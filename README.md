@@ -60,40 +60,26 @@ bun install
 
 ### Lexicons
 
-`GENERATED/lexicons/` is **gitignored** and must be populated before building or testing. The codegen pipeline merges lexicon JSON files from two upstream repos, in priority order (later source wins on conflicts):
+`GENERATED/lexicons/` is **committed to this repo** — you do not need to fetch anything to get started. The lexicons currently tracked come from two upstream sources, merged in priority order (later source wins on conflicts):
 
-| # | Repo | Default branch |
-|---|---|---|
-| 1 | [`GainForest/lexicons`](https://github.com/GainForest/lexicons) | `main` |
-| 2 | [`hypercerts-org/hypercerts-lexicon`](https://github.com/hypercerts-org/hypercerts-lexicon) | `main` |
+| # | Repo |
+|---|---|
+| 1 | [`GainForest/lexicons`](https://github.com/GainForest/lexicons) |
+| 2 | [`hypercerts-org/hypercerts-lexicon`](https://github.com/hypercerts-org/hypercerts-lexicon) |
 
-After merging, the script verifies that every `$ref` used across all lexicons can be resolved locally. If any ref is missing the script exits loudly — so codegen fails before generating broken types.
-
-**If you are adding new lexicons** that live in a different repo, add a new `fetch_and_merge` call for it in `GENERATED/scripts/fetch-lexicons.sh`.
+**If you add or change lexicons**, edit the JSON files in `GENERATED/lexicons/` directly and commit them. To re-sync from the upstream repos instead, run `bun run fetch-lexicons` (or `bun run fetch-lexicons:local` for local sibling repos) and commit the result. The fetch script also verifies that every `$ref` across all lexicons can be resolved locally — it will exit loudly if anything is missing.
 
 ### Generate types
 
-Fetch lexicons and generate TypeScript types. Run this once before your first build, and again whenever any lexicon changes.
+`GENERATED/types/` is gitignored and must be regenerated from the lexicons. Run this once after cloning and again whenever `GENERATED/lexicons/` changes.
 
 ```bash
-# Fetch from GitHub (both repos @ main) + generate types
-bun run codegen
+# Generate types from the committed lexicons
+bun run GENERATED/scripts/codegen.ts
 
-# Fetch from local sibling directories instead of GitHub
-# (expects ../lexicons and ../hypercerts-lexicon relative to this repo)
-bun run codegen:local
-
-# Fetch only — skip type generation
-bun run fetch-lexicons
-
-# Fetch from a specific branch (e.g. when working on a lexicon PR)
-./GENERATED/scripts/fetch-lexicons.sh --gainforest-branch my-feature-branch
-
-# Mix: one source from local, the other from GitHub
-./GENERATED/scripts/fetch-lexicons.sh \
-  --gainforest-local ../lexicons \
-  --hypercerts-branch main
-# then run: bun run GENERATED/scripts/codegen.ts
+# Or re-fetch from upstream first, then generate
+bun run codegen          # fetch from GitHub @ main + generate
+bun run codegen:local    # fetch from local sibling repos + generate
 ```
 
 ### Build all packages
