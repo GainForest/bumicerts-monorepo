@@ -1,7 +1,7 @@
 {
   "name": "@gainforest/atproto-auth-next",
   "version": "0.0.1",
-  "description": "ATProto OAuth authentication for Next.js — iron-session cookies, Supabase stores, agent construction.",
+  "description": "ATProto OAuth authentication for Next.js — iron-session cookies, Supabase stores, pluggable route handlers.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -44,7 +44,6 @@
   "dependencies": {
     "@atproto/api": "^0.13.17",
     "@atproto/oauth-client-node": "^0.3.9",
-    "@gainforest/internal-utils": "workspace:*",
     "iron-session": "^8.0.4"
   },
   "peerDependencies": {
