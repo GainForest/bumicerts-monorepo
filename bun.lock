@@ -11,6 +11,13 @@
         "typescript": "^5.9.3",
       },
     },
+    "GENERATED": {
+      "name": "@gainforest/generated",
+      "version": "0.0.1",
+      "dependencies": {
+        "@atproto/lex": "^0.0.19",
+      },
+    },
     "packages/atproto-auth-next": {
       "name": "@gainforest/atproto-auth-next",
       "version": "0.0.1",
@@ -35,6 +42,8 @@
       "version": "0.0.1",
       "dependencies": {
         "@atproto/api": "0.19.0",
+        "@atproto/lex": "^0.0.19",
+        "@gainforest/generated": "workspace:*",
         "effect": "3.19.19",
       },
       "devDependencies": {
@@ -239,6 +248,8 @@
     "@gainforest/atproto-mutations-core": ["@gainforest/atproto-mutations-core@workspace:packages/atproto-mutations-core"],
 
     "@gainforest/atproto-mutations-next": ["@gainforest/atproto-mutations-next@workspace:packages/atproto-mutations-next"],
+
+    "@gainforest/generated": ["@gainforest/generated@workspace:GENERATED"],
 
     "@gainforest/internal-utils": ["@gainforest/internal-utils@workspace:packages/internal-utils"],
 

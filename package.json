@@ -1,7 +1,7 @@
 {
   "name": "atproto-packages",
   "private": true,
-  "workspaces": ["packages/*"],
+  "workspaces": ["packages/*", "GENERATED"],
   "scripts": {
     "build": "bun run --filter '*' build",
     "dev": "bun run --filter '*' dev",

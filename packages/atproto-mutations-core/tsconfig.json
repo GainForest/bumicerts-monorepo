@@ -4,7 +4,9 @@
     "outDir": "./dist",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@gainforest/generated": ["../../GENERATED/types/index.ts"],
+      "@gainforest/generated/*": ["../../GENERATED/types/*.ts"]
     }
   },
   "include": ["src/**/*", "tests/**/*"]

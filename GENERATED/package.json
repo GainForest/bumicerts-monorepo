@@ -1,0 +1,14 @@
+{
+  "name": "@gainforest/generated",
+  "version": "0.0.1",
+  "description": "Auto-generated ATProto lexicon types and validators for Gainforest. Do not edit manually — run bun run codegen to regenerate.",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./types/index.ts",
+    "./*": "./types/*.ts"
+  },
+  "dependencies": {
+    "@atproto/lex": "^0.0.19"
+  }
+}
