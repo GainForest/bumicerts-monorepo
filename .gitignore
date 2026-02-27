@@ -7,7 +7,5 @@ dist/
 .env.*.local
 .env.test-credentials
 
-# Generated artifacts — populated by `bun run fetch-lexicons` and `bun run codegen`
-# Do not commit these; they are fetched fresh from source repos.
-GENERATED/lexicons/
+# Generated TypeScript types — populated by `bun run codegen`, derived from lexicons
 GENERATED/types/
