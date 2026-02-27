@@ -42,7 +42,10 @@
     "dev": "tsup --watch"
   },
   "dependencies": {
-    "@gainforest/atproto-mutations-core": "workspace:*"
+    "@atproto/api": "0.19.0",
+    "@gainforest/atproto-auth-next": "workspace:*",
+    "@gainforest/atproto-mutations-core": "workspace:*",
+    "effect": "^3.19.19"
   },
   "peerDependencies": {
     "next": ">=14.0.0",

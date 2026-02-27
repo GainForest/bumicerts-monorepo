@@ -9,3 +9,10 @@ export type { MutationResult } from "./result";
 export { ok, err } from "./result";
 export { MutationError } from "./error";
 export { adapt } from "./adapt";
+
+// Effect-based agent abstraction
+export { AtprotoAgent } from "./services/AtprotoAgent";
+
+// Credential (username/password) auth layer — for scripts, workers, service accounts
+export { makeCredentialAgentLayer, CredentialLoginError } from "./layers/credential";
+export type { CredentialConfig } from "./layers/credential";

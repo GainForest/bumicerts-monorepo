@@ -7,7 +7,8 @@
     "paths": {
       "@/*": ["./src/*"],
       "@gainforest/atproto-mutations-core": ["../atproto-mutations-core/dist/index.d.ts"],
-      "@gainforest/internal-utils": ["../internal-utils/dist/index.d.ts"]
+      "@gainforest/atproto-auth-next": ["../atproto-auth-next/dist/index.d.ts"],
+      "@gainforest/atproto-auth-next/server": ["../atproto-auth-next/dist/server.d.ts"]
     }
   },
   "include": ["src/**/*"]

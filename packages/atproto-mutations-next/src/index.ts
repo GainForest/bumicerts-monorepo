@@ -9,4 +9,6 @@
 //   @gainforest/atproto-mutations-next/client   — adapted mutations namespace for useMutation
 
 export type { MutationResult } from "@gainforest/atproto-mutations-core";
-export { ok, err, MutationError, adapt } from "@gainforest/atproto-mutations-core";
+export { ok, err, MutationError, adapt, AtprotoAgent } from "@gainforest/atproto-mutations-core";
+export { makeCredentialAgentLayer, CredentialLoginError } from "@gainforest/atproto-mutations-core";
+export type { CredentialConfig } from "@gainforest/atproto-mutations-core";
