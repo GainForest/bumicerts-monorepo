@@ -2,6 +2,7 @@ import { Effect } from "effect";
 import { AtprotoAgent } from "../../services/AtprotoAgent";
 import {
   $parse,
+  main as orgInfoSchema,
 } from "@gainforest/generated/app/gainforest/organization/info.defs";
 import type {
   OrganizationInfoMutationResult,
@@ -13,100 +14,71 @@ import {
   OrganizationInfoPdsError,
   OrganizationInfoValidationError,
 } from "./utils/errors";
+import { applyPatch } from "./utils/merge";
+import { extractBlobConstraints } from "../../blob/introspect";
+import { validateFileConstraints } from "../../blob/helpers";
+import { FileConstraintError, BlobUploadError } from "../../blob/errors";
+import {
+  stubValidate,
+  finalValidate,
+  resolveFileInputs,
+  fetchRecord,
+  putRecord,
+} from "../../utils/shared";
 
 const COLLECTION = "app.gainforest.organization.info";
 const RKEY = "self";
 
-/**
- * Updates an existing organization.info record with the provided partial input.
- *
- * Only the fields present in `input` are changed — all other fields retain
- * their existing values. Fails with OrganizationInfoNotFoundError if no record
- * exists yet. Use upsertOrganizationInfo if you need create-or-update semantics.
- *
- * The merged result is re-validated against the lexicon before writing.
- */
+const BLOB_CONSTRAINTS = extractBlobConstraints(orgInfoSchema);
+
+const makePdsError = (message: string, cause: unknown) =>
+  new OrganizationInfoPdsError({ message, cause });
+
+const makeValidationError = (message: string, cause: unknown) =>
+  new OrganizationInfoValidationError({ message, cause });
+
 export const updateOrganizationInfo = (
   input: UpdateOrganizationInfoInput
 ): Effect.Effect<
   OrganizationInfoMutationResult,
   | OrganizationInfoValidationError
   | OrganizationInfoNotFoundError
-  | OrganizationInfoPdsError,
+  | OrganizationInfoPdsError
+  | FileConstraintError
+  | BlobUploadError,
   AtprotoAgent
 > =>
   Effect.gen(function* () {
-    const agent = yield* AtprotoAgent;
-    const repo = agent.assertDid;
+    yield* validateFileConstraints(input.data, BLOB_CONSTRAINTS);
 
-    // -----------------------------------------------------------------------
-    // 1. Fetch the existing record.
-    //    If the repo has no organization.info record yet we fail — use upsert.
-    // -----------------------------------------------------------------------
-    const existing = yield* Effect.tryPromise({
-      try: () =>
-        agent.com.atproto.repo
-          .getRecord({ repo, collection: COLLECTION, rkey: RKEY })
-          .then((res) => res.data.value as OrganizationInfoRecord)
-          .catch(() => null),
-      catch: (cause) =>
-        new OrganizationInfoPdsError({
-          message: "Failed to fetch existing organization.info record",
-          cause,
-        }),
-    });
+    const existing = yield* fetchRecord<OrganizationInfoRecord, OrganizationInfoPdsError>(
+      COLLECTION, RKEY, makePdsError
+    );
 
     if (existing === null) {
-      return yield* Effect.fail(new OrganizationInfoNotFoundError({ repo }));
+      return yield* Effect.fail(
+        new OrganizationInfoNotFoundError({ repo: (yield* AtprotoAgent).assertDid })
+      );
     }
 
-    // -----------------------------------------------------------------------
-    // 2. Merge: existing record values are the base; input fields overwrite.
-    //    createdAt is intentionally preserved from the original record.
-    // -----------------------------------------------------------------------
-    const merged = {
-      ...existing,
-      ...input,
-      $type: COLLECTION,
-      createdAt: existing.createdAt,
-    } as OrganizationInfoRecord;
+    const patched = applyPatch(existing, input.data, input.unset) as OrganizationInfoRecord;
+    patched.$type = COLLECTION;
+    patched.createdAt = existing.createdAt;
 
-    const record = yield* Effect.try({
-      try: () => $parse(merged),
-      catch: (cause) =>
-        new OrganizationInfoValidationError({
-          message: `Merged organization.info record failed lexicon validation: ${String(cause)}`,
-          cause,
-        }),
-    });
+    yield* stubValidate(patched, $parse, makeValidationError);
 
-    // -----------------------------------------------------------------------
-    // 3. Write back with putRecord (full replacement, same rkey).
-    // -----------------------------------------------------------------------
-    const response = yield* Effect.tryPromise({
-      try: () =>
-        agent.com.atproto.repo.putRecord({
-          repo,
-          collection: COLLECTION,
-          rkey: RKEY,
-          record,
-        }),
-      catch: (cause) =>
-        new OrganizationInfoPdsError({
-          message: "PDS rejected putRecord for organization.info",
-          cause,
-        }),
-    });
+    const resolved = yield* resolveFileInputs(patched);
+    const record = yield* finalValidate(resolved, $parse, makeValidationError);
 
-    return {
-      uri: response.data.uri,
-      cid: response.data.cid,
-      record,
-    } satisfies OrganizationInfoMutationResult;
+    const { uri, cid } = yield* putRecord(COLLECTION, RKEY, record, makePdsError);
+
+    return { uri, cid, record: record as OrganizationInfoRecord } satisfies OrganizationInfoMutationResult;
   });
 
 export {
   OrganizationInfoNotFoundError,
   OrganizationInfoPdsError,
   OrganizationInfoValidationError,
+  FileConstraintError,
+  BlobUploadError,
 };

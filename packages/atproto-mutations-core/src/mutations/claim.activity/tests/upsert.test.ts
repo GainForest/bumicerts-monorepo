@@ -1,9 +1,10 @@
 import { describe, it, expect } from "bun:test";
 import { Effect } from "effect";
 import { makeCredentialAgentLayer } from "../../../layers/credential";
-import { upsertOrganizationInfo } from "../upsert";
+import { upsertClaimActivity } from "../upsert";
 import { FileConstraintError } from "../../../blob/errors";
-import type { CreateOrganizationInfoInput } from "../utils/types";
+import { ClaimActivityValidationError } from "../utils/errors";
+import type { UpsertClaimActivityInput } from "../utils/types";
 import type { SerializableFile } from "../../../blob/types";
 
 // ---------------------------------------------------------------------------
@@ -48,27 +49,17 @@ function makeTinyPng(overrides?: { size?: number; type?: string }): Serializable
 // Fixture
 // ---------------------------------------------------------------------------
 
-const fullInput: CreateOrganizationInfoInput = {
-  displayName: "Test Org (atproto-mutations-core)",
-  shortDescription: {
-    $type: "app.gainforest.common.defs#richtext",
-    text: "A test organization created by the automated test suite.",
-  },
-  longDescription: {
-    $type: "pub.leaflet.pages.linearDocument",
-    blocks: [],
-  },
-  objectives: ["Conservation"],
-  country: "BR",
-  visibility: "Unlisted",
+const baseInput: UpsertClaimActivityInput = {
+  title: "Test Claim Activity",
+  shortDescription: "A test claim activity record created by the automated test suite.",
 };
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("upsertOrganizationInfo", () => {
-  it("creates or fully replaces the record idempotently", async () => {
+describe("upsertClaimActivity", () => {
+  it("creates a new record when no rkey is provided (always creates, created=true)", async () => {
     if (!credentialsProvided) {
       console.log(
         "[skip] Copy tests/.env.test-credentials.example → tests/.env.test-credentials " +
@@ -79,80 +70,100 @@ describe("upsertOrganizationInfo", () => {
 
     const layer = makeCredentialAgentLayer({ service, identifier, password });
 
-    // First call — creates if not present, replaces if present.
-    const first = await Effect.runPromise(
-      upsertOrganizationInfo(fullInput).pipe(Effect.provide(layer))
+    // No rkey — always creates a brand new record.
+    const result = await Effect.runPromise(
+      upsertClaimActivity(baseInput).pipe(Effect.provide(layer))
     );
 
-    expect(first.uri).toMatch(/^at:\/\//);
-    expect(first.cid).toBeString();
-    expect(first.record.displayName).toBe(fullInput.displayName);
-    expect(first.record.country).toBe("BR");
+    expect(result.uri).toMatch(/^at:\/\//);
+    expect(result.uri).toContain("org.hypercerts.claim.activity");
+    expect(result.cid).toBeString();
+    expect(result.rkey).toBeString();
+    expect(result.created).toBe(true);
+    expect(result.record.title).toBe(baseInput.title);
+    expect(result.record.createdAt).toBeString();
     console.log(
-      `[ok] Upsert (first call) — created=${first.created}, uri=${first.uri}`
+      `[ok] Upsert (no rkey) — created=${result.created}, uri=${result.uri}, rkey=${result.rkey}`
+    );
+  });
+
+  it("creates a record when rkey is provided but record does not exist (created=true)", async () => {
+    if (!credentialsProvided) {
+      console.log("[skip] Credentials not set.");
+      return;
+    }
+
+    const layer = makeCredentialAgentLayer({ service, identifier, password });
+    const rkey = `test-upsert-create-${Date.now()}`;
+
+    const result = await Effect.runPromise(
+      upsertClaimActivity({ ...baseInput, rkey }).pipe(Effect.provide(layer))
     );
 
-    // Second call — always a replace (record now exists), with new data.
+    expect(result.rkey).toBe(rkey);
+    expect(result.created).toBe(true);
+    expect(result.record.title).toBe(baseInput.title);
+    console.log(
+      `[ok] Upsert (new rkey) — created=${result.created}, rkey=${result.rkey}`
+    );
+  });
+
+  it("replaces the record when rkey is provided and record exists (created=false)", async () => {
+    if (!credentialsProvided) {
+      console.log("[skip] Credentials not set.");
+      return;
+    }
+
+    const layer = makeCredentialAgentLayer({ service, identifier, password });
+    const rkey = `test-upsert-replace-${Date.now()}`;
+
+    // First upsert — creates.
+    const first = await Effect.runPromise(
+      upsertClaimActivity({ ...baseInput, rkey }).pipe(Effect.provide(layer))
+    );
+
+    expect(first.created).toBe(true);
+
+    // Second upsert at same rkey — replaces.
     const second = await Effect.runPromise(
-      upsertOrganizationInfo({
-        ...fullInput,
-        displayName: "Test Org — Upserted Name!!",
+      upsertClaimActivity({
+        ...baseInput,
+        rkey,
+        title: "Replaced Title",
+        description: "Now with a description.",
       }).pipe(Effect.provide(layer))
     );
 
     expect(second.created).toBe(false);
-    expect(second.record.displayName).toBe("Test Org — Upserted Name!!");
-    // createdAt must be the same value set during the initial creation.
-    expect(second.record.createdAt).toBe(first.record.createdAt);
+    expect(second.rkey).toBe(rkey);
+    expect(second.record.title).toBe("Replaced Title");
+    expect(second.record.description).toBe("Now with a description.");
     console.log(
-      `[ok] Upsert (second call) — created=${second.created}, ` +
-      `displayName=${second.record.displayName}, createdAt preserved=${second.record.createdAt}`
+      `[ok] Upsert (replace) — created=${second.created}, title="${second.record.title}"`
     );
   });
 
-  it("reports created=true on first upsert and created=false on subsequent ones", async () => {
+  it("preserves createdAt from the original record on replacement", async () => {
     if (!credentialsProvided) {
       console.log("[skip] Credentials not set.");
       return;
     }
 
     const layer = makeCredentialAgentLayer({ service, identifier, password });
-
-    const results = await Effect.runPromise(
-      Effect.gen(function* () {
-        const a = yield* upsertOrganizationInfo(fullInput);
-        const b = yield* upsertOrganizationInfo(fullInput);
-        return { a, b };
-      }).pipe(Effect.provide(layer))
-    );
-
-    // b is always false — record existed from a (or a prior test run).
-    expect(results.b.created).toBe(false);
-    console.log(
-      `[ok] a.created=${results.a.created}, b.created=${results.b.created}`
-    );
-  });
-
-  it("preserves createdAt across upserts", async () => {
-    if (!credentialsProvided) {
-      console.log("[skip] Credentials not set.");
-      return;
-    }
-
-    const layer = makeCredentialAgentLayer({ service, identifier, password });
+    const rkey = `test-upsert-createdat-${Date.now()}`;
 
     const first = await Effect.runPromise(
-      upsertOrganizationInfo(fullInput).pipe(Effect.provide(layer))
+      upsertClaimActivity({ ...baseInput, rkey }).pipe(Effect.provide(layer))
     );
 
     const second = await Effect.runPromise(
-      upsertOrganizationInfo({ ...fullInput, displayName: "Test Org — CreatedAt Test!!!!" }).pipe(
+      upsertClaimActivity({ ...baseInput, rkey, title: "Updated Title" }).pipe(
         Effect.provide(layer)
       )
     );
 
-    expect(first.record.createdAt).toBe(second.record.createdAt);
-    console.log(`[ok] createdAt stable across upserts: ${second.record.createdAt}`);
+    expect(second.record.createdAt).toBe(first.record.createdAt);
+    console.log(`[ok] createdAt preserved across upserts: ${second.record.createdAt}`);
   });
 
   it("fully replaces the record — fields absent from the new input are removed", async () => {
@@ -162,24 +173,27 @@ describe("upsertOrganizationInfo", () => {
     }
 
     const layer = makeCredentialAgentLayer({ service, identifier, password });
+    const rkey = `test-upsert-fullreplace-${Date.now()}`;
 
-    // First upsert: set a website.
+    // First upsert: set a description.
     await Effect.runPromise(
-      upsertOrganizationInfo({ ...fullInput, website: "https://example.com" }).pipe(
-        Effect.provide(layer)
-      )
+      upsertClaimActivity({
+        ...baseInput,
+        rkey,
+        description: "This will disappear on the next upsert.",
+      }).pipe(Effect.provide(layer))
     );
 
-    // Second upsert: supply fullInput which has no website → it should be gone.
+    // Second upsert: baseInput has no description — it should be gone.
     const result = await Effect.runPromise(
-      upsertOrganizationInfo(fullInput).pipe(Effect.provide(layer))
+      upsertClaimActivity({ ...baseInput, rkey }).pipe(Effect.provide(layer))
     );
 
-    expect(result.record.website).toBeUndefined();
-    console.log("[ok] website absent from second upsert input — field was removed from record");
+    expect(result.record.description).toBeUndefined();
+    console.log("[ok] description absent from second upsert input — field was removed from record");
   });
 
-  it("fails with OrganizationInfoValidationError on invalid input", async () => {
+  it("fails with ClaimActivityValidationError on invalid input", async () => {
     if (!credentialsProvided) {
       console.log("[skip] Credentials not set.");
       return;
@@ -187,9 +201,9 @@ describe("upsertOrganizationInfo", () => {
 
     const layer = makeCredentialAgentLayer({ service, identifier, password });
 
-    // "Bad" is too short for displayName (min 8 chars).
+    // title exceeds maxLength: 256.
     const result = await Effect.runPromise(
-      upsertOrganizationInfo({ ...fullInput, displayName: "Bad" }).pipe(
+      upsertClaimActivity({ ...baseInput, title: "x".repeat(257) }).pipe(
         Effect.either,
         Effect.provide(layer)
       )
@@ -197,10 +211,8 @@ describe("upsertOrganizationInfo", () => {
 
     expect(result._tag).toBe("Left");
     if (result._tag === "Left") {
-      expect(result.left._tag).toBe("OrganizationInfoValidationError");
-      console.log(
-        `[ok] Got expected OrganizationInfoValidationError: ${result.left.message}`
-      );
+      expect(result.left).toBeInstanceOf(ClaimActivityValidationError);
+      console.log(`[ok] Got expected ClaimActivityValidationError: ${result.left.message}`);
     }
   });
 
@@ -208,18 +220,17 @@ describe("upsertOrganizationInfo", () => {
   // Blob tests
   // -------------------------------------------------------------------------
 
-  it("fails with FileConstraintError when logo MIME type is invalid (offline)", async () => {
+  it("fails with FileConstraintError when image MIME type is invalid (offline)", async () => {
     const layer = makeCredentialAgentLayer({
-      service: service || "https://bsky.social",
+      service: service || "bsky.social",
       identifier: identifier || "placeholder",
       password: password || "placeholder",
     });
 
     const result = await Effect.runPromise(
-      upsertOrganizationInfo({
-        ...fullInput,
-        logo: {
-          // @ts-expect-error — deliberately wrong type for the test
+      upsertClaimActivity({
+        ...baseInput,
+        image: {
           $type: "org.hypercerts.defs#smallImage",
           image: makeTinyPng({ type: "application/octet-stream" }),
         },
@@ -234,20 +245,19 @@ describe("upsertOrganizationInfo", () => {
     }
   });
 
-  it("fails with FileConstraintError when coverImage exceeds 5 MB (offline)", async () => {
+  it("fails with FileConstraintError when image exceeds 5 MB (offline)", async () => {
     const layer = makeCredentialAgentLayer({
-      service: service || "https://bsky.social",
+      service: service || "bsky.social",
       identifier: identifier || "placeholder",
       password: password || "placeholder",
     });
 
     const result = await Effect.runPromise(
-      upsertOrganizationInfo({
-        ...fullInput,
-        coverImage: {
-          // @ts-expect-error
+      upsertClaimActivity({
+        ...baseInput,
+        image: {
           $type: "org.hypercerts.defs#smallImage",
-          image: makeTinyPng({ size: 5 * 1024 * 1024 + 100 }),
+          image: makeTinyPng({ size: 5 * 1024 * 1024 + 1 }),
         },
       }).pipe(Effect.either, Effect.provide(layer))
     );
@@ -260,7 +270,7 @@ describe("upsertOrganizationInfo", () => {
     }
   });
 
-  it("upserts with a logo SerializableFile (integration — requires credentials)", async () => {
+  it("upserts with a SmallImage SerializableFile (integration — requires credentials)", async () => {
     if (!credentialsProvided) {
       console.log("[skip] Credentials not set.");
       return;
@@ -269,10 +279,9 @@ describe("upsertOrganizationInfo", () => {
     const layer = makeCredentialAgentLayer({ service, identifier, password });
 
     const result = await Effect.runPromise(
-      upsertOrganizationInfo({
-        ...fullInput,
-        logo: {
-          // @ts-expect-error — type widening for test
+      upsertClaimActivity({
+        ...baseInput,
+        image: {
           $type: "org.hypercerts.defs#smallImage",
           image: makeTinyPng(),
         },
@@ -280,10 +289,9 @@ describe("upsertOrganizationInfo", () => {
     );
 
     expect(result.uri).toMatch(/^at:\/\//);
-    expect(result.record.logo).toBeDefined();
-    expect(result.record.logo?.image).toBeDefined();
+    expect(result.record.image).toBeDefined();
     console.log(
-      `[ok] Upserted organization.info with logo blob — created=${result.created}, uri=${result.uri}`
+      `[ok] Upserted claim.activity with SmallImage — created=${result.created}, uri=${result.uri}`
     );
   });
 });

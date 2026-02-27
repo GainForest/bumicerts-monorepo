@@ -2,131 +2,74 @@ import { Effect } from "effect";
 import { AtprotoAgent } from "../../services/AtprotoAgent";
 import {
   $parse,
+  main as orgInfoSchema,
 } from "@gainforest/generated/app/gainforest/organization/info.defs";
 import type {
   CreateOrganizationInfoInput,
   OrganizationInfoMutationResult,
   OrganizationInfoRecord,
-  UpdateOrganizationInfoInput,
 } from "./utils/types";
 import {
   OrganizationInfoPdsError,
   OrganizationInfoValidationError,
 } from "./utils/errors";
+import { extractBlobConstraints } from "../../blob/introspect";
+import { validateFileConstraints } from "../../blob/helpers";
+import { FileConstraintError, BlobUploadError } from "../../blob/errors";
+import {
+  stubValidate,
+  finalValidate,
+  resolveFileInputs,
+  fetchRecord,
+  putRecord,
+} from "../../utils/shared";
 
 const COLLECTION = "app.gainforest.organization.info";
 const RKEY = "self";
 
-// ---------------------------------------------------------------------------
-// Input union — callers pass either a full create input (no record exists yet)
-// or a partial update input (record already exists). The discriminant is
-// determined at runtime by checking whether a record is present in the repo.
-// ---------------------------------------------------------------------------
-export type UpsertOrganizationInfoInput =
-  | { mode: "create"; data: CreateOrganizationInfoInput }
-  | { mode: "update"; data: UpdateOrganizationInfoInput }
-  | { mode: "auto"; data: CreateOrganizationInfoInput };
+const BLOB_CONSTRAINTS = extractBlobConstraints(orgInfoSchema);
 
-/**
- * Upserts an organization.info record: creates if absent, updates if present.
- *
- * Three modes:
- *   - "auto"   (default/recommended): you supply a full CreateOrganizationInfoInput.
- *              If no record exists, it is created with that data. If one exists,
- *              the provided fields are merged over it (partial update).
- *   - "create": like createOrganizationInfo but never fails on existing records —
- *              if one exists the provided fields are merged instead.
- *   - "update": like updateOrganizationInfo but creates the record if missing
- *              using the provided data as the initial payload.
- *
- * Prefer "auto" in application code. Use "create" / "update" when you need to
- * be explicit about the intent while still tolerating the other state.
- */
+const makePdsError = (message: string, cause: unknown) =>
+  new OrganizationInfoPdsError({ message, cause });
+
+const makeValidationError = (message: string, cause: unknown) =>
+  new OrganizationInfoValidationError({ message, cause });
+
 export const upsertOrganizationInfo = (
-  input: UpsertOrganizationInfoInput
+  input: CreateOrganizationInfoInput
 ): Effect.Effect<
   OrganizationInfoMutationResult & { created: boolean },
-  OrganizationInfoValidationError | OrganizationInfoPdsError,
+  | OrganizationInfoValidationError
+  | OrganizationInfoPdsError
+  | FileConstraintError
+  | BlobUploadError,
   AtprotoAgent
 > =>
   Effect.gen(function* () {
-    const agent = yield* AtprotoAgent;
-    const repo = agent.assertDid;
+    yield* validateFileConstraints(input, BLOB_CONSTRAINTS);
 
-    // -----------------------------------------------------------------------
-    // 1. Attempt to fetch the existing record.
-    // -----------------------------------------------------------------------
-    const existing = yield* Effect.tryPromise({
-      try: () =>
-        agent.com.atproto.repo
-          .getRecord({ repo, collection: COLLECTION, rkey: RKEY })
-          .then((res) => res.data.value as OrganizationInfoRecord)
-          .catch(() => null),
-      catch: (cause) =>
-        new OrganizationInfoPdsError({
-          message: "Failed to check for existing organization.info record during upsert",
-          cause,
-        }),
-    });
+    const existing = yield* fetchRecord<OrganizationInfoRecord, OrganizationInfoPdsError>(
+      COLLECTION, RKEY, makePdsError
+    );
 
-    const isCreate = existing === null;
-    const createdAt = isCreate
-      ? new Date().toISOString()
-      : (existing as OrganizationInfoRecord).createdAt;
+    const createdAt = existing !== null
+      ? existing.createdAt
+      : new Date().toISOString();
 
-    // -----------------------------------------------------------------------
-    // 2. Build the candidate record.
-    //    - On create: use the full input data + new createdAt.
-    //    - On update: merge input.data over existing fields, preserve createdAt.
-    // -----------------------------------------------------------------------
-    const base: Partial<OrganizationInfoRecord> = isCreate
-      ? {}
-      : (existing as OrganizationInfoRecord);
+    const candidate = { $type: COLLECTION, ...input, createdAt };
 
-    const candidate = {
-      ...base,
-      ...input.data,
-      $type: COLLECTION,
-      createdAt,
-    } as OrganizationInfoRecord;
+    yield* stubValidate(candidate, $parse, makeValidationError);
 
-    // -----------------------------------------------------------------------
-    // 3. Validate the candidate against the lexicon.
-    // -----------------------------------------------------------------------
-    const record = yield* Effect.try({
-      try: () => $parse(candidate),
-      catch: (cause) =>
-        new OrganizationInfoValidationError({
-          message: `organization.info record failed lexicon validation during upsert: ${String(cause)}`,
-          cause,
-        }),
-    });
+    const resolved = yield* resolveFileInputs(candidate);
+    const record = yield* finalValidate(resolved, $parse, makeValidationError);
 
-    // -----------------------------------------------------------------------
-    // 4. Write to the PDS.
-    //    putRecord is idempotent for both create-new and replace-existing
-    //    when used with a known rkey ("self"), so we use it for both branches.
-    // -----------------------------------------------------------------------
-    const response = yield* Effect.tryPromise({
-      try: () =>
-        agent.com.atproto.repo.putRecord({
-          repo,
-          collection: COLLECTION,
-          rkey: RKEY,
-          record,
-        }),
-      catch: (cause) =>
-        new OrganizationInfoPdsError({
-          message: `PDS rejected putRecord for organization.info during upsert`,
-          cause,
-        }),
-    });
+    const { uri, cid } = yield* putRecord(COLLECTION, RKEY, record, makePdsError);
 
     return {
-      uri: response.data.uri,
-      cid: response.data.cid,
-      record,
-      created: isCreate,
+      uri,
+      cid,
+      record: record as OrganizationInfoRecord,
+      created: existing === null,
     };
   });
 

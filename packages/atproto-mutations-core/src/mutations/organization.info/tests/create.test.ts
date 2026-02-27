@@ -6,7 +6,9 @@ import {
   OrganizationInfoAlreadyExistsError,
   OrganizationInfoValidationError,
 } from "../utils/errors";
+import { FileConstraintError } from "../../../blob/errors";
 import type { CreateOrganizationInfoInput } from "../utils/types";
+import type { SerializableFile } from "../../../blob/types";
 
 // ---------------------------------------------------------------------------
 // Load test credentials from the package-level tests/.env.test-credentials.
@@ -33,6 +35,24 @@ const service    = process.env["ATPROTO_SERVICE"]    ?? "";
 const identifier = process.env["ATPROTO_IDENTIFIER"] ?? "";
 const password   = process.env["ATPROTO_PASSWORD"]   ?? "";
 const credentialsProvided = service !== "" && identifier !== "" && password !== "";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Build a tiny valid PNG SerializableFile (8×8 solid-blue). */
+function makeTinyPng(overrides?: { size?: number; type?: string }): SerializableFile {
+  // 1×1 transparent PNG — 67 bytes, well within any size limit.
+  const PNG_BASE64 =
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+  return {
+    $file: true,
+    name: "test.png",
+    type: overrides?.type ?? "image/png",
+    size: overrides?.size ?? 67,
+    data: PNG_BASE64,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Minimal valid input fixture.
@@ -155,5 +175,116 @@ describe("createOrganizationInfo", () => {
       expect(result.left._tag).toBe("OrganizationInfoValidationError");
       console.log(`[ok] Got expected OrganizationInfoValidationError: ${result.left.message}`);
     }
+  });
+
+  // -------------------------------------------------------------------------
+  // Blob tests
+  // -------------------------------------------------------------------------
+
+  it("fails with FileConstraintError when logo image MIME type is invalid (offline)", async () => {
+    // This test does NOT need credentials — FileConstraintError is raised
+    // before any PDS call is attempted.
+    const layer = makeCredentialAgentLayer({
+      service: service || "https://bsky.social",
+      identifier: identifier || "placeholder",
+      password: password || "placeholder",
+    });
+
+    const inputWithBadMime: CreateOrganizationInfoInput = {
+      ...minimalInput,
+      logo: {
+        // @ts-expect-error — deliberately wrong type for the test
+        $type: "org.hypercerts.defs#smallImage",
+        image: makeTinyPng({ type: "application/pdf" }), // wrong MIME
+      },
+    };
+
+    const result = await Effect.runPromise(
+      createOrganizationInfo(inputWithBadMime).pipe(
+        Effect.either,
+        Effect.provide(layer)
+      )
+    );
+
+    expect(result._tag).toBe("Left");
+    if (result._tag === "Left") {
+      expect(result.left).toBeInstanceOf(FileConstraintError);
+      expect(result.left._tag).toBe("FileConstraintError");
+      expect((result.left as FileConstraintError).reason).toContain("not accepted");
+      console.log(`[ok] Got expected FileConstraintError: ${(result.left as FileConstraintError).reason}`);
+    }
+  });
+
+  it("fails with FileConstraintError when logo image exceeds 5 MB (offline)", async () => {
+    const layer = makeCredentialAgentLayer({
+      service: service || "https://bsky.social",
+      identifier: identifier || "placeholder",
+      password: password || "placeholder",
+    });
+
+    const oversizedFile: SerializableFile = makeTinyPng({
+      size: 5 * 1024 * 1024 + 1, // 1 byte over the 5 MB limit
+    });
+
+    const inputWithOversizedLogo: CreateOrganizationInfoInput = {
+      ...minimalInput,
+      logo: {
+        // @ts-expect-error — deliberately wrong type for the test
+        $type: "org.hypercerts.defs#smallImage",
+        image: oversizedFile,
+      },
+    };
+
+    const result = await Effect.runPromise(
+      createOrganizationInfo(inputWithOversizedLogo).pipe(
+        Effect.either,
+        Effect.provide(layer)
+      )
+    );
+
+    expect(result._tag).toBe("Left");
+    if (result._tag === "Left") {
+      expect(result.left).toBeInstanceOf(FileConstraintError);
+      expect((result.left as FileConstraintError).reason).toContain("exceeds maximum");
+      console.log(`[ok] Got expected FileConstraintError: ${(result.left as FileConstraintError).reason}`);
+    }
+  });
+
+  it("creates a record with a logo SerializableFile (integration — requires credentials)", async () => {
+    if (!credentialsProvided) {
+      console.log("[skip] Credentials not set.");
+      return;
+    }
+
+    const layer = makeCredentialAgentLayer({ service, identifier, password });
+
+    const inputWithLogo: CreateOrganizationInfoInput = {
+      ...minimalInput,
+      logo: {
+        // @ts-expect-error — type widening for test
+        $type: "org.hypercerts.defs#smallImage",
+        image: makeTinyPng(),
+      },
+    };
+
+    const result = await Effect.runPromise(
+      createOrganizationInfo(inputWithLogo).pipe(
+        // Already-exists from a prior test run is fine — the blob flow was still
+        // exercised up to the existence check.
+        Effect.catchTag("OrganizationInfoAlreadyExistsError", (e) =>
+          Effect.succeed({ uri: e.uri, cid: "(existing)", record: null as any, _alreadyExisted: true })
+        ),
+        Effect.provide(layer)
+      )
+    );
+
+    if ((result as any)._alreadyExisted) {
+      console.log(`[ok] Record already existed — blob upload path was exercised up to existence check`);
+      return;
+    }
+
+    expect(result.uri).toMatch(/^at:\/\//);
+    expect(result.record).toBeDefined();
+    console.log(`[ok] Created organization.info with logo blob at ${result.uri}`);
   });
 });
