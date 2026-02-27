@@ -7,6 +7,7 @@ ATProto mutations for Next.js. Wraps `@gainforest/atproto-mutations-core` with N
 ## Contents
 
 - [Installation](#installation)
+- [Auth prerequisite](#auth-prerequisite)
 - [Package exports](#package-exports)
 - [Architecture overview](#architecture-overview)
 - [Setup](#setup)
@@ -39,6 +40,16 @@ npm install @gainforest/atproto-mutations-next
 ```
 
 Peer dependencies: `next >= 14`, `typescript >= 5`.
+
+---
+
+## Auth prerequisite
+
+This package requires an OAuth session to authenticate mutations against the ATProto PDS. Authentication is handled entirely by `@gainforest/atproto-auth-next` — follow its README for full setup instructions:
+
+> **[→ @gainforest/atproto-auth-next README](../atproto-auth-next/README.md)**
+
+Once auth is set up you will have an `oauthClient` (`NodeOAuthClient`) and a `sessionConfig` (`SessionConfig`). Pass these to `makeUserAgentLayer` in [step 1 of Setup](#1-create-an-agent-layer) below.
 
 ---
 
