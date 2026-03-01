@@ -1,0 +1,24 @@
+"use client";
+
+import { useModal } from "@/components/ui/modal/context";
+import { ModalContent, ModalTitle, ModalDescription } from "@/components/ui/modal/modal";
+import { LoginModal } from "./LoginModal";
+
+export function AuthModal() {
+  const { hide, clear } = useModal();
+
+  const handleClose = async () => {
+    await hide();
+    clear();
+  };
+
+  return (
+    <ModalContent dismissible className="py-2">
+      <ModalTitle className="sr-only">Sign in to Bumicerts</ModalTitle>
+      <ModalDescription className="sr-only">
+        Sign in with your ATProto handle to access Bumicerts.
+      </ModalDescription>
+      <LoginModal onClose={handleClose} />
+    </ModalContent>
+  );
+}

@@ -20,6 +20,10 @@
     "indexer:docker:down": "bun run --cwd apps/indexer docker:down",
     "indexer:docker:reset": "bun run --cwd apps/indexer docker:reset",
     "indexer:typecheck": "bun run --cwd apps/indexer typecheck",
+    "bumicerts:dev": "bun run --cwd apps/bumicerts dev",
+    "bumicerts:build": "bun run --cwd apps/bumicerts build",
+    "bumicerts:start": "bun run --cwd apps/bumicerts start",
+    "bumicerts:typecheck": "bun run --cwd apps/bumicerts typecheck",
     "changeset": "changeset",
     "version": "changeset version",
     "release": "bun run build && changeset publish"

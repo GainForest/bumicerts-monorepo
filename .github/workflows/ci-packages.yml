@@ -1,0 +1,64 @@
+name: CI - Packages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/**'
+      - 'GENERATED/**'
+      - 'package.json'
+      - 'bun.lock'
+  pull_request:
+    paths:
+      - 'packages/**'
+      - 'GENERATED/**'
+      - 'package.json'
+      - 'bun.lock'
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate types
+        run: bun run gen:types
+
+      - name: Build packages
+        run: bun run build
+
+      - name: Typecheck packages
+        run: |
+          cd packages/atproto-mutations-core && bun run typecheck
+          cd ../atproto-mutations-next && bun run typecheck
+          cd ../atproto-auth-next && bun run typecheck
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate types
+        run: bun run gen:types
+
+      - name: Build packages
+        run: bun run build
+
+      - name: Run tests
+        run: bun test
+        env:
+          CI: true

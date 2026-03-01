@@ -1,0 +1,30 @@
+# Auto-label PRs based on changed paths
+# Used by .github/workflows/labeler.yml
+
+app:bumicerts:
+  - changed-files:
+      - any-glob-to-any-file: 'apps/bumicerts/**'
+
+app:indexer:
+  - changed-files:
+      - any-glob-to-any-file: 'apps/indexer/**'
+
+pkg:auth-next:
+  - changed-files:
+      - any-glob-to-any-file: 'packages/atproto-auth-next/**'
+
+pkg:mutations-core:
+  - changed-files:
+      - any-glob-to-any-file: 'packages/atproto-mutations-core/**'
+
+pkg:mutations-next:
+  - changed-files:
+      - any-glob-to-any-file: 'packages/atproto-mutations-next/**'
+
+generated:
+  - changed-files:
+      - any-glob-to-any-file: 'GENERATED/**'
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file: '.github/**'

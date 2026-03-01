@@ -16,6 +16,7 @@ Monorepo of GainForest's ATProto packages and apps — OAuth authentication, typ
 
 | App | Description |
 |---|---|
+| [`@gainforest/bumicerts`](apps/bumicerts/README.md) | Bumicerts — Next.js app for creating and managing environmental impact certificates. Uses auth-next and mutations-next packages. |
 | [`@gainforest/indexer`](apps/indexer/README.md) | AT Protocol indexer — connects to a self-hosted Tap relay, indexes GainForest lexicon records from all PDSes, stores them in PostgreSQL, and serves a namespace-grouped GraphQL API. |
 
 ## Getting started
@@ -45,6 +46,7 @@ atproto-packages/
 │   ├── atproto-mutations-next/  # @gainforest/atproto-mutations-next
 │   └── internal-utils/          # @gainforest/internal-utils (private)
 ├── apps/                        # deployable services
+│   ├── bumicerts/               # @gainforest/bumicerts — Next.js app
 │   └── indexer/                 # @gainforest/indexer — GraphQL indexer
 └── GENERATED/
     ├── lexicons/                # SINGLE SOURCE OF TRUTH for all lexicons (committed)
@@ -124,6 +126,14 @@ bun run indexer:dev       # start indexer with file-watching
 bun run indexer:setup     # docker:up + db:migrate (first time)
 bun run indexer:migrate   # apply DB migrations
 bun run indexer:typecheck # type-check the indexer
+```
+
+### Bumicerts development
+
+```bash
+bun run bumicerts:dev       # start Next.js dev server on port 3001
+bun run bumicerts:build     # production build
+bun run bumicerts:typecheck # type-check the app
 ```
 
 ### Run tests

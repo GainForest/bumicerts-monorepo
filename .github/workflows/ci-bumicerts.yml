@@ -1,0 +1,44 @@
+name: CI - Bumicerts
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/bumicerts/**'
+      - 'packages/**'  # Rebuild if packages change
+      - 'GENERATED/**'
+  pull_request:
+    paths:
+      - 'apps/bumicerts/**'
+      - 'packages/**'
+      - 'GENERATED/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate types
+        run: bun run gen:types
+
+      - name: Build packages (dependencies)
+        run: bun run build
+
+      - name: Typecheck bumicerts
+        run: bun run typecheck
+        working-directory: apps/bumicerts
+
+      - name: Build bumicerts
+        run: bun run build
+        working-directory: apps/bumicerts
+        env:
+          # Add any required env vars for build
+          NEXT_PUBLIC_APP_URL: https://bumicerts.example.com
