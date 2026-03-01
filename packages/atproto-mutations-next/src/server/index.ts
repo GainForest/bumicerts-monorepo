@@ -4,11 +4,10 @@ import { AtprotoAgent } from "@gainforest/atproto-mutations-core";
 import { getSession } from "@gainforest/atproto-auth-next/server";
 import type { NodeOAuthClient } from "@gainforest/atproto-auth-next";
 import type { SessionConfig } from "@gainforest/atproto-auth-next/server";
+import type { AuthSetup } from "@gainforest/atproto-auth-next";
+import type { AtprotoDid } from "@atproto/did";
 
-export type UserAgentConfig = {
-  oauthClient: NodeOAuthClient;
-  sessionConfig: SessionConfig;
-};
+// ─── Error types ──────────────────────────────────────────────────────────────
 
 export class UnauthorizedError extends Data.TaggedError("UnauthorizedError")<{
   message?: string;
@@ -18,20 +17,52 @@ export class SessionExpiredError extends Data.TaggedError("SessionExpiredError")
   message?: string;
 }> {}
 
+// ─── makeUserAgentLayer ───────────────────────────────────────────────────────
+
+/**
+ * Low-level config accepted by makeUserAgentLayer.
+ * Use this when you are constructing the OAuth client manually.
+ */
+export type UserAgentConfig = {
+  oauthClient: NodeOAuthClient;
+  sessionConfig: SessionConfig;
+};
+
 /**
  * Build an AtprotoAgent Layer from the current user's OAuth session stored in
  * Next.js iron-session cookies.
  *
- * Fails with UnauthorizedError when no session exists, or SessionExpiredError
- * when the stored DID can no longer be restored from the OAuth client.
+ * Accepts either:
+ *   - An `AuthSetup` object from `createAuthSetup()` — the recommended pattern
+ *   - A `{ oauthClient, sessionConfig }` object — for manual / advanced setups
+ *
+ * Fails with:
+ *   - `UnauthorizedError` — no session cookie / user is not logged in
+ *   - `SessionExpiredError` — session exists but OAuth tokens could not be restored
+ *
+ * @example
+ * // Recommended — pass auth directly from createAuthSetup()
+ * import { auth } from "@/lib/auth";
+ * import { makeUserAgentLayer } from "@gainforest/atproto-mutations-next/server";
+ *
+ * export function getUserAgentLayer() {
+ *   return makeUserAgentLayer(auth);
+ * }
+ *
+ * @example
+ * // Advanced — pass individual primitives
+ * makeUserAgentLayer({ oauthClient: auth.oauthClient, sessionConfig: auth.sessionConfig })
  */
 export function makeUserAgentLayer(
-  config: UserAgentConfig
+  config: AuthSetup | UserAgentConfig
 ): Layer.Layer<AtprotoAgent, UnauthorizedError | SessionExpiredError> {
+  // Both AuthSetup and UserAgentConfig expose oauthClient and sessionConfig directly.
+  const { oauthClient, sessionConfig } = config;
+
   return Layer.effect(
     AtprotoAgent,
     Effect.gen(function* () {
-      const session = yield* Effect.promise(() => getSession(config.sessionConfig));
+      const session = yield* Effect.promise(() => getSession(sessionConfig));
 
       if (!session.isLoggedIn) {
         return yield* Effect.fail(
@@ -39,8 +70,10 @@ export function makeUserAgentLayer(
         );
       }
 
+      // session.did is a plain string; oauthClient.restore() expects AtprotoDid
+      // (a branded string). The value is always a valid DID at runtime.
       const oauthSession = yield* Effect.tryPromise({
-        try: () => config.oauthClient.restore(session.did),
+        try: () => oauthClient.restore(session.did as AtprotoDid),
         catch: (cause) =>
           new SessionExpiredError({
             message: `Failed to restore OAuth session for ${session.did}: ${String(cause)}`,
@@ -57,6 +90,8 @@ export function makeUserAgentLayer(
     })
   );
 }
+
+// ─── makeServiceAgentLayer ────────────────────────────────────────────────────
 
 /**
  * Build an AtprotoAgent Layer from a pre-constructed Agent instance.

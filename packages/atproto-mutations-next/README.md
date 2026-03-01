@@ -49,7 +49,7 @@ This package requires an OAuth session to authenticate mutations against the ATP
 
 > **[→ @gainforest/atproto-auth-next README](../atproto-auth-next/README.md)**
 
-Once auth is set up you will have an `oauthClient` (`NodeOAuthClient`) and a `sessionConfig` (`SessionConfig`). Pass these to `makeUserAgentLayer` in [step 1 of Setup](#1-create-an-agent-layer) below.
+Once auth is set up you will have an `auth` object from `createAuthSetup()`. Pass it directly to `makeUserAgentLayer(auth)` in [step 1 of Setup](#1-create-an-agent-layer) below.
 
 ---
 
@@ -94,22 +94,23 @@ The agent layer is passed **explicitly at call time** — there are no hidden `p
 
 ### 1. Create an agent layer
 
-In a server module (e.g. `lib/auth.ts` or `lib/agent.ts`):
+`makeUserAgentLayer` accepts an `auth` object directly from `createAuthSetup()`. Call it per request inside a server module (e.g. in a server action or route handler) — not at module init time, because it reads the session cookie on each call.
 
 ```ts
-// lib/agent.ts  (server-only)
+// lib/mutations.ts  (server-only)
 import { makeUserAgentLayer } from "@gainforest/atproto-mutations-next/server";
-import { oauthClient } from "./oauth";         // your NodeOAuthClient
-import { sessionConfig } from "./session";     // your iron-session SessionConfig
+import { auth } from "@/lib/auth";   // your createAuthSetup() output
 
 export function getUserAgentLayer() {
-  return makeUserAgentLayer({ oauthClient, sessionConfig });
+  return makeUserAgentLayer(auth);   // reads cookie + restores OAuth session
 }
 ```
 
 `makeUserAgentLayer` reads the user's DID from the iron-session cookie and restores the OAuth session. It fails with:
 - `UnauthorizedError` — no session / user is not logged in
-- `SessionExpiredError` — session exists but OAuth token could not be restored
+- `SessionExpiredError` — session exists but OAuth tokens could not be restored
+
+> **Advanced:** If you construct the OAuth client manually, you can also pass `{ oauthClient, sessionConfig }` instead of the full `auth` object.
 
 ### 2. Create the mutations namespace
 
@@ -118,9 +119,10 @@ Create the namespace **once** in a server module. Do not call `createMutations` 
 ```ts
 // lib/mutations.ts  (server-only)
 import { createMutations } from "@gainforest/atproto-mutations-next/client";
-import { getUserAgentLayer } from "./agent";
+import { makeUserAgentLayer } from "@gainforest/atproto-mutations-next/server";
+import { auth } from "@/lib/auth";
 
-export const mutations = createMutations(getUserAgentLayer());
+export const mutations = createMutations(makeUserAgentLayer(auth));
 ```
 
 ### 3. Use in client components
@@ -181,10 +183,11 @@ import {
   upsertOrganizationInfoAction,
   setDefaultSiteAction,
 } from "@gainforest/atproto-mutations-next/actions";
-import { getUserAgentLayer } from "~/lib/agent";
+import { makeUserAgentLayer } from "@gainforest/atproto-mutations-next/server";
+import { auth } from "@/lib/auth";
 
 export async function POST(req: Request) {
-  const agentLayer = getUserAgentLayer();
+  const agentLayer = makeUserAgentLayer(auth);
   const body = await req.json();
 
   const orgResult = await upsertOrganizationInfoAction(body.org, agentLayer);

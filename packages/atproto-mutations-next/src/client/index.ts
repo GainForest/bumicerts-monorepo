@@ -18,11 +18,9 @@
 //
 //   import { createMutations } from "@gainforest/atproto-mutations-next/client";
 //   import { makeUserAgentLayer } from "@gainforest/atproto-mutations-next/server";
-//   import { oauthClient, sessionConfig } from "./auth";
+//   import { auth } from "@/lib/auth";   // your createAuthSetup() output
 //
-//   export const mutations = createMutations(
-//     makeUserAgentLayer({ oauthClient, sessionConfig })
-//   );
+//   export const mutations = createMutations(makeUserAgentLayer(auth));
 //
 // Then in a client component:
 //
