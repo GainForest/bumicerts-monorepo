@@ -1,0 +1,90 @@
+# syntax=docker/dockerfile:1
+#
+# Railway-optimized Dockerfile for @gainforest/indexer
+#
+# This Dockerfile generates TypeScript types from lexicons during build,
+# so you only need to commit lexicons (GENERATED/lexicons/) to git.
+#
+# Build context must be the MONOREPO ROOT (atproto-packages/), not this directory.
+#
+# Build:
+#   docker build -f apps/indexer/Dockerfile.railway -t gainforest-indexer .
+#
+# Run:
+#   docker run --env-file apps/indexer/.env gainforest-indexer
+
+# ─────────────────────────────────────────────────────────────
+# Stage 1: Generate types from lexicons
+# ─────────────────────────────────────────────────────────────
+FROM oven/bun:1.2-alpine AS codegen
+
+WORKDIR /repo
+
+# Install lex CLI globally (needed for type generation)
+RUN bun install -g @atproto/lex
+
+# Copy workspace manifests
+COPY package.json bun.lock* ./
+COPY GENERATED/package.json GENERATED/
+COPY apps/indexer/package.json apps/indexer/
+
+# Install root dependencies (needed for codegen scripts)
+RUN bun install --frozen-lockfile
+
+# Copy lexicons and codegen scripts
+COPY GENERATED/lexicons/ GENERATED/lexicons/
+COPY GENERATED/scripts/ GENERATED/scripts/
+
+# Generate types into GENERATED/types/
+RUN bun run gen:types
+
+# Generate indexer-specific files:
+#   - apps/indexer/src/generated/ (TypeScript types)
+#   - apps/indexer/src/tap/collections.ts (collection list)
+#   - apps/indexer/src/tap/validation.ts (validators)
+RUN bun run gen:indexer
+
+# ─────────────────────────────────────────────────────────────
+# Stage 2: Install indexer dependencies
+# ─────────────────────────────────────────────────────────────
+FROM oven/bun:1.2-alpine AS builder
+
+WORKDIR /repo
+
+# Copy workspace manifests
+COPY package.json bun.lock* ./
+COPY apps/indexer/package.json apps/indexer/
+COPY apps/indexer/patches/ apps/indexer/patches/
+
+# Install only the indexer's dependencies (hoisted into /repo/node_modules)
+RUN bun install --frozen-lockfile --filter @gainforest/indexer
+
+# Copy generated types from stage 1
+COPY --from=codegen /repo/apps/indexer/src/generated/ apps/indexer/src/generated/
+COPY --from=codegen /repo/apps/indexer/src/tap/collections.ts apps/indexer/src/tap/collections.ts
+COPY --from=codegen /repo/apps/indexer/src/tap/validation.ts apps/indexer/src/tap/validation.ts
+
+# Copy the rest of the indexer source
+COPY apps/indexer/src/ apps/indexer/src/
+COPY apps/indexer/tsconfig.json apps/indexer/
+
+# ─────────────────────────────────────────────────────────────
+# Stage 3: Minimal runtime image
+# ─────────────────────────────────────────────────────────────
+FROM oven/bun:1.2-alpine AS runtime
+
+WORKDIR /app
+
+# Copy only what's needed to run the indexer
+COPY --from=builder /repo/node_modules/ ./node_modules/
+COPY --from=builder /repo/apps/indexer/src/ ./src/
+COPY --from=builder /repo/apps/indexer/tsconfig.json ./
+
+# Health check — polls the /health endpoint
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget -qO- http://localhost:${HEALTH_PORT:-4001}/health | grep -q '"status":"ok"' || exit 1
+
+EXPOSE 4000
+EXPOSE 4001
+
+CMD ["bun", "run", "src/index.ts"]

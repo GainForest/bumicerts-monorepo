@@ -1,0 +1,45 @@
+# Railway Ignore File
+# Tells Railway which files NOT to upload during deployment
+# This speeds up builds and reduces cache size
+
+# Development files
+.env.local
+.env.*.local
+.env.test-credentials
+*.tgz
+.DS_Store
+
+# Documentation (not needed for runtime)
+*.md
+!README.md
+
+# Git
+.git/
+.github/
+
+# Other app directories (we only need indexer)
+apps/bumicerts/
+
+# Packages (not used by indexer runtime)
+packages/
+
+# Generated types (will be generated during build)
+GENERATED/types/
+apps/indexer/src/generated/
+apps/indexer/src/tap/collections.ts
+apps/indexer/src/tap/validation.ts
+
+# Build artifacts
+dist/
+.turbo/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Misc
+.changeset/
+patches/
