@@ -53,15 +53,15 @@ The indexer's job is to filter, validate, and store whatever Tap delivers.
 
 | Namespace | Collections |
 |-----------|-------------|
+| `app.certified.*` | `actor.profile`, `badge.award`, `badge.definition`, `badge.response`, `location` |
 | `app.gainforest.dwc.*` | `event`, `measurement`, `occurrence` |
 | `app.gainforest.evaluator.*` | `evaluation`, `service`, `subscription` |
 | `app.gainforest.organization.*` | `defaultSite`, `info`, `layer`, `observations.dendogram`, `observations.fauna`, `observations.flora`, `observations.measuredTreesCluster`, `predictions.fauna`, `predictions.flora`, `recordings.audio` |
-| `org.hypercerts.claim.*` | `activity`, `collection`, `contribution`, `evaluation`, `evidence`, `measurement`, `project`, `rights` |
+| `org.hypercerts.claim.*` | `activity`, `attachment`, `collection`, `contributionDetails`, `contributorInformation`, `evaluation`, `measurement`, `rights` |
 | `org.hypercerts.funding.*` | `receipt` |
+| `org.hypercerts.helper.*` | `workScopeTag` |
 | `org.impactindexer.link.*` | `attestation` |
 | `org.impactindexer.review.*` | `comment`, `like` |
-
-> `app.certified.*` is excluded — those lexicons use a mixed-type union field that `@atproto/lex` cannot generate valid TypeScript for.
 
 ---
 
@@ -72,7 +72,7 @@ The indexer's job is to filter, validate, and store whatever Tap delivers.
 
 ---
 
-## First-time setup
+## First-time setup (local development)
 
 ### 1. Install dependencies
 
@@ -122,7 +122,7 @@ docker compose ps
 And confirm the schema was applied by connecting to the database:
 
 ```bash
-docker exec -it gainforest-indexer-db-1 psql -U gainforest -d gainforest_indexer -c '\dt'
+docker exec -it gainforest_db psql -U gainforest -d gainforest_indexer -c '\dt'
 ```
 
 ### 4. Generate TypeScript types from lexicons
@@ -172,6 +172,124 @@ curl http://localhost:4001/stats               # combined indexer + Tap stats
 ```
 
 The **GraphQL API** is available immediately at **`http://localhost:4000/graphql`** — even while backfill is in progress, you can query whatever has already been indexed. Explore the schema interactively via [Apollo Sandbox](https://studio.apollo.dev/sandbox/explorer) by pointing it at that URL.
+
+---
+
+## Production deployment
+
+The indexer is designed to run as a standalone Docker container, with only itself and its dependencies — no need for the rest of the monorepo at runtime.
+
+### Building the production image
+
+From the **monorepo root** (`atproto-packages/`):
+
+```bash
+docker build -f apps/indexer/Dockerfile -t gainforest-indexer .
+```
+
+The multi-stage Dockerfile:
+1. **Stage 1 (builder)** — installs only the indexer's dependencies via `--filter @gainforest/indexer`, copies lexicons and source
+2. **Stage 2 (runtime)** — copies only `node_modules/`, `src/`, and `tsconfig.json` into a minimal Alpine image
+
+Final image size is ~150MB (Alpine + Bun + dependencies).
+
+### Minimal production compose
+
+Create a `docker-compose.prod.yml` for your production environment:
+
+```yaml
+services:
+  indexer:
+    image: gainforest-indexer:latest
+    restart: unless-stopped
+    ports:
+      - "4000:4000"   # GraphQL
+      - "4001:4001"   # Health
+    environment:
+      DATABASE_URL: postgres://user:pass@your-db-host:5432/gainforest_indexer
+      TAP_URL: http://tap:2480
+      TAP_ADMIN_PASSWORD: ${TAP_ADMIN_PASSWORD}
+      SEED_PDSS: https://climateai.org
+      # SEED_DIDS: did:plc:abc123,did:plc:xyz456
+      VALIDATE_RECORDS: "true"
+      LOG_LEVEL: info
+    depends_on:
+      - tap
+
+  tap:
+    image: ghcr.io/bluesky-social/indigo/tap:latest
+    restart: unless-stopped
+    ports:
+      - "2480:2480"
+    volumes:
+      - tap_data:/data
+    environment:
+      TAP_DATABASE_URL: sqlite:///data/tap.db
+      TAP_BIND: ":2480"
+      TAP_SIGNAL_COLLECTION: org.hypercerts.claim.activity
+      TAP_COLLECTION_FILTERS: "app.gainforest.*,org.hypercerts.*,org.impactindexer.*,app.certified.*"
+      TAP_ADMIN_PASSWORD: ${TAP_ADMIN_PASSWORD}
+      TAP_LOG_LEVEL: info
+
+volumes:
+  tap_data:
+```
+
+For PostgreSQL, either:
+- Add a `db` service to the compose file, or
+- Use a managed database (Railway, Supabase, RDS, etc.) and set `DATABASE_URL` accordingly
+
+### Deploying without the monorepo
+
+If you don't want to clone the whole monorepo on your server:
+
+**Option A: Build locally, push to registry**
+
+```bash
+# On your dev machine (from monorepo root)
+docker build -f apps/indexer/Dockerfile -t your-registry/gainforest-indexer:latest .
+docker push your-registry/gainforest-indexer:latest
+
+# On your server
+docker pull your-registry/gainforest-indexer:latest
+docker compose -f docker-compose.prod.yml up -d
+```
+
+**Option B: CI/CD pipeline**
+
+Add to your GitHub Actions or similar:
+
+```yaml
+- name: Build and push indexer
+  uses: docker/build-push-action@v5
+  with:
+    context: .
+    file: apps/indexer/Dockerfile
+    push: true
+    tags: ghcr.io/gainforest/indexer:latest
+```
+
+### Resource recommendations
+
+| Component | Minimum | Recommended |
+|-----------|---------|-------------|
+| Indexer | 256MB RAM, 0.5 CPU | 512MB RAM, 1 CPU |
+| Tap | 256MB RAM, 0.5 CPU | 512MB RAM, 1 CPU |
+| PostgreSQL | 512MB RAM, 1 CPU | 2GB RAM, 2 CPU |
+
+Disk: Tap uses ~10MB per 10K repos in SQLite. PostgreSQL grows with record count — expect ~1KB per record average.
+
+### Health checks
+
+The indexer exposes health endpoints for orchestration:
+
+```
+GET /health   → 200 { "status": "ok" }           # always ok if process is up
+GET /ready    → 200 { "ready": true, ... }       # 503 if not connected to Tap
+GET /stats    → 200 { indexer stats + Tap stats }
+```
+
+Use `/ready` for Kubernetes readiness probes or load balancer health checks.
 
 ---
 
@@ -255,7 +373,7 @@ If you only want to clear the PostgreSQL records — for instance, to re-index f
 # Stop the indexer (Ctrl+C if running in dev mode)
 
 # Drop and recreate just the database
-docker exec -it gainforest-indexer-db-1 psql -U gainforest -d postgres \
+docker exec -it gainforest_db psql -U gainforest -d postgres \
   -c "DROP DATABASE gainforest_indexer;" \
   -c "CREATE DATABASE gainforest_indexer;"
 
@@ -278,14 +396,14 @@ Then restart the indexer — Tap will backfill everything from scratch into the 
 To clear only specific tables without dropping the whole database — for example, to re-index records while keeping cached PDS host mappings and quality labels:
 
 ```bash
-docker exec -it gainforest-indexer-db-1 psql -U gainforest -d gainforest_indexer \
+docker exec -it gainforest_db psql -U gainforest -d gainforest_indexer \
   -c "TRUNCATE TABLE records RESTART IDENTITY CASCADE;"
 ```
 
 Or to also clear the PDS host cache (e.g. after bulk PDS migrations):
 
 ```bash
-docker exec -it gainforest-indexer-db-1 psql -U gainforest -d gainforest_indexer \
+docker exec -it gainforest_db psql -U gainforest -d gainforest_indexer \
   -c "TRUNCATE TABLE records, pds_hosts RESTART IDENTITY CASCADE;"
 ```
 
@@ -467,6 +585,14 @@ The `activities` query additionally accepts:
 
 ```graphql
 query {
+  certified {
+    locations(limit: 20) { ... }
+    actorProfiles(limit: 20) { ... }
+    badgeDefinitions(limit: 20) { ... }
+    badgeAwards(limit: 20) { ... }
+    badgeResponses(limit: 20) { ... }
+  }
+
   gainforest {
     dwc {
       occurrences(limit: 20, handle: "gainforest.bsky.social") {
@@ -510,8 +636,6 @@ query {
       pageInfo { endCursor hasNextPage }
     }
     collections(limit: 20) { ... }
-    contributions(limit: 20) { ... }
-    projects(limit: 20) { ... }
     fundingReceipts(limit: 20) { ... }
   }
 
@@ -649,6 +773,7 @@ atproto-packages/                              ← monorepo root
         │   ├── schema.ts                      # Assembles the full GraphQL schema
         │   ├── server.ts                      # GraphQL Yoga HTTP server
         │   └── resolvers/
+        │       ├── certified.ts               # certified { ... } namespace
         │       ├── gainforest.ts              # gainforest { dwc evaluator organization } namespace
         │       ├── hypercerts.ts              # hypercerts { ... } namespace (activities carry label field)
         │       ├── impactIndexer.ts           # impactIndexer { ... } namespace
@@ -665,7 +790,6 @@ atproto-packages/                              ← monorepo root
 ## Technical notes
 
 - **`exactOptionalPropertyTypes` is disabled** — required for compatibility with `@atproto/lex`-generated types.
-- **`app.certified.*` exclusion** — these four lexicons use a mixed-type union (string DID ref + object strongRef) that `@atproto/lex` cannot represent in valid TypeScript. Excluded via `EXCLUDED_COLLECTIONS` in `GENERATED/scripts/generate-collections.ts`.
 - **Tap's cursor lives in Tap, not in Postgres** — the `cursor` table in `schema.sql` is kept for potential rollback but is unused. Tap persists its own position in its SQLite database (`tap_data` Docker volume), so the indexer never needs to manage cursor state.
 - **Handle resolution** — `resolveActorToDid()` in `src/graphql/identity.ts` calls the public Bluesky AppView API. Results are cached in-process with a 10-minute TTL, bounded to 1000 entries.
 - **Label refresh strategy** — the `labels` table caches one quality tier per (subject DID, labeller DID) pair. After every `activities` query, `refreshLabelsAsync()` fires a non-blocking background request to the Hyperlabel API and upserts any updated labels. The caller always receives the current DB state with zero added latency; labels converge toward freshness on the next request.
