@@ -1,6 +1,6 @@
 "use server";
 
-import { allowedPDSDomains } from "@/lib/config/gainforest-sdk";
+import { allowedPDSDomains } from "@/lib/config/pds";
 import { NextRequest } from "next/server";
 import postgres from "postgres";
 

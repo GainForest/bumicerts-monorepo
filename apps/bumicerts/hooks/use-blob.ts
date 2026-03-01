@@ -1,15 +1,17 @@
-import { AllowedPDSDomain, allowedPDSDomains } from "@/lib/config/gainforest-sdk";
+import { AllowedPDSDomain } from "@/lib/config/pds";
 import { useQuery } from "@tanstack/react-query";
-import { OrgHypercertsDefs } from "gainforest-sdk/lex-api";
-import { getBlobUrl } from "gainforest-sdk/utilities/atproto";
-import { BlobRef, BlobRefGenerator } from "gainforest-sdk/zod";
-import React from "react";
+import {
+  getBlobUrl,
+  type BlobRef,
+  type BlobRefGenerator,
+  type SmallImage,
+  type LargeImage,
+  type SmallBlob,
+  type LargeBlob,
+  type BlobInput,
+} from "@/lib/atproto/blobs";
 import { debug } from "@/lib/logger";
 
-type SmallImage = OrgHypercertsDefs.SmallImage;
-type LargeImage = OrgHypercertsDefs.LargeImage;
-type SmallBlob = OrgHypercertsDefs.SmallBlob;
-type LargeBlob = OrgHypercertsDefs.LargeBlob;
 type BlobUrl =
   `https://${AllowedPDSDomain}/xrpc/com.atproto.sync.getBlob?did=${string}&cid=${string}`;
 
@@ -18,15 +20,7 @@ const useBlob = ({
   did,
   pdsDomain,
 }: {
-  blob:
-    | BlobRef
-    | BlobRefGenerator
-    | BlobUrl
-    | SmallImage
-    | LargeImage
-    | SmallBlob
-    | LargeBlob
-    | undefined;
+  blob: BlobInput | BlobUrl | undefined;
   did: string | undefined;
   pdsDomain: AllowedPDSDomain;
 }) => {
@@ -34,7 +28,7 @@ const useBlob = ({
     typeof blob === "string"
       ? blob
       : did && blob
-      ? getBlobUrl(did, blob, pdsDomain)
+      ? getBlobUrl(did, blob as BlobInput, pdsDomain)
       : null;
   const { data, isPending, error, isPlaceholderData } = useQuery({
     queryKey: ["blob", blob],

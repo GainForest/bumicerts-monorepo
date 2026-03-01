@@ -32,11 +32,16 @@ import {
   allowedPDSDomains,
   defaultPdsDomain,
   type AllowedPDSDomain,
-} from "@/lib/config/gainforest-sdk";
-import { gainforestSdk } from "@/lib/config/gainforest-sdk.server";
+} from "@/lib/config/pds";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { checkRateLimit, recordRateLimitAttempt, getClientIp, RATE_LIMITS } from "@/lib/rate-limit";
 import { organizationInfoSchema } from "./schema";
+import { Effect } from "effect";
+import {
+  mutations,
+  makeCredentialAgentLayer,
+  toSerializableFile,
+} from "@gainforest/atproto-mutations-next";
 
 const VALID_OBJECTIVES = ["Conservation", "Research", "Education", "Community", "Other"] as const;
 type Objective = (typeof VALID_OBJECTIVES)[number];
@@ -53,7 +58,7 @@ const requestSchema = z.object({
     .optional()
     .default(defaultPdsDomain)
     .refine(
-      (value) => (allowedPDSDomains as string[]).includes(value),
+      (value) => ([...allowedPDSDomains] as string[]).includes(value),
       { message: "Unsupported pdsDomain" }
     ),
   displayName: z.string().min(1).max(100),
@@ -307,31 +312,40 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Step 5: Initialize organization using SDK's onboard method
+    // Step 5: Initialize organization using mutations package
     let organizationInitialized = false;
     try {
-      const apiCaller = gainforestSdk.getServerCaller();
-      await apiCaller.miscellaneous.onboard({
-        credentials: {
-          did,
-          handle: fullHandle,
-          accessJwt,
-          refreshJwt,
-        },
-        pdsDomain: pdsDomain as AllowedPDSDomain,
-        info: {
-          displayName: orgInfo.displayName,
-          shortDescription: orgInfo.shortDescription,
-          longDescription: plainTextToLinearDocument(orgInfo.longDescription),
-          objectives: parsed.data.objectives,
-          country: orgInfo.country,
-          visibility: "Public",
-          website: orgInfo.website || undefined,
-          // SDK expects full ISO datetime, convert date-only to datetime
-          startDate: orgInfo.startDate ? `${orgInfo.startDate}T00:00:00.000Z` : undefined,
-        },
-        uploads: logoUpload ? { logo: logoUpload } : undefined,
+      // Create a credential-based agent layer for the new account
+      const agentLayer = makeCredentialAgentLayer({
+        service: `https://${pdsDomain}`,
+        identifier: did,
+        password: password, // Use the password directly for credential auth
       });
+
+      // Prepare logo as SerializableFile if provided
+      let logoInput: Awaited<ReturnType<typeof toSerializableFile>> | undefined;
+      if (logoFile && logoFile.size > 0) {
+        logoInput = await toSerializableFile(logoFile);
+      }
+
+      // Create organization info record using Effect-based API
+      const program = mutations.organization.info.upsert({
+        displayName: orgInfo.displayName,
+        shortDescription: { text: orgInfo.shortDescription },
+        longDescription: plainTextToLinearDocument(orgInfo.longDescription),
+        objectives: parsed.data.objectives,
+        country: orgInfo.country,
+        visibility: "Public",
+        website: orgInfo.website as `${string}:${string}` | undefined,
+        startDate: orgInfo.startDate ? `${orgInfo.startDate}T00:00:00.000Z` as `${string}-${string}-${string}T${string}:${string}:${string}Z` : undefined,
+        logo: logoInput ? { image: logoInput } : undefined,
+      });
+
+      // Run the Effect with the credential layer
+      await Effect.runPromise(
+        program.pipe(Effect.provide(agentLayer))
+      );
+
       organizationInitialized = true;
     } catch (error) {
       // If org creation fails, log it but don't fail the request

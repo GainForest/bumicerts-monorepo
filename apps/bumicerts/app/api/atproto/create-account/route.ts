@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { headers } from "next/headers";
 import postgres from "postgres";
-import { allowedPDSDomains } from "@/lib/config/gainforest-sdk";
+import { allowedPDSDomains } from "@/lib/config/pds";
 import { env } from "process";
 import { checkRateLimit, recordRateLimitAttempt } from "@/lib/rate-limit";
 

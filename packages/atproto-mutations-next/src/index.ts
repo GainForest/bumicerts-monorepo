@@ -145,3 +145,7 @@ export {
   computePolygonMetrics,
 } from "@gainforest/atproto-mutations-core";
 export type { PolygonMetrics } from "@gainforest/atproto-mutations-core";
+
+// AT URI utilities — safe everywhere
+export { parseAtUri } from "@gainforest/internal-utils";
+export type { AtUri } from "@gainforest/internal-utils";

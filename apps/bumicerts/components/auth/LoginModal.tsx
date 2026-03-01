@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRightIcon, LoaderIcon } from "lucide-react";
 import { authorize } from "@/components/actions/oauth";
-import { allowedPDSDomains } from "@/lib/config/gainforest-sdk";
+import { allowedPDSDomains } from "@/lib/config/pds";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";

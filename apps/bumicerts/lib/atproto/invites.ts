@@ -22,7 +22,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { AllowedPDSDomain } from "@/lib/config/gainforest-sdk";
+import type { AllowedPDSDomain } from "@/lib/config/pds";
 
 interface InviteCodeError extends Error {
   status: number;

@@ -1,9 +1,11 @@
 import { Suspense } from "react";
-import { gainforestSdk } from "@/lib/config/gainforest-sdk.server";
-import { allowedPDSDomains } from "@/lib/config/gainforest-sdk";
-import { tryCatch } from "@/lib/tryCatch";
-import { claimsToBumicertDataArray } from "@/lib/adapters";
-import { serialize, type SerializedSuperjson } from "gainforest-sdk/utilities/transform";
+import { graphqlClient } from "@/lib/graphql/client";
+import { ExploreActivitiesQuery } from "@/lib/graphql/queries";
+import {
+  activitiesToBumicertDataArray,
+  type GraphQLHcActivity,
+  type GraphQLOrgInfo,
+} from "@/lib/adapters";
 import type { BumicertData } from "@/lib/types";
 import { ExploreClient } from "./_components/ExploreClient";
 
@@ -14,17 +16,33 @@ export const metadata = {
 };
 
 export default async function ExplorePage() {
-  const caller = gainforestSdk.getServerCaller();
+  let initialBumicerts: BumicertData[] = [];
 
-  const [data, error] = await tryCatch(
-    caller.hypercerts.claim.activity.getAllAcrossOrgs({
-      pdsDomain: allowedPDSDomains[0],
-    })
-  );
+  try {
+    const response = await graphqlClient.request(ExploreActivitiesQuery, {
+      limit: 1000,
+      labelTier: "high-quality",
+    });
 
-  // Build initial bumicerts for SSR (SEO + first paint)
-  // On error, we pass an empty array — the client will retry via tRPC
-  const initialBumicerts = error ? [] : claimsToBumicertDataArray(data as Parameters<typeof claimsToBumicertDataArray>[0]);
+    // Extract activities and org infos from the response
+    const activities = (response.hypercerts?.activities?.records ?? []) as GraphQLHcActivity[];
+    const orgInfos = (response.gainforest?.organization?.infos?.records ?? []) as GraphQLOrgInfo[];
+
+    // Build a map of org info by DID for quick lookup
+    const orgInfoByDid = new Map<string, GraphQLOrgInfo>();
+    for (const org of orgInfos) {
+      const did = org.meta?.did;
+      if (did) {
+        orgInfoByDid.set(did, org);
+      }
+    }
+
+    // Transform to UI types
+    initialBumicerts = activitiesToBumicertDataArray(activities, orgInfoByDid);
+  } catch (error) {
+    // On error, pass an empty array — the client will retry via GraphQL
+    console.error("Failed to fetch initial bumicerts:", error);
+  }
 
   // Structured data for search engines
   const structuredData = {
@@ -37,8 +55,6 @@ export default async function ExplorePage() {
     url: "https://bumicerts.com/explore",
   };
 
-  const serialized: SerializedSuperjson<BumicertData[]> = serialize(initialBumicerts);
-
   return (
     <>
       <script
@@ -46,7 +62,7 @@ export default async function ExplorePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
       <Suspense>
-        <ExploreClient initialData={serialized} />
+        <ExploreClient initialData={initialBumicerts} />
       </Suspense>
     </>
   );

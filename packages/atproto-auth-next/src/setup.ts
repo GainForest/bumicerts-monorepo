@@ -133,6 +133,42 @@ export type AuthSetupConfig = {
   onLogout?: {
     redirectTo?: string;
   };
+
+  // ─── Optional: Branding / OAuth consent screen ───────────────────────────────
+  /**
+   * Logo URI shown on OAuth consent screens.
+   * e.g. "https://example.com/logo.png"
+   */
+  logoUri?: string;
+  /**
+   * Brand color (hex) for OAuth consent screens.
+   * e.g. "#2FCE8A"
+   */
+  brandColor?: string;
+  /**
+   * Background color (hex) for OAuth consent screens.
+   * e.g. "#FFFFFF"
+   */
+  backgroundColor?: string;
+  /**
+   * Email template URI for OTP emails (ePDS).
+   * e.g. "https://example.com/email-template.html"
+   */
+  emailTemplateUri?: string;
+  /**
+   * Email subject template for OTP emails (ePDS).
+   * Supports placeholders: {{code}}, {{app_name}}
+   * e.g. "{{code}} — Your {{app_name}} sign-in code"
+   */
+  emailSubjectTemplate?: string;
+  /**
+   * Terms of service URI.
+   */
+  tosUri?: string;
+  /**
+   * Privacy policy URI.
+   */
+  policyUri?: string;
 };
 
 // ─── Output types ─────────────────────────────────────────────────────────────
@@ -243,6 +279,14 @@ export function createAuthSetup(config: AuthSetupConfig): AuthSetup {
     epds: epdsConfig,
     onCallback,
     onLogout,
+    // Branding options
+    logoUri,
+    brandColor,
+    backgroundColor,
+    emailTemplateUri,
+    emailSubjectTemplate,
+    tosUri,
+    policyUri,
   } = config;
 
   // ─── URL resolution ─────────────────────────────────────────────────────────
@@ -311,6 +355,13 @@ export function createAuthSetup(config: AuthSetupConfig): AuthSetup {
     clientName,
     extraRedirectUris,
     scope,
+    logoUri,
+    brandColor,
+    backgroundColor,
+    emailTemplateUri,
+    emailSubjectTemplate,
+    tosUri,
+    policyUri,
   });
 
   const jwksHandler = createJwksHandler(privateKeyJwk);

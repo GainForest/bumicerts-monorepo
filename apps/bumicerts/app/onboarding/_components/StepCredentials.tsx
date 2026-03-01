@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { allowedPDSDomains } from "@/lib/config/gainforest-sdk";
+import { allowedPDSDomains } from "@/lib/config/pds";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { useDebounce } from "@/hooks/use-debounce";

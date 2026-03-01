@@ -7,7 +7,7 @@ import { ArrowLeft, ArrowRight, Loader2, Mail, RefreshCw, KeyRound } from "lucid
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { links } from "@/lib/links";
-import { defaultPdsDomain } from "@/lib/config/gainforest-sdk";
+import { defaultPdsDomain } from "@/lib/config/pds";
 
 type Phase = "email" | "code";
 

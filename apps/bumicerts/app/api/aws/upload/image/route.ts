@@ -1,8 +1,8 @@
-import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { type NextRequest, NextResponse } from "next/server";
 
 import { s3Client, S3_BUCKET } from "@/lib/config/s3";
-import { getAppSession } from "gainforest-sdk/oauth";
+import { auth } from "@/lib/auth";
 
 // Allowed image MIME types
 const ALLOWED_MIME_TYPES = [
@@ -34,8 +34,8 @@ type ErrorResponse = {
 export async function POST(
   request: NextRequest
 ): Promise<NextResponse<UploadResponse | ErrorResponse>> {
-  const session = await getAppSession();
-  if (!session.isLoggedIn || !session.did) {
+  const session = await auth.session.getSession();
+  if (!session.isLoggedIn) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

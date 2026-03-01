@@ -10,7 +10,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useRef, useState } from "react";
-import { allowedPDSDomains } from "@/lib/config/gainforest-sdk";
+import { allowedPDSDomains } from "@/lib/config/pds";
 import { motion } from "framer-motion";
 import { links } from "@/lib/links";
 import { useModal } from "@/components/ui/modal/context";

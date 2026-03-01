@@ -5,8 +5,12 @@ import {
   type RichTextRecord,
   type FacetFeature,
 } from "bsky-richtext-react";
-import type { AppGainforestCommonDefs, AppBskyRichtextFacet } from "gainforest-sdk/lex-api";
+import type { app } from "@gainforest/generated";
 import { cn } from "@/lib/utils";
+
+// Type aliases for cleaner code
+type Richtext = app.gainforest.common.defs.Richtext;
+type RichtextFacet = app.bsky.richtext.facet.Main;
 
 const customClassNames = {
   mention: "text-primary",
@@ -30,12 +34,11 @@ const KNOWN_FEATURE_TYPES = new Set([
 ]);
 
 /**
- * Type guard: checks whether an SDK facet feature is a known
- * bsky-richtext-react FacetFeature (mention, link, or tag).
+ * Type guard: checks whether a facet feature is a known type (mention, link, tag).
  */
 function isKnownFacetFeature(
-  f: AppBskyRichtextFacet.Main["features"][number]
-): f is FacetFeature {
+  f: { $type?: string }
+): boolean {
   return typeof f.$type === "string" && KNOWN_FEATURE_TYPES.has(f.$type);
 }
 
@@ -44,14 +47,14 @@ function isKnownFacetFeature(
  * by filtering facet features to known types (mention, link, tag).
  */
 export function toRichTextRecord(
-  richtext: AppGainforestCommonDefs.Richtext
+  richtext: Richtext
 ): RichTextRecord {
   return {
     text: richtext.text,
     facets: richtext.facets
       ?.map((facet) => ({
         index: facet.index,
-        features: facet.features.filter(isKnownFacetFeature),
+        features: facet.features.filter(isKnownFacetFeature) as FacetFeature[],
       }))
       .filter((facet) => facet.features.length > 0),
   };
@@ -62,12 +65,12 @@ export function toRichTextRecord(
  * features to known types. Use when you have facets separately from text.
  */
 export function toRichTextFacets(
-  facets: AppBskyRichtextFacet.Main[]
+  facets: RichtextFacet[]
 ): RichTextRecord["facets"] {
   return facets
     .map((facet) => ({
       index: facet.index,
-      features: facet.features.filter(isKnownFacetFeature),
+      features: facet.features.filter(isKnownFacetFeature) as FacetFeature[],
     }))
     .filter((facet) => facet.features.length > 0);
 }

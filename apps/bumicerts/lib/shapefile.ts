@@ -1,12 +1,11 @@
-import { getBlobUrl } from "gainforest-sdk/utilities/atproto";
-import { allowedPDSDomains } from "@/lib/config/gainforest-sdk";
-import { BlobRefGenerator, BlobRef } from "gainforest-sdk/zod";
+import { allowedPDSDomains } from "@/lib/config/pds";
+import { getBlobUrl, type BlobInput } from "@/lib/atproto/blobs";
 
 export const getShapefilePreviewUrl = (
   shapefile:
     | string
     | {
-        blob: BlobRef | BlobRefGenerator;
+        blob: BlobInput;
         did: string;
       }
 ) => {
@@ -14,7 +13,9 @@ export const getShapefilePreviewUrl = (
   if (typeof shapefile === "string") {
     return `${suffix}${encodeURIComponent(shapefile)}`;
   }
-  return `${suffix}${encodeURIComponent(
-    getBlobUrl(shapefile.did, shapefile.blob, allowedPDSDomains[0])
-  )}`;
+  const blobUrl = getBlobUrl(shapefile.did, shapefile.blob, allowedPDSDomains[0]);
+  if (!blobUrl) {
+    return `${suffix}`;
+  }
+  return `${suffix}${encodeURIComponent(blobUrl)}`;
 };
