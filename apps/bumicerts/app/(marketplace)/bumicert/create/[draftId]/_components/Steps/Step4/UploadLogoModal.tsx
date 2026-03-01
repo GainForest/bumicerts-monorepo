@@ -14,6 +14,7 @@ import { useModal } from "@/components/ui/modal/context";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toSerializableFile } from "@/lib/mutations-utils";
 import { updateOrganizationInfoAction } from "@/lib/actions/organizations";
+import { queryKeys } from "@/lib/query-keys";
 
 export const UploadLogoModalId = "upload/organization/logo";
 
@@ -44,8 +45,7 @@ export const UploadLogoModal = () => {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["org-logo"] });
-      queryClient.invalidateQueries({ queryKey: ["org-info"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.org.all() });
     },
   });
 

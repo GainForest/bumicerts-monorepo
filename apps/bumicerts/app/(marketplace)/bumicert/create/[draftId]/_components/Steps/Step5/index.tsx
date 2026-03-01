@@ -24,6 +24,7 @@ import Link from "next/link";
 import { toSerializableFile, parseAtUri } from "@/lib/mutations-utils";
 import type { SerializableFile } from "@/lib/mutations-utils";
 import { createBumicertAction } from "@/lib/actions/bumicerts";
+import { queryKeys } from "@/lib/query-keys";
 import { usePathname } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { trackBumicertPublished, getFlowDurationSeconds } from "@/lib/analytics/hotjar";
@@ -233,7 +234,7 @@ const Step5 = () => {
           // Invalidate drafts query to refresh the list
           if (auth.user?.did) {
             queryClient.invalidateQueries({
-              queryKey: ["drafts", auth.user.did],
+              queryKey: queryKeys.drafts.byDid(auth.user.did),
             });
           }
         } catch (error) {

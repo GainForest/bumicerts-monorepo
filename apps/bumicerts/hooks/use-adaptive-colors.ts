@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
+import { queryKeys } from "@/lib/query-keys";
 
 type ExtractedColors = {
   background: string;
@@ -21,7 +22,7 @@ export function useAdaptiveColors(imageSrc: string | null): AdaptiveColors {
       : { background: "#000000", foreground: "#FFFFFF" };
 
   const { data } = useQuery({
-    queryKey: ["adaptive-colors", imageSrc],
+    queryKey: queryKeys.adaptiveColors(imageSrc),
     queryFn: async (): Promise<ExtractedColors | null> => {
       if (!imageSrc) return null;
       const { extractColors } = await import("extract-colors");

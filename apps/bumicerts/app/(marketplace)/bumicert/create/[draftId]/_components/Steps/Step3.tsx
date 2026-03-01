@@ -29,6 +29,7 @@ import { ContributorSelector } from "./ContributorSelector";
 import QuerySuspense from "@/components/query-suspense";
 import { graphqlClient } from "@/lib/graphql/client";
 import { graphql } from "@/lib/graphql/tada";
+import { queryKeys } from "@/lib/query-keys";
 import { allowedPDSDomains } from "@/lib/config/pds";
 
 const SiteEditorModal = dynamic(
@@ -128,7 +129,7 @@ const Step3 = () => {
     isPlaceholderData: isOlderSites,
     error: sitesFetchError,
   } = useQuery({
-    queryKey: ["certified-locations", auth.user?.did],
+    queryKey: queryKeys.locations.byDid(auth.user?.did),
     queryFn: async () => {
       if (!auth.user?.did) return { locations: [] };
       const response = await graphqlClient.request(CertifiedLocationsQuery, {
@@ -384,7 +385,7 @@ const SiteItem = ({
   }
 
   const { data: locationData } = useSuspenseQuery({
-    queryKey: ["location", urlToFetch],
+    queryKey: queryKeys.locations.preview(urlToFetch),
     queryFn: async () => {
       if (!urlToFetch) {
         console.error("Invalid urlToFetch while fetching Location. Location for debugging:", locationRef);

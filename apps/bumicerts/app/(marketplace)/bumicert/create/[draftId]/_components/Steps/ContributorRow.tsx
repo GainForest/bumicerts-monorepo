@@ -7,6 +7,7 @@ import { Trash2, Pencil, Check, X } from "lucide-react";
 import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
 import { useQuery } from "@tanstack/react-query";
 import { links } from "@/lib/links";
+import { queryKeys } from "@/lib/query-keys";
 
 interface ActorProfile {
     did: string;
@@ -36,7 +37,7 @@ export function ContributorRow({ value, onEdit, onRemove }: ContributorRowProps)
     const shouldFetch = isDidOrHandle(value);
 
     const { data: profile, isPending } = useQuery<ActorProfile>({
-        queryKey: ["actor-profile", value],
+        queryKey: queryKeys.actor.profile(value),
         queryFn: async () => {
             const res = await fetch(links.api.getProfile(value));
             if (!res.ok) throw new Error("Failed to fetch profile");

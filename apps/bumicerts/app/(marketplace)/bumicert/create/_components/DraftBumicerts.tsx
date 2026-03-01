@@ -15,6 +15,7 @@ import { useAtprotoStore } from "@/components/stores/atproto";
 import { Button } from "@/components/ui/button";
 import TimeText from "@/components/time-text";
 import { links } from "@/lib/links";
+import { queryKeys } from "@/lib/query-keys";
 import {
   DraftBumicertDataV0,
   DraftBumicertResponse,
@@ -73,7 +74,7 @@ const DraftBumicerts = () => {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["drafts", auth.user?.did],
+    queryKey: queryKeys.drafts.byDid(auth.user?.did),
     queryFn: getDrafts,
     enabled: auth.authenticated && !!auth.user?.did,
   });

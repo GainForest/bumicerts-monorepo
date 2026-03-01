@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { graphqlClient } from "@/lib/graphql/client";
 import { ExploreActivitiesQuery } from "@/lib/graphql/queries";
 import { useExploreStore } from "../store";
+import { queryKeys } from "@/lib/query-keys";
 import {
   activitiesToBumicertDataArray,
   orgInfosToOrganizationDataArray,
@@ -18,7 +19,7 @@ import {
  */
 const ExploreHydrator = ({ children }: { children?: React.ReactNode }) => {
   const { data, isLoading, error, isPlaceholderData } = useQuery({
-    queryKey: ["explore-activities"],
+    queryKey: queryKeys.activities.explore(),
     queryFn: async () => {
       const response = await graphqlClient.request(ExploreActivitiesQuery, {
         limit: 1000,

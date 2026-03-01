@@ -15,6 +15,7 @@ import { links } from "@/lib/links";
 import { CircleCheck, Loader2, Trash2 } from "lucide-react";
 import { useFormStore } from "../form-store";
 import { useAtprotoStore } from "@/components/stores/atproto";
+import { queryKeys } from "@/lib/query-keys";
 
 export const DeleteDraftModalId = "bumicert/delete-draft";
 
@@ -82,7 +83,7 @@ const DeleteDraftModal = ({
       // Invalidate drafts query to refresh the list
       if (auth.user?.did) {
         queryClient.invalidateQueries({
-          queryKey: ["drafts", auth.user.did],
+          queryKey: queryKeys.drafts.byDid(auth.user.did),
         });
       }
 

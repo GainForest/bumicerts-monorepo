@@ -11,6 +11,7 @@ import { UploadLogoModal, UploadLogoModalId } from "./UploadLogoModal";
 import { useQuery } from "@tanstack/react-query";
 import { graphqlClient } from "@/lib/graphql/client";
 import { graphql } from "@/lib/graphql/tada";
+import { queryKeys } from "@/lib/query-keys";
 
 // Query to get organization logo
 const OrgLogoQuery = graphql(`
@@ -131,7 +132,7 @@ const BumicertPreviewCard = () => {
     isPending: isPendingOrganizationInfo,
     isPlaceholderData: isOlderData,
   } = useQuery({
-    queryKey: ["org-logo-card", auth.user?.did],
+    queryKey: queryKeys.org.logo(auth.user?.did),
     queryFn: async () => {
       if (!auth.user?.did) return null;
       const response = await graphqlClient.request(OrgLogoQuery, {

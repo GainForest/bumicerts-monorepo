@@ -10,6 +10,7 @@ import React, { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { graphqlClient } from "@/lib/graphql/client";
 import { graphql } from "@/lib/graphql/tada";
+import { queryKeys } from "@/lib/query-keys";
 
 // Query to get activities for current user
 const MyActivitiesQuery = graphql(`
@@ -46,7 +47,7 @@ const MyBumicerts = () => {
     isPending: isPendingActivityClaims,
     error: errorActivityClaims,
   } = useQuery({
-    queryKey: ["my-activities", auth.authenticated ? auth.user.did : ""],
+    queryKey: queryKeys.activities.byDid(auth.authenticated ? auth.user.did : undefined),
     queryFn: async () => {
       if (!auth.authenticated) return { records: [] };
       const response = await graphqlClient.request(MyActivitiesQuery, {

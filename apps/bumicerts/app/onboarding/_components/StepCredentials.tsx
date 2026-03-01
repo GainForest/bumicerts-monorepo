@@ -24,6 +24,7 @@ import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { useDebounce } from "@/hooks/use-debounce";
 import { links } from "@/lib/links";
+import { queryKeys } from "@/lib/query-keys";
 
 const STRENGTH_COLORS: Record<PasswordStrength, string> = {
   weak: "bg-red-500",
@@ -67,7 +68,7 @@ export function StepCredentials() {
 
   // Check handle availability
   const { data: handleCheckResult, isLoading: isCheckingHandle } = useQuery({
-    queryKey: ["handleAvailability", debouncedHandle],
+    queryKey: queryKeys.handle.availability(debouncedHandle),
     queryFn: async () => {
       if (!debouncedHandle || debouncedHandle.length < 3) {
         return { available: true, checked: false };

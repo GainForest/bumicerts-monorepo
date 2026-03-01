@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { getBlobUrl, type BlobInput } from "@/lib/atproto/blobs";
 import { parseAtUri, toSerializableFile } from "@/lib/mutations-utils";
 import { createLocationAction, updateLocationAction } from "@/lib/actions/locations";
+import { queryKeys } from "@/lib/query-keys";
 import FileInput from "@/components/ui/FileInput";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, CheckIcon, Loader2, Pencil } from "lucide-react";
@@ -113,9 +114,7 @@ export const SiteEditorModal = ({ initialData }: SiteEditorModalProps) => {
       });
     },
     onSuccess: () => {
-      // Invalidate queries related to locations
-      queryClient.invalidateQueries({ queryKey: ["locations", did] });
-      queryClient.invalidateQueries({ queryKey: ["sites", did] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.locations.byDid(did) });
       setIsCompleted(true);
     },
   });
@@ -146,9 +145,7 @@ export const SiteEditorModal = ({ initialData }: SiteEditorModalProps) => {
       });
     },
     onSuccess: () => {
-      // Invalidate queries related to locations
-      queryClient.invalidateQueries({ queryKey: ["locations", did] });
-      queryClient.invalidateQueries({ queryKey: ["sites", did] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.locations.byDid(did) });
       setIsCompleted(true);
     },
   });

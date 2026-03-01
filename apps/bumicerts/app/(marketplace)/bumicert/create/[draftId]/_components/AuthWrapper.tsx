@@ -12,6 +12,7 @@ import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { graphqlClient } from "@/lib/graphql/client";
 import { graphql } from "@/lib/graphql/tada";
+import { queryKeys } from "@/lib/query-keys";
 
 // Query to check if organization info exists
 const OrgInfoCheckQuery = graphql(`
@@ -46,7 +47,7 @@ const AuthWrapper = ({
     data: orgData,
     isPlaceholderData: isOlderData,
   } = useQuery({
-    queryKey: ["org-info-check", auth.user?.did],
+    queryKey: queryKeys.org.info(auth.user?.did),
     queryFn: async () => {
       if (!auth.user?.did) return null;
       const response = await graphqlClient.request(OrgInfoCheckQuery, {

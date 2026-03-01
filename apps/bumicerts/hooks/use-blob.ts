@@ -11,6 +11,7 @@ import {
   type BlobInput,
 } from "@/lib/atproto/blobs";
 import { debug } from "@/lib/logger";
+import { queryKeys } from "@/lib/query-keys";
 
 type BlobUrl =
   `https://${AllowedPDSDomain}/xrpc/com.atproto.sync.getBlob?did=${string}&cid=${string}`;
@@ -31,7 +32,7 @@ const useBlob = ({
       ? getBlobUrl(did, blob as BlobInput, pdsDomain)
       : null;
   const { data, isPending, error, isPlaceholderData } = useQuery({
-    queryKey: ["blob", blob],
+    queryKey: queryKeys.blob(blob),
     queryFn: async () => {
       if (!dataSource) throw new Error("blob and did are required.");
       const response = await fetch(dataSource);
