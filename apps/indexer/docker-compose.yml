@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: gainforest_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gainforest_indexer
+      POSTGRES_USER: gainforest
+      POSTGRES_PASSWORD: gainforest
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gainforest -d gainforest_indexer"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  tap:
+    image: ghcr.io/bluesky-social/indigo/tap:latest
+    container_name: gainforest_tap
+    restart: unless-stopped
+    ports:
+      - "2480:2480"
+    volumes:
+      - tap_data:/data
+    environment:
+      TAP_DATABASE_URL: sqlite:///data/tap.db
+      TAP_BIND: ":2480"
+      TAP_SIGNAL_COLLECTION: org.hypercerts.claim.activity
+      TAP_COLLECTION_FILTERS: "app.gainforest.*,org.hypercerts.*,org.impactindexer.*"
+      TAP_DISABLE_ACKS: "false"
+      TAP_ADMIN_PASSWORD: ${TAP_ADMIN_PASSWORD}
+      TAP_LOG_LEVEL: info
+    healthcheck:
+      test: ["CMD", "sh", "-c", "wget -q --spider --header \"Authorization: Basic $(echo -n admin:$${TAP_ADMIN_PASSWORD} | base64)\" http://localhost:2480/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    driver: local
+  tap_data:
+    driver: local

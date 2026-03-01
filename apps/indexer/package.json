@@ -1,0 +1,38 @@
+{
+  "name": "@gainforest/indexer",
+  "version": "0.1.0",
+  "description": "AT Protocol indexer for GainForest lexicons",
+  "module": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "bun run src/db/migrate.ts",
+    "docker:up": "docker compose up -d db tap",
+    "docker:down": "docker compose down",
+    "docker:reset": "docker compose down -v && docker compose up -d db tap",
+    "setup": "bun run docker:up && sleep 3 && bun run db:migrate",
+    "tap:add-repo": "curl -X POST http://localhost:2480/repos/add -H 'Content-Type: application/json' -u admin:$TAP_ADMIN_PASSWORD -d",
+    "tap:stats": "curl http://localhost:2480/stats/repo-count && curl http://localhost:2480/stats/record-count"
+  },
+  "dependencies": {
+    "@atproto/lex": "^0.0.19",
+    "@atproto/tap": "^0.2.7",
+    "@atproto/ws-client": "0.0.4",
+    "@pothos/core": "^4.12.0",
+    "@pothos/plugin-simple-objects": "^4.1.3",
+    "graphql": "^16.9.0",
+    "graphql-yoga": "^5.10.11",
+    "multiformats": "^13.4.2",
+    "postgres": "^3.4.5"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.14",
+    "typescript": "^5.7.2"
+  },
+  "patchedDependencies": {
+    "@atproto/ws-client@0.0.4": "patches/@atproto%2Fws-client@0.0.4.patch"
+  }
+}

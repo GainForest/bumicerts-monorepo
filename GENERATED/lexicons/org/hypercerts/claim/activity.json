@@ -11,9 +11,7 @@
                 "required": [
                     "title",
                     "shortDescription",
-                    "createdAt",
-                    "startDate",
-                    "endDate"
+                    "createdAt"
                 ],
                 "properties": {
                     "title": {
@@ -23,15 +21,31 @@
                     },
                     "shortDescription": {
                         "type": "string",
-                        "description": "Short blurb of the impact work done.",
+                        "description": "Short summary of this activity claim, suitable for previews and list views. Rich text annotations may be provided via `shortDescriptionFacets`.",
                         "maxLength": 3000,
                         "maxGraphemes": 300
                     },
+                    "shortDescriptionFacets": {
+                        "type": "array",
+                        "description": "Rich text annotations for `shortDescription` (mentions, URLs, hashtags, etc).",
+                        "items": {
+                            "type": "ref",
+                            "ref": "app.bsky.richtext.facet"
+                        }
+                    },
                     "description": {
                         "type": "string",
-                        "description": "Optional longer description of the impact work done.",
+                        "description": "Optional longer description of this activity claim, including context or interpretation. Rich text annotations may be provided via `descriptionFacets`.",
                         "maxLength": 30000,
                         "maxGraphemes": 3000
+                    },
+                    "descriptionFacets": {
+                        "type": "array",
+                        "description": "Rich text annotations for `description` (mentions, URLs, hashtags, etc).",
+                        "items": {
+                            "type": "ref",
+                            "ref": "app.bsky.richtext.facet"
+                        }
                     },
                     "image": {
                         "type": "union",
@@ -42,8 +56,12 @@
                         "description": "The hypercert visual representation as a URI or image blob."
                     },
                     "workScope": {
-                        "type": "ref",
-                        "ref": "#workScope"
+                        "type": "union",
+                        "refs": [
+                            "com.atproto.repo.strongRef",
+                            "#workScopeString"
+                        ],
+                        "description": "Work scope definition. Either a strongRef to a work-scope logic record (structured, nested logic), or a free-form string for simple or legacy scopes. The work scope record should conform to the org.hypercerts.helper.workScopeTag lexicon."
                     },
                     "startDate": {
                         "type": "string",
@@ -55,12 +73,12 @@
                         "format": "datetime",
                         "description": "When the work ended"
                     },
-                    "contributions": {
+                    "contributors": {
                         "type": "array",
-                        "description": "A strong reference to the contributions done to create the impact in the hypercerts. The record referenced must conform with the lexicon org.hypercerts.claim.contribution.",
+                        "description": "An array of contributor objects, each containing contributor information, weight, and contribution details.",
                         "items": {
                             "type": "ref",
-                            "ref": "com.atproto.repo.strongRef"
+                            "ref": "#contributor"
                         }
                     },
                     "rights": {
@@ -68,15 +86,13 @@
                         "ref": "com.atproto.repo.strongRef",
                         "description": "A strong reference to the rights that this hypercert has. The record referenced must conform with the lexicon org.hypercerts.claim.rights."
                     },
-                    "location": {
-                        "type": "ref",
-                        "ref": "com.atproto.repo.strongRef",
-                        "description": "A strong reference to the location where the activity was performed. The record referenced must conform with the lexicon app.certified.location."
-                    },
-                    "project": {
-                        "type": "string",
-                        "format": "at-uri",
-                        "description": "A reference (AT-URI) to the project record that this activity is part of. The record referenced must conform with the lexicon org.hypercerts.claim.project. This activity must also be referenced by the project, establishing a bidirectional link."
+                    "locations": {
+                        "type": "array",
+                        "description": "An array of strong references to the location where activity was performed. The record referenced must conform with the lexicon app.certified.location.",
+                        "items": {
+                            "type": "ref",
+                            "ref": "com.atproto.repo.strongRef"
+                        }
                     },
                     "createdAt": {
                         "type": "string",
@@ -86,51 +102,76 @@
                 }
             }
         },
-        "workScope": {
+        "contributor": {
             "type": "object",
-            "description": "Logical scope of the work using label-based conditions. All labels in `withinAllOf` must apply; at least one label in `withinAnyOf` must apply if provided; no label in `withinNoneOf` may apply.",
+            "required": [
+                "contributorIdentity"
+            ],
             "properties": {
-                "withinAllOf": {
-                    "type": "array",
-                    "description": "Labels that MUST all hold for the scope to apply.",
-                    "items": {
-                        "type": "string"
-                    },
-                    "maxLength": 100
+                "contributorIdentity": {
+                    "type": "union",
+                    "refs": [
+                        "#contributorIdentity",
+                        "com.atproto.repo.strongRef"
+                    ],
+                    "description": "Contributor identity as a string (DID or identifier) via org.hypercerts.claim.activity#contributorIdentity, or a strong reference to a contributor information record."
                 },
-                "withinAnyOf": {
-                    "type": "array",
-                    "description": "Labels of which AT LEAST ONE must hold (optional). If omitted or empty, imposes no additional condition.",
-                    "items": {
-                        "type": "string"
-                    },
-                    "maxLength": 100
+                "contributionWeight": {
+                    "type": "string",
+                    "description": "The relative weight/importance of this contribution (stored as a string to avoid float precision issues). Must be a positive numeric value. Weights do not need to sum to a specific total; normalization can be performed by the consuming application as needed."
                 },
-                "withinNoneOf": {
-                    "type": "array",
-                    "description": "Labels that MUST NOT hold for the scope to apply.",
-                    "items": {
-                        "type": "string"
-                    },
-                    "maxLength": 100
+                "contributionDetails": {
+                    "type": "union",
+                    "refs": [
+                        "#contributorRole",
+                        "com.atproto.repo.strongRef"
+                    ],
+                    "description": "Contribution details as a string via org.hypercerts.claim.activity#contributorRole, or a strong reference to a contribution details record."
                 }
             }
         },
-        "activityWeight": {
+        "contributorIdentity": {
             "type": "object",
+            "description": "Contributor information as a string (DID or identifier).",
             "required": [
-                "activity",
-                "weight"
+                "identity"
             ],
             "properties": {
-                "activity": {
-                    "type": "ref",
-                    "ref": "com.atproto.repo.strongRef",
-                    "description": "A strong reference to a hypercert activity record. This activity must conform to the lexicon org.hypercerts.claim.activity"
-                },
-                "weight": {
+                "identity": {
                     "type": "string",
-                    "description": "The relative weight/importance of this hypercert activity (stored as a string to avoid float precision issues). Weights can be any positive numeric values and do not need to sum to a specific total; normalization can be performed by the consuming application as needed."
+                    "description": "The contributor identity string (DID or identifier).",
+                    "maxLength": 1000,
+                    "maxGraphemes": 100
+                }
+            }
+        },
+        "contributorRole": {
+            "type": "object",
+            "description": "Contribution details as a string.",
+            "required": [
+                "role"
+            ],
+            "properties": {
+                "role": {
+                    "type": "string",
+                    "description": "The contribution role or details.",
+                    "maxLength": 1000,
+                    "maxGraphemes": 100
+                }
+            }
+        },
+        "workScopeString": {
+            "type": "object",
+            "description": "A free-form string describing the work scope for simple or legacy scopes.",
+            "required": [
+                "scope"
+            ],
+            "properties": {
+                "scope": {
+                    "type": "string",
+                    "description": "The work scope description string.",
+                    "maxLength": 1000,
+                    "maxGraphemes": 100
                 }
             }
         }

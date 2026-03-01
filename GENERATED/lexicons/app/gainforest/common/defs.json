@@ -120,7 +120,6 @@
                     "type": "blob",
                     "accept": [
                         "audio/wav",
-                        "audio/vnd.wave",
                         "audio/x-wav",
                         "audio/mpeg",
                         "audio/mp3",

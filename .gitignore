@@ -7,5 +7,6 @@ dist/
 .env.*.local
 .env.test-credentials
 
-# Generated TypeScript types — populated by `bun run codegen`, derived from lexicons
+# Generated TypeScript types for packages — populated by `bun run gen:types`, derived from lexicons
+# NOTE: apps/indexer/src/generated/ is intentionally committed (the indexer's own lex types)
 GENERATED/types/

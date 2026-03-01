@@ -1,0 +1,104 @@
+diff --git a/dist/index.js b/dist/index.js
+index 11eb1e5719ad783df3d61345f304dfff2a5931fd..84cf3d4561554466e5afe177039e8cc55463b889 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -3,6 +3,88 @@ Object.defineProperty(exports, "__esModule", { value: true });
+ exports.CloseCode = exports.DisconnectError = exports.WebSocketKeepAlive = void 0;
+ const ws_1 = require("ws");
+ const common_1 = require("@atproto/common");
++
++// Bun-compatible replacement for createWebSocketStream.
++// Uses EventEmitter message events instead of Node stream internals.
++// createWebSocketStream internally uses Node.js stream.Receiver which is not
++// supported in Bun. This implementation yields the same Buffer chunks via a
++// manually-managed async iterator backed by the 'message'/'close'/'error' events.
++function makeWsAsyncIterable(ws, opts) {
++    const signal = opts && opts.signal;
++    return {
++        [Symbol.asyncIterator]() {
++            const queue = [];
++            let resolve = null;
++            let done = false;
++            let error = null;
++            const push = (val) => {
++                if (done) return;
++                if (resolve) {
++                    const r = resolve;
++                    resolve = null;
++                    r({ value: val, done: false });
++                } else {
++                    queue.push({ value: val, done: false });
++                }
++            };
++            const finish = (err) => {
++                if (done) return; // idempotent
++                done = true;
++                error = err || null;
++                if (resolve) {
++                    const r = resolve;
++                    resolve = null;
++                    if (err) r(Promise.reject(err));
++                    else r({ value: undefined, done: true });
++                }
++            };
++            ws.on('message', (data) => {
++                push(Buffer.isBuffer(data) ? data : Buffer.from(data));
++            });
++            ws.on('close', (code, reason) => {
++                if (code === CloseCode.Abnormal) {
++                    const err = Object.assign(new Error('Abnormal ws close: ' + (reason ? reason.toString() : '')), { code: 'EWSABNORMALCLOSE' });
++                    finish(err);
++                } else {
++                    finish(null);
++                }
++            });
++            ws.on('error', (err) => {
++                finish(err);
++            });
++            if (signal) {
++                const onAbort = () => {
++                    try { ws.close(); } catch (_) {}
++                    const reason = signal.reason;
++                    if (reason instanceof Error) {
++                        finish(reason);
++                    } else {
++                        finish(null);
++                    }
++                };
++                if (signal.aborted) {
++                    onAbort();
++                } else {
++                    signal.addEventListener('abort', onAbort, { once: true });
++                }
++            }
++            return {
++                next() {
++                    if (queue.length > 0) return Promise.resolve(queue.shift());
++                    if (done) {
++                        if (error) return Promise.reject(error);
++                        return Promise.resolve({ value: undefined, done: true });
++                    }
++                    return new Promise((res) => { resolve = res; });
++                },
++                return() {
++                    done = true;
++                    return Promise.resolve({ value: undefined, done: true });
++                },
++            };
++        },
++    };
++}
+ class WebSocketKeepAlive {
+     constructor(opts) {
+         Object.defineProperty(this, "opts", {
+@@ -62,9 +144,8 @@ class WebSocketKeepAlive {
+                 }
+             });
+             try {
+-                const wsStream = (0, ws_1.createWebSocketStream)(this.ws, {
++                const wsStream = makeWsAsyncIterable(this.ws, {
+                     signal: ac.signal,
+-                    readableObjectMode: true, // Ensures frame bytes don't get buffered/combined together
+                 });
+                 for await (const chunk of wsStream) {
+                     yield chunk;
