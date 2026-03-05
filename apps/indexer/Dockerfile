@@ -9,10 +9,6 @@
 #
 # Run:
 #   docker run --env-file apps/indexer/.env gainforest-indexer
-#
-# Or via monorepo root script:
-#   docker build -f apps/indexer/Dockerfile -t gainforest-indexer .
-#   docker run --env-file apps/indexer/.env gainforest-indexer
 
 # ─────────────────────────────────────────────────────────────
 # Stage 1: install deps + copy source
@@ -21,19 +17,17 @@ FROM oven/bun:1.2-alpine AS builder
 
 WORKDIR /repo
 
-# Copy workspace manifests first for layer caching
+# Copy ALL workspace manifests (bun needs every package.json to resolve the
+# full workspace graph and keep the lockfile consistent)
 COPY package.json bun.lock* ./
-# All workspace package.json files must be present so bun can resolve the
-# full workspace graph without mutating the frozen lockfile
+COPY GENERATED/package.json GENERATED/
 COPY apps/indexer/package.json apps/indexer/
 COPY apps/bumicerts/package.json apps/bumicerts/
 COPY packages/atproto-auth-next/package.json packages/atproto-auth-next/
 COPY packages/atproto-mutations-core/package.json packages/atproto-mutations-core/
 COPY packages/atproto-mutations-next/package.json packages/atproto-mutations-next/
 COPY packages/internal-utils/package.json packages/internal-utils/
-COPY GENERATED/package.json GENERATED/
-# Patches must live at the workspace root so bun can find them during install
-COPY apps/indexer/patches/ patches/
+COPY apps/indexer/patches/ apps/indexer/patches/
 
 # Install only the indexer's dependencies (hoisted into /repo/node_modules)
 RUN bun install --frozen-lockfile --filter @gainforest/indexer
@@ -57,9 +51,9 @@ COPY --from=builder /repo/node_modules/ ./node_modules/
 COPY --from=builder /repo/apps/indexer/src/ ./src/
 COPY --from=builder /repo/apps/indexer/tsconfig.json ./
 
-# Health check — polls the /health endpoint
+# Health check — /health is served on the GraphQL port (PORT env var, default 4000)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD wget -qO- http://localhost:${HEALTH_PORT:-4001}/health | grep -q '"status":"ok"' || exit 1
+  CMD wget -qO- http://localhost:${PORT:-4000}/health | grep -q '"status":"ok"' || exit 1
 
 EXPOSE 4000
 EXPOSE 4001
