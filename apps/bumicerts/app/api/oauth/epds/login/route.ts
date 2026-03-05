@@ -16,4 +16,5 @@ import { auth } from "@/lib/auth";
 import type { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 export function GET(req: NextRequest) { return auth.handlers.epds.login.GET(req); }
