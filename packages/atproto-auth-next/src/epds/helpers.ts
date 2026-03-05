@@ -43,8 +43,10 @@ export function generateState(): string {
  */
 export function generateDpopKeyPair(): {
   privateKey: crypto.KeyObject;
-  publicJwk: crypto.JsonWebKey;
-  privateJwk: crypto.JsonWebKey;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  publicJwk: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  privateJwk: any;
 } {
   const { publicKey, privateKey } = crypto.generateKeyPairSync("ec", {
     namedCurve: "P-256",
@@ -59,14 +61,14 @@ export function generateDpopKeyPair(): {
 /**
  * Restore a DPoP key pair from a serialized private JWK (e.g. from a session store).
  */
-export function restoreDpopKeyPair(privateJwk: crypto.JsonWebKey): {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function restoreDpopKeyPair(privateJwk: any): {
   privateKey: crypto.KeyObject;
-  publicJwk: crypto.JsonWebKey;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  publicJwk: any;
 } {
-  const privateKey = crypto.createPrivateKey({
-    key: privateJwk as crypto.JsonWebKey,
-    format: "jwk",
-  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const privateKey = crypto.createPrivateKey({ key: privateJwk as any, format: "jwk" });
   const publicKey = crypto.createPublicKey(privateKey);
   return { privateKey, publicJwk: publicKey.export({ format: "jwk" }) };
 }
@@ -105,7 +107,8 @@ function derToRaw(der: Buffer): Buffer {
  */
 export function createDpopProof(opts: {
   privateKey: crypto.KeyObject;
-  jwk: object;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  jwk: any;
   method: string;
   url: string;
   nonce?: string;
@@ -145,7 +148,8 @@ export async function fetchWithDpopRetry(
   url: string,
   body: URLSearchParams,
   privateKey: crypto.KeyObject,
-  publicJwk: object,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  publicJwk: any,
 ): Promise<Response> {
   let dpopProof = createDpopProof({
     privateKey,
