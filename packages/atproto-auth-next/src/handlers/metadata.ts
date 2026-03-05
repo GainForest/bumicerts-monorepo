@@ -108,10 +108,13 @@ export function createClientMetadataHandler(
  * Must be publicly accessible.
  */
 export function createJwksHandler(privateKeyJwk: string) {
-  const { d: _d, ...publicKey } = JSON.parse(privateKeyJwk) as Record<
-    string,
-    unknown
-  >;
+  // The stored JWK may be a single key object OR a keyset ({ keys: [...] }).
+  // Extract the raw key either way, then strip the private `d` parameter.
+  const parsed = JSON.parse(privateKeyJwk) as Record<string, unknown>;
+  const rawKey: Record<string, unknown> = Array.isArray(parsed?.keys)
+    ? (parsed.keys as Record<string, unknown>[])[0]!
+    : parsed;
+  const { d: _d, ...publicKey } = rawKey;
 
   return function GET() {
     return NextResponse.json(
