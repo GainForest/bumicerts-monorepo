@@ -24,7 +24,8 @@ WORKDIR /repo
 # Copy workspace manifests first for layer caching
 COPY package.json bun.lock* ./
 COPY apps/indexer/package.json apps/indexer/
-COPY apps/indexer/patches/ apps/indexer/patches/
+# Patches must live at the workspace root so bun can find them during install
+COPY apps/indexer/patches/ patches/
 # GENERATED workspace package.json is needed so bun can resolve the workspace
 COPY GENERATED/package.json GENERATED/
 

@@ -10,11 +10,11 @@ import Step2 from "../_components/Steps/Step2";
 import Step3 from "../_components/Steps/Step3";
 import Step4 from "../_components/Steps/Step4";
 import Step5 from "../_components/Steps/Step5";
-import BiokoNeutralImage from "./assets/bioko-neutral.png";
-import BiokoHoldingLoudspeakerImage from "./assets/bioko-holding-loudspeaker.png";
-import BiokoHoldingEarthImage from "./assets/bioko-holding-earth.png";
-import BiokoHoldingMagnifierImage from "./assets/bioko-holding-magnifier.png";
-import BiokoHoldingConfettiImage from "./assets/bioko-holding-confetti.png";
+import BiokoNeutralImage from "../_assets/bioko-neutral.png";
+import BiokoHoldingLoudspeakerImage from "../_assets/bioko-holding-loudspeaker.png";
+import BiokoHoldingEarthImage from "../_assets/bioko-holding-earth.png";
+import BiokoHoldingMagnifierImage from "../_assets/bioko-holding-magnifier.png";
+import BiokoHoldingConfettiImage from "../_assets/bioko-holding-confetti.png";
 
 type StepData = {
   title: string;
