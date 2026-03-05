@@ -7,44 +7,13 @@ import * as RepoStrongRef from '../../../com/atproto/repo/strongRef.defs.ts'
 import * as CertifiedDefs from '../../../app/certified/defs.defs.ts'
 import * as HypercertsDefs from '../defs.defs.ts'
 
-const $nsid = 'org.hypercerts.claim.evaluation'
+const $nsid = 'org.hypercerts.context.evaluation'
 
 export { $nsid }
 
-/** Overall score for an evaluation on a numeric scale. */
-type Score = {
-  $type?: 'org.hypercerts.claim.evaluation#score'
-
-  /**
-   * Minimum value of the scale, e.g. 0 or 1.
-   */
-  min: number
-
-  /**
-   * Maximum value of the scale, e.g. 5 or 10.
-   */
-  max: number
-
-  /**
-   * Score within the inclusive range [min, max].
-   */
-  value: number
-}
-
-export type { Score }
-
-/** Overall score for an evaluation on a numeric scale. */
-const score = l.typedObject<Score>(
-  $nsid,
-  'score',
-  l.object({ min: l.integer(), max: l.integer(), value: l.integer() }),
-)
-
-export { score }
-
 /** An evaluation of a hypercert record (e.g. an activity and its impact). */
 type Main = {
-  $type: 'org.hypercerts.claim.evaluation'
+  $type: 'org.hypercerts.context.evaluation'
 
   /**
    * A strong reference to what is being evaluated (e.g. activity, measurement, contribution, etc.)
@@ -66,7 +35,7 @@ type Main = {
   )[]
 
   /**
-   * Optional references to the measurements that contributed to this evaluation. The record(s) referenced must conform with the lexicon org.hypercerts.claim.measurement
+   * Optional references to the measurements that contributed to this evaluation. The record(s) referenced must conform with the lexicon org.hypercerts.context.measurement
    */
   measurements?: RepoStrongRef.Main[]
 
@@ -147,3 +116,34 @@ export const $assert = /*#__PURE__*/ main.assert.bind(main),
   $safeParse = /*#__PURE__*/ main.safeParse.bind(main),
   $validate = /*#__PURE__*/ main.validate.bind(main),
   $safeValidate = /*#__PURE__*/ main.safeValidate.bind(main)
+
+/** Overall score for an evaluation on a numeric scale. */
+type Score = {
+  $type?: 'org.hypercerts.context.evaluation#score'
+
+  /**
+   * Minimum value of the scale, e.g. 0 or 1.
+   */
+  min: number
+
+  /**
+   * Maximum value of the scale, e.g. 5 or 10.
+   */
+  max: number
+
+  /**
+   * Score within the inclusive range [min, max].
+   */
+  value: number
+}
+
+export type { Score }
+
+/** Overall score for an evaluation on a numeric scale. */
+const score = l.typedObject<Score>(
+  $nsid,
+  'score',
+  l.object({ min: l.integer(), max: l.integer(), value: l.integer() }),
+)
+
+export { score }

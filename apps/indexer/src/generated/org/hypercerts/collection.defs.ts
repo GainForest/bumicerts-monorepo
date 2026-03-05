@@ -3,17 +3,17 @@
  */
 
 import { l } from '@atproto/lex'
-import * as PagesLinearDocument from '../../../pub/leaflet/pages/linearDocument.defs.ts'
-import * as HypercertsDefs from '../defs.defs.ts'
-import * as RepoStrongRef from '../../../com/atproto/repo/strongRef.defs.ts'
+import * as PagesLinearDocument from '../../pub/leaflet/pages/linearDocument.defs.ts'
+import * as HypercertsDefs from './defs.defs.ts'
+import * as RepoStrongRef from '../../com/atproto/repo/strongRef.defs.ts'
 
-const $nsid = 'org.hypercerts.claim.collection'
+const $nsid = 'org.hypercerts.collection'
 
 export { $nsid }
 
 /** A collection/group of items (activities and/or other collections). Collections support recursive nesting. */
 type Main = {
-  $type: 'org.hypercerts.claim.collection'
+  $type: 'org.hypercerts.collection'
 
   /**
    * The type of this collection. Possible fields can be 'favorites', 'project', or any other type of collection.
@@ -54,7 +54,7 @@ type Main = {
   /**
    * Array of items in this collection with optional weights.
    */
-  items: Item[]
+  items?: Item[]
 
   /**
    * A strong reference to the location where this collection's activities were performed. The record referenced must conform with the lexicon app.certified.location.
@@ -104,7 +104,9 @@ const main = l.record<'tid', Main>(
         false,
       ),
     ),
-    items: l.array(l.ref<Item>((() => item) as any), { maxLength: 1000 }),
+    items: l.optional(
+      l.array(l.ref<Item>((() => item) as any), { maxLength: 1000 }),
+    ),
     location: l.optional(
       l.ref<RepoStrongRef.Main>((() => RepoStrongRef.main) as any),
     ),
@@ -128,10 +130,10 @@ export const $assert = /*#__PURE__*/ main.assert.bind(main),
   $safeValidate = /*#__PURE__*/ main.safeValidate.bind(main)
 
 type Item = {
-  $type?: 'org.hypercerts.claim.collection#item'
+  $type?: 'org.hypercerts.collection#item'
 
   /**
-   * Strong reference to an item in this collection. Items can be activities (org.hypercerts.claim.activity) and/or other collections (org.hypercerts.claim.collection).
+   * Strong reference to an item in this collection. Items can be activities (org.hypercerts.claim.activity) and/or other collections (org.hypercerts.collection).
    */
   itemIdentifier: RepoStrongRef.Main
 

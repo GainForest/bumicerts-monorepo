@@ -1,6 +1,6 @@
 {
     "lexicon": 1,
-    "id": "org.hypercerts.claim.collection",
+    "id": "org.hypercerts.collection",
     "defs": {
         "main": {
             "type": "record",
@@ -10,7 +10,6 @@
                 "type": "object",
                 "required": [
                     "title",
-                    "items",
                     "createdAt"
                 ],
                 "properties": {
@@ -83,7 +82,7 @@
                 "itemIdentifier": {
                     "type": "ref",
                     "ref": "com.atproto.repo.strongRef",
-                    "description": "Strong reference to an item in this collection. Items can be activities (org.hypercerts.claim.activity) and/or other collections (org.hypercerts.claim.collection)."
+                    "description": "Strong reference to an item in this collection. Items can be activities (org.hypercerts.claim.activity) and/or other collections (org.hypercerts.collection)."
                 },
                 "itemWeight": {
                     "type": "string",

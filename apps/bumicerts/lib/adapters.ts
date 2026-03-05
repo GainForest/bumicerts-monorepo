@@ -65,7 +65,8 @@ export interface GraphQLHcActivityItem {
   record: {
     title: string | null;
     shortDescription: string | null;
-    description: string | null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    description: any; // JSON scalar — now a LinearDocument (pub.leaflet.pages.linearDocument), not a string
     startDate: string | null;
     endDate: string | null;
     createdAt: string | null;
@@ -216,13 +217,18 @@ export function activityToBumicertData(item: GraphQLHcActivityItem): BumicertDat
     // no fallback available
   }
 
+  // Extract description: now a LinearDocument, use extractLinearDocument to get plaintext
+  // Fall back to shortDescription if description is empty
+  const descriptionText = extractLinearDocument(record?.description);
+  const description = descriptionText || record?.shortDescription || "";
+
   return {
     id: `${did}-${rkey}`,
     organizationDid: did,
     rkey,
     title: record?.title ?? "",
     shortDescription: record?.shortDescription ?? "",
-    description: record?.description ?? record?.shortDescription ?? "",
+    description,
     coverImageUrl,
     logoUrl,
     organizationName: creatorInfo?.organizationName ?? "",

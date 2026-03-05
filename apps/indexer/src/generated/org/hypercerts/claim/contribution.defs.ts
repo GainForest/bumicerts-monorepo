@@ -4,13 +4,13 @@
 
 import { l } from '@atproto/lex'
 
-const $nsid = 'org.hypercerts.claim.contributionDetails'
+const $nsid = 'org.hypercerts.claim.contribution'
 
 export { $nsid }
 
 /** Details about a specific contribution including role, description, and timeframe. */
 type Main = {
-  $type: 'org.hypercerts.claim.contributionDetails'
+  $type: 'org.hypercerts.claim.contribution'
 
   /**
    * Role or title of the contributor.

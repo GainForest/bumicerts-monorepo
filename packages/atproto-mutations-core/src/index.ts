@@ -177,8 +177,13 @@ export type {
   ClaimActivityMutationResult,
   ClaimActivityRecord,
   WorkScopeString,
+  WorkscopeCel,
+  Contributor,
+  ContributorIdentity,
+  ContributorRole,
   StrongRef,
   RichtextFacet,
+  LinearDocument as ClaimActivityLinearDocument,
 } from "./mutations/claim.activity/utils/types";
 
 // organization.info

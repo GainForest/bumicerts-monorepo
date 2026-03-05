@@ -7,18 +7,18 @@ import * as RepoStrongRef from '../../../com/atproto/repo/strongRef.defs.ts'
 import * as CertifiedDefs from '../../../app/certified/defs.defs.ts'
 import * as RichtextFacet from '../../../app/bsky/richtext/facet.defs.ts'
 
-const $nsid = 'org.hypercerts.claim.measurement'
+const $nsid = 'org.hypercerts.context.measurement'
 
 export { $nsid }
 
-/** Measurement data related to a hypercert record (e.g. an activity and its impact). */
+/** Measurement data related to one or more records (e.g. activities, projects, etc.). */
 type Main = {
-  $type: 'org.hypercerts.claim.measurement'
+  $type: 'org.hypercerts.context.measurement'
 
   /**
-   * A strong reference to the record this measurement refers to (e.g. an activity, project, or claim).
+   * Strong references to the records this measurement refers to (e.g. activities, projects, or claims).
    */
-  subject?: RepoStrongRef.Main
+  subjects?: RepoStrongRef.Main[]
 
   /**
    * The metric being measured, e.g. forest area restored, number of users, etc.
@@ -88,13 +88,15 @@ type Main = {
 
 export type { Main }
 
-/** Measurement data related to a hypercert record (e.g. an activity and its impact). */
+/** Measurement data related to one or more records (e.g. activities, projects, etc.). */
 const main = l.record<'tid', Main>(
   'tid',
   $nsid,
   l.object({
-    subject: l.optional(
-      l.ref<RepoStrongRef.Main>((() => RepoStrongRef.main) as any),
+    subjects: l.optional(
+      l.array(l.ref<RepoStrongRef.Main>((() => RepoStrongRef.main) as any), {
+        maxLength: 100,
+      }),
     ),
     metric: l.string({ maxLength: 500 }),
     unit: l.string({ maxLength: 50 }),

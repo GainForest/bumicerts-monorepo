@@ -34,6 +34,11 @@ type Main = {
   note?: string
 
   /**
+   * Optional URL the badge award links to.
+   */
+  url?: l.UriString
+
+  /**
    * Client-declared timestamp when this record was originally created
    */
   createdAt: l.DatetimeString
@@ -55,6 +60,7 @@ const main = l.record<'tid', Main>(
       false,
     ),
     note: l.optional(l.string({ maxLength: 500 })),
+    url: l.optional(l.string({ format: 'uri', maxLength: 2048 })),
     createdAt: l.string({ format: 'datetime' }),
   }),
 )

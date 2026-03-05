@@ -4,7 +4,9 @@
 
 import { l } from '@atproto/lex'
 import * as RichtextFacet from '../../../app/bsky/richtext/facet.defs.ts'
+import * as PagesLinearDocument from '../../../pub/leaflet/pages/linearDocument.defs.ts'
 import * as HypercertsDefs from '../defs.defs.ts'
+import * as WorkscopeCel from '../workscope/cel.defs.ts'
 import * as RepoStrongRef from '../../../com/atproto/repo/strongRef.defs.ts'
 
 const $nsid = 'org.hypercerts.claim.activity'
@@ -31,14 +33,9 @@ type Main = {
   shortDescriptionFacets?: RichtextFacet.Main[]
 
   /**
-   * Optional longer description of this activity claim, including context or interpretation. Rich text annotations may be provided via `descriptionFacets`.
+   * Rich-text description, represented as a Leaflet linear document.
    */
-  description?: string
-
-  /**
-   * Rich text annotations for `description` (mentions, URLs, hashtags, etc).
-   */
-  descriptionFacets?: RichtextFacet.Main[]
+  description?: PagesLinearDocument.Main
 
   /**
    * The hypercert visual representation as a URI or image blob.
@@ -49,10 +46,15 @@ type Main = {
     | l.Unknown$TypedObject
 
   /**
-   * Work scope definition. Either a strongRef to a work-scope logic record (structured, nested logic), or a free-form string for simple or legacy scopes. The work scope record should conform to the org.hypercerts.helper.workScopeTag lexicon.
+   * An array of contributor objects, each containing contributor information, weight, and contribution details.
+   */
+  contributors?: Contributor[]
+
+  /**
+   * Work scope definition. A CEL expression for structured, machine-evaluable scopes or a free-form string for simple and legacy scopes.
    */
   workScope?:
-    | l.$Typed<RepoStrongRef.Main>
+    | l.$Typed<WorkscopeCel.Main>
     | l.$Typed<WorkScopeString>
     | l.Unknown$TypedObject
 
@@ -67,19 +69,14 @@ type Main = {
   endDate?: l.DatetimeString
 
   /**
-   * An array of contributor objects, each containing contributor information, weight, and contribution details.
+   * An array of strong references to the location where activity was performed. The record referenced must conform with the lexicon app.certified.location.
    */
-  contributors?: Contributor[]
+  locations?: RepoStrongRef.Main[]
 
   /**
    * A strong reference to the rights that this hypercert has. The record referenced must conform with the lexicon org.hypercerts.claim.rights.
    */
   rights?: RepoStrongRef.Main
-
-  /**
-   * An array of strong references to the location where activity was performed. The record referenced must conform with the lexicon app.certified.location.
-   */
-  locations?: RepoStrongRef.Main[]
 
   /**
    * Client-declared timestamp when this record was originally created
@@ -99,9 +96,8 @@ const main = l.record<'any', Main>(
     shortDescriptionFacets: l.optional(
       l.array(l.ref<RichtextFacet.Main>((() => RichtextFacet.main) as any)),
     ),
-    description: l.optional(l.string({ maxLength: 30000, maxGraphemes: 3000 })),
-    descriptionFacets: l.optional(
-      l.array(l.ref<RichtextFacet.Main>((() => RichtextFacet.main) as any)),
+    description: l.optional(
+      l.ref<PagesLinearDocument.Main>((() => PagesLinearDocument.main) as any),
     ),
     image: l.optional(
       l.typedUnion(
@@ -114,10 +110,15 @@ const main = l.record<'any', Main>(
         false,
       ),
     ),
+    contributors: l.optional(
+      l.array(l.ref<Contributor>((() => contributor) as any), {
+        maxLength: 1000,
+      }),
+    ),
     workScope: l.optional(
       l.typedUnion(
         [
-          l.typedRef<RepoStrongRef.Main>((() => RepoStrongRef.main) as any),
+          l.typedRef<WorkscopeCel.Main>((() => WorkscopeCel.main) as any),
           l.typedRef<WorkScopeString>((() => workScopeString) as any),
         ],
         false,
@@ -125,18 +126,13 @@ const main = l.record<'any', Main>(
     ),
     startDate: l.optional(l.string({ format: 'datetime' })),
     endDate: l.optional(l.string({ format: 'datetime' })),
-    contributors: l.optional(
-      l.array(l.ref<Contributor>((() => contributor) as any), {
+    locations: l.optional(
+      l.array(l.ref<RepoStrongRef.Main>((() => RepoStrongRef.main) as any), {
         maxLength: 1000,
       }),
     ),
     rights: l.optional(
       l.ref<RepoStrongRef.Main>((() => RepoStrongRef.main) as any),
-    ),
-    locations: l.optional(
-      l.array(l.ref<RepoStrongRef.Main>((() => RepoStrongRef.main) as any), {
-        maxLength: 1000,
-      }),
     ),
     createdAt: l.string({ format: 'datetime' }),
   }),
@@ -161,7 +157,7 @@ type Contributor = {
   $type?: 'org.hypercerts.claim.activity#contributor'
 
   /**
-   * Contributor identity as a string (DID or identifier) via org.hypercerts.claim.activity#contributorIdentity, or a strong reference to a contributor information record.
+   * Inline contributor identity object with an identity string (DID or identifier) via org.hypercerts.claim.activity#contributorIdentity, or a strong reference to a contributor information record. The record referenced must conform with the lexicon org.hypercerts.claim.contributorInformation.
    */
   contributorIdentity:
     | l.$Typed<ContributorIdentity>
@@ -174,7 +170,7 @@ type Contributor = {
   contributionWeight?: string
 
   /**
-   * Contribution details as a string via org.hypercerts.claim.activity#contributorRole, or a strong reference to a contribution details record.
+   * Inline contribution role object with a role string via org.hypercerts.claim.activity#contributorRole, or a strong reference to a contribution details record. The record referenced must conform with the lexicon org.hypercerts.claim.contribution.
    */
   contributionDetails?:
     | l.$Typed<ContributorRole>

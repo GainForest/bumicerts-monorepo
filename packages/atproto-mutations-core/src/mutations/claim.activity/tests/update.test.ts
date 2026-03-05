@@ -49,6 +49,26 @@ function makeTinyPng(overrides?: { size?: number; type?: string }): Serializable
   };
 }
 
+/**
+ * Create a LinearDocument from a plain text string.
+ * The description field in org.hypercerts.claim.activity now expects a
+ * pub.leaflet.pages.linearDocument object instead of a plain string.
+ */
+function makeLinearDocument(text: string) {
+  return {
+    $type: "pub.leaflet.pages.linearDocument" as const,
+    blocks: [
+      {
+        $type: "pub.leaflet.pages.linearDocument#block" as const,
+        block: {
+          $type: "pub.leaflet.blocks.text" as const,
+          plaintext: text,
+        },
+      },
+    ],
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Fixture
 // ---------------------------------------------------------------------------
@@ -81,12 +101,13 @@ describe("updateClaimActivity", () => {
       createClaimActivity(baseInput).pipe(Effect.provide(layer))
     );
 
+    const newDescription = makeLinearDocument("Now with a long description.");
     const result = await Effect.runPromise(
       updateClaimActivity({
         rkey: created.rkey,
         data: {
           title: "Updated Claim Activity Title",
-          description: "Now with a long description.",
+          description: newDescription,
           startDate: "2024-01-01T00:00:00.000Z",
         },
       }).pipe(Effect.provide(layer))
@@ -96,7 +117,7 @@ describe("updateClaimActivity", () => {
     expect(result.cid).toBeString();
     expect(result.rkey).toBe(created.rkey);
     expect(result.record.title).toBe("Updated Claim Activity Title");
-    expect(result.record.description).toBe("Now with a long description.");
+    expect(result.record.description).toMatchObject(newDescription);
     expect(result.record.startDate).toBe("2024-01-01T00:00:00.000Z");
     // shortDescription was not in the patch — must be preserved from original.
     expect(result.record.shortDescription).toBe(baseInput.shortDescription);
@@ -200,7 +221,7 @@ describe("updateClaimActivity", () => {
     const created = await Effect.runPromise(
       createClaimActivity({
         ...baseInput,
-        description: "A description that will be unset.",
+        description: makeLinearDocument("A description that will be unset."),
       }).pipe(Effect.provide(layer))
     );
 
@@ -254,7 +275,7 @@ describe("updateClaimActivity", () => {
     const created = await Effect.runPromise(
       createClaimActivity({
         ...baseInput,
-        description: "Will be unset.",
+        description: makeLinearDocument("Will be unset."),
         startDate: "2024-01-01T00:00:00.000Z",
       }).pipe(Effect.provide(layer))
     );

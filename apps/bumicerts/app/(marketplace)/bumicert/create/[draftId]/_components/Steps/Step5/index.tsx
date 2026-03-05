@@ -178,6 +178,7 @@ const Step5 = () => {
       title: string;
       shortDescription: string;
       description: string;
+      descriptionFacets?: unknown[];
       workScopes: string[];
       startDate: string;
       endDate: string;
@@ -188,11 +189,31 @@ const Step5 = () => {
       // Convert file to serializable format
       const imageFile = await toSerializableFile(data.image);
 
+      // Transform description string + facets into a LinearDocument
+      // The new lexicon expects description to be a pub.leaflet.pages.linearDocument
+      // Structure: { blocks: [ { block: { $type: "pub.leaflet.blocks.text", plaintext, facets } } ] }
+      // Note: We use type assertion because bsky-richtext-react outputs app.bsky.richtext.facet
+      // while the lexicon now expects pub.leaflet.richtext.facet. The structures are compatible.
+      const descriptionAsLinearDocument = {
+        $type: "pub.leaflet.pages.linearDocument" as const,
+        blocks: [
+          {
+            $type: "pub.leaflet.pages.linearDocument#block" as const,
+            block: {
+              $type: "pub.leaflet.blocks.text" as const,
+              plaintext: data.description,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              facets: (data.descriptionFacets ?? []) as any,
+            },
+          },
+        ],
+      };
+
       // Call the mutation with properly typed inputs
       const result = await createBumicertAction({
         title: data.title,
         shortDescription: data.shortDescription,
-        description: data.description,
+        description: descriptionAsLinearDocument,
         workScope: {
           $type: "org.hypercerts.claim.activity#workScopeString" as const,
           scope: data.workScopes.join(", "),
@@ -311,6 +332,7 @@ const Step5 = () => {
         title: step1FormValues.projectName,
         shortDescription: step2FormValues.shortDescription,
         description: step2FormValues.description,
+        descriptionFacets: step2FormValues.descriptionFacets,
         workScopes: step1FormValues.workType,
         startDate: step1FormValues.projectDateRange[0].toISOString(),
         endDate: step1FormValues.projectDateRange[1].toISOString(),

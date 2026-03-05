@@ -102,6 +102,33 @@ const smallImage = l.typedObject<SmallImage>(
 
 export { smallImage }
 
+/** Object containing a small video */
+type SmallVideo = {
+  $type?: 'org.hypercerts.defs#smallVideo'
+
+  /**
+   * Video (up to 20MB)
+   */
+  video: l.BlobRef
+}
+
+export type { SmallVideo }
+
+/** Object containing a small video */
+const smallVideo = l.typedObject<SmallVideo>(
+  $nsid,
+  'smallVideo',
+  l.object({
+    video: l.blob({
+      accept: ['video/mp4', 'video/webm'],
+      maxSize: 20971520,
+      allowLegacy: false,
+    }),
+  }),
+)
+
+export { smallVideo }
+
 /** Object containing a large image */
 type LargeImage = {
   $type?: 'org.hypercerts.defs#largeImage'

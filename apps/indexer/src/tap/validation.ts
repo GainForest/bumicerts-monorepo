@@ -29,14 +29,11 @@ import type { IndexedCollection } from "./collections.ts";
 // ============================================================
 
 type LexSchema = {
-  // NOTE: @atproto/lex-schema safeValidate() returns { success: true, value }
-  // or { success: false, reason: ValidationError } — the failure field is
-  // `reason`, NOT `error`. Accessing result.error always yields undefined.
-  // DO NOT change `reason` back to `error` here — that is the bug this comment exists to prevent.
-  $safeValidate: (data: unknown) => { success: true; value: unknown } | { success: false; reason: unknown };
+  $safeValidate: (data: unknown) => { success: boolean; error?: unknown };
 };
 
 const SCHEMA_REGISTRY: Record<IndexedCollection, LexSchema> = {
+  "app.certified.actor.organization":                      generated.app.certified.actor.organization,
   "app.certified.actor.profile":                           generated.app.certified.actor.profile,
   "app.certified.badge.award":                             generated.app.certified.badge.award,
   "app.certified.badge.definition":                        generated.app.certified.badge.definition,
@@ -58,17 +55,19 @@ const SCHEMA_REGISTRY: Record<IndexedCollection, LexSchema> = {
   "app.gainforest.organization.predictions.fauna":         generated.app.gainforest.organization.predictions.fauna,
   "app.gainforest.organization.predictions.flora":         generated.app.gainforest.organization.predictions.flora,
   "app.gainforest.organization.recordings.audio":          generated.app.gainforest.organization.recordings.audio,
-  "org.hypercerts.acknowledgement":                        generated.org.hypercerts.acknowledgement,
+  "org.hyperboards.board":                                 generated.org.hyperboards.board,
+  "org.hyperboards.displayProfile":                        generated.org.hyperboards.displayProfile,
   "org.hypercerts.claim.activity":                         generated.org.hypercerts.claim.activity,
-  "org.hypercerts.claim.attachment":                       generated.org.hypercerts.claim.attachment,
-  "org.hypercerts.claim.collection":                       generated.org.hypercerts.claim.collection,
-  "org.hypercerts.claim.contributionDetails":              generated.org.hypercerts.claim.contributionDetails,
+  "org.hypercerts.claim.contribution":                     generated.org.hypercerts.claim.contribution,
   "org.hypercerts.claim.contributorInformation":           generated.org.hypercerts.claim.contributorInformation,
-  "org.hypercerts.claim.evaluation":                       generated.org.hypercerts.claim.evaluation,
-  "org.hypercerts.claim.measurement":                      generated.org.hypercerts.claim.measurement,
   "org.hypercerts.claim.rights":                           generated.org.hypercerts.claim.rights,
+  "org.hypercerts.collection":                             generated.org.hypercerts.collection,
+  "org.hypercerts.context.acknowledgement":                generated.org.hypercerts.context.acknowledgement,
+  "org.hypercerts.context.attachment":                     generated.org.hypercerts.context.attachment,
+  "org.hypercerts.context.evaluation":                     generated.org.hypercerts.context.evaluation,
+  "org.hypercerts.context.measurement":                    generated.org.hypercerts.context.measurement,
   "org.hypercerts.funding.receipt":                        generated.org.hypercerts.funding.receipt,
-  "org.hypercerts.helper.workScopeTag":                    generated.org.hypercerts.helper.workScopeTag,
+  "org.hypercerts.workscope.tag":                          generated.org.hypercerts.workscope.tag,
   "org.impactindexer.link.attestation":                    generated.org.impactindexer.link.attestation,
   "org.impactindexer.review.comment":                      generated.org.impactindexer.review.comment,
   "org.impactindexer.review.like":                         generated.org.impactindexer.review.like,
@@ -100,9 +99,7 @@ export function validateRecord(
 
   const result = schema.$safeValidate(record);
   if (result.success) return { ok: true };
-  // NOTE: the failure field is `reason`, NOT `error` — see LexSchema type above.
-  // DO NOT change result.reason back to result.error — that silently produces "undefined" in logs.
-  return { ok: false, error: formatError(result.reason) };
+  return { ok: false, error: formatError(result.error) };
 }
 
 // ============================================================

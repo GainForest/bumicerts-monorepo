@@ -19,9 +19,9 @@
 
 import { builder } from "../builder.ts";
 import {
-  PageInfoType, RecordMetaType, BlobRefType, StrongRefType, CreatorInfoType,
+  PageInfoType, RecordMetaType, StrongRefType, CreatorInfoType,
   SortOrderEnum, SortFieldEnum,
-  rowToMeta, payload, extractBlobRef, extractStrongRef, extractStrongRefs,
+  rowToMeta, payload, extractStrongRef, extractStrongRefs,
   resolveBlobsInValue,
   fetchCollectionPage, toPageInfo, WhereInputRef,
   ActivityWhereInputRef, activityWhereToFilter, activityWhereHasText,
@@ -45,7 +45,9 @@ const arr = (p: Record<string, unknown>, k: string): string[] | null => {
 const j = (p: Record<string, unknown>, k: string): unknown => p[k] ?? null;
 
 class HypercertsNS {}
-class HcHelperNS {}
+class HcContextNS {}
+class HcWorkscopeNS {}
+class HyperboardsNS {}
 
 // ── Activity metadata type (envelope + label extras) ──
 
@@ -97,10 +99,9 @@ const HcActivityRecordType = builder.simpleObject("HcActivityRecord", {
     title:                  t.string({ nullable: true }),
     shortDescription:       t.string({ nullable: true }),
     shortDescriptionFacets: t.field({ type: "JSON", nullable: true }),
-    description:            t.string({ nullable: true }),
-    descriptionFacets:      t.field({ type: "JSON", nullable: true }),
+    description:            t.field({ type: "JSON", nullable: true, description: "Rich-text description as a Leaflet linear document" }),
     image:                  t.field({ type: "JSON", nullable: true }),
-    workScope:              t.field({ type: "JSON", nullable: true }),
+    workScope:              t.field({ type: "JSON", nullable: true, description: "Work scope: CEL expression or free-form string" }),
     startDate:              t.field({ type: "DateTime", nullable: true }),
     endDate:                t.field({ type: "DateTime", nullable: true }),
     contributors:           t.field({ type: "JSON", nullable: true }),
@@ -111,19 +112,22 @@ const HcActivityRecordType = builder.simpleObject("HcActivityRecord", {
 });
 
 const HcCollectionRecordType = builder.simpleObject("HcCollectionRecord", {
-  description: "Pure payload for a Hypercerts claim collection (org.hypercerts.claim.collection).",
+  description: "Pure payload for a Hypercerts collection (org.hypercerts.collection).",
   fields: (t) => ({
+    type:             t.string({ nullable: true, description: "Collection type, e.g. 'favorites', 'project'" }),
     title:            t.string({ nullable: true }),
     shortDescription: t.string({ nullable: true }),
-    avatar:           t.field({ type: BlobRefType, nullable: true }),
-    coverPhoto:       t.field({ type: BlobRefType, nullable: true }),
-    activities:       t.field({ type: "JSON", nullable: true }),
+    description:      t.field({ type: "JSON", nullable: true, description: "Rich-text description as a Leaflet linear document" }),
+    avatar:           t.field({ type: "JSON", nullable: true, description: "Avatar as URI or image blob" }),
+    banner:           t.field({ type: "JSON", nullable: true, description: "Banner image as URI or large image blob" }),
+    items:            t.field({ type: "JSON", nullable: true, description: "Array of items with optional weights" }),
+    location:         t.field({ type: StrongRefType, nullable: true }),
     createdAt:        t.field({ type: "DateTime", nullable: true }),
   }),
 });
 
 const HcEvaluationRecordType = builder.simpleObject("HcEvaluationRecord", {
-  description: "Pure payload for a Hypercerts claim evaluation (org.hypercerts.claim.evaluation).",
+  description: "Pure payload for a Hypercerts context evaluation (org.hypercerts.context.evaluation).",
   fields: (t) => ({
     subject:      t.field({ type: StrongRefType, nullable: true }),
     evaluators:   t.stringList({ nullable: true }),
@@ -137,7 +141,7 @@ const HcEvaluationRecordType = builder.simpleObject("HcEvaluationRecord", {
 });
 
 const HcMeasurementRecordType = builder.simpleObject("HcMeasurementRecord", {
-  description: "Pure payload for a Hypercerts claim measurement (org.hypercerts.claim.measurement).",
+  description: "Pure payload for a Hypercerts context measurement (org.hypercerts.context.measurement).",
   fields: (t) => ({
     subject:     t.field({ type: StrongRefType, nullable: true }),
     measurers:   t.stringList({ nullable: true }),
@@ -180,7 +184,7 @@ const HcFundingReceiptRecordType = builder.simpleObject("HcFundingReceiptRecord"
 });
 
 const HcAcknowledgementRecordType = builder.simpleObject("HcAcknowledgementRecord", {
-  description: "Pure payload for an acknowledgement record (org.hypercerts.acknowledgement).",
+  description: "Pure payload for an acknowledgement record (org.hypercerts.context.acknowledgement).",
   fields: (t) => ({
     subject:      t.field({ type: StrongRefType, nullable: true }),
     context:      t.field({ type: StrongRefType, nullable: true }),
@@ -191,7 +195,7 @@ const HcAcknowledgementRecordType = builder.simpleObject("HcAcknowledgementRecor
 });
 
 const HcAttachmentRecordType = builder.simpleObject("HcAttachmentRecord", {
-  description: "Pure payload for an attachment record (org.hypercerts.claim.attachment).",
+  description: "Pure payload for an attachment record (org.hypercerts.context.attachment).",
   fields: (t) => ({
     subjects:               t.field({ type: [StrongRefType], nullable: true }),
     contentType:            t.string({ nullable: true }),
@@ -199,15 +203,14 @@ const HcAttachmentRecordType = builder.simpleObject("HcAttachmentRecord", {
     title:                  t.string({ nullable: true }),
     shortDescription:       t.string({ nullable: true }),
     shortDescriptionFacets: t.field({ type: "JSON", nullable: true }),
-    description:            t.string({ nullable: true }),
-    descriptionFacets:      t.field({ type: "JSON", nullable: true }),
+    description:            t.field({ type: "JSON", nullable: true, description: "Rich-text description as a Leaflet linear document" }),
     location:               t.field({ type: StrongRefType, nullable: true }),
     createdAt:              t.field({ type: "DateTime", nullable: true }),
   }),
 });
 
-const HcContributionDetailsRecordType = builder.simpleObject("HcContributionDetailsRecord", {
-  description: "Pure payload for contribution details (org.hypercerts.claim.contributionDetails).",
+const HcContributionRecordType = builder.simpleObject("HcContributionRecord", {
+  description: "Pure payload for contribution details (org.hypercerts.claim.contribution).",
   fields: (t) => ({
     role:                    t.string({ nullable: true }),
     contributionDescription: t.string({ nullable: true }),
@@ -228,7 +231,7 @@ const HcContributorInformationRecordType = builder.simpleObject("HcContributorIn
 });
 
 const HcWorkScopeTagRecordType = builder.simpleObject("HcWorkScopeTagRecord", {
-  description: "Pure payload for a work scope tag (org.hypercerts.helper.workScopeTag).",
+  description: "Pure payload for a work scope tag (org.hypercerts.workscope.tag).",
   fields: (t) => ({
     key:               t.string({ nullable: true }),
     label:             t.string({ nullable: true }),
@@ -237,7 +240,33 @@ const HcWorkScopeTagRecordType = builder.simpleObject("HcWorkScopeTagRecord", {
     parent:            t.field({ type: StrongRefType, nullable: true }),
     aliases:           t.stringList({ nullable: true }),
     externalReference: t.field({ type: "JSON", nullable: true }),
+    deprecated:        t.field({ type: StrongRefType, nullable: true, description: "Points to replacement tag if deprecated" }),
     createdAt:         t.field({ type: "DateTime", nullable: true }),
+  }),
+});
+
+// ── Hyperboards record types ──
+
+const HbBoardRecordType = builder.simpleObject("HbBoardRecord", {
+  description: "Pure payload for a hyperboard (org.hyperboards.board).",
+  fields: (t) => ({
+    subject:            t.field({ type: StrongRefType, nullable: true, description: "Reference to the activity or collection this board visualizes" }),
+    config:             t.field({ type: "JSON", nullable: true, description: "Board-level visual configuration" }),
+    contributorConfigs: t.field({ type: "JSON", nullable: true, description: "Per-contributor configuration entries" }),
+    createdAt:          t.field({ type: "DateTime", nullable: true }),
+  }),
+});
+
+const HbDisplayProfileRecordType = builder.simpleObject("HbDisplayProfileRecord", {
+  description: "Pure payload for a hyperboard display profile (org.hyperboards.displayProfile).",
+  fields: (t) => ({
+    displayName:    t.string({ nullable: true }),
+    image:          t.field({ type: "JSON", nullable: true }),
+    video:          t.field({ type: "JSON", nullable: true }),
+    hoverImage:     t.field({ type: "JSON", nullable: true }),
+    hoverIframeUrl: t.string({ nullable: true }),
+    url:            t.string({ nullable: true }),
+    createdAt:      t.field({ type: "DateTime", nullable: true }),
   }),
 });
 
@@ -256,7 +285,7 @@ const HcActivityPageType = builder.simpleObject("HcActivityPage", {
 });
 
 const HcCollectionItemType = builder.simpleObject("HcCollectionItem", {
-  description: "A Hypercerts claim collection (org.hypercerts.claim.collection).",
+  description: "A Hypercerts collection (org.hypercerts.collection).",
   fields: (t) => ({
     metadata:    t.field({ type: RecordMetaType }),
     creatorInfo: t.field({ type: CreatorInfoType }),
@@ -268,7 +297,7 @@ const HcCollectionPageType = builder.simpleObject("HcCollectionPage", {
 });
 
 const HcEvaluationItemType = builder.simpleObject("HcEvaluationItem", {
-  description: "A Hypercerts claim evaluation (org.hypercerts.claim.evaluation).",
+  description: "A Hypercerts context evaluation (org.hypercerts.context.evaluation).",
   fields: (t) => ({
     metadata:    t.field({ type: RecordMetaType }),
     creatorInfo: t.field({ type: CreatorInfoType }),
@@ -280,7 +309,7 @@ const HcEvaluationPageType = builder.simpleObject("HcEvaluationPage", {
 });
 
 const HcMeasurementItemType = builder.simpleObject("HcMeasurementItem", {
-  description: "A Hypercerts claim measurement (org.hypercerts.claim.measurement).",
+  description: "A Hypercerts context measurement (org.hypercerts.context.measurement).",
   fields: (t) => ({
     metadata:    t.field({ type: RecordMetaType }),
     creatorInfo: t.field({ type: CreatorInfoType }),
@@ -316,7 +345,7 @@ const HcFundingReceiptPageType = builder.simpleObject("HcFundingReceiptPage", {
 });
 
 const HcAcknowledgementItemType = builder.simpleObject("HcAcknowledgementItem", {
-  description: "An acknowledgement record (org.hypercerts.acknowledgement).",
+  description: "An acknowledgement record (org.hypercerts.context.acknowledgement).",
   fields: (t) => ({
     metadata:    t.field({ type: RecordMetaType }),
     creatorInfo: t.field({ type: CreatorInfoType }),
@@ -328,7 +357,7 @@ const HcAcknowledgementPageType = builder.simpleObject("HcAcknowledgementPage", 
 });
 
 const HcAttachmentItemType = builder.simpleObject("HcAttachmentItem", {
-  description: "An attachment providing commentary, context, or evidence (org.hypercerts.claim.attachment).",
+  description: "An attachment providing commentary, context, or evidence (org.hypercerts.context.attachment).",
   fields: (t) => ({
     metadata:    t.field({ type: RecordMetaType }),
     creatorInfo: t.field({ type: CreatorInfoType }),
@@ -339,16 +368,16 @@ const HcAttachmentPageType = builder.simpleObject("HcAttachmentPage", {
   fields: (t) => ({ data: t.field({ type: [HcAttachmentItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
 });
 
-const HcContributionDetailsItemType = builder.simpleObject("HcContributionDetailsItem", {
-  description: "Details about a specific contribution (org.hypercerts.claim.contributionDetails).",
+const HcContributionItemType = builder.simpleObject("HcContributionItem", {
+  description: "Details about a specific contribution (org.hypercerts.claim.contribution).",
   fields: (t) => ({
     metadata:    t.field({ type: RecordMetaType }),
     creatorInfo: t.field({ type: CreatorInfoType }),
-    record:      t.field({ type: HcContributionDetailsRecordType }),
+    record:      t.field({ type: HcContributionRecordType }),
   }),
 });
-const HcContributionDetailsPageType = builder.simpleObject("HcContributionDetailsPage", {
-  fields: (t) => ({ data: t.field({ type: [HcContributionDetailsItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
+const HcContributionPageType = builder.simpleObject("HcContributionPage", {
+  fields: (t) => ({ data: t.field({ type: [HcContributionItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
 });
 
 const HcContributorInformationItemType = builder.simpleObject("HcContributorInformationItem", {
@@ -364,7 +393,7 @@ const HcContributorInformationPageType = builder.simpleObject("HcContributorInfo
 });
 
 const HcWorkScopeTagItemType = builder.simpleObject("HcWorkScopeTagItem", {
-  description: "A reusable work scope atom for taxonomy (org.hypercerts.helper.workScopeTag).",
+  description: "A reusable work scope atom for taxonomy (org.hypercerts.workscope.tag).",
   fields: (t) => ({
     metadata:    t.field({ type: RecordMetaType }),
     creatorInfo: t.field({ type: CreatorInfoType }),
@@ -373,6 +402,32 @@ const HcWorkScopeTagItemType = builder.simpleObject("HcWorkScopeTagItem", {
 });
 const HcWorkScopeTagPageType = builder.simpleObject("HcWorkScopeTagPage", {
   fields: (t) => ({ data: t.field({ type: [HcWorkScopeTagItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
+});
+
+// ── Hyperboards item types ──
+
+const HbBoardItemType = builder.simpleObject("HbBoardItem", {
+  description: "A hyperboard record (org.hyperboards.board).",
+  fields: (t) => ({
+    metadata:    t.field({ type: RecordMetaType }),
+    creatorInfo: t.field({ type: CreatorInfoType }),
+    record:      t.field({ type: HbBoardRecordType }),
+  }),
+});
+const HbBoardPageType = builder.simpleObject("HbBoardPage", {
+  fields: (t) => ({ data: t.field({ type: [HbBoardItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
+});
+
+const HbDisplayProfileItemType = builder.simpleObject("HbDisplayProfileItem", {
+  description: "A hyperboard display profile (org.hyperboards.displayProfile).",
+  fields: (t) => ({
+    metadata:    t.field({ type: RecordMetaType }),
+    creatorInfo: t.field({ type: CreatorInfoType }),
+    record:      t.field({ type: HbDisplayProfileRecordType }),
+  }),
+});
+const HbDisplayProfilePageType = builder.simpleObject("HbDisplayProfilePage", {
+  fields: (t) => ({ data: t.field({ type: [HbDisplayProfileItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
 });
 
 // ── Row mappers ──
@@ -393,8 +448,7 @@ async function mapActivity(
       title: s(p,"title"),
       shortDescription: s(p,"shortDescription"),
       shortDescriptionFacets: j(p,"shortDescriptionFacets"),
-      description: s(p,"description"),
-      descriptionFacets: j(p,"descriptionFacets"),
+      description: j(p,"description"), // Now a LinearDocument object, not a string
       image: await resolveBlobsInValue(j(p,"image"), row.did),
       workScope: j(p,"workScope"),
       startDate: s(p,"startDate"),
@@ -413,11 +467,14 @@ async function mapCollection(row: RecordRow) {
     metadata:    rowToMeta(row),
     creatorInfo: await resolveCreatorInfo(row.did),
     record: {
+      type: s(p,"type"),
       title: s(p,"title"),
       shortDescription: s(p,"shortDescription"),
-      avatar:     await extractBlobRef(j(p,"avatar"),     row.did),
-      coverPhoto: await extractBlobRef(j(p,"coverPhoto"), row.did),
-      activities: j(p,"activities"),
+      description: j(p,"description"), // LinearDocument
+      avatar: await resolveBlobsInValue(j(p,"avatar"), row.did),
+      banner: await resolveBlobsInValue(j(p,"banner"), row.did),
+      items: j(p,"items"),
+      location: extractStrongRef(j(p,"location")),
       createdAt:  s(p,"createdAt"),
     },
   };
@@ -516,15 +573,14 @@ async function mapAttachment(row: RecordRow) {
       title: s(p,"title"),
       shortDescription: s(p,"shortDescription"),
       shortDescriptionFacets: j(p,"shortDescriptionFacets"),
-      description: s(p,"description"),
-      descriptionFacets: j(p,"descriptionFacets"),
+      description: j(p,"description"), // LinearDocument
       location: extractStrongRef(j(p,"location")),
       createdAt: s(p,"createdAt"),
     },
   };
 }
 
-async function mapContributionDetails(row: RecordRow) {
+async function mapContribution(row: RecordRow) {
   const p = payload(row);
   return {
     metadata:    rowToMeta(row),
@@ -566,18 +622,108 @@ async function mapWorkScopeTag(row: RecordRow) {
       parent: extractStrongRef(j(p,"parent")),
       aliases: arr(p,"aliases"),
       externalReference: await resolveBlobsInValue(j(p,"externalReference"), row.did),
+      deprecated: extractStrongRef(j(p,"deprecated")),
       createdAt: s(p,"createdAt"),
     },
   };
 }
 
-// ── Helper namespace objectType ──
+async function mapBoard(row: RecordRow) {
+  const p = payload(row);
+  return {
+    metadata:    rowToMeta(row),
+    creatorInfo: await resolveCreatorInfo(row.did),
+    record: {
+      subject: extractStrongRef(j(p,"subject")),
+      config: await resolveBlobsInValue(j(p,"config"), row.did),
+      contributorConfigs: await resolveBlobsInValue(j(p,"contributorConfigs"), row.did),
+      createdAt: s(p,"createdAt"),
+    },
+  };
+}
 
-builder.objectType(HcHelperNS, {
-  name: "HcHelperNamespace",
-  description: "Hypercerts helper records (org.hypercerts.helper.*).",
+async function mapDisplayProfile(row: RecordRow) {
+  const p = payload(row);
+  return {
+    metadata:    rowToMeta(row),
+    creatorInfo: await resolveCreatorInfo(row.did),
+    record: {
+      displayName: s(p,"displayName"),
+      image: await resolveBlobsInValue(j(p,"image"), row.did),
+      video: await resolveBlobsInValue(j(p,"video"), row.did),
+      hoverImage: await resolveBlobsInValue(j(p,"hoverImage"), row.did),
+      hoverIframeUrl: s(p,"hoverIframeUrl"),
+      url: s(p,"url"),
+      createdAt: s(p,"createdAt"),
+    },
+  };
+}
+
+// ── Context namespace objectType ──
+
+builder.objectType(HcContextNS, {
+  name: "HcContextNamespace",
+  description: "Hypercerts context records (org.hypercerts.context.*).",
   fields: (t) => ({
-    workScopeTag: t.field({
+    acknowledgement: t.field({
+      type: HcAcknowledgementPageType,
+      args: {
+        cursor: t.arg.string(), limit: t.arg.int(),
+        where: t.arg({ type: WhereInputRef, required: false }),
+        sortBy: t.arg({ type: SortFieldEnum }), order: t.arg({ type: SortOrderEnum }),
+      },
+      resolve: (_, args) => fetchCollectionPage("org.hypercerts.context.acknowledgement", args, mapAcknowledgement),
+    }),
+    attachment: t.field({
+      type: HcAttachmentPageType,
+      args: {
+        cursor: t.arg.string(), limit: t.arg.int(),
+        where: t.arg({ type: WhereInputRef, required: false }),
+        sortBy: t.arg({ type: SortFieldEnum }), order: t.arg({ type: SortOrderEnum }),
+      },
+      resolve: async (_, args) => {
+        const { cursor, limit, where, sortBy, order } = args;
+        let resolvedDid: string | undefined;
+        if (where?.handle) resolvedDid = await resolveActorToDid(where.handle);
+        else if (where?.did) resolvedDid = where.did;
+        const page = await getRecordsByCollection("org.hypercerts.context.attachment", {
+          cursor: cursor ?? undefined, limit: limit ?? undefined, did: resolvedDid,
+          sortField: (sortBy as "createdAt" | "indexedAt") ?? undefined,
+          sortOrder: (order as "asc" | "desc") ?? undefined,
+        });
+        await getPdsHostsBatch([...new Set(page.records.map((r) => r.did))]);
+        const data = await Promise.all(page.records.map(mapAttachment));
+        return { data, pageInfo: toPageInfo(page.cursor, data.length) };
+      },
+    }),
+    evaluation: t.field({
+      type: HcEvaluationPageType,
+      args: {
+        cursor: t.arg.string(), limit: t.arg.int(),
+        where: t.arg({ type: WhereInputRef, required: false }),
+        sortBy: t.arg({ type: SortFieldEnum }), order: t.arg({ type: SortOrderEnum }),
+      },
+      resolve: (_, args) => fetchCollectionPage("org.hypercerts.context.evaluation", args, mapEvaluation),
+    }),
+    measurement: t.field({
+      type: HcMeasurementPageType,
+      args: {
+        cursor: t.arg.string(), limit: t.arg.int(),
+        where: t.arg({ type: WhereInputRef, required: false }),
+        sortBy: t.arg({ type: SortFieldEnum }), order: t.arg({ type: SortOrderEnum }),
+      },
+      resolve: (_, args) => fetchCollectionPage("org.hypercerts.context.measurement", args, mapMeasurement),
+    }),
+  }),
+});
+
+// ── Workscope namespace objectType ──
+
+builder.objectType(HcWorkscopeNS, {
+  name: "HcWorkscopeNamespace",
+  description: "Hypercerts work scope records (org.hypercerts.workscope.*).",
+  fields: (t) => ({
+    tag: t.field({
       type: HcWorkScopeTagPageType,
       args: {
         cursor: t.arg.string(), limit: t.arg.int(),
@@ -589,13 +735,66 @@ builder.objectType(HcHelperNS, {
         let resolvedDid: string | undefined;
         if (where?.handle) resolvedDid = await resolveActorToDid(where.handle);
         else if (where?.did) resolvedDid = where.did;
-        const page = await getRecordsByCollection("org.hypercerts.helper.workScopeTag", {
+        const page = await getRecordsByCollection("org.hypercerts.workscope.tag", {
           cursor: cursor ?? undefined, limit: limit ?? undefined, did: resolvedDid,
           sortField: (sortBy as "createdAt" | "indexedAt") ?? undefined,
           sortOrder: (order as "asc" | "desc") ?? undefined,
         });
         await getPdsHostsBatch([...new Set(page.records.map((r) => r.did))]);
         const data = await Promise.all(page.records.map(mapWorkScopeTag));
+        return { data, pageInfo: toPageInfo(page.cursor, data.length) };
+      },
+    }),
+  }),
+});
+
+// ── Hyperboards namespace objectType ──
+
+builder.objectType(HyperboardsNS, {
+  name: "HyperboardsNamespace",
+  description: "Hyperboards AT Protocol records (org.hyperboards.*).",
+  fields: (t) => ({
+    board: t.field({
+      type: HbBoardPageType,
+      args: {
+        cursor: t.arg.string(), limit: t.arg.int(),
+        where: t.arg({ type: WhereInputRef, required: false }),
+        sortBy: t.arg({ type: SortFieldEnum }), order: t.arg({ type: SortOrderEnum }),
+      },
+      resolve: async (_, args) => {
+        const { cursor, limit, where, sortBy, order } = args;
+        let resolvedDid: string | undefined;
+        if (where?.handle) resolvedDid = await resolveActorToDid(where.handle);
+        else if (where?.did) resolvedDid = where.did;
+        const page = await getRecordsByCollection("org.hyperboards.board", {
+          cursor: cursor ?? undefined, limit: limit ?? undefined, did: resolvedDid,
+          sortField: (sortBy as "createdAt" | "indexedAt") ?? undefined,
+          sortOrder: (order as "asc" | "desc") ?? undefined,
+        });
+        await getPdsHostsBatch([...new Set(page.records.map((r) => r.did))]);
+        const data = await Promise.all(page.records.map(mapBoard));
+        return { data, pageInfo: toPageInfo(page.cursor, data.length) };
+      },
+    }),
+    displayProfile: t.field({
+      type: HbDisplayProfilePageType,
+      args: {
+        cursor: t.arg.string(), limit: t.arg.int(),
+        where: t.arg({ type: WhereInputRef, required: false }),
+        sortBy: t.arg({ type: SortFieldEnum }), order: t.arg({ type: SortOrderEnum }),
+      },
+      resolve: async (_, args) => {
+        const { cursor, limit, where, sortBy, order } = args;
+        let resolvedDid: string | undefined;
+        if (where?.handle) resolvedDid = await resolveActorToDid(where.handle);
+        else if (where?.did) resolvedDid = where.did;
+        const page = await getRecordsByCollection("org.hyperboards.displayProfile", {
+          cursor: cursor ?? undefined, limit: limit ?? undefined, did: resolvedDid,
+          sortField: (sortBy as "createdAt" | "indexedAt") ?? undefined,
+          sortOrder: (order as "asc" | "desc") ?? undefined,
+        });
+        await getPdsHostsBatch([...new Set(page.records.map((r) => r.did))]);
+        const data = await Promise.all(page.records.map(mapDisplayProfile));
         return { data, pageInfo: toPageInfo(page.cursor, data.length) };
       },
     }),
@@ -733,7 +932,7 @@ builder.objectType(HypercertsNS, {
         let resolvedDid: string | undefined;
         if (where?.handle) resolvedDid = await resolveActorToDid(where.handle);
         else if (where?.did) resolvedDid = where.did;
-        const page = await getRecordsByCollection("org.hypercerts.claim.collection", {
+        const page = await getRecordsByCollection("org.hypercerts.collection", {
           cursor: cursor ?? undefined, limit: limit ?? undefined, did: resolvedDid,
           sortField: (sortBy as "createdAt" | "indexedAt") ?? undefined,
           sortOrder: (order as "asc" | "desc") ?? undefined,
@@ -742,24 +941,6 @@ builder.objectType(HypercertsNS, {
         const data = await Promise.all(page.records.map(mapCollection));
         return { data, pageInfo: toPageInfo(page.cursor, data.length) };
       },
-    }),
-    evaluation: t.field({
-      type: HcEvaluationPageType,
-      args: {
-        cursor: t.arg.string(), limit: t.arg.int(),
-        where: t.arg({ type: WhereInputRef, required: false }),
-        sortBy: t.arg({ type: SortFieldEnum }), order: t.arg({ type: SortOrderEnum }),
-      },
-      resolve: (_, args) => fetchCollectionPage("org.hypercerts.claim.evaluation", args, mapEvaluation),
-    }),
-    measurement: t.field({
-      type: HcMeasurementPageType,
-      args: {
-        cursor: t.arg.string(), limit: t.arg.int(),
-        where: t.arg({ type: WhereInputRef, required: false }),
-        sortBy: t.arg({ type: SortFieldEnum }), order: t.arg({ type: SortOrderEnum }),
-      },
-      resolve: (_, args) => fetchCollectionPage("org.hypercerts.claim.measurement", args, mapMeasurement),
     }),
     rights: t.field({
       type: HcRightsPageType,
@@ -779,45 +960,14 @@ builder.objectType(HypercertsNS, {
       },
       resolve: (_, args) => fetchCollectionPage("org.hypercerts.funding.receipt", args, mapFundingReceipt),
     }),
-    acknowledgement: t.field({
-      type: HcAcknowledgementPageType,
+    contribution: t.field({
+      type: HcContributionPageType,
       args: {
         cursor: t.arg.string(), limit: t.arg.int(),
         where: t.arg({ type: WhereInputRef, required: false }),
         sortBy: t.arg({ type: SortFieldEnum }), order: t.arg({ type: SortOrderEnum }),
       },
-      resolve: (_, args) => fetchCollectionPage("org.hypercerts.acknowledgement", args, mapAcknowledgement),
-    }),
-    attachment: t.field({
-      type: HcAttachmentPageType,
-      args: {
-        cursor: t.arg.string(), limit: t.arg.int(),
-        where: t.arg({ type: WhereInputRef, required: false }),
-        sortBy: t.arg({ type: SortFieldEnum }), order: t.arg({ type: SortOrderEnum }),
-      },
-      resolve: async (_, args) => {
-        const { cursor, limit, where, sortBy, order } = args;
-        let resolvedDid: string | undefined;
-        if (where?.handle) resolvedDid = await resolveActorToDid(where.handle);
-        else if (where?.did) resolvedDid = where.did;
-        const page = await getRecordsByCollection("org.hypercerts.claim.attachment", {
-          cursor: cursor ?? undefined, limit: limit ?? undefined, did: resolvedDid,
-          sortField: (sortBy as "createdAt" | "indexedAt") ?? undefined,
-          sortOrder: (order as "asc" | "desc") ?? undefined,
-        });
-        await getPdsHostsBatch([...new Set(page.records.map((r) => r.did))]);
-        const data = await Promise.all(page.records.map(mapAttachment));
-        return { data, pageInfo: toPageInfo(page.cursor, data.length) };
-      },
-    }),
-    contributionDetail: t.field({
-      type: HcContributionDetailsPageType,
-      args: {
-        cursor: t.arg.string(), limit: t.arg.int(),
-        where: t.arg({ type: WhereInputRef, required: false }),
-        sortBy: t.arg({ type: SortFieldEnum }), order: t.arg({ type: SortOrderEnum }),
-      },
-      resolve: (_, args) => fetchCollectionPage("org.hypercerts.claim.contributionDetails", args, mapContributionDetails),
+      resolve: (_, args) => fetchCollectionPage("org.hypercerts.claim.contribution", args, mapContribution),
     }),
     contributorInformation: t.field({
       type: HcContributorInformationPageType,
@@ -841,10 +991,15 @@ builder.objectType(HypercertsNS, {
         return { data, pageInfo: toPageInfo(page.cursor, data.length) };
       },
     }),
-    helper: t.field({
-      type: HcHelperNS,
-      description: "Helper records (org.hypercerts.helper.*).",
-      resolve: () => new HcHelperNS(),
+    context: t.field({
+      type: HcContextNS,
+      description: "Context records (org.hypercerts.context.*).",
+      resolve: () => new HcContextNS(),
+    }),
+    workscope: t.field({
+      type: HcWorkscopeNS,
+      description: "Work scope records (org.hypercerts.workscope.*).",
+      resolve: () => new HcWorkscopeNS(),
     }),
   }),
 });
@@ -854,5 +1009,10 @@ builder.queryFields((t) => ({
     type: HypercertsNS,
     description: "All Hypercerts indexed records, grouped by namespace.",
     resolve: () => new HypercertsNS(),
+  }),
+  hyperboards: t.field({
+    type: HyperboardsNS,
+    description: "All Hyperboards indexed records.",
+    resolve: () => new HyperboardsNS(),
   }),
 }));

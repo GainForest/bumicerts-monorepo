@@ -6,14 +6,15 @@ import { l } from '@atproto/lex'
 import * as RepoStrongRef from '../../../com/atproto/repo/strongRef.defs.ts'
 import * as HypercertsDefs from '../defs.defs.ts'
 import * as RichtextFacet from '../../../app/bsky/richtext/facet.defs.ts'
+import * as PagesLinearDocument from '../../../pub/leaflet/pages/linearDocument.defs.ts'
 
-const $nsid = 'org.hypercerts.claim.attachment'
+const $nsid = 'org.hypercerts.context.attachment'
 
 export { $nsid }
 
 /** An attachment providing commentary, context, evidence, or documentary material related to a hypercert record (e.g. an activity, project, claim, or evaluation). */
 type Main = {
-  $type: 'org.hypercerts.claim.attachment'
+  $type: 'org.hypercerts.context.attachment'
 
   /**
    * References to the subject(s) the attachment is connected to—this may be an activity claim, outcome claim, measurement, evaluation, or even another attachment. This is optional as the attachment can exist before the claim is recorded.
@@ -28,7 +29,7 @@ type Main = {
   /**
    * The files, documents, or external references included in this attachment record.
    */
-  content: (
+  content?: (
     | l.$Typed<HypercertsDefs.Uri>
     | l.$Typed<HypercertsDefs.SmallBlob>
     | l.Unknown$TypedObject
@@ -50,14 +51,9 @@ type Main = {
   shortDescriptionFacets?: RichtextFacet.Main[]
 
   /**
-   * Optional longer description of this attachment, including context or interpretation. Rich text annotations may be provided via `descriptionFacets`.
+   * Rich-text description, represented as a Leaflet linear document.
    */
-  description?: string
-
-  /**
-   * Rich text annotations for `description` (mentions, URLs, hashtags, etc).
-   */
-  descriptionFacets?: RichtextFacet.Main[]
+  description?: PagesLinearDocument.Main
 
   /**
    * A strong reference to the location where this attachment's subject matter occurred. The record referenced must conform with the lexicon app.certified.location.
@@ -83,17 +79,19 @@ const main = l.record<'tid', Main>(
       }),
     ),
     contentType: l.optional(l.string({ maxLength: 64 })),
-    content: l.array(
-      l.typedUnion(
-        [
-          l.typedRef<HypercertsDefs.Uri>((() => HypercertsDefs.uri) as any),
-          l.typedRef<HypercertsDefs.SmallBlob>(
-            (() => HypercertsDefs.smallBlob) as any,
-          ),
-        ],
-        false,
+    content: l.optional(
+      l.array(
+        l.typedUnion(
+          [
+            l.typedRef<HypercertsDefs.Uri>((() => HypercertsDefs.uri) as any),
+            l.typedRef<HypercertsDefs.SmallBlob>(
+              (() => HypercertsDefs.smallBlob) as any,
+            ),
+          ],
+          false,
+        ),
+        { maxLength: 100 },
       ),
-      { maxLength: 100 },
     ),
     title: l.string({ maxLength: 256 }),
     shortDescription: l.optional(
@@ -102,9 +100,8 @@ const main = l.record<'tid', Main>(
     shortDescriptionFacets: l.optional(
       l.array(l.ref<RichtextFacet.Main>((() => RichtextFacet.main) as any)),
     ),
-    description: l.optional(l.string({ maxLength: 30000, maxGraphemes: 3000 })),
-    descriptionFacets: l.optional(
-      l.array(l.ref<RichtextFacet.Main>((() => RichtextFacet.main) as any)),
+    description: l.optional(
+      l.ref<PagesLinearDocument.Main>((() => PagesLinearDocument.main) as any),
     ),
     location: l.optional(
       l.ref<RepoStrongRef.Main>((() => RepoStrongRef.main) as any),
