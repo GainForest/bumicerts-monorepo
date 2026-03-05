@@ -56,6 +56,9 @@ COPY package.json bun.lock* ./
 COPY GENERATED/package.json GENERATED/
 COPY apps/indexer/package.json apps/indexer/
 COPY apps/indexer/patches/ apps/indexer/patches/
+# Bun resolves patchedDependencies paths relative to the workspace root,
+# so the patch file must also exist at the root-relative path it declares.
+COPY apps/indexer/patches/ patches/
 
 # Install only the indexer's dependencies (hoisted into /repo/node_modules)
 RUN bun install --frozen-lockfile --filter @gainforest/indexer
