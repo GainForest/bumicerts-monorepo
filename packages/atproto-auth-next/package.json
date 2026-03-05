@@ -9,21 +9,25 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
     "./server": {
+      "source": "./src/server.ts",
       "types": "./dist/server.d.ts",
       "import": "./dist/server.js",
       "require": "./dist/server.cjs"
     },
     "./stores": {
+      "source": "./src/stores.ts",
       "types": "./dist/stores.d.ts",
       "import": "./dist/stores.js",
       "require": "./dist/stores.cjs"
     },
     "./client": {
+      "source": "./src/client.ts",
       "types": "./dist/client.d.ts",
       "import": "./dist/client.js",
       "require": "./dist/client.cjs"
