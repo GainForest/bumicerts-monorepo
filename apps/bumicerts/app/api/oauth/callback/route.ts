@@ -11,5 +11,7 @@
  */
 
 import { auth } from "@/lib/auth";
+import type { NextRequest } from "next/server";
 
-export const { GET } = auth.handlers.callback;
+export const dynamic = "force-dynamic";
+export function GET(req: NextRequest) { return auth.handlers.callback.GET(req); }

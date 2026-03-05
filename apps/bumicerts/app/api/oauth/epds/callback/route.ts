@@ -13,5 +13,7 @@
  */
 
 import { auth } from "@/lib/auth";
+import type { NextRequest } from "next/server";
 
-export const { GET } = auth.handlers.epds.callback;
+export const dynamic = "force-dynamic";
+export function GET(req: NextRequest) { return auth.handlers.epds.callback.GET(req); }

@@ -11,4 +11,5 @@
 
 import { auth } from "@/lib/auth";
 
-export const { GET } = auth.handlers.clientMetadata;
+export const dynamic = "force-dynamic";
+export function GET() { return auth.handlers.clientMetadata.GET(); }

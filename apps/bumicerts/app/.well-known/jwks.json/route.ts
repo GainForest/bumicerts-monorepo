@@ -11,4 +11,5 @@
 
 import { auth } from "@/lib/auth";
 
-export const { GET } = auth.handlers.jwks;
+export const dynamic = "force-dynamic";
+export function GET() { return auth.handlers.jwks.GET(); }
