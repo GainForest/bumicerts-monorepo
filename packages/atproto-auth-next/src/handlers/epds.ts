@@ -90,7 +90,7 @@ export function createEpdsLoginHandler(config: EpdsHandlerConfig) {
       const codeChallenge = generateCodeChallenge(codeVerifier);
       const state = generateState();
 
-      const { parEndpoint, authEndpoint } = getEpdsEndpoints({
+      const { parEndpoint, authEndpoint, issuer } = getEpdsEndpoints({
         url: config.epdsUrl,
       });
       const clientId = getEpdsClientId(
@@ -121,7 +121,7 @@ export function createEpdsLoginHandler(config: EpdsHandlerConfig) {
 
       if (!isLoopback(config.publicUrl)) {
         parBody.set("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer");
-        parBody.set("client_assertion", createClientAssertion(config.privateKeyJwk, clientId, parEndpoint));
+        parBody.set("client_assertion", createClientAssertion(config.privateKeyJwk, clientId, issuer));
       }
 
       const parResponse = await fetchWithDpopRetry(
@@ -220,7 +220,7 @@ export function createEpdsCallbackHandler(config: EpdsHandlerConfig) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { privateKey, publicJwk } = restoreDpopKeyPair(dpopPrivateJwk as any);
 
-      const { tokenEndpoint } = getEpdsEndpoints({ url: config.epdsUrl });
+      const { tokenEndpoint, issuer: epdsIssuer } = getEpdsEndpoints({ url: config.epdsUrl });
       const clientId = getEpdsClientId(
         config.publicUrl,
         config.devClientId,
@@ -240,7 +240,7 @@ export function createEpdsCallbackHandler(config: EpdsHandlerConfig) {
 
       if (!isLoopback(config.publicUrl)) {
         tokenBody.set("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer");
-        tokenBody.set("client_assertion", createClientAssertion(config.privateKeyJwk, clientId, tokenEndpoint));
+        tokenBody.set("client_assertion", createClientAssertion(config.privateKeyJwk, clientId, epdsIssuer));
       }
 
       const tokenResponse = await fetchWithDpopRetry(

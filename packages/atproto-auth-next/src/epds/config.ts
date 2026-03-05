@@ -21,6 +21,8 @@ export type EpdsEndpoints = {
   parEndpoint: string;
   authEndpoint: string;
   tokenEndpoint: string;
+  /** The authorization server issuer (base URL). Used as `aud` in client_assertion JWTs. */
+  issuer: string;
 };
 
 /**
@@ -34,6 +36,7 @@ export function getEpdsEndpoints(config: EpdsConfig): EpdsEndpoints {
     : `auth.${url.hostname}`;
 
   return {
+    issuer: normalizedUrl,
     parEndpoint: `${normalizedUrl}/oauth/par`,
     authEndpoint: `${url.protocol}//${authHost}/oauth/authorize`,
     tokenEndpoint: `${normalizedUrl}/oauth/token`,
