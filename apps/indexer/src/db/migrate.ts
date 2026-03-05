@@ -5,7 +5,8 @@
  * Safe to run multiple times — all statements use IF NOT EXISTS.
  *
  * Usage:
- *   bun run db:migrate
+ *   bun run db:migrate          (standalone)
+ *   import { runMigration }     (called from index.ts on startup)
  */
 
 import { readFileSync } from "node:fs";
@@ -14,7 +15,7 @@ import { sql, closeDb } from "./index.ts";
 
 const SCHEMA_PATH = join(import.meta.dirname, "schema.sql");
 
-async function migrate(): Promise<void> {
+export async function runMigration(): Promise<void> {
   console.log("\n=== GainForest Indexer — DB Migration ===\n");
   console.log(`Schema file: ${SCHEMA_PATH}`);
   console.log(`Database:    ${process.env.DATABASE_URL?.replace(/:\/\/.*@/, "://<credentials>@")}\n`);
@@ -30,9 +31,12 @@ async function migrate(): Promise<void> {
   console.log("\nMigration complete — all tables and indexes are up to date.\n");
 }
 
-migrate()
-  .catch((err) => {
-    console.error("\nMigration failed:", err);
-    process.exit(1);
-  })
-  .finally(() => closeDb());
+// When run directly (bun run db:migrate), execute and close the pool.
+if (import.meta.path === Bun.main) {
+  runMigration()
+    .catch((err) => {
+      console.error("\nMigration failed:", err);
+      process.exit(1);
+    })
+    .finally(() => closeDb());
+}

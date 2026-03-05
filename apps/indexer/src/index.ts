@@ -12,10 +12,15 @@ import { TapSync } from "@/tap/index.ts";
 import { startHealthServer } from "@/health/index.ts";
 import { startGraphQLServer } from "@/graphql/server.ts";
 import { setTapContext } from "@/graphql/tap-context.ts";
+import { runMigration } from "@/db/migrate.ts";
 
 // ============================================================
 // BOOT
 // ============================================================
+
+// Run DB migration on every startup — all statements are IF NOT EXISTS
+// so this is idempotent and safe to run repeatedly.
+await runMigration();
 
 const tap = new TapSync();
 
