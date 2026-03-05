@@ -27,30 +27,20 @@ import { createClient } from "@supabase/supabase-js";
 import { createAuthSetup } from "@gainforest/atproto-auth-next";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Environment validation
+// Environment — validated at runtime, not at module load, so Next.js can
+// collect page data without all env vars being present (e.g. in CI build).
 // ─────────────────────────────────────────────────────────────────────────────
 
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-  throw new Error("NEXT_PUBLIC_SUPABASE_URL is not set");
-}
-if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set");
-}
-if (!process.env.ATPROTO_JWK_PRIVATE) {
-  throw new Error("ATPROTO_JWK_PRIVATE is not set");
-}
-if (!process.env.COOKIE_SECRET) {
-  throw new Error("COOKIE_SECRET is not set");
-}
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+const privateKeyJwk = process.env.ATPROTO_JWK_PRIVATE ?? "";
+const cookieSecret = process.env.COOKIE_SECRET ?? "";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Supabase client (server-side with service role)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const supabase = createClient(supabaseUrl || "https://placeholder.supabase.co", supabaseServiceKey || "placeholder");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Auth setup
@@ -72,9 +62,9 @@ const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "";
  * - `auth.session.*` — Session utilities for server-side code
  */
 export const auth = createAuthSetup({
-  // Required
-  privateKeyJwk: process.env.ATPROTO_JWK_PRIVATE,
-  cookieSecret: process.env.COOKIE_SECRET,
+  // Required — will surface errors at runtime if missing, not at build time
+  privateKeyJwk,
+  cookieSecret,
   supabase,
   appId: "bumicerts",
 
