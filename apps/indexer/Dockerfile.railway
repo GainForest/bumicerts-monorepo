@@ -23,10 +23,17 @@ WORKDIR /repo
 # Install lex CLI globally (needed for type generation)
 RUN bun install -g @atproto/lex
 
-# Copy workspace manifests
+# Copy ALL workspace manifests (bun needs every package.json to resolve the
+# full workspace graph and keep the lockfile consistent)
 COPY package.json bun.lock* ./
 COPY GENERATED/package.json GENERATED/
 COPY apps/indexer/package.json apps/indexer/
+COPY apps/bumicerts/package.json apps/bumicerts/
+COPY packages/atproto-auth-next/package.json packages/atproto-auth-next/
+COPY packages/atproto-mutations-core/package.json packages/atproto-mutations-core/
+COPY packages/atproto-mutations-next/package.json packages/atproto-mutations-next/
+COPY packages/internal-utils/package.json packages/internal-utils/
+COPY apps/indexer/patches/ apps/indexer/patches/
 
 # Install root dependencies (needed for codegen scripts)
 RUN bun install --frozen-lockfile
@@ -51,10 +58,16 @@ FROM oven/bun:1.2-alpine AS builder
 
 WORKDIR /repo
 
-# Copy workspace manifests
+# Copy ALL workspace manifests (bun needs every package.json to resolve the
+# full workspace graph and keep the lockfile consistent)
 COPY package.json bun.lock* ./
 COPY GENERATED/package.json GENERATED/
 COPY apps/indexer/package.json apps/indexer/
+COPY apps/bumicerts/package.json apps/bumicerts/
+COPY packages/atproto-auth-next/package.json packages/atproto-auth-next/
+COPY packages/atproto-mutations-core/package.json packages/atproto-mutations-core/
+COPY packages/atproto-mutations-next/package.json packages/atproto-mutations-next/
+COPY packages/internal-utils/package.json packages/internal-utils/
 COPY apps/indexer/patches/ apps/indexer/patches/
 
 # Install only the indexer's dependencies (hoisted into /repo/node_modules)
