@@ -47,6 +47,8 @@ const j = (p: Record<string, unknown>, k: string): unknown => p[k] ?? null;
 class HypercertsNS {}
 class HcContextNS {}
 class HcWorkscopeNS {}
+class HcFractionNS {}
+class HcOrderNS {}
 class HyperboardsNS {}
 
 // ── Activity metadata type (envelope + label extras) ──
@@ -270,6 +272,51 @@ const HbDisplayProfileRecordType = builder.simpleObject("HbDisplayProfileRecord"
   }),
 });
 
+// ── Fraction record types ──
+
+const HcSaleEventRecordType = builder.simpleObject("HcSaleEventRecord", {
+  description: "Pure payload for a fraction sale event (org.hypercerts.fraction.saleEvent).",
+  fields: (t) => ({
+    activityClaimUri: t.string({ nullable: true, description: "AT-URI of the associated activity claim" }),
+    buyer:            t.string({ nullable: true, description: "DID of the buyer (omitted if anonymous)" }),
+    amount:           t.string({ nullable: true, description: "Amount paid as a numeric string" }),
+    currency:         t.string({ nullable: true, description: "Fiat currency (e.g. USD, EUR)" }),
+    receipt:          t.string({ nullable: true, description: "AT-URI of the funding receipt proving the transaction" }),
+    createdAt:        t.field({ type: "DateTime", nullable: true }),
+  }),
+});
+
+const HcTransferEventRecordType = builder.simpleObject("HcTransferEventRecord", {
+  description: "Pure payload for a fraction transfer event (org.hypercerts.fraction.transferEvent).",
+  fields: (t) => ({
+    activityClaimUri: t.string({ nullable: true, description: "AT-URI of the associated activity claim" }),
+    from:             t.string({ nullable: true, description: "DID of the sender (omitted if anonymous)" }),
+    to:               t.string({ nullable: true, description: "DID of the recipient" }),
+    amount:           t.string({ nullable: true, description: "Amount transferred as a numeric string" }),
+    currency:         t.string({ nullable: true, description: "Fiat currency (e.g. USD, EUR)" }),
+    signedAt:         t.field({ type: "DateTime", nullable: true, description: "Timestamp embedded in the signed message payload" }),
+    nonce:            t.string({ nullable: true, description: "Nonce included in the signed message" }),
+    chainId:          t.string({ nullable: true, description: "EVM chain ID on which this transfer was signed" }),
+    signerEVMAddress: t.string({ nullable: true, description: "EVM address of the signer in checksummed hex format" }),
+    signature:        t.string({ nullable: true, description: "Cryptographic signature over the transfer message payload" }),
+    createdAt:        t.field({ type: "DateTime", nullable: true }),
+  }),
+});
+
+// ── Order record types ──
+
+const HcListingRecordType = builder.simpleObject("HcListingRecord", {
+  description: "Pure payload for a sale listing (org.hypercerts.order.listing).",
+  fields: (t) => ({
+    goal:         t.string({ nullable: true, description: "Fundraising goal amount as a numeric string" }),
+    currency:     t.string({ nullable: true, description: "Fiat currency in which fractions are priced" }),
+    allowOversell: t.boolean({ nullable: true, description: "Whether sales are accepted after goal is reached" }),
+    status:       t.string({ nullable: true, description: "Listing status: open | paused | closed" }),
+    updatedAt:    t.field({ type: "DateTime", nullable: true }),
+    createdAt:    t.field({ type: "DateTime", nullable: true }),
+  }),
+});
+
 // ── Item wrapper types ──
 
 const HcActivityItemType = builder.simpleObject("HcActivityItem", {
@@ -428,6 +475,46 @@ const HbDisplayProfileItemType = builder.simpleObject("HbDisplayProfileItem", {
 });
 const HbDisplayProfilePageType = builder.simpleObject("HbDisplayProfilePage", {
   fields: (t) => ({ data: t.field({ type: [HbDisplayProfileItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
+});
+
+// ── Fraction item types ──
+
+const HcSaleEventItemType = builder.simpleObject("HcSaleEventItem", {
+  description: "A fraction sale event (org.hypercerts.fraction.saleEvent).",
+  fields: (t) => ({
+    metadata:    t.field({ type: RecordMetaType }),
+    creatorInfo: t.field({ type: CreatorInfoType }),
+    record:      t.field({ type: HcSaleEventRecordType }),
+  }),
+});
+const HcSaleEventPageType = builder.simpleObject("HcSaleEventPage", {
+  fields: (t) => ({ data: t.field({ type: [HcSaleEventItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
+});
+
+const HcTransferEventItemType = builder.simpleObject("HcTransferEventItem", {
+  description: "A fraction transfer event (org.hypercerts.fraction.transferEvent).",
+  fields: (t) => ({
+    metadata:    t.field({ type: RecordMetaType }),
+    creatorInfo: t.field({ type: CreatorInfoType }),
+    record:      t.field({ type: HcTransferEventRecordType }),
+  }),
+});
+const HcTransferEventPageType = builder.simpleObject("HcTransferEventPage", {
+  fields: (t) => ({ data: t.field({ type: [HcTransferEventItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
+});
+
+// ── Order item types ──
+
+const HcListingItemType = builder.simpleObject("HcListingItem", {
+  description: "A sale listing (org.hypercerts.order.listing).",
+  fields: (t) => ({
+    metadata:    t.field({ type: RecordMetaType }),
+    creatorInfo: t.field({ type: CreatorInfoType }),
+    record:      t.field({ type: HcListingRecordType }),
+  }),
+});
+const HcListingPageType = builder.simpleObject("HcListingPage", {
+  fields: (t) => ({ data: t.field({ type: [HcListingItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
 });
 
 // ── Row mappers ──
@@ -659,6 +746,78 @@ async function mapDisplayProfile(row: RecordRow) {
   };
 }
 
+async function mapSaleEvent(row: RecordRow) {
+  const p = payload(row);
+  const buyerRaw = j(p, "buyer");
+  const buyer = typeof buyerRaw === "string"
+    ? buyerRaw
+    : (buyerRaw != null && typeof buyerRaw === "object")
+      ? (s(buyerRaw as Record<string, unknown>, "did") ?? null)
+      : null;
+  return {
+    metadata:    rowToMeta(row),
+    creatorInfo: await resolveCreatorInfo(row.did),
+    record: {
+      activityClaimUri: s(p, "activityClaimUri"),
+      buyer,
+      amount:   s(p, "amount"),
+      currency: s(p, "currency"),
+      receipt:  s(p, "receipt"),
+      createdAt: s(p, "createdAt"),
+    },
+  };
+}
+
+async function mapTransferEvent(row: RecordRow) {
+  const p = payload(row);
+  const fromRaw = j(p, "from");
+  const from = typeof fromRaw === "string"
+    ? fromRaw
+    : (fromRaw != null && typeof fromRaw === "object")
+      ? (s(fromRaw as Record<string, unknown>, "did") ?? null)
+      : null;
+  const toRaw = j(p, "to");
+  const to = typeof toRaw === "string"
+    ? toRaw
+    : (toRaw != null && typeof toRaw === "object")
+      ? (s(toRaw as Record<string, unknown>, "did") ?? null)
+      : null;
+  return {
+    metadata:    rowToMeta(row),
+    creatorInfo: await resolveCreatorInfo(row.did),
+    record: {
+      activityClaimUri: s(p, "activityClaimUri"),
+      from,
+      to,
+      amount:           s(p, "amount"),
+      currency:         s(p, "currency"),
+      signedAt:         s(p, "signedAt"),
+      nonce:            s(p, "nonce"),
+      chainId:          s(p, "chainId"),
+      signerEVMAddress: s(p, "signerEVMAddress"),
+      signature:        s(p, "signature"),
+      createdAt:        s(p, "createdAt"),
+    },
+  };
+}
+
+async function mapListing(row: RecordRow) {
+  const p = payload(row);
+  const allowOversell = typeof p["allowOversell"] === "boolean" ? p["allowOversell"] : null;
+  return {
+    metadata:    rowToMeta(row),
+    creatorInfo: await resolveCreatorInfo(row.did),
+    record: {
+      goal:         s(p, "goal"),
+      currency:     s(p, "currency"),
+      allowOversell,
+      status:       s(p, "status"),
+      updatedAt:    s(p, "updatedAt"),
+      createdAt:    s(p, "createdAt"),
+    },
+  };
+}
+
 // ── Context namespace objectType ──
 
 builder.objectType(HcContextNS, {
@@ -744,6 +903,54 @@ builder.objectType(HcWorkscopeNS, {
         const data = await Promise.all(page.records.map(mapWorkScopeTag));
         return { data, pageInfo: toPageInfo(page.cursor, data.length) };
       },
+    }),
+  }),
+});
+
+// ── Fraction namespace objectType ──
+
+builder.objectType(HcFractionNS, {
+  name: "HcFractionNamespace",
+  description: "Hypercerts fraction records (org.hypercerts.fraction.*).",
+  fields: (t) => ({
+    saleEvent: t.field({
+      type: HcSaleEventPageType,
+      description: "Paginated list of org.hypercerts.fraction.saleEvent records.",
+      args: {
+        cursor: t.arg.string(), limit: t.arg.int(),
+        where: t.arg({ type: WhereInputRef, required: false }),
+        sortBy: t.arg({ type: SortFieldEnum }), order: t.arg({ type: SortOrderEnum }),
+      },
+      resolve: (_, args) => fetchCollectionPage("org.hypercerts.fraction.saleEvent", args, mapSaleEvent),
+    }),
+    transferEvent: t.field({
+      type: HcTransferEventPageType,
+      description: "Paginated list of org.hypercerts.fraction.transferEvent records.",
+      args: {
+        cursor: t.arg.string(), limit: t.arg.int(),
+        where: t.arg({ type: WhereInputRef, required: false }),
+        sortBy: t.arg({ type: SortFieldEnum }), order: t.arg({ type: SortOrderEnum }),
+      },
+      resolve: (_, args) => fetchCollectionPage("org.hypercerts.fraction.transferEvent", args, mapTransferEvent),
+    }),
+  }),
+});
+
+// ── Order namespace objectType ──
+
+builder.objectType(HcOrderNS, {
+  name: "HcOrderNamespace",
+  description: "Hypercerts order records (org.hypercerts.order.*).",
+  fields: (t) => ({
+    listing: t.field({
+      type: HcListingPageType,
+      description: "Paginated list of org.hypercerts.order.listing records.",
+      args: {
+        cursor: t.arg.string(), limit: t.arg.int(),
+        where: t.arg({ type: WhereInputRef, required: false }),
+        sortBy: t.arg({ type: SortFieldEnum }), order: t.arg({ type: SortOrderEnum }),
+      },
+      resolve: (_, args) => fetchCollectionPage("org.hypercerts.order.listing", args, mapListing),
     }),
   }),
 });
@@ -1000,6 +1207,16 @@ builder.objectType(HypercertsNS, {
       type: HcWorkscopeNS,
       description: "Work scope records (org.hypercerts.workscope.*).",
       resolve: () => new HcWorkscopeNS(),
+    }),
+    fraction: t.field({
+      type: HcFractionNS,
+      description: "Fraction records (org.hypercerts.fraction.*).",
+      resolve: () => new HcFractionNS(),
+    }),
+    order: t.field({
+      type: HcOrderNS,
+      description: "Order records (org.hypercerts.order.*).",
+      resolve: () => new HcOrderNS(),
     }),
   }),
 });
