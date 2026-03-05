@@ -500,7 +500,57 @@ type GainforestNamespace {
   organization: OrgNamespace
 }
 
-"""An acknowledgement record (org.hypercerts.acknowledgement)."""
+"""A hyperboard record (org.hyperboards.board)."""
+type HbBoardItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: HbBoardRecord
+}
+
+type HbBoardPage {
+  data: [HbBoardItem!]
+  pageInfo: PageInfo
+}
+
+"""Pure payload for a hyperboard (org.hyperboards.board)."""
+type HbBoardRecord {
+  """Board-level visual configuration"""
+  config: JSON
+
+  """Per-contributor configuration entries"""
+  contributorConfigs: JSON
+  createdAt: DateTime
+
+  """Reference to the activity or collection this board visualizes"""
+  subject: StrongRef
+}
+
+"""A hyperboard display profile (org.hyperboards.displayProfile)."""
+type HbDisplayProfileItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: HbDisplayProfileRecord
+}
+
+type HbDisplayProfilePage {
+  data: [HbDisplayProfileItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for a hyperboard display profile (org.hyperboards.displayProfile).
+"""
+type HbDisplayProfileRecord {
+  createdAt: DateTime
+  displayName: String
+  hoverIframeUrl: String
+  hoverImage: JSON
+  image: JSON
+  url: String
+  video: JSON
+}
+
+"""An acknowledgement record (org.hypercerts.context.acknowledgement)."""
 type HcAcknowledgementItem {
   creatorInfo: CreatorInfo
   metadata: RecordMeta
@@ -513,7 +563,7 @@ type HcAcknowledgementPage {
 }
 
 """
-Pure payload for an acknowledgement record (org.hypercerts.acknowledgement).
+Pure payload for an acknowledgement record (org.hypercerts.context.acknowledgement).
 """
 type HcAcknowledgementRecord {
   acknowledged: Boolean
@@ -592,8 +642,9 @@ Pure payload for a Hypercerts claim activity (org.hypercerts.claim.activity).
 type HcActivityRecord {
   contributors: JSON
   createdAt: DateTime
-  description: String
-  descriptionFacets: JSON
+
+  """Rich-text description as a Leaflet linear document"""
+  description: JSON
   endDate: DateTime
   image: JSON
   locations: [StrongRef!]
@@ -602,11 +653,13 @@ type HcActivityRecord {
   shortDescriptionFacets: JSON
   startDate: DateTime
   title: String
+
+  """Work scope: CEL expression or free-form string"""
   workScope: JSON
 }
 
 """
-An attachment providing commentary, context, or evidence (org.hypercerts.claim.attachment).
+An attachment providing commentary, context, or evidence (org.hypercerts.context.attachment).
 """
 type HcAttachmentItem {
   creatorInfo: CreatorInfo
@@ -620,14 +673,15 @@ type HcAttachmentPage {
 }
 
 """
-Pure payload for an attachment record (org.hypercerts.claim.attachment).
+Pure payload for an attachment record (org.hypercerts.context.attachment).
 """
 type HcAttachmentRecord {
   content: JSON
   contentType: String
   createdAt: DateTime
-  description: String
-  descriptionFacets: JSON
+
+  """Rich-text description as a Leaflet linear document"""
+  description: JSON
   location: StrongRef
   shortDescription: String
   shortDescriptionFacets: JSON
@@ -635,7 +689,7 @@ type HcAttachmentRecord {
   title: String
 }
 
-"""A Hypercerts claim collection (org.hypercerts.claim.collection)."""
+"""A Hypercerts collection (org.hypercerts.collection)."""
 type HcCollectionItem {
   creatorInfo: CreatorInfo
   metadata: RecordMeta
@@ -647,36 +701,54 @@ type HcCollectionPage {
   pageInfo: PageInfo
 }
 
-"""
-Pure payload for a Hypercerts claim collection (org.hypercerts.claim.collection).
-"""
+"""Pure payload for a Hypercerts collection (org.hypercerts.collection)."""
 type HcCollectionRecord {
-  activities: JSON
-  avatar: BlobRef
-  coverPhoto: BlobRef
+  """Avatar as URI or image blob"""
+  avatar: JSON
+
+  """Banner image as URI or large image blob"""
+  banner: JSON
   createdAt: DateTime
+
+  """Rich-text description as a Leaflet linear document"""
+  description: JSON
+
+  """Array of items with optional weights"""
+  items: JSON
+  location: StrongRef
   shortDescription: String
   title: String
+
+  """Collection type, e.g. 'favorites', 'project'"""
+  type: String
+}
+
+"""Hypercerts context records (org.hypercerts.context.*)."""
+type HcContextNamespace {
+  acknowledgement(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcAcknowledgementPage
+  attachment(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcAttachmentPage
+  evaluation(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcEvaluationPage
+  measurement(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcMeasurementPage
 }
 
 """
-Details about a specific contribution (org.hypercerts.claim.contributionDetails).
+Details about a specific contribution (org.hypercerts.claim.contribution).
 """
-type HcContributionDetailsItem {
+type HcContributionItem {
   creatorInfo: CreatorInfo
   metadata: RecordMeta
-  record: HcContributionDetailsRecord
+  record: HcContributionRecord
 }
 
-type HcContributionDetailsPage {
-  data: [HcContributionDetailsItem!]
+type HcContributionPage {
+  data: [HcContributionItem!]
   pageInfo: PageInfo
 }
 
 """
-Pure payload for contribution details (org.hypercerts.claim.contributionDetails).
+Pure payload for contribution details (org.hypercerts.claim.contribution).
 """
-type HcContributionDetailsRecord {
+type HcContributionRecord {
   contributionDescription: String
   createdAt: DateTime
   endDate: DateTime
@@ -706,7 +778,7 @@ type HcContributorInformationRecord {
   image: JSON
 }
 
-"""A Hypercerts claim evaluation (org.hypercerts.claim.evaluation)."""
+"""A Hypercerts context evaluation (org.hypercerts.context.evaluation)."""
 type HcEvaluationItem {
   creatorInfo: CreatorInfo
   metadata: RecordMeta
@@ -719,7 +791,7 @@ type HcEvaluationPage {
 }
 
 """
-Pure payload for a Hypercerts claim evaluation (org.hypercerts.claim.evaluation).
+Pure payload for a Hypercerts context evaluation (org.hypercerts.context.evaluation).
 """
 type HcEvaluationRecord {
   content: JSON
@@ -730,6 +802,15 @@ type HcEvaluationRecord {
   score: JSON
   subject: StrongRef
   summary: String
+}
+
+"""Hypercerts fraction records (org.hypercerts.fraction.*)."""
+type HcFractionNamespace {
+  """Paginated list of org.hypercerts.fraction.saleEvent records."""
+  saleEvent(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcSaleEventPage
+
+  """Paginated list of org.hypercerts.fraction.transferEvent records."""
+  transferEvent(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcTransferEventPage
 }
 
 """A Hypercerts funding receipt (org.hypercerts.funding.receipt)."""
@@ -761,12 +842,36 @@ type HcFundingReceiptRecord {
   transactionId: String
 }
 
-"""Hypercerts helper records (org.hypercerts.helper.*)."""
-type HcHelperNamespace {
-  workScopeTag(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcWorkScopeTagPage
+"""A sale listing (org.hypercerts.order.listing)."""
+type HcListingItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: HcListingRecord
 }
 
-"""A Hypercerts claim measurement (org.hypercerts.claim.measurement)."""
+type HcListingPage {
+  data: [HcListingItem!]
+  pageInfo: PageInfo
+}
+
+"""Pure payload for a sale listing (org.hypercerts.order.listing)."""
+type HcListingRecord {
+  """Whether sales are accepted after goal is reached"""
+  allowOversell: Boolean
+  createdAt: DateTime
+
+  """Fiat currency in which fractions are priced"""
+  currency: String
+
+  """Fundraising goal amount as a numeric string"""
+  goal: String
+
+  """Listing status: open | paused | closed"""
+  status: String
+  updatedAt: DateTime
+}
+
+"""A Hypercerts context measurement (org.hypercerts.context.measurement)."""
 type HcMeasurementItem {
   creatorInfo: CreatorInfo
   metadata: RecordMeta
@@ -779,7 +884,7 @@ type HcMeasurementPage {
 }
 
 """
-Pure payload for a Hypercerts claim measurement (org.hypercerts.claim.measurement).
+Pure payload for a Hypercerts context measurement (org.hypercerts.context.measurement).
 """
 type HcMeasurementRecord {
   createdAt: DateTime
@@ -791,6 +896,12 @@ type HcMeasurementRecord {
   metric: String
   subject: StrongRef
   value: String
+}
+
+"""Hypercerts order records (org.hypercerts.order.*)."""
+type HcOrderNamespace {
+  """Paginated list of org.hypercerts.order.listing records."""
+  listing(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcListingPage
 }
 
 """A Hypercerts claim rights record (org.hypercerts.claim.rights)."""
@@ -816,8 +927,89 @@ type HcRightsRecord {
   rightsType: String
 }
 
+"""A fraction sale event (org.hypercerts.fraction.saleEvent)."""
+type HcSaleEventItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: HcSaleEventRecord
+}
+
+type HcSaleEventPage {
+  data: [HcSaleEventItem!]
+  pageInfo: PageInfo
+}
+
 """
-A reusable work scope atom for taxonomy (org.hypercerts.helper.workScopeTag).
+Pure payload for a fraction sale event (org.hypercerts.fraction.saleEvent).
+"""
+type HcSaleEventRecord {
+  """AT-URI of the associated activity claim"""
+  activityClaimUri: String
+
+  """Amount paid as a numeric string"""
+  amount: String
+
+  """DID of the buyer (omitted if anonymous)"""
+  buyer: String
+  createdAt: DateTime
+
+  """Fiat currency (e.g. USD, EUR)"""
+  currency: String
+
+  """AT-URI of the funding receipt proving the transaction"""
+  receipt: String
+}
+
+"""A fraction transfer event (org.hypercerts.fraction.transferEvent)."""
+type HcTransferEventItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: HcTransferEventRecord
+}
+
+type HcTransferEventPage {
+  data: [HcTransferEventItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for a fraction transfer event (org.hypercerts.fraction.transferEvent).
+"""
+type HcTransferEventRecord {
+  """AT-URI of the associated activity claim"""
+  activityClaimUri: String
+
+  """Amount transferred as a numeric string"""
+  amount: String
+
+  """EVM chain ID on which this transfer was signed"""
+  chainId: String
+  createdAt: DateTime
+
+  """Fiat currency (e.g. USD, EUR)"""
+  currency: String
+
+  """DID of the sender (omitted if anonymous)"""
+  from: String
+
+  """Nonce included in the signed message"""
+  nonce: String
+
+  """Cryptographic signature over the transfer message payload"""
+  signature: String
+
+  """Timestamp embedded in the signed message payload"""
+  signedAt: DateTime
+
+  """EVM address of the signer in checksummed hex format"""
+  signerEVMAddress: String
+
+  """DID of the recipient"""
+  to: String
+}
+
+"""
+A reusable work scope atom for taxonomy (org.hypercerts.workscope.tag).
 """
 type HcWorkScopeTagItem {
   creatorInfo: CreatorInfo
@@ -830,12 +1022,13 @@ type HcWorkScopeTagPage {
   pageInfo: PageInfo
 }
 
-"""
-Pure payload for a work scope tag (org.hypercerts.helper.workScopeTag).
-"""
+"""Pure payload for a work scope tag (org.hypercerts.workscope.tag)."""
 type HcWorkScopeTagRecord {
   aliases: [String!]
   createdAt: DateTime
+
+  """Points to replacement tag if deprecated"""
+  deprecated: StrongRef
   description: String
   externalReference: JSON
   key: String
@@ -844,10 +1037,19 @@ type HcWorkScopeTagRecord {
   parent: StrongRef
 }
 
+"""Hypercerts work scope records (org.hypercerts.workscope.*)."""
+type HcWorkscopeNamespace {
+  tag(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcWorkScopeTagPage
+}
+
+"""Hyperboards AT Protocol records (org.hyperboards.*)."""
+type HyperboardsNamespace {
+  board(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HbBoardPage
+  displayProfile(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HbDisplayProfilePage
+}
+
 """Hypercerts AT Protocol records (org.hypercerts.*)."""
 type HypercertsNamespace {
-  acknowledgement(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcAcknowledgementPage
-
   """
   Paginated list of org.hypercerts.claim.activity records. When `where` contains no text-filter fields, returns all records ordered by time (sortBy/order apply). When `where` contains any of title/shortDescription/description/text, runs a text search (sortBy/order are ignored; results ordered by indexed_at DESC). Combine with `labelTier` to intersect label and text filters.
   """
@@ -867,17 +1069,23 @@ type HypercertsNamespace {
     sortBy: SortField
     where: ActivityWhereInput
   ): HcActivityPage
-  attachment(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcAttachmentPage
   collection(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcCollectionPage
-  contributionDetail(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcContributionDetailsPage
+
+  """Context records (org.hypercerts.context.*)."""
+  context: HcContextNamespace
+  contribution(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcContributionPage
   contributorInformation(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcContributorInformationPage
-  evaluation(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcEvaluationPage
+
+  """Fraction records (org.hypercerts.fraction.*)."""
+  fraction: HcFractionNamespace
   fundingReceipt(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcFundingReceiptPage
 
-  """Helper records (org.hypercerts.helper.*)."""
-  helper: HcHelperNamespace
-  measurement(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcMeasurementPage
+  """Order records (org.hypercerts.order.*)."""
+  order: HcOrderNamespace
   rights(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcRightsPage
+
+  """Work scope records (org.hypercerts.workscope.*)."""
+  workscope: HcWorkscopeNamespace
 }
 
 """An on-chain attestation link (org.impactindexer.link.attestation)."""
@@ -1305,6 +1513,9 @@ type Query {
 
   """All GainForest indexed records, grouped by namespace."""
   gainforest: GainforestNamespace
+
+  """All Hyperboards indexed records."""
+  hyperboards: HyperboardsNamespace
 
   """All Hypercerts indexed records, grouped by namespace."""
   hypercerts: HypercertsNamespace
