@@ -49,11 +49,14 @@ export function createOAuthClient({
   ];
   const loopback = isLoopback(url);
 
-  // Wrap the raw JWK in a proper JoseKey instance so the Keyset constructor
-  // gets a real Key object (with isActive, matches, etc.) rather than a plain
-  // object. Passing a plain object works in Bun/dev but fails on Vercel's
-  // webpack bundle because the Keyset constructor does not auto-wrap raw JWKs.
-  const key = new JoseKey(JSON.parse(privateKeyJwk));
+  // The stored JWK may be a single key object OR a keyset ({ keys: [...] }).
+  // Extract the raw key object either way, then wrap it in a JoseKey instance
+  // so the Keyset constructor gets a real Key object (with isActive, matches,
+  // etc.) rather than a plain object. Passing a plain object works in Bun/dev
+  // but fails on Vercel's webpack bundle.
+  const parsed = JSON.parse(privateKeyJwk);
+  const rawJwk = Array.isArray(parsed?.keys) ? parsed.keys[0] : parsed;
+  const key = new JoseKey(rawJwk);
 
   if (loopback) {
     // RFC 8252 loopback client — client_id embeds scope + all redirect_uris
