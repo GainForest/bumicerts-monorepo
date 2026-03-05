@@ -11,7 +11,7 @@ export function Header() {
   const subHeaderContent = useHeaderSlots((s) => s.subHeaderContent);
 
   return (
-    <div className="sticky top-0 z-30">
+    <div className="sticky top-0 z-30" data-header>
 
       {/* Progressive blur background - same approach as TopNavbar */}
       <div className="absolute inset-0 pointer-events-none">
@@ -71,7 +71,7 @@ export function Header() {
           </div>
         </div>
 
-        {/* Sub-header slot (e.g. step progress bar) */}
+        {/* Sub-header slot (e.g. step progress bar) — desktop only */}
         <AnimatePresence>
           {subHeaderContent ? (
             <motion.div
@@ -80,7 +80,7 @@ export function Header() {
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-              className="px-4 pb-1 overflow-hidden"
+              className="hidden lg:block px-4 pb-1 overflow-hidden"
             >
               {subHeaderContent}
             </motion.div>

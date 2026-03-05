@@ -1,7 +1,8 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { BumicertCard, BumicertCardSkeleton, cardVariants } from "./BumicertCard";
+import Link from "next/link";
+import { BumicertCardVisual, BumicertCardSkeleton, cardVariants } from "./BumicertCard";
 import type { BumicertData } from "@/lib/types";
 import { LeafIcon, SearchIcon } from "lucide-react";
 
@@ -82,7 +83,18 @@ export function BumicertGrid({
     >
       <AnimatePresence mode="popLayout">
         {bumicerts.map((bumicert) => (
-          <BumicertCard key={bumicert.id} bumicert={bumicert} />
+          <motion.div key={bumicert.id} variants={cardVariants} className="h-full">
+            <Link href={`/bumicert/${encodeURIComponent(bumicert.id)}`} className="h-full block">
+              <BumicertCardVisual
+                coverImage={bumicert.coverImageUrl}
+                logoUrl={bumicert.logoUrl}
+                title={bumicert.title}
+                organizationName={bumicert.organizationName}
+                objectives={bumicert.objectives}
+                description={bumicert.description}
+              />
+            </Link>
+          </motion.div>
         ))}
       </AnimatePresence>
     </motion.div>

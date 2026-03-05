@@ -6,20 +6,16 @@ import BiokoHoldingLoudspeakerImage from "@/app/(marketplace)/bumicert/create/[d
 import BiokoHoldingEarthImage from "@/app/(marketplace)/bumicert/create/[draftId]/_assets/bioko-holding-earth.png";
 import BiokoHoldingMagnifierImage from "@/app/(marketplace)/bumicert/create/[draftId]/_assets/bioko-holding-magnifier.png";
 import BiokoHoldingConfettiImage from "@/app/(marketplace)/bumicert/create/[draftId]/_assets/bioko-holding-confetti.png";
-import { getStripedBackground } from "@/lib/getStripedBackground";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, EyeIcon, Lightbulb } from "lucide-react";
+import { ChevronDownIcon, EyeIcon, LightbulbIcon } from "lucide-react";
 import useNewBumicertStore from "../store";
-import BumicertPreviewCard, {
-  BumicertArt,
-} from "./Steps/Step4/BumicertPreviewCard";
+import BumicertPreviewCard from "./Steps/Step4/BumicertPreviewCard";
+import { BumicertCardVisual } from "@/app/(marketplace)/explore/_components/BumicertCard";
 import { useFormStore } from "../form-store";
-import { trpcApi } from "@/components/providers/TrpcProvider";
-import { allowedPDSDomains } from "@/lib/config/gainforest-sdk";
 import { useAtprotoStore } from "@/components/stores/atproto";
-import { getBlobUrl } from "gainforest-sdk/utilities/atproto";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { queries } from "@/lib/graphql/queries/index";
 
 const stepImages = [
   {
@@ -84,21 +80,11 @@ const SecondaryContent = () => {
     stepImages[currentStep].previewBumicertByDefault
   );
 
-  const { data: organizationInfoResponse, isPlaceholderData: isOlderData } =
-    trpcApi.gainforest.organization.info.get.useQuery(
-      {
-        did: auth.user?.did ?? "",
-        pdsDomain: allowedPDSDomains[0],
-      },
-      {
-        enabled: !!auth.user?.did,
-      }
-    );
-  const organizationInfo = organizationInfoResponse?.value;
-  const logoFromData = isOlderData ? undefined : organizationInfo?.logo;
-  const logoUrl = logoFromData
-    ? getBlobUrl(auth.user?.did ?? "", logoFromData.image, allowedPDSDomains[0])
-    : null;
+  const { data: orgLogoData, isPlaceholderData: isOlderData } = queries.organization.logo.useQuery(
+    { did: auth.user?.did ?? "" }
+  );
+
+  const logoUrl = isOlderData ? null : (orgLogoData ?? null);
 
   return (
     <div className="w-full min-h-full flex flex-col bg-muted/50 rounded-xl">
@@ -113,7 +99,7 @@ const SecondaryContent = () => {
             variant={"ghost"}
             onClick={() => setIsBumicertPreviewOpen(prev => !prev)}
           >
-            <ChevronDown
+            <ChevronDownIcon
               className={cn(
                 "size-5 transition-transform duration-200",
                 isBumicertPreviewOpen ? "rotate-180" : ""
@@ -141,18 +127,18 @@ const SecondaryContent = () => {
             >
               {step1Progress === 100 ? (
                 <div className="flex items-center justify-center">
-                  <BumicertArt
+                  <BumicertCardVisual
                     logoUrl={logoUrl}
                     coverImage={
                       step1FormValues.coverImage ??
                       EMPTY_COVER_IMAGE
                     }
                     title={step1FormValues.projectName}
+                    organizationName=""
                     objectives={step1FormValues.workType}
-                    startDate={step1FormValues.projectDateRange[0]}
-                    endDate={step1FormValues.projectDateRange[1]}
                     className="w-min"
                   />
+
                 </div>
               ) : (
                 <div className="w-full flex items-center justify-center p-4">
@@ -167,7 +153,7 @@ const SecondaryContent = () => {
       </div>
       <div className="w-full p-2">
         <span className="flex items-center gap-1 text-lg font-medium text-muted-foreground">
-          <Lightbulb className="size-5" />
+          <LightbulbIcon className="size-5" />
           Tips for this section
         </span>
         <hr className="my-2" />

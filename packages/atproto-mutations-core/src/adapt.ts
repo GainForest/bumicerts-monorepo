@@ -9,6 +9,10 @@ import type { MutationResult } from "./result";
  * onSuccess receives TData directly (not a Result wrapper), and onError
  * fires with a typed MutationError instead of a generic Error.
  *
+ * When the action returns a failure with `issues` (validation errors),
+ * those issues are forwarded to the MutationError so consumers can
+ * call `formatMutationError()` to produce user-friendly messages.
+ *
  * Raw server actions are NOT replaced — they remain available via
  * @gainforest/atproto-mutations-next/actions for server-to-server calls.
  *
@@ -33,7 +37,7 @@ export const adapt = <TInput, TData, TCode extends string>(
   return async (input: TInput): Promise<TData> => {
     const result = await action(input);
     if (!result.success) {
-      throw new MutationError(result.code, result.message);
+      throw new MutationError(result.code, result.message, result.issues);
     }
     return result.data;
   };

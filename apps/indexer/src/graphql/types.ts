@@ -8,6 +8,7 @@ import type { RecordFilter, StringFilter } from "@/db/queries.ts";
 import { resolveActorToDid } from "./identity.ts";
 import { getPdsHost } from "@/identity/pds.ts";
 import { normalizeBlob } from "@/tap/blobs.ts";
+import { CID } from "multiformats/cid";
 import type { RecordRow } from "@/db/types.ts";
 
 // Re-export enums so resolvers can import from one place
@@ -26,6 +27,9 @@ export const PageInfoType = builder.simpleObject("PageInfo", {
     }),
     hasNextPage: t.boolean({
       description: "True if more records exist beyond this page.",
+    }),
+    count: t.int({
+      description: "Number of items in the current page's data array.",
     }),
   }),
 });
@@ -89,6 +93,102 @@ export const IiSubjectRefType = builder.simpleObject("IiSubjectRef", {
 });
 
 // ---------------------------------------------------------------
+// CreatorInfo — org identity resolved inline at query time
+// ---------------------------------------------------------------
+
+/**
+ * Creator identity for a record, resolved inline by the indexer.
+ * `organizationName` and `organizationLogo` are looked up from the indexed
+ * `app.gainforest.organization.info` records in the DB by DID — so callers
+ * never need a second round-trip to decorate records with org branding.
+ */
+export const CreatorInfoType = builder.simpleObject("CreatorInfo", {
+  description:
+    "The identity of the record's creator, enriched with organization branding " +
+    "resolved from the indexed app.gainforest.organization.info records.",
+  fields: (t) => ({
+    did: t.string({
+      description: "DID of the record author.",
+    }),
+    organizationName: t.string({
+      nullable: true,
+      description: "Display name from the author's organization.info record. Null if not indexed.",
+    }),
+    organizationLogo: t.field({
+      type: BlobRefType,
+      nullable: true,
+      description: "Resolved logo blob from the author's organization.info record. Null if not indexed or no logo set.",
+    }),
+  }),
+});
+
+// ---------------------------------------------------------------
+// In-process LRU cache for resolveCreatorInfo
+// ---------------------------------------------------------------
+
+const CREATOR_INFO_CACHE_MAX = 500;
+const CREATOR_INFO_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+interface CachedCreatorInfo {
+  value: { did: string; organizationName: string | null; organizationLogo: { uri: string; cid: string; mimeType: string | null; size: number | null } | null };
+  expiresAt: number;
+}
+
+const creatorInfoCache = new Map<string, CachedCreatorInfo>();
+
+/**
+ * Resolve the creator info for a given DID.
+ *
+ * Looks up `app.gainforest.organization.info` records from the local DB
+ * (no external API call). Results are cached for 5 minutes with a simple
+ * LRU-ish eviction at 500 entries.
+ */
+export async function resolveCreatorInfo(did: string): Promise<{
+  did: string;
+  organizationName: string | null;
+  organizationLogo: { uri: string; cid: string; mimeType: string | null; size: number | null } | null;
+}> {
+  const now = Date.now();
+
+  // Cache hit
+  const cached = creatorInfoCache.get(did);
+  if (cached && cached.expiresAt > now) {
+    return cached.value;
+  }
+
+  // Evict if over max
+  if (creatorInfoCache.size >= CREATOR_INFO_CACHE_MAX) {
+    const firstKey = creatorInfoCache.keys().next().value;
+    if (firstKey !== undefined) creatorInfoCache.delete(firstKey);
+  }
+
+  // Look up org info from DB
+  let organizationName: string | null = null;
+  let organizationLogo: { uri: string; cid: string; mimeType: string | null; size: number | null } | null = null;
+
+  try {
+    const page = await getRecordsByCollection("app.gainforest.organization.info", {
+      did,
+      limit: 1,
+    });
+    const row = page.records[0];
+    if (row !== undefined) {
+      const p = (row.record ?? {}) as Record<string, unknown>;
+      const displayName = p["displayName"];
+      if (typeof displayName === "string") organizationName = displayName;
+      organizationLogo = await extractBlobRef(p["logo"] ?? null, did);
+    }
+  } catch {
+    // If the lookup fails, return null values — don't let creator info errors
+    // break the main record query.
+  }
+
+  const value = { did, organizationName, organizationLogo };
+  creatorInfoCache.set(did, { value, expiresAt: now + CREATOR_INFO_TTL_MS });
+  return value;
+}
+
+// ---------------------------------------------------------------
 // Shared helpers used by namespace resolvers
 // ---------------------------------------------------------------
 
@@ -110,11 +210,15 @@ export function payload(row: RecordRow): Record<string, unknown> {
   return (row.record ?? {}) as Record<string, unknown>;
 }
 
-/** Build the pageInfo shape from a DB page cursor. */
-export function toPageInfo(cursor: string | undefined) {
+/**
+ * Build the pageInfo shape from a DB page cursor and item count.
+ * `count` is the number of items in the current page's data array.
+ */
+export function toPageInfo(cursor: string | undefined, count: number) {
   return {
     endCursor:   cursor ?? null,
     hasNextPage: cursor !== undefined,
+    count,
   };
 }
 
@@ -145,7 +249,7 @@ export async function fetchCollectionPage<T>(
   collection: string,
   args: CollectionQueryArgs,
   mapper: (row: RecordRow) => T | Promise<T>
-): Promise<{ records: T[]; pageInfo: { endCursor: string | null; hasNextPage: boolean } }> {
+): Promise<{ data: T[]; pageInfo: { endCursor: string | null; hasNextPage: boolean; count: number } }> {
   const { cursor, limit, where, sortBy, order } = args;
 
   // Resolve actor → DID from where.handle > where.did
@@ -164,9 +268,11 @@ export async function fetchCollectionPage<T>(
     sortOrder: (order  as "asc" | "desc")            ?? undefined,
   });
 
+  const data = await Promise.all(page.records.map(mapper));
+
   return {
-    records:  await Promise.all(page.records.map(mapper)),
-    pageInfo: toPageInfo(page.cursor),
+    data,
+    pageInfo: toPageInfo(page.cursor, data.length),
   };
 }
 
@@ -174,7 +280,7 @@ export async function fetchCollectionPage<T>(
  * Extract and resolve a blob reference from a record field.
  *
  * Handles both formats:
- *   - New (normalized): { $type: "blob", cid: "Qm...", mimeType, size }
+ *   - New (normalized): { $type: "blob", cid: "bafkrei...", mimeType, size }
  *   - Old (decoded):    { $type: "blob", ref: { hash: {...} }, mimeType, size }
  *
  * Also handles wrapper objects where the blob is nested:
@@ -219,9 +325,20 @@ export async function extractBlobRef(
   const mimeType = typeof blob["mimeType"] === "string" ? blob["mimeType"] : null;
   const size = typeof blob["size"] === "number" ? blob["size"] : null;
 
-  // Build URI using cached PDS host
+  // Normalise the CID to CIDv1 base32 ("bafkrei...") — the format required by
+  // com.atproto.sync.getBlob. Blobs stored from old-style decoded refs may have
+  // been serialised as CIDv0 ("Qm..."), which the PDS rejects.
+  let cidV1 = cid;
+  try {
+    cidV1 = CID.parse(cid).toV1().toString();
+  } catch {
+    // If parsing fails, fall back to the raw string and let the PDS reject it
+  }
+
+  // Build URI using cached PDS host.
+  // The `did` param must NOT be percent-encoded — PDSes expect the raw DID string.
   const host = await getPdsHost(did);
-  const uri = `${host}/xrpc/com.atproto.sync.getBlob?did=${encodeURIComponent(did)}&cid=${encodeURIComponent(cid)}`;
+  const uri = `${host}/xrpc/com.atproto.sync.getBlob?did=${did}&cid=${cidV1}`;
 
   return { uri, cid, mimeType, size };
 }
@@ -428,6 +545,11 @@ interface ActivityWhereInput {
   description?:      StringFilterInput | null;
   /** Full-text search across title, shortDescription and description (tsvector). */
   text?:             string | null;
+  // boolean presence filters
+  /** If true, only return activities that have an `image` field set in the record payload. */
+  hasImage?:                   boolean | null;
+  /** If true, only return activities whose author DID has an indexed app.gainforest.organization.info record with a non-null displayName. */
+  hasOrganizationInfoRecord?:  boolean | null;
   // boolean combinators
   and?: ActivityWhereInput[] | null;
   or?:  ActivityWhereInput[] | null;
@@ -466,6 +588,19 @@ ActivityWhereInputRef.implement({
       description:
         "Full-text search across title, shortDescription and description simultaneously " +
         "(PostgreSQL websearch_to_tsquery). Supports quoted phrases and minus-negation.",
+    }),
+    hasImage: t.boolean({
+      required: false,
+      description:
+        "If true, only return activities that have an `image` field set in the record payload. " +
+        "Filtered after fetch using the resolved record data.",
+    }),
+    hasOrganizationInfoRecord: t.boolean({
+      required: false,
+      description:
+        "If true, only return activities whose author DID has an indexed " +
+        "app.gainforest.organization.info record with a non-null displayName. " +
+        "Determined from the inline-resolved creatorInfo (zero extra DB cost).",
     }),
     and: t.field({ type: [ActivityWhereInputRef], required: false, description: "All child filters must match." }),
     or:  t.field({ type: [ActivityWhereInputRef], required: false, description: "At least one child filter must match." }),

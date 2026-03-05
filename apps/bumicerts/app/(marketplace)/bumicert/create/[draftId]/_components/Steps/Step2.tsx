@@ -2,7 +2,7 @@
 import React, { useEffect } from "react";
 import FormField from "../../../../../../../components/ui/FormField";
 import { Textarea } from "@/components/ui/textarea";
-import { HandHeart, MessageCircle, SparklesIcon } from "lucide-react";
+import { HandHeartIcon, MessageCircleIcon, SparklesIcon } from "lucide-react";
 import { useFormStore } from "../../form-store";
 import useNewBumicertStore from "../../store";
 import { Button } from "@/components/ui/button";
@@ -36,7 +36,7 @@ const Step2 = () => {
         Share your impact story.
       </h1>
       <FormField
-        Icon={HandHeart}
+        Icon={HandHeartIcon}
         label="Your Impact Story"
         className="mt-8"
         description="Tell us about your impact — what changed, who was involved, and how it's helping. Take your time. Your story helps inspire others and verify your work."
@@ -60,7 +60,7 @@ const Step2 = () => {
         </div>
       </FormField>
       <FormField
-        Icon={MessageCircle}
+        Icon={MessageCircleIcon}
         label="Short Description"
         className="mt-4"
         description="A short description of your impact story. This will be used as the short description of the bumicert."

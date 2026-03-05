@@ -8,21 +8,23 @@ import {
   PasswordStrength,
 } from "../store";
 import {
-  ArrowLeft,
-  ArrowRight,
-  Eye,
-  EyeOff,
-  AlertCircle,
-  Loader2,
-  Check,
-  X,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  EyeIcon,
+  EyeOffIcon,
+  AlertCircleIcon,
+  Loader2Icon,
+  CheckIcon,
+  XIcon,
+  ChevronDownIcon,
 } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { allowedPDSDomains } from "@/lib/config/gainforest-sdk";
-import { motion } from "framer-motion";
+import { signupPDSDomains } from "@/lib/config/pds";
+import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { useDebounce } from "@/hooks/use-debounce";
+import { queryKeys } from "@/lib/query-keys";
 import { links } from "@/lib/links";
 
 const STRENGTH_COLORS: Record<PasswordStrength, string> = {
@@ -48,6 +50,71 @@ const STRENGTH_WIDTH: Record<PasswordStrength, string> = {
 
 type HandleAvailability = "checking" | "available" | "taken" | "idle";
 
+// ─── PDS Domain Picker ───────────────────────────────────────────────────────
+
+function PdsDomainPicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (domain: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, []);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1 px-2 bg-muted border border-l-0 rounded-r-md text-xs text-muted-foreground h-9 shrink-0 hover:text-foreground transition-colors"
+      >
+        <span className="font-mono">.{value}</span>
+        <ChevronDownIcon className={cn("w-3 h-3 transition-transform", open && "rotate-180")} />
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -4, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -4, scale: 0.97 }}
+            transition={{ duration: 0.12 }}
+            className="absolute right-0 top-full mt-1 z-50 min-w-[160px] bg-popover border border-border rounded-md shadow-md overflow-hidden"
+          >
+            {signupPDSDomains.map((domain) => (
+              <button
+                key={domain}
+                type="button"
+                onClick={() => { onChange(domain); setOpen(false); }}
+                className={cn(
+                  "w-full text-left px-3 py-2 text-xs hover:bg-accent transition-colors",
+                  value === domain && "bg-accent text-accent-foreground font-medium"
+                )}
+              >
+                {domain}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── StepCredentials ─────────────────────────────────────────────────────────
+
 export function StepCredentials() {
   const { data, updateData, nextStep, prevStep, error, setError } =
     useOnboardingStore();
@@ -56,6 +123,16 @@ export function StepCredentials() {
 
   const isDev = process.env.NODE_ENV !== "production";
 
+  // Ensure selectedPdsDomain is initialised
+  useEffect(() => {
+    if (!data.selectedPdsDomain) {
+      updateData({ selectedPdsDomain: signupPDSDomains[0] });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const selectedDomain = data.selectedPdsDomain || signupPDSDomains[0];
+  const isMultiDomain = signupPDSDomains.length > 1;
+
   const passwordAnalysis = useMemo(
     () => calculatePasswordStrength(data.password),
     [data.password]
@@ -63,33 +140,23 @@ export function StepCredentials() {
 
   // Debounce handle for availability check
   const debouncedHandle = useDebounce(data.handle, 500);
-  const fullHandle = `${debouncedHandle}.${allowedPDSDomains[0]}`;
+  const fullHandle = `${debouncedHandle}.${selectedDomain}`;
 
   // Check handle availability
   const { data: handleCheckResult, isLoading: isCheckingHandle } = useQuery({
-    queryKey: ["handleAvailability", debouncedHandle],
+    queryKey: queryKeys.handle.availability(debouncedHandle + "@" + selectedDomain),
     queryFn: async () => {
-      if (!debouncedHandle || debouncedHandle.length < 3) {
-        return { available: true, checked: false };
-      }
-
-      const response = await fetch(links.api.searchActors(fullHandle, 1));
-      if (!response.ok) {
-        // On error, assume available (don't block user)
-        return { available: true, checked: true };
-      }
-
-      const result = await response.json();
-      // Check if any actor has an exact handle match
+      if (!debouncedHandle || debouncedHandle.length < 3) return { available: true, checked: false };
+      const res = await fetch(links.api.searchActors(fullHandle, 1));
+      if (!res.ok) return { available: true, checked: true };
+      const result = await res.json();
       const exactMatch = result.actors?.some(
-        (actor: { handle: string }) =>
-          actor.handle.toLowerCase() === fullHandle.toLowerCase()
+        (actor: { handle: string }) => actor.handle.toLowerCase() === fullHandle.toLowerCase()
       );
-
       return { available: !exactMatch, checked: true };
     },
     enabled: debouncedHandle.length >= 3,
-    staleTime: 30 * 1000, // Cache for 30 seconds
+    staleTime: 30 * 1_000,
   });
 
   const handleAvailability: HandleAvailability = useMemo(() => {
@@ -104,7 +171,6 @@ export function StepCredentials() {
   const passwordsDontMatch =
     data.confirmPassword.length > 0 && data.password !== data.confirmPassword;
 
-  // In dev mode, only require password to not be empty (no strength/length requirements)
   const isPasswordValid = isDev
     ? data.password.length > 0
     : passwordAnalysis.strength !== "weak" && data.password.length >= 8;
@@ -117,7 +183,6 @@ export function StepCredentials() {
     handleAvailability !== "checking";
 
   const handleContinue = () => {
-    // Clean trailing hyphens before validation
     const cleanHandle = data.handle.replace(/-+$/, "");
     if (cleanHandle !== data.handle) {
       updateData({ handle: cleanHandle });
@@ -140,8 +205,6 @@ export function StepCredentials() {
   };
 
   const handleHandleChange = (value: string) => {
-    // Normalize handle: lowercase, remove special chars except hyphens, no leading hyphens
-    // Note: trailing hyphens are cleaned on continue/blur to allow typing "my-org-name"
     const normalized = value
       .toLowerCase()
       .replace(/[^a-z0-9-]/g, "")
@@ -194,17 +257,24 @@ export function StepCredentials() {
                 )}
                 aria-describedby="handle-hint"
               />
-              <div className="flex items-center px-2 bg-muted border border-l-0 rounded-r-md text-xs text-muted-foreground">
-                .{allowedPDSDomains[0]}
-              </div>
+              {isMultiDomain ? (
+                <PdsDomainPicker
+                  value={selectedDomain}
+                  onChange={(d) => updateData({ selectedPdsDomain: d })}
+                />
+              ) : (
+                <div className="flex items-center px-2 bg-muted border border-l-0 rounded-r-md text-xs text-muted-foreground h-9 shrink-0">
+                  .{selectedDomain}
+                </div>
+              )}
             </div>
 
             {/* Handle availability indicator */}
             <div className="flex items-center justify-between">
               <p id="handle-hint" className="text-xs text-muted-foreground">
                 Your handle:{" "}
-                <span className="font-medium text-foreground">
-                  @{data.handle || "handle"}.{allowedPDSDomains[0]}
+                <span className="font-medium text-foreground font-mono">
+                  @{data.handle || "handle"}.{selectedDomain}
                 </span>
               </p>
 
@@ -212,19 +282,19 @@ export function StepCredentials() {
                 <div className="flex items-center gap-1 text-xs">
                   {handleAvailability === "checking" && (
                     <>
-                      <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
+                      <Loader2Icon className="w-3 h-3 animate-spin text-muted-foreground" />
                       <span className="text-muted-foreground">Checking...</span>
                     </>
                   )}
                   {handleAvailability === "available" && (
                     <>
-                      <Check className="w-3 h-3 text-primary" />
+                      <CheckIcon className="w-3 h-3 text-primary" />
                       <span className="text-primary">Available</span>
                     </>
                   )}
                   {handleAvailability === "taken" && (
                     <>
-                      <X className="w-3 h-3 text-destructive" />
+                      <XIcon className="w-3 h-3 text-destructive" />
                       <span className="text-destructive">Taken</span>
                     </>
                   )}
@@ -260,9 +330,9 @@ export function StepCredentials() {
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? (
-                  <EyeOff className="w-4 h-4" />
+                  <EyeOffIcon className="w-4 h-4" />
                 ) : (
-                  <Eye className="w-4 h-4" />
+                  <EyeIcon className="w-4 h-4" />
                 )}
               </button>
             </div>
@@ -336,9 +406,9 @@ export function StepCredentials() {
                 }
               >
                 {showConfirmPassword ? (
-                  <EyeOff className="w-4 h-4" />
+                  <EyeOffIcon className="w-4 h-4" />
                 ) : (
-                  <Eye className="w-4 h-4" />
+                  <EyeIcon className="w-4 h-4" />
                 )}
               </button>
             </div>
@@ -355,7 +425,7 @@ export function StepCredentials() {
                   <>Passwords match</>
                 ) : (
                   <>
-                    <AlertCircle className="w-3 h-3" />
+                    <AlertCircleIcon className="w-3 h-3" />
                     Passwords do not match
                   </>
                 )}
@@ -377,12 +447,12 @@ export function StepCredentials() {
         {/* Navigation */}
         <div className="w-full flex justify-between mt-1">
           <Button onClick={prevStep} variant="ghost">
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeftIcon className="mr-2" />
             Back
           </Button>
           <Button onClick={handleContinue} disabled={!canContinue}>
             Continue
-            <ArrowRight className="w-4 h-4 ml-2" />
+            <ArrowRightIcon className="ml-2" />
           </Button>
         </div>
       </div>

@@ -1,3 +1,5 @@
+import type { ValidationIssue } from "./result";
+
 /**
  * MutationError — thrown by adapt() when a server action returns a failure
  * result. Carries the typed error code so consumers can pattern-match in
@@ -5,14 +7,26 @@
  *
  * Deliberately serializable: code and message are plain strings, making it
  * safe to log, display in UI, or forward to error tracking.
+ *
+ * When the failure is caused by a lexicon validation error
+ * (code === "INVALID_RECORD"), `issues` is populated with structured
+ * per-field details extracted from @atproto/lex-schema's ValidationError.
+ * Pass these to `formatMutationError()` to produce user-friendly messages.
  */
 export class MutationError<TCode extends string = string> extends Error {
   readonly code: TCode;
+  /**
+   * Structured validation issues. Present when the failure originated from
+   * a lexicon validation error (e.g. code === "INVALID_RECORD").
+   * Undefined for auth, network, and PDS errors.
+   */
+  readonly issues?: ValidationIssue[];
 
-  constructor(code: TCode, message: string) {
+  constructor(code: TCode, message: string, issues?: ValidationIssue[]) {
     super(message);
     this.name = "MutationError";
     this.code = code;
+    if (issues !== undefined) this.issues = issues;
 
     // Maintain proper prototype chain in environments that transpile classes.
     Object.setPrototypeOf(this, new.target.prototype);

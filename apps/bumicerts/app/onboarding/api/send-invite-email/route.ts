@@ -21,7 +21,7 @@
  */
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { allowedPDSDomains, defaultPdsDomain, type AllowedPDSDomain } from "@/lib/config/gainforest-sdk";
+import { signupPDSDomains, defaultSignupPdsDomain, type SignupPDSDomain } from "@/lib/config/pds";
 import { InviteCodeEmail } from "@/email-templates/InviteCodeEmail";
 import {
   getOrCreateInviteCode,
@@ -32,15 +32,15 @@ import { checkRateLimit, recordRateLimitAttempt, getClientIp, RATE_LIMITS } from
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 const requestSchema = z.object({
-  email: z.email().toLowerCase(),
+  email: z.string().email().toLowerCase(),
   pdsDomain: z
     .string()
     .trim()
     .toLowerCase()
     .optional()
-    .default(defaultPdsDomain)
+    .default(defaultSignupPdsDomain)
     .refine(
-      (value) => (allowedPDSDomains as string[]).includes(value),
+      (value) => ([...signupPDSDomains] as string[]).includes(value),
       { message: "Unsupported pdsDomain" }
     ),
 });
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     }
 
     const email = parsed.data.email;
-    const pdsDomain = parsed.data.pdsDomain as AllowedPDSDomain;
+    const pdsDomain = parsed.data.pdsDomain as SignupPDSDomain;
 
     const clientIp = getClientIp(req.headers);
 

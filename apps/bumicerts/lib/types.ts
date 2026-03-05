@@ -8,6 +8,11 @@
 
 // ── Bumicert ────────────────────────────────────────────────────────────────
 
+export type BumicertContributor = {
+  /** Raw identity string — DID or free-text name */
+  identity: string;
+};
+
 export type BumicertData = {
   /** "{did}-{rkey}" — used as the route param */
   id: string;
@@ -31,6 +36,9 @@ export type BumicertData = {
   country: string;
   /** Free-form objective strings */
   objectives: string[];
+
+  /** Contributors extracted from the activity record */
+  contributors: BumicertContributor[];
 
   startDate: string | null;
   endDate: string | null;

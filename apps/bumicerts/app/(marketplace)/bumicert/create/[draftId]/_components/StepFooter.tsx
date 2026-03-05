@@ -1,6 +1,6 @@
 "use client";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Lightbulb, X } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon, LightbulbIcon, XIcon } from "lucide-react";
 import React, { useEffect, useEffectEvent, useMemo, useState } from "react";
 import useNewBumicertStore from "../store";
 import { STEPS, STEPS as steps } from "../_data/steps";
@@ -70,7 +70,7 @@ const StepFooter = () => {
                   currentStepIndex === 4 && overallStatusForStep5 === "pending"
                 }
               >
-                <ChevronLeft />
+                <ChevronLeftIcon />
                 {showTipButton ? "" : steps[currentStepIndex - 1].title}
               </Button>
             )}
@@ -86,7 +86,7 @@ const StepFooter = () => {
                   onClick={() => setShowTips(true)}
                 >
                   <motion.span layoutId="tips-icon">
-                    <Lightbulb />
+                    <LightbulbIcon />
                   </motion.span>
                   <motion.span layoutId="tips-text">Tips</motion.span>
                 </Button>
@@ -95,7 +95,7 @@ const StepFooter = () => {
           </div>
           <div className="flex items-center gap-2">
             <Button variant={"outline"} className="hidden">
-              <Lightbulb />
+              <LightbulbIcon />
             </Button>
             {currentStepIndex < 4 && (
               <Button
@@ -103,7 +103,7 @@ const StepFooter = () => {
                 disabled={!allowUserToMoveForward}
                 className="disabled:opacity-100 disabled:saturate-40 disabled:text-primary-foreground/50"
               >
-                Continue <ChevronRight />
+                Continue <ChevronRightIcon />
               </Button>
             )}
           </div>
@@ -127,7 +127,7 @@ const TipsPopup = ({ onClose }: { onClose: () => void }) => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1 text-xl">
             <motion.span layoutId="tips-icon">
-              <Lightbulb className="size-5" />
+              <LightbulbIcon className="size-5" />
             </motion.span>
             <motion.span layoutId="tips-text">Tips</motion.span>
           </div>
@@ -137,7 +137,7 @@ const TipsPopup = ({ onClose }: { onClose: () => void }) => {
             size={"icon"}
             className="rounded-full"
           >
-            <X />
+            <XIcon />
           </Button>
         </div>
         <div className="mt-2">

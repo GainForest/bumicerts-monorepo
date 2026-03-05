@@ -1,26 +1,37 @@
-"use server";
-
-import { allowedPDSDomains } from "@/lib/config/gainforest-sdk";
+import { signupPDSDomains } from "@/lib/config/pds";
 import { NextRequest } from "next/server";
 import postgres from "postgres";
 
-if (!process.env.POSTGRES_URL_NON_POOLING_ATPROTO_AUTH_MAPPING) {
-  throw new Error("Missing POSTGRES_URL_NON_POOLING_ATPROTO_AUTH_MAPPING env var");
-}
-if (!process.env.INVITE_CODES_PASSWORD) {
-  throw new Error("Missing INVITE_CODES_PASSWORD env var");
-}
-if (!process.env.PDS_ADMIN_IDENTIFIER || !process.env.PDS_ADMIN_PASSWORD) {
-  throw new Error("Missing PDS_ADMIN_IDENTIFIER / PDS_ADMIN_PASSWORD env vars");
-}
-
-const sql = postgres(process.env.POSTGRES_URL_NON_POOLING_ATPROTO_AUTH_MAPPING, { ssl: "require" });
+// Force dynamic so Next.js never tries to statically collect this route
+export const dynamic = "force-dynamic";
 
 type XrpcInviteResponse = {
   codes: Array<{ account: string; codes: string[] }>;
 };
 
 export async function POST(req: NextRequest) {
+  // Env var checks at runtime, not module level
+  if (!process.env.POSTGRES_URL_NON_POOLING_ATPROTO_AUTH_MAPPING) {
+    return new Response(JSON.stringify({ error: "Server misconfiguration: missing DB URL" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  if (!process.env.INVITE_CODES_PASSWORD) {
+    return new Response(JSON.stringify({ error: "Server misconfiguration: missing admin password" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  if (!process.env.PDS_ADMIN_IDENTIFIER || !process.env.PDS_ADMIN_PASSWORD) {
+    return new Response(JSON.stringify({ error: "Server misconfiguration: missing PDS credentials" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const sql = postgres(process.env.POSTGRES_URL_NON_POOLING_ATPROTO_AUTH_MAPPING, { ssl: "require" });
+
   try {
     // --- Parse & normalize body ---
     const body = (await req.json()) as {
@@ -62,12 +73,12 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const service = process.env.NEXT_PUBLIC_ATPROTO_SERVICE_URL || `https://${allowedPDSDomains[0]}`;
-    const adminUsername = process.env.PDS_ADMIN_IDENTIFIER!;
-    const adminPassword = process.env.PDS_ADMIN_PASSWORD!;
+    const service = process.env.NEXT_PUBLIC_ATPROTO_SERVICE_URL || `https://${signupPDSDomains[0]}`;
+    const adminUsername = process.env.PDS_ADMIN_IDENTIFIER;
+    const adminPassword = process.env.PDS_ADMIN_PASSWORD;
     const adminBasic = Buffer.from(`${adminUsername}:${adminPassword}`).toString("base64");
 
-    // so N codes for N emails  with use count being 1
+    // so N codes for N emails with use count being 1
     const codeCount = emails.length;
 
     const response = await fetch(`${service}/xrpc/com.atproto.server.createInviteCodes`, {
@@ -77,7 +88,6 @@ export async function POST(req: NextRequest) {
         Authorization: `Basic ${adminBasic}`,
       },
       body: JSON.stringify({ codeCount, useCount }),
-      // If your PDS is strict about JSON ints, the cast above ensures numbers.
     });
 
     if (!response.ok) {
@@ -109,7 +119,7 @@ export async function POST(req: NextRequest) {
           const inviteCode = minted[i];
           await sql`
             INSERT INTO invites (email, invite_token, pds_domain)
-            VALUES (${email}, ${inviteCode}, ${allowedPDSDomains[0]})
+            VALUES (${email}, ${inviteCode}, ${signupPDSDomains[0]})
           `;
           return { email, inviteCode };
         })

@@ -1,18 +1,16 @@
 import React from "react";
 import AuthWrapper from "./[draftId]/_components/AuthWrapper";
 import {
-  ArrowRight,
+  ArrowRightIcon,
   ChartPieIcon,
-  CircleCheck,
-  Clock,
-  HelpCircle,
-  Inbox,
-  Leaf,
-  PartyPopper,
+  CircleCheckIcon,
+  ClockIcon,
+  HelpCircleIcon,
+  InboxIcon,
+  LeafIcon,
+  PartyPopperIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { BumicertArt } from "./[draftId]/_components/Steps/Step4/BumicertPreviewCard";
-import { getStripedBackground } from "@/lib/getStripedBackground";
 import Link from "next/link";
 import { links } from "@/lib/links";
 import GetStartedButton from "./_components/GetStartedButton";
@@ -52,7 +50,7 @@ const CreateBumicertPage = () => {
             <div className="relative inset-0 flex flex-col p-4 gap-2 bg-linear-to-b from-black/60 via-black/20 to-black/0">
               <div className="flex items-center gap-2">
                 <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center">
-                  <Leaf className="size-4 text-white" />
+                  <LeafIcon className="size-4 text-white" />
                 </div>
                 <h1 className="text-2xl font-bold font-serif text-white">
                   Start a new application
@@ -76,7 +74,7 @@ const CreateBumicertPage = () => {
             <AccordionItem value="item-1">
               <AccordionTrigger>
                 <div className="flex items-center gap-2">
-                  <HelpCircle className="size-4 opacity-50" />
+                  <HelpCircleIcon className="size-4 opacity-50" />
                   What is a Bumicert?
                 </div>
               </AccordionTrigger>

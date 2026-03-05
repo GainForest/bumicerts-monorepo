@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRightIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { links } from "@/lib/links";
@@ -17,7 +17,7 @@ const GetStartedButton = () => {
     <Link href={links.bumicert.createWithDraftId("0")} onClick={handleClick}>
       <Button>
         Get Started
-        <ArrowRight />
+        <ArrowRightIcon />
       </Button>
     </Link>
   );

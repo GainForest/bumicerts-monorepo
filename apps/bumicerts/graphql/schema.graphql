@@ -1,0 +1,1406 @@
+"""
+Filter for activity records. Use `did` / `handle` to filter by author. Use `title`, `shortDescription`, `description` (StringFilter) for field-level search, or `text` for full-text search across all three fields at once. Combine with `and` / `or` / `not` for boolean logic.
+"""
+input ActivityWhereInput {
+  """All child filters must match."""
+  and: [ActivityWhereInput!]
+
+  """
+  Filter on `description`. Supports equals, startsWith, endsWith, includes.
+  """
+  description: StringFilterInput
+
+  """Filter to records authored by this DID."""
+  did: String
+
+  """
+  Filter by AT Protocol handle. Resolved to a DID (takes precedence over `did`).
+  """
+  handle: String
+
+  """
+  If true, only return activities that have an `image` field set in the record payload. Filtered after fetch using the resolved record data.
+  """
+  hasImage: Boolean
+
+  """
+  If true, only return activities whose author DID has an indexed app.gainforest.organization.info record with a non-null displayName. Determined from the inline-resolved creatorInfo (zero extra DB cost).
+  """
+  hasOrganizationInfoRecord: Boolean
+
+  """The child filter must NOT match."""
+  not: ActivityWhereInput
+
+  """At least one child filter must match."""
+  or: [ActivityWhereInput!]
+
+  """
+  Filter on `shortDescription`. Supports equals, startsWith, endsWith, includes.
+  """
+  shortDescription: StringFilterInput
+
+  """
+  Full-text search across title, shortDescription and description simultaneously (PostgreSQL websearch_to_tsquery). Supports quoted phrases and minus-negation.
+  """
+  text: String
+
+  """Filter on `title`. Supports equals, startsWith, endsWith, includes."""
+  title: StringFilterInput
+}
+
+"""
+A blob reference with a resolved URI for fetching directly from the PDS.
+"""
+type BlobRef {
+  """Content identifier (CID) of the blob"""
+  cid: String
+
+  """MIME type of the blob (e.g. image/jpeg, audio/mpeg)"""
+  mimeType: String
+
+  """Size of the blob in bytes"""
+  size: Int
+
+  """
+  Full URI to fetch the blob (e.g. https://pds.example.com/xrpc/com.atproto.sync.getBlob?did=...&cid=...). May be 'https://unknown.invalid/...' if the DID's PDS could not be resolved.
+  """
+  uri: String
+}
+
+"""Certified actor records (app.certified.actor.*)."""
+type CertifiedActorNamespace {
+  profile(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): CertifiedActorProfilePage
+}
+
+"""A Hypercert account profile declaration (app.certified.actor.profile)."""
+type CertifiedActorProfileItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: CertifiedActorProfileRecord
+}
+
+type CertifiedActorProfilePage {
+  data: [CertifiedActorProfileItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for a Hypercert account profile declaration (app.certified.actor.profile).
+"""
+type CertifiedActorProfileRecord {
+  avatar: JSON
+  banner: JSON
+  createdAt: DateTime
+  description: String
+  displayName: String
+  pronouns: String
+  website: String
+}
+
+"""
+A badge award to a user, project, or activity claim (app.certified.badge.award).
+"""
+type CertifiedBadgeAwardItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: CertifiedBadgeAwardRecord
+}
+
+type CertifiedBadgeAwardPage {
+  data: [CertifiedBadgeAwardItem!]
+  pageInfo: PageInfo
+}
+
+"""Pure payload for a badge award (app.certified.badge.award)."""
+type CertifiedBadgeAwardRecord {
+  badge: JSON
+  createdAt: DateTime
+  note: String
+  subject: JSON
+}
+
+"""A badge definition (app.certified.badge.definition)."""
+type CertifiedBadgeDefinitionItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: CertifiedBadgeDefinitionRecord
+}
+
+type CertifiedBadgeDefinitionPage {
+  data: [CertifiedBadgeDefinitionItem!]
+  pageInfo: PageInfo
+}
+
+"""Pure payload for a badge definition (app.certified.badge.definition)."""
+type CertifiedBadgeDefinitionRecord {
+  allowedIssuers: JSON
+  badgeType: String
+  createdAt: DateTime
+  description: String
+  icon: JSON
+  title: String
+}
+
+"""Badge records (app.certified.badge.*)."""
+type CertifiedBadgeNamespace {
+  award(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): CertifiedBadgeAwardPage
+  definition(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): CertifiedBadgeDefinitionPage
+  response(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): CertifiedBadgeResponsePage
+}
+
+"""A recipient response to a badge award (app.certified.badge.response)."""
+type CertifiedBadgeResponseItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: CertifiedBadgeResponseRecord
+}
+
+type CertifiedBadgeResponsePage {
+  data: [CertifiedBadgeResponseItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for a recipient response to a badge award (app.certified.badge.response).
+"""
+type CertifiedBadgeResponseRecord {
+  badgeAward: JSON
+  createdAt: DateTime
+  response: String
+  weight: String
+}
+
+"""A geospatial location record (app.certified.location)."""
+type CertifiedLocationItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: CertifiedLocationRecord
+}
+
+type CertifiedLocationPage {
+  data: [CertifiedLocationItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for a geospatial location record (app.certified.location).
+"""
+type CertifiedLocationRecord {
+  createdAt: DateTime
+  description: String
+  location: JSON
+  locationType: String
+  lpVersion: String
+  name: String
+  srs: String
+}
+
+"""All Certified AT Protocol records (app.certified.*)."""
+type CertifiedNamespace {
+  """Certified actor records (app.certified.actor.*)."""
+  actor: CertifiedActorNamespace
+
+  """Badge records (app.certified.badge.*)."""
+  badge: CertifiedBadgeNamespace
+
+  """Geospatial location records (app.certified.location)."""
+  location(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): CertifiedLocationPage
+}
+
+"""Record count for a single collection."""
+type CollectionStat {
+  """Lexicon collection NSID"""
+  collection: String
+
+  """Number of indexed records"""
+  count: Int
+}
+
+"""
+The identity of the record's creator, enriched with organization branding resolved from the indexed app.gainforest.organization.info records.
+"""
+type CreatorInfo {
+  """DID of the record author."""
+  did: String
+
+  """
+  Resolved logo blob from the author's organization.info record. Null if not indexed or no logo set.
+  """
+  organizationLogo: BlobRef
+
+  """
+  Display name from the author's organization.info record. Null if not indexed.
+  """
+  organizationName: String
+}
+
+"""ISO-8601 date-time string (e.g. 2024-01-15T12:00:00.000Z)"""
+scalar DateTime
+
+"""A Darwin Core sampling event (app.gainforest.dwc.event)."""
+type DwcEventItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: DwcEventRecord
+}
+
+type DwcEventPage {
+  data: [DwcEventItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for a Darwin Core sampling event (app.gainforest.dwc.event).
+"""
+type DwcEventRecord {
+  coordinateUncertaintyInMeters: Int
+  country: String
+  countryCode: String
+  county: String
+  createdAt: DateTime
+  decimalLatitude: String
+  decimalLongitude: String
+  eventDate: String
+  eventID: String
+  eventRemarks: String
+  eventTime: String
+  fieldNotes: String
+  geodeticDatum: String
+  habitat: String
+  locality: String
+  locationID: String
+  locationRemarks: String
+  maximumElevationInMeters: Int
+  minimumElevationInMeters: Int
+  municipality: String
+  parentEventID: String
+  parentEventRef: String
+  sampleSizeUnit: String
+  sampleSizeValue: String
+  samplingEffort: String
+  samplingProtocol: String
+  stateProvince: String
+}
+
+"""A Darwin Core measurement (app.gainforest.dwc.measurement)."""
+type DwcMeasurementItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: DwcMeasurementRecord
+}
+
+type DwcMeasurementPage {
+  data: [DwcMeasurementItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for a Darwin Core measurement (app.gainforest.dwc.measurement).
+"""
+type DwcMeasurementRecord {
+  createdAt: DateTime
+  measurementAccuracy: String
+  measurementDeterminedBy: String
+  measurementDeterminedDate: String
+  measurementID: String
+  measurementMethod: String
+  measurementRemarks: String
+  measurementType: String
+  measurementUnit: String
+  measurementValue: String
+  occurrenceID: String
+  occurrenceRef: String
+}
+
+"""Darwin Core biodiversity records (app.gainforest.dwc.*)."""
+type DwcNamespace {
+  event(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): DwcEventPage
+  measurement(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): DwcMeasurementPage
+  occurrence(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): DwcOccurrencePage
+}
+
+"""A Darwin Core species occurrence (app.gainforest.dwc.occurrence)."""
+type DwcOccurrenceItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: DwcOccurrenceRecord
+}
+
+type DwcOccurrencePage {
+  data: [DwcOccurrenceItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for a Darwin Core species occurrence (app.gainforest.dwc.occurrence).
+"""
+type DwcOccurrenceRecord {
+  associatedMedia: String
+  associatedOccurrences: String
+  associatedReferences: String
+  associatedSequences: String
+  audioEvidence: BlobRef
+  basisOfRecord: String
+  behavior: String
+  class: String
+  collectionCode: String
+  coordinateUncertaintyInMeters: Int
+  country: String
+  countryCode: String
+  county: String
+  createdAt: DateTime
+  dataGeneralizations: String
+  datasetName: String
+  dateIdentified: String
+  dcType: String
+  decimalLatitude: String
+  decimalLongitude: String
+  dynamicProperties: String
+  eventDate: String
+  eventID: String
+  eventRef: String
+  eventTime: String
+  family: String
+  fieldNotes: String
+  gbifTaxonKey: String
+  genus: String
+  geodeticDatum: String
+  habitat: String
+  higherClassification: String
+  identificationQualifier: String
+  identificationRemarks: String
+  identifiedBy: String
+  identifiedByID: String
+  imageEvidence: BlobRef
+  individualCount: Int
+  informationWithheld: String
+  infraspecificEpithet: String
+  institutionCode: String
+  kingdom: String
+  license: String
+  lifeStage: String
+  locality: String
+  locationID: String
+  locationRemarks: String
+  maximumDepthInMeters: Int
+  maximumElevationInMeters: Int
+  minimumDepthInMeters: Int
+  minimumElevationInMeters: Int
+  municipality: String
+  nomenclaturalCode: String
+  occurrenceID: String
+  occurrenceRemarks: String
+  occurrenceStatus: String
+  order: String
+  organismQuantity: String
+  organismQuantityType: String
+  phylum: String
+  previousIdentifications: String
+  recordedBy: String
+  recordedByID: String
+  references: String
+  reproductiveCondition: String
+  rightsHolder: String
+  samplingEffort: String
+  samplingProtocol: String
+  scientificName: String
+  scientificNameAuthorship: String
+  sex: String
+  specificEpithet: String
+  spectrogramEvidence: BlobRef
+  stateProvince: String
+  taxonRank: String
+  taxonomicStatus: String
+  verbatimLocality: String
+  vernacularName: String
+  videoEvidence: BlobRef
+}
+
+"""An evaluator evaluation (app.gainforest.evaluator.evaluation)."""
+type EvaluationItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: EvaluationRecord
+}
+
+type EvaluationPage {
+  data: [EvaluationItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for an evaluator evaluation (app.gainforest.evaluator.evaluation).
+"""
+type EvaluationRecord {
+  confidence: Int
+  createdAt: DateTime
+  dynamicProperties: String
+  evaluationType: String
+  method: JSON
+  neg: Boolean
+  result: JSON
+  subject: JSON
+  subjects: JSON
+  supersedes: String
+}
+
+"""Evaluator records (app.gainforest.evaluator.*)."""
+type EvaluatorNamespace {
+  evaluation(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): EvaluationPage
+  service(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): EvaluatorServicePage
+  subscription(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): EvaluatorSubscriptionPage
+}
+
+"""An evaluator service (app.gainforest.evaluator.service)."""
+type EvaluatorServiceItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: EvaluatorServiceRecord
+}
+
+type EvaluatorServicePage {
+  data: [EvaluatorServiceItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for an evaluator service (app.gainforest.evaluator.service).
+"""
+type EvaluatorServiceRecord {
+  createdAt: DateTime
+  policies: JSON
+}
+
+"""An evaluator subscription (app.gainforest.evaluator.subscription)."""
+type EvaluatorSubscriptionItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: EvaluatorSubscriptionRecord
+}
+
+type EvaluatorSubscriptionPage {
+  data: [EvaluatorSubscriptionItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for an evaluator subscription (app.gainforest.evaluator.subscription).
+"""
+type EvaluatorSubscriptionRecord {
+  collections: [String!]
+  createdAt: DateTime
+  evaluationTypes: [String!]
+  evaluator: String
+}
+
+"""All GainForest AT Protocol records."""
+type GainforestNamespace {
+  dwc: DwcNamespace
+  evaluator: EvaluatorNamespace
+  organization: OrgNamespace
+}
+
+"""An acknowledgement record (org.hypercerts.acknowledgement)."""
+type HcAcknowledgementItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: HcAcknowledgementRecord
+}
+
+type HcAcknowledgementPage {
+  data: [HcAcknowledgementItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for an acknowledgement record (org.hypercerts.acknowledgement).
+"""
+type HcAcknowledgementRecord {
+  acknowledged: Boolean
+  comment: String
+  context: StrongRef
+  createdAt: DateTime
+  subject: StrongRef
+}
+
+"""A Hypercerts claim activity (org.hypercerts.claim.activity)."""
+type HcActivityItem {
+  creatorInfo: CreatorInfo
+  metadata: HcActivityMetadata
+  record: HcActivityRecord
+}
+
+"""Quality label from the Hyperlabel labeller (einstein.climateai.org)."""
+type HcActivityLabel {
+  """When the labeller applied this label"""
+  labeledAt: DateTime
+
+  """DID of the labeller that issued this label"""
+  labeler: String
+
+  """When the indexer last synced this label"""
+  syncedAt: DateTime
+
+  """Quality tier: high-quality | standard | draft | likely-test"""
+  tier: String
+}
+
+"""
+AT Protocol envelope fields for an activity record, including optional Hyperlabel quality metadata.
+"""
+type HcActivityMetadata {
+  """Content hash (CID)"""
+  cid: String
+
+  """Lexicon collection NSID"""
+  collection: String
+
+  """Creation time from record payload"""
+  createdAt: DateTime
+
+  """DID of the record author"""
+  did: String
+
+  """When the indexer stored this record"""
+  indexedAt: DateTime
+
+  """
+  Full quality label object from Hyperlabel (null if author not yet labelled).
+  """
+  label: HcActivityLabel
+
+  """
+  Hyperlabel quality tier for this record's author: high-quality | standard | draft | likely-test. Null if the author has not been labelled yet.
+  """
+  labelTier: String
+
+  """Record key (TID or literal)"""
+  rkey: String
+
+  """Full AT-URI (at://did/collection/rkey)"""
+  uri: String
+}
+
+type HcActivityPage {
+  data: [HcActivityItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for a Hypercerts claim activity (org.hypercerts.claim.activity).
+"""
+type HcActivityRecord {
+  contributors: JSON
+  createdAt: DateTime
+  description: String
+  descriptionFacets: JSON
+  endDate: DateTime
+  image: JSON
+  locations: [StrongRef!]
+  rights: StrongRef
+  shortDescription: String
+  shortDescriptionFacets: JSON
+  startDate: DateTime
+  title: String
+  workScope: JSON
+}
+
+"""
+An attachment providing commentary, context, or evidence (org.hypercerts.claim.attachment).
+"""
+type HcAttachmentItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: HcAttachmentRecord
+}
+
+type HcAttachmentPage {
+  data: [HcAttachmentItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for an attachment record (org.hypercerts.claim.attachment).
+"""
+type HcAttachmentRecord {
+  content: JSON
+  contentType: String
+  createdAt: DateTime
+  description: String
+  descriptionFacets: JSON
+  location: StrongRef
+  shortDescription: String
+  shortDescriptionFacets: JSON
+  subjects: [StrongRef!]
+  title: String
+}
+
+"""A Hypercerts claim collection (org.hypercerts.claim.collection)."""
+type HcCollectionItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: HcCollectionRecord
+}
+
+type HcCollectionPage {
+  data: [HcCollectionItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for a Hypercerts claim collection (org.hypercerts.claim.collection).
+"""
+type HcCollectionRecord {
+  activities: JSON
+  avatar: BlobRef
+  coverPhoto: BlobRef
+  createdAt: DateTime
+  shortDescription: String
+  title: String
+}
+
+"""
+Details about a specific contribution (org.hypercerts.claim.contributionDetails).
+"""
+type HcContributionDetailsItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: HcContributionDetailsRecord
+}
+
+type HcContributionDetailsPage {
+  data: [HcContributionDetailsItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for contribution details (org.hypercerts.claim.contributionDetails).
+"""
+type HcContributionDetailsRecord {
+  contributionDescription: String
+  createdAt: DateTime
+  endDate: DateTime
+  role: String
+  startDate: DateTime
+}
+
+"""Contributor information (org.hypercerts.claim.contributorInformation)."""
+type HcContributorInformationItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: HcContributorInformationRecord
+}
+
+type HcContributorInformationPage {
+  data: [HcContributorInformationItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for contributor information (org.hypercerts.claim.contributorInformation).
+"""
+type HcContributorInformationRecord {
+  createdAt: DateTime
+  displayName: String
+  identifier: String
+  image: JSON
+}
+
+"""A Hypercerts claim evaluation (org.hypercerts.claim.evaluation)."""
+type HcEvaluationItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: HcEvaluationRecord
+}
+
+type HcEvaluationPage {
+  data: [HcEvaluationItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for a Hypercerts claim evaluation (org.hypercerts.claim.evaluation).
+"""
+type HcEvaluationRecord {
+  content: JSON
+  createdAt: DateTime
+  evaluators: [String!]
+  location: StrongRef
+  measurements: [StrongRef!]
+  score: JSON
+  subject: StrongRef
+  summary: String
+}
+
+"""A Hypercerts funding receipt (org.hypercerts.funding.receipt)."""
+type HcFundingReceiptItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: HcFundingReceiptRecord
+}
+
+type HcFundingReceiptPage {
+  data: [HcFundingReceiptItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for a Hypercerts funding receipt (org.hypercerts.funding.receipt).
+"""
+type HcFundingReceiptRecord {
+  amount: String
+  createdAt: DateTime
+  currency: String
+  for: String
+  from: String
+  notes: String
+  occurredAt: DateTime
+  paymentNetwork: String
+  paymentRail: String
+  to: String
+  transactionId: String
+}
+
+"""Hypercerts helper records (org.hypercerts.helper.*)."""
+type HcHelperNamespace {
+  workScopeTag(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcWorkScopeTagPage
+}
+
+"""A Hypercerts claim measurement (org.hypercerts.claim.measurement)."""
+type HcMeasurementItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: HcMeasurementRecord
+}
+
+type HcMeasurementPage {
+  data: [HcMeasurementItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for a Hypercerts claim measurement (org.hypercerts.claim.measurement).
+"""
+type HcMeasurementRecord {
+  createdAt: DateTime
+  evidenceURI: [String!]
+  location: StrongRef
+  measurers: [String!]
+  methodType: String
+  methodURI: String
+  metric: String
+  subject: StrongRef
+  value: String
+}
+
+"""A Hypercerts claim rights record (org.hypercerts.claim.rights)."""
+type HcRightsItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: HcRightsRecord
+}
+
+type HcRightsPage {
+  data: [HcRightsItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for a Hypercerts claim rights record (org.hypercerts.claim.rights).
+"""
+type HcRightsRecord {
+  attachment: JSON
+  createdAt: DateTime
+  rightsDescription: String
+  rightsName: String
+  rightsType: String
+}
+
+"""
+A reusable work scope atom for taxonomy (org.hypercerts.helper.workScopeTag).
+"""
+type HcWorkScopeTagItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: HcWorkScopeTagRecord
+}
+
+type HcWorkScopeTagPage {
+  data: [HcWorkScopeTagItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for a work scope tag (org.hypercerts.helper.workScopeTag).
+"""
+type HcWorkScopeTagRecord {
+  aliases: [String!]
+  createdAt: DateTime
+  description: String
+  externalReference: JSON
+  key: String
+  kind: String
+  label: String
+  parent: StrongRef
+}
+
+"""Hypercerts AT Protocol records (org.hypercerts.*)."""
+type HypercertsNamespace {
+  acknowledgement(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcAcknowledgementPage
+
+  """
+  Paginated list of org.hypercerts.claim.activity records. When `where` contains no text-filter fields, returns all records ordered by time (sortBy/order apply). When `where` contains any of title/shortDescription/description/text, runs a text search (sortBy/order are ignored; results ordered by indexed_at DESC). Combine with `labelTier` to intersect label and text filters.
+  """
+  activity(
+    cursor: String
+
+    """
+    Filter by Hyperlabel quality tier: high-quality | standard | draft | likely-test
+    """
+    labelTier: String
+    limit: Int
+
+    """Sort direction when no text filter is present."""
+    order: SortOrder
+
+    """Sort field when no text filter is present."""
+    sortBy: SortField
+    where: ActivityWhereInput
+  ): HcActivityPage
+  attachment(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcAttachmentPage
+  collection(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcCollectionPage
+  contributionDetail(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcContributionDetailsPage
+  contributorInformation(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcContributorInformationPage
+  evaluation(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcEvaluationPage
+  fundingReceipt(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcFundingReceiptPage
+
+  """Helper records (org.hypercerts.helper.*)."""
+  helper: HcHelperNamespace
+  measurement(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcMeasurementPage
+  rights(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): HcRightsPage
+}
+
+"""An on-chain attestation link (org.impactindexer.link.attestation)."""
+type IiAttestationItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: IiAttestationRecord
+}
+
+type IiAttestationPage {
+  data: [IiAttestationItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for an on-chain attestation link (org.impactindexer.link.attestation).
+"""
+type IiAttestationRecord {
+  address: String
+  chainId: Int
+  createdAt: DateTime
+  message: IiEip712Message
+  signature: String
+  signatureType: String
+}
+
+"""A review comment (org.impactindexer.review.comment)."""
+type IiCommentItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: IiCommentRecord
+}
+
+type IiCommentPage {
+  data: [IiCommentItem!]
+  pageInfo: PageInfo
+}
+
+"""Pure payload for a review comment (org.impactindexer.review.comment)."""
+type IiCommentRecord {
+  createdAt: DateTime
+  replyTo: String
+  subject: IiSubjectRef
+  text: String
+}
+
+"""The EIP-712 typed data message that was signed."""
+type IiEip712Message {
+  chainId: String
+  did: String
+  evmAddress: String
+  nonce: String
+  timestamp: String
+}
+
+"""A review like (org.impactindexer.review.like)."""
+type IiLikeItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: IiLikeRecord
+}
+
+type IiLikePage {
+  data: [IiLikeItem!]
+  pageInfo: PageInfo
+}
+
+"""Pure payload for a review like (org.impactindexer.review.like)."""
+type IiLikeRecord {
+  createdAt: DateTime
+  subject: IiSubjectRef
+}
+
+"""A review subject reference (record, user, PDS, or lexicon)."""
+type IiSubjectRef {
+  """Optional CID to pin to a specific record version"""
+  cid: String
+
+  """Subject type: record | user | pds | lexicon"""
+  type: String
+
+  """Subject identifier (AT-URI, DID, hostname, or NSID)"""
+  uri: String
+}
+
+"""Impact Indexer AT Protocol records (org.impactindexer.*)."""
+type ImpactIndexerNamespace {
+  attestation(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): IiAttestationPage
+  comment(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): IiCommentPage
+  like(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): IiLikePage
+}
+
+"""Arbitrary JSON value"""
+scalar JSON
+
+"""Mutations for managing which AT Protocol repos Tap tracks."""
+type Mutation {
+  """Register DIDs with Tap for tracking and backfill."""
+  addRepos(
+    """List of DIDs to add"""
+    dids: [String!]!
+  ): Boolean
+
+  """Stop tracking DIDs in Tap."""
+  removeRepos(
+    """List of DIDs to remove"""
+    dids: [String!]!
+  ): Boolean
+}
+
+"""An audio recording (app.gainforest.organization.recordings.audio)."""
+type OrgAudioItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: OrgAudioRecord
+}
+
+"""Metadata for an audio recording."""
+type OrgAudioMetadata {
+  channels: Int
+  codec: String
+  coordinates: String
+  duration: String
+  recordedAt: DateTime
+  sampleRate: Int
+}
+
+type OrgAudioPage {
+  data: [OrgAudioItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for an audio recording (app.gainforest.organization.recordings.audio).
+"""
+type OrgAudioRecord {
+  blob: BlobRef
+  createdAt: DateTime
+  description: JSON
+  metadata: OrgAudioMetadata
+  name: String
+}
+
+"""Default site declaration (app.gainforest.organization.defaultSite)."""
+type OrgDefaultSiteItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: OrgDefaultSiteRecord
+}
+
+type OrgDefaultSitePage {
+  data: [OrgDefaultSiteItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for a default site declaration (app.gainforest.organization.defaultSite).
+"""
+type OrgDefaultSiteRecord {
+  createdAt: DateTime
+  site: String
+}
+
+"""
+A dendogram observation (app.gainforest.organization.observations.dendogram).
+"""
+type OrgDendogramItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: OrgDendogramRecord
+}
+
+type OrgDendogramPage {
+  data: [OrgDendogramItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for a dendogram observation (app.gainforest.organization.observations.dendogram).
+"""
+type OrgDendogramRecord {
+  createdAt: DateTime
+  dendogram: BlobRef
+}
+
+type OrgFaunaObservationItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: OrgFaunaObservationRecord
+}
+
+type OrgFaunaObservationPage {
+  data: [OrgFaunaObservationItem!]
+  pageInfo: PageInfo
+}
+
+type OrgFaunaObservationRecord {
+  createdAt: DateTime
+  gbifTaxonKeys: [String!]
+}
+
+type OrgFaunaPredictionItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: OrgFaunaPredictionRecord
+}
+
+type OrgFaunaPredictionPage {
+  data: [OrgFaunaPredictionItem!]
+  pageInfo: PageInfo
+}
+
+type OrgFaunaPredictionRecord {
+  createdAt: DateTime
+  gbifTaxonKeys: [String!]
+}
+
+type OrgFloraObservationItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: OrgFloraObservationRecord
+}
+
+type OrgFloraObservationPage {
+  data: [OrgFloraObservationItem!]
+  pageInfo: PageInfo
+}
+
+type OrgFloraObservationRecord {
+  createdAt: DateTime
+  gbifTaxonKeys: [String!]
+}
+
+type OrgFloraPredictionItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: OrgFloraPredictionRecord
+}
+
+type OrgFloraPredictionPage {
+  data: [OrgFloraPredictionItem!]
+  pageInfo: PageInfo
+}
+
+type OrgFloraPredictionRecord {
+  createdAt: DateTime
+  gbifTaxonKeys: [String!]
+}
+
+"""An organization profile (app.gainforest.organization.info)."""
+type OrgInfoItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: OrgInfoRecord
+}
+
+type OrgInfoPage {
+  data: [OrgInfoItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for an organization profile (app.gainforest.organization.info).
+"""
+type OrgInfoRecord {
+  country: String
+  coverImage: BlobRef
+  createdAt: DateTime
+  displayName: String
+  logo: BlobRef
+  longDescription: JSON
+  objectives: [String!]
+  shortDescription: JSON
+  startDate: DateTime
+  visibility: String
+  website: String
+}
+
+"""
+Filter for organization info records. Use `did` / `handle` to filter by author. Use `displayName`, `shortDescription`, `longDescription` (StringFilter) for field-level search, or `text` for full-text search across all three fields at once. Combine with `and` / `or` / `not` for boolean logic.
+"""
+input OrgInfoWhereInput {
+  """All child filters must match."""
+  and: [OrgInfoWhereInput!]
+
+  """Filter to records authored by this DID."""
+  did: String
+
+  """
+  Filter on `displayName`. Supports equals, startsWith, endsWith, includes.
+  """
+  displayName: StringFilterInput
+
+  """
+  Filter by AT Protocol handle. Resolved to a DID (takes precedence over `did`).
+  """
+  handle: String
+
+  """
+  Filter on `longDescription`. Supports equals, startsWith, endsWith, includes.
+  """
+  longDescription: StringFilterInput
+
+  """The child filter must NOT match."""
+  not: OrgInfoWhereInput
+
+  """At least one child filter must match."""
+  or: [OrgInfoWhereInput!]
+
+  """
+  Filter on `shortDescription`. Supports equals, startsWith, endsWith, includes.
+  """
+  shortDescription: StringFilterInput
+
+  """
+  Full-text search across displayName, shortDescription and longDescription simultaneously (PostgreSQL websearch_to_tsquery). Supports quoted phrases and minus-negation.
+  """
+  text: String
+}
+
+"""A geospatial map layer (app.gainforest.organization.layer)."""
+type OrgLayerItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: OrgLayerRecord
+}
+
+type OrgLayerPage {
+  data: [OrgLayerItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for a geospatial map layer (app.gainforest.organization.layer).
+"""
+type OrgLayerRecord {
+  createdAt: DateTime
+  description: String
+  name: String
+  type: String
+  uri: String
+}
+
+"""
+A measured trees cluster (app.gainforest.organization.observations.measuredTreesCluster).
+"""
+type OrgMeasuredTreesClusterItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: OrgMeasuredTreesClusterRecord
+}
+
+type OrgMeasuredTreesClusterPage {
+  data: [OrgMeasuredTreesClusterItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for a measured trees cluster (app.gainforest.organization.observations.measuredTreesCluster).
+"""
+type OrgMeasuredTreesClusterRecord {
+  createdAt: DateTime
+  shapefile: BlobRef
+}
+
+"""Organization records (app.gainforest.organization.*)."""
+type OrgNamespace {
+  defaultSite(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): OrgDefaultSitePage
+
+  """
+  Paginated list of app.gainforest.organization.info records. When `where` contains no text-filter fields (displayName/shortDescription/longDescription/text), returns all records ordered by time (sortBy/order apply). When any text field is present in `where`, runs a text search (sortBy/order are ignored; results ordered by indexed_at DESC).
+  """
+  info(
+    cursor: String
+    limit: Int
+
+    """Sort direction when no text filter is present."""
+    order: SortOrder
+
+    """Sort field when no text filter is present."""
+    sortBy: SortField
+    where: OrgInfoWhereInput
+  ): OrgInfoPage
+  layer(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): OrgLayerPage
+  observations: OrgObservationsNamespace
+  predictions: OrgPredictionsNamespace
+  recordings: OrgRecordingsNamespace
+}
+
+type OrgObservationsNamespace {
+  dendogram(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): OrgDendogramPage
+  fauna(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): OrgFaunaObservationPage
+  flora(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): OrgFloraObservationPage
+  measuredTreesCluster(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): OrgMeasuredTreesClusterPage
+}
+
+type OrgPredictionsNamespace {
+  fauna(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): OrgFaunaPredictionPage
+  flora(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): OrgFloraPredictionPage
+}
+
+type OrgRecordingsNamespace {
+  audio(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): OrgAudioPage
+}
+
+"""Cursor-based pagination metadata."""
+type PageInfo {
+  """Number of items in the current page's data array."""
+  count: Int
+
+  """Pass as `cursor` in the next request. Null when no more pages."""
+  endCursor: String
+
+  """True if more records exist beyond this page."""
+  hasNextPage: Boolean
+}
+
+"""GainForest AT Protocol record index."""
+type Query {
+  """All Certified indexed records, grouped by namespace."""
+  certified: CertifiedNamespace
+
+  """Total number of indexed records per lexicon collection."""
+  collectionStats: [CollectionStat!]
+
+  """All GainForest indexed records, grouped by namespace."""
+  gainforest: GainforestNamespace
+
+  """All Hypercerts indexed records, grouped by namespace."""
+  hypercerts: HypercertsNamespace
+
+  """All Impact Indexer indexed records, grouped by namespace."""
+  impactIndexer: ImpactIndexerNamespace
+}
+
+"""AT Protocol envelope fields present on every indexed record."""
+type RecordMeta {
+  """Content hash (CID)"""
+  cid: String
+
+  """Lexicon collection NSID"""
+  collection: String
+
+  """Creation time from record payload"""
+  createdAt: DateTime
+
+  """DID of the record author"""
+  did: String
+
+  """When the indexer stored this record"""
+  indexedAt: DateTime
+
+  """Record key (TID or literal)"""
+  rkey: String
+
+  """Full AT-URI (at://did/collection/rkey)"""
+  uri: String
+}
+
+"""Which timestamp field to sort and paginate on."""
+enum SortField {
+  """Sort by record creation timestamp (default)"""
+  CREATED_AT
+
+  """Sort by when the indexer stored the record"""
+  INDEXED_AT
+}
+
+"""Sort direction for paginated queries."""
+enum SortOrder {
+  """Oldest / smallest first"""
+  ASC
+
+  """Newest / largest first (default)"""
+  DESC
+}
+
+"""
+Case-insensitive string match filter. All provided modes are combined with AND. e.g. { startsWith: "carbon", endsWith: "forest" } matches strings that begin with "carbon" AND end with "forest".
+"""
+input StringFilterInput {
+  """Value must end with this suffix (ILIKE '%value')."""
+  endsWith: String
+
+  """Exact case-insensitive equality (lower(col) = lower(value))."""
+  equals: String
+
+  """Value must contain this substring (ILIKE '%value%')."""
+  includes: String
+
+  """Value must begin with this prefix (ILIKE 'value%')."""
+  startsWith: String
+}
+
+"""
+An AT Protocol strong reference (URI + CID for version-pinned linking).
+"""
+type StrongRef {
+  """CID of the referenced record version"""
+  cid: String
+
+  """AT-URI of the referenced record"""
+  uri: String
+}
+
+"""
+Filter records by author identity. `handle` takes precedence over `did` if both are supplied. Combine conditions with `and` / `or` / `not`.
+"""
+input WhereInput {
+  """All child filters must match (logical AND)."""
+  and: [WhereInput!]
+
+  """Filter to records authored by this DID (e.g. did:plc:abc123)."""
+  did: String
+
+  """
+  Filter by AT Protocol handle (e.g. gainforest.bsky.social). Resolved to a DID via the Bluesky AppView API (cached 10 min). Takes precedence over `did` if both are supplied.
+  """
+  handle: String
+
+  """The child filter must NOT match (logical NOT)."""
+  not: WhereInput
+
+  """At least one child filter must match (logical OR)."""
+  or: [WhereInput!]
+}

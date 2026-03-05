@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { X, Link as LinkIcon, Loader2 } from "lucide-react";
+import { XIcon, LinkIcon, Loader2Icon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
 import {
@@ -152,14 +152,14 @@ export function ContributorSelector({
                                 onValueChange={setQuery}
                                 autoFocus={autoFocus}
                             />
-                            {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
+                            {loading && <Loader2Icon className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
                             {showClearButton && !loading && (
                                 <button
                                     type="button"
                                     onClick={onClear}
                                     className="h-4 w-4 shrink-0 text-muted-foreground hover:text-foreground transition-colors"
                                 >
-                                    <X className="h-4 w-4" />
+                                    <XIcon className="h-4 w-4" />
                                 </button>
                             )}
                         </div>
@@ -207,7 +207,7 @@ export function ContributorSelector({
                                 onClick={onClear}
                                 className="h-4 w-4 mr-3 shrink-0 text-muted-foreground hover:text-foreground transition-colors"
                             >
-                                <X className="h-4 w-4" />
+                                <XIcon className="h-4 w-4" />
                             </button>
                         )}
                     </InputGroup>

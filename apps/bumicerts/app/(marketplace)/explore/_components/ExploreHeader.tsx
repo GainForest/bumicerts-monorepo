@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   SearchIcon,
   SlidersHorizontalIcon,
@@ -241,6 +241,28 @@ export function ExploreHeaderSlots({
   const modal = useModal();
   const filterCategories = buildFilterCategories(bumicerts);
 
+  // Stable reference so HeaderContent's useEffect dependency doesn't fire every render
+  const rightSlot = useMemo(
+    () => (
+      <Link href="/bumicert/create">
+        <motion.span
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-full text-sm font-medium px-3.5 py-1.5 transition-colors border",
+            isUnauthenticated
+              ? "border-border text-foreground hover:bg-muted"
+              : "bg-primary text-primary-foreground border-transparent hover:bg-primary/90"
+          )}
+        >
+          <PlusIcon className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Create Project</span>
+        </motion.span>
+      </Link>
+    ),
+    [isUnauthenticated]
+  );
+
   const openFiltersModal = async () => {
     modal.pushModal(
       {
@@ -266,25 +288,7 @@ export function ExploreHeaderSlots({
 
   return (
     <>
-    <HeaderContent
-      right={
-        <Link href="/bumicert/create">
-          <motion.span
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full text-sm font-medium px-3.5 py-1.5 transition-colors border",
-              isUnauthenticated
-                ? "border-border text-foreground hover:bg-muted"
-                : "bg-primary text-primary-foreground border-transparent hover:bg-primary/90"
-            )}
-          >
-            <PlusIcon className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Create Project</span>
-          </motion.span>
-        </Link>
-      }
-    />
+    <HeaderContent right={rightSlot} />
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}

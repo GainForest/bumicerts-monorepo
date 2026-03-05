@@ -3,40 +3,34 @@ import React from "react";
 import FormField from "../../../../../../../components/ui/FormField";
 import { Button } from "@/components/ui/button";
 import {
-  Users,
-  ShieldCheck,
-  Map,
-  PlusCircle,
-  Trash2,
-  Loader2,
+  UsersIcon,
+  ShieldCheckIcon,
+  MapIcon,
+  PlusCircleIcon,
   Loader2Icon,
-  CircleDashed,
-  Check,
-  ChevronRight,
+  CircleDashedIcon,
+  CheckIcon,
+  ChevronRightIcon,
 } from "lucide-react";
 import { useFormStore } from "../../form-store";
 import { Checkbox } from "@/components/ui/checkbox";
 import useNewBumicertStore from "../../store";
-import { allowedPDSDomains } from "@/lib/config/gainforest-sdk";
 import { useAtprotoStore } from "@/components/stores/atproto";
-import { trpcApi } from "@/components/providers/TrpcProvider";
 import { useModal } from "@/components/ui/modal/context";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { SiteEditorModalId } from "@/components/global/modals/upload/site/editor";
 import dynamic from "next/dynamic";
-import { computePolygonMetrics } from "gainforest-sdk/utilities/geojson";
-import { GetRecordResponse } from "gainforest-sdk/types";
-import { AppCertifiedLocation } from "gainforest-sdk/lex-api";
-import useBlob from "@/hooks/use-blob";
-import { $Typed } from "gainforest-sdk/lex-api/utils";
-import { OrgHypercertsDefs as Defs } from "gainforest-sdk/lex-api";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { getBlobUrl, parseAtUri } from "gainforest-sdk/utilities/atproto";
+import { computePolygonMetrics, parseAtUri } from "@gainforest/atproto-mutations-next";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { links } from "@/lib/links";
 import { ContributorRow } from "./ContributorRow";
 import { ContributorSelector } from "./ContributorSelector";
 import QuerySuspense from "@/components/query-suspense";
+
+import { queries } from "@/lib/graphql/queries/index";
+import type { CertifiedLocation } from "@/lib/graphql/queries/index";
+import { queryKeys } from "@/lib/query-keys";
 
 const SiteEditorModal = dynamic(
   () =>
@@ -92,21 +86,16 @@ const Step3 = () => {
     );
     show();
   };
+
   const {
     data: sitesResponse,
     isPending: isSitesPending,
     isPlaceholderData: isOlderSites,
     error: sitesFetchError,
-  } = trpcApi.hypercerts.location.getAll.useQuery(
-    {
-      did: auth.user?.did ?? "",
-      pdsDomain: allowedPDSDomains[0],
-    },
-    {
-      enabled: !!auth.user?.did,
-    }
-  );
-  const sites = sitesResponse?.locations;
+  } = queries.locations.useQuery({ did: auth.user?.did ?? "" });
+
+  // sitesResponse is CertifiedLocation[] directly
+  const sites = sitesResponse as CertifiedLocation[] | undefined;
   const isSitesLoading = isSitesPending || isOlderSites;
 
   const selectedSitesSet = new Set(siteBoundaries.map((sb) => sb.uri));
@@ -118,7 +107,7 @@ const Step3 = () => {
       </h1>
       <div className="mt-8 flex flex-col gap-2">
         <FormField
-          Icon={Users}
+          Icon={UsersIcon}
           label="List of Contributors"
           description="Add everyone involved in this project — including your own community or organization and any collaborators. Tip: Start by adding your own group first before listing your partners or supporters."
           error={errors.contributors}
@@ -155,7 +144,7 @@ const Step3 = () => {
         </FormField>
 
         <FormField
-          Icon={Map}
+          Icon={MapIcon}
           label="Site Boundaries"
           description="Please upload your site boundary in GeoJSON format so we can visualize your project on the map."
           error={errors.siteBoundaries}
@@ -173,7 +162,7 @@ const Step3 = () => {
                   href={links.upload.sites(auth.user.did)}
                   className="flex items-center text-primary hover:underline"
                 >
-                  Manage sites <ChevronRight className="size-4" />
+                  Manage sites <ChevronRightIcon className="size-4" />
                 </Link>
               </span>
             )}
@@ -182,7 +171,7 @@ const Step3 = () => {
           <div className="h-40 w-full border border-dashed border-border rounded-lg bg-background/50">
             {isSitesLoading && (
               <div className="w-full h-full flex flex-col items-center justify-center">
-                <Loader2 className="animate-spin text-muted-foreground size-4" />
+                <Loader2Icon className="animate-spin text-muted-foreground size-4" />
                 <span className="text-sm text-muted-foreground">
                   Loading your sites...
                 </span>
@@ -203,18 +192,18 @@ const Step3 = () => {
                       className="mt-2"
                       onClick={onAddSite}
                     >
-                      <PlusCircle /> Add a site
+                      <PlusCircleIcon /> Add a site
                     </Button>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-1 p-2">
                     {sites.map((site) => {
-                      if (typeof site.cid !== "string") return null;
-                      const cid = site.cid;
-                      const uri = site.uri;
+                      const cid = site.metadata?.cid;
+                      const uri = site.metadata?.uri;
+                      if (!cid || !uri) return null;
                       return (
                         <QuerySuspense
-                          key={site.cid}
+                          key={cid}
                           loadingFallback={
                             <div className="h-12 rounded-md bg-muted animate-pulse"></div>
                           }
@@ -249,7 +238,7 @@ const Step3 = () => {
                       className="h-auto"
                       onClick={onAddSite}
                     >
-                      <PlusCircle /> Add a site
+                      <PlusCircleIcon /> Add a site
                     </Button>
                   </div>
                 )
@@ -260,7 +249,7 @@ const Step3 = () => {
         </FormField>
 
         <FormField
-          Icon={ShieldCheck}
+          Icon={ShieldCheckIcon}
           label="Permissions"
           className="text-sm"
           error={errors.confirmPermissions || errors.agreeTnc}
@@ -317,29 +306,36 @@ const SiteItem = ({
   isSelected,
   onSelectChange,
 }: {
-  site: GetRecordResponse<AppCertifiedLocation.Main>;
+  site: CertifiedLocation;
   isSelected: boolean;
   onSelectChange: (value: boolean) => void;
 }) => {
-  const locationRef = site.value.location;
-  const locationBlob =
-    locationRef.$type === "org.hypercerts.defs#smallBlob"
-      ? (locationRef as $Typed<Defs.SmallBlob>).blob
-      : null;
-  const locationURI =
-    locationRef.$type === "org.hypercerts.defs#uri"
-      ? (locationRef as $Typed<Defs.Uri>).uri
-      : null;
-  const locationBlobURL = locationBlob
-    ? getBlobUrl(parseAtUri(site.uri).did, locationBlob, allowedPDSDomains[0])
-    : null;
-  const urlToFetch = locationBlobURL ?? locationURI ?? null;
+  const locationRef = site.record?.location;
+  const uri = site.metadata?.uri ?? "";
+  // Try to get URL from location data.
+  // The indexer resolves every blob reference to a URI before serving it via
+  // GraphQL, so we can always read `uri` from whichever variant is present.
+  let urlToFetch: string | null = null;
+
+  if (locationRef && typeof locationRef === "object") {
+    const loc = locationRef as Record<string, unknown>;
+    const $type = loc["$type"] as string | undefined;
+
+    if ($type?.includes("uri")) {
+      // URI variant — the value is already a fetchable URL
+      urlToFetch = (loc["uri"] as string | undefined) ?? null;
+    } else if ($type?.includes("Blob") || $type?.includes("blob")) {
+      // Blob variant — indexer injects `uri` into the blob object
+      const blob = loc["blob"] as Record<string, unknown> | undefined;
+      urlToFetch = (blob?.["uri"] as string | undefined) ?? null;
+    }
+  }
 
   const { data: locationData } = useSuspenseQuery({
-    queryKey: ["location", urlToFetch],
+    queryKey: queryKeys.locationPreview(urlToFetch),
     queryFn: async () => {
       if (!urlToFetch) {
-        console.error("Invalid urlToFetch while fetching Location. Location for debugging:", locationRef)
+        console.error("Invalid urlToFetch while fetching Location. Location for debugging:", locationRef);
         throw new Error("A valid location could not be found.");
       }
       const response = await fetch(urlToFetch);
@@ -366,7 +362,7 @@ const SiteItem = ({
 
   return (
     <Button
-      key={site.cid}
+      key={site.metadata?.cid}
       variant={"outline"}
       size="sm"
       className={cn(
@@ -377,13 +373,13 @@ const SiteItem = ({
     >
       {isSelected ? (
         <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center shrink-0">
-          <Check className="size-3 text-white" />
+          <CheckIcon className="size-3 text-white" />
         </div>
       ) : (
-        <CircleDashed className="size-5 text-muted-foreground" />
+          <CircleDashedIcon className="size-5 text-muted-foreground" />
       )}
       <div className="flex flex-col items-start justify-start">
-        <span className="text-base font-medium">{site.value.name}</span>
+        <span className="text-base font-medium">{site.record?.name ?? "Unnamed Site"}</span>
         <div className="flex items-center gap-1">
           {locationValidity.valid ? (
             <>

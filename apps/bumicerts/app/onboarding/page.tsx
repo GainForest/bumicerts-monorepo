@@ -9,7 +9,7 @@ import { StepCredentials } from "./_components/StepCredentials";
 import { StepComplete } from "./_components/StepComplete";
 import { useAtprotoStore } from "@/components/stores/atproto";
 import Link from "next/link";
-import { ArrowRight, Building2, Loader2 } from "lucide-react";
+import { ArrowRightIcon, Building2Icon, Loader2Icon } from "lucide-react";
 import { links } from "@/lib/links";
 import { useEffect } from "react";
 import Image from "next/image";
@@ -65,7 +65,7 @@ export default function OnboardingPage() {
     return (
       <div className="min-h-screen w-full flex items-center justify-center">
         <div className="text-center space-y-4">
-          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+          <Loader2Icon className="w-8 h-8 animate-spin text-primary mx-auto" />
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
@@ -110,7 +110,7 @@ export default function OnboardingPage() {
                 className="group flex items-center gap-4 p-4 rounded-lg bg-muted/40 hover:bg-accent/50 transition-colors"
               >
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <Building2 className="w-6 h-6 text-primary" />
+                  <Building2Icon className="w-6 h-6 text-primary" />
                 </div>
                 <div className="text-left flex-1">
                   <div className="font-semibold">View My Organization</div>
@@ -118,7 +118,7 @@ export default function OnboardingPage() {
                     Manage your organization profile
                   </div>
                 </div>
-                <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                <ArrowRightIcon className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
               </Link>
 
               <Link
@@ -134,7 +134,7 @@ export default function OnboardingPage() {
                     Issue certificates for your projects
                   </div>
                 </div>
-                <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                <ArrowRightIcon className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
               </Link>
               
             </div>

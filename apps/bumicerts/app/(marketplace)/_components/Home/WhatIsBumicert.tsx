@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDownIcon, SparklesIcon } from "lucide-react";
 import { useState } from "react";
-import { BumicertArt } from "@/components/shared/BumicertArt";
+import { BumicertCardVisual } from "@/app/(marketplace)/explore/_components/BumicertCard";
 
 const FAQ_ITEMS = [
   {
@@ -167,18 +167,13 @@ export function WhatIsBumicert() {
                 01
               </div>
               
-              <BumicertArt
+              <BumicertCardVisual
                 logoUrl="/assets/media/images/logo.svg"
                 coverImage="/assets/media/images/hero-bumicert-card/image0.png"
                 title="Reforestation of Mount Halimun"
                 description="Community-led restoration of native forest in West Java, Indonesia. 5,000 trees planted across 12 hectares."
-                objectives={[
-                  "Reforestation",
-                  "Biodiversity",
-                ]}
-                startDate={new Date("2024-01-15")}
-                endDate={new Date("2025-01-15")}
-                performant={false}
+                organizationName="Bumicerts"
+                objectives={["Reforestation", "Biodiversity"]}
               />
             </div>
           </motion.div>

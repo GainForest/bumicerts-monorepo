@@ -14,7 +14,7 @@ import { useFormStore } from "../form-store";
 import useNewBumicertStore from "../store";
 import { usePathname, useRouter } from "next/navigation";
 import { links } from "@/lib/links";
-import { ArrowRight, CircleCheck, Loader2, Save } from "lucide-react";
+import { ArrowRightIcon, CircleCheckIcon, Loader2Icon, SaveIcon } from "lucide-react";
 import CircularProgressBar from "@/components/circular-progressbar";
 import { cheapHash } from "@/lib/cheapHash";
 import { DraftBumicertResponse } from "@/app/api/supabase/drafts/bumicert/type";
@@ -238,13 +238,13 @@ const SaveAsDraftModal = () => {
               >
                 {isPending ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2Icon className="mr-2 animate-spin" />
                     Saving...
                   </>
                 ) : (
                   <>
                     Save Draft
-                    <ArrowRight />
+                    <ArrowRightIcon />
                   </>
                 )}
               </Button>
@@ -260,7 +260,7 @@ const SaveAsDraftModal = () => {
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="h-20 w-20 bg-primary blur-2xl rounded-full animate-pulse"></div>
               </div>
-              <CircleCheck className="size-20 text-primary" />
+              <CircleCheckIcon className="size-20 text-primary" />
             </div>
             <p className="text-center text-muted-foreground font-medium text-pretty">
               Your draft has been saved. You can continue working on it later.

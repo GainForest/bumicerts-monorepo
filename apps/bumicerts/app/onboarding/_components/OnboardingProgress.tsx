@@ -3,19 +3,19 @@
 import { cn } from "@/lib/utils";
 import { ONBOARDING_STEPS, OnboardingStep } from "../store";
 import {
-  Mail,
-  Building2,
-  KeyRound,
-  PartyPopper,
-  DoorOpen,
+  MailIcon,
+  Building2Icon,
+  KeyRoundIcon,
+  PartyPopperIcon,
+  DoorOpenIcon,
 } from "lucide-react";
 
 const STEP_ICONS: Record<OnboardingStep, React.ReactNode> = {
-  intro: <DoorOpen className="w-4 h-4" />,
-  email: <Mail className="w-4 h-4" />,
-  "org-details": <Building2 className="w-4 h-4" />,
-  credentials: <KeyRound className="w-4 h-4" />,
-  complete: <PartyPopper className="w-4 h-4" />,
+  intro: <DoorOpenIcon className="w-4 h-4" />,
+  email: <MailIcon className="w-4 h-4" />,
+  "org-details": <Building2Icon className="w-4 h-4" />,
+  credentials: <KeyRoundIcon className="w-4 h-4" />,
+  complete: <PartyPopperIcon className="w-4 h-4" />,
 };
 
 const STEP_LABELS: Record<OnboardingStep, string> = {

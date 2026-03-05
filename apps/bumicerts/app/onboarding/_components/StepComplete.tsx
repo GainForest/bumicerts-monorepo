@@ -3,14 +3,14 @@
 import { Button } from "@/components/ui/button";
 import { useOnboardingStore } from "../store";
 import {
-  ArrowLeft,
-  CheckCircle2,
-  Loader2,
-  LogIn,
-  XCircle,
+  ArrowLeftIcon,
+  CheckCircle2Icon,
+  Loader2Icon,
+  LogInIcon,
+  XCircleIcon,
 } from "lucide-react";
 import { useRef, useState } from "react";
-import { allowedPDSDomains } from "@/lib/config/gainforest-sdk";
+import { defaultSignupPdsDomain } from "@/lib/config/pds";
 import { motion } from "framer-motion";
 import { links } from "@/lib/links";
 import { useModal } from "@/components/ui/modal/context";
@@ -49,7 +49,7 @@ export function StepComplete() {
       formData.append("password", data.password);
       formData.append("handle", data.handle);
       formData.append("inviteCode", data.inviteCode);
-      formData.append("pdsDomain", allowedPDSDomains[0]);
+      formData.append("pdsDomain", data.selectedPdsDomain || defaultSignupPdsDomain);
       formData.append("displayName", data.organizationName);
       formData.append("shortDescription", data.shortDescription);
       formData.append("longDescription", data.longDescription);
@@ -140,7 +140,7 @@ export function StepComplete() {
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="h-16 w-16 bg-primary blur-2xl rounded-full animate-pulse" />
             </div>
-            <CheckCircle2 className="w-16 h-16 text-primary" />
+            <CheckCircle2Icon className="w-16 h-16 text-primary" />
           </div>
           <div className="space-y-1">
             <h1 className="text-2xl font-serif font-bold">
@@ -168,7 +168,7 @@ export function StepComplete() {
 
           <div className="w-full flex justify-between mt-2">
             <Button onClick={prevStep} variant="ghost">
-              <ArrowLeft className="w-4 h-4 mr-2" />
+              <ArrowLeftIcon className="mr-2" />
               Back
             </Button>
             <Button onClick={createAccount} disabled={isCreating}>
@@ -194,7 +194,7 @@ export function StepComplete() {
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="h-16 w-16 bg-primary blur-2xl rounded-full animate-pulse" />
             </div>
-            <Loader2 className="w-16 h-16 text-primary animate-spin" />
+            <Loader2Icon className="w-16 h-16 text-primary animate-spin" />
           </div>
           <div className="space-y-1">
             <h1 className="text-2xl font-serif font-bold">
@@ -223,7 +223,7 @@ export function StepComplete() {
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="h-16 w-16 bg-destructive blur-2xl rounded-full opacity-50" />
             </div>
-            <XCircle className="w-16 h-16 text-destructive" />
+            <XCircleIcon className="w-16 h-16 text-destructive" />
           </div>
           <div className="space-y-1">
             <h1 className="text-2xl font-serif font-bold">
@@ -240,7 +240,7 @@ export function StepComplete() {
           )}
           <div className="flex gap-3 w-full">
             <Button onClick={prevStep} variant="ghost" className="flex-1">
-              <ArrowLeft className="w-4 h-4 mr-2" />
+              <ArrowLeftIcon className="mr-2" />
               Go Back
             </Button>
             <Button onClick={handleRetry} className="flex-1">
@@ -265,7 +265,7 @@ export function StepComplete() {
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="h-16 w-16 bg-primary blur-2xl rounded-full animate-pulse" />
           </div>
-          <CheckCircle2 className="w-16 h-16 text-primary" />
+          <CheckCircle2Icon className="w-16 h-16 text-primary" />
         </div>
         <div className="space-y-1">
           <h1 className="text-2xl font-serif font-bold">
@@ -277,7 +277,7 @@ export function StepComplete() {
         </div>
 
         <Button onClick={handleSignIn} className="w-full mt-2">
-          <LogIn className="w-4 h-4 mr-2" />
+          <LogInIcon className="mr-2" />
           Sign In
         </Button>
       </div>

@@ -22,7 +22,8 @@
  * }
  */
 
-import { CID } from "multiformats/cid";
+import { CID, type Version } from "multiformats/cid";
+import * as Digest from "multiformats/hashes/digest";
 
 export interface NormalizedBlob {
   $type: "blob";
@@ -35,27 +36,39 @@ export interface NormalizedBlob {
  * Convert a decoded CID ref object to its string representation.
  *
  * The decoded form has:
- *   ref.hash: a plain object whose keys are numeric indices (not a real Uint8Array)
- *   ref.code: multicodec code (85 = dag-cbor, etc.)
+ *   ref.hash:    a plain object whose keys are numeric indices (not a real Uint8Array)
+ *                — this is the raw multihash bytes (already includes hash fn code + digest length)
+ *   ref.code:    multicodec code (e.g. 85 = 0x55 = raw, used for ATProto blobs)
  *   ref.version: CID version (1)
  *
- * We reconstruct the Uint8Array from the index-keyed object and use
- * multiformats/cid to encode it back to the base32/base58 string.
+ * We must use CID.create(version, code, digest) — NOT CID.decode(bytes).
+ * CID.decode() expects full CID bytes (version + codec + multihash concatenated),
+ * but `ref.hash` is only the multihash portion. Passing just the hash bytes to
+ * CID.decode() causes it to misinterpret the first hash bytes as version/codec,
+ * producing a wrong CID encoding (e.g. bafyb... instead of bafkr...).
  */
 function cidRefToString(ref: unknown): string | null {
   try {
     if (ref == null || typeof ref !== "object") return null;
     const r = ref as Record<string, unknown>;
+
+    const version = r["version"];
+    const code = r["code"];
     const hash = r["hash"];
+
     if (hash == null || typeof hash !== "object") return null;
+    if (typeof version !== "number" || typeof code !== "number") return null;
 
     // The hash is stored as {0: byte, 1: byte, ...} — convert to Uint8Array
     const hashObj = hash as Record<string, number>;
     const length = Object.keys(hashObj).length;
-    const bytes = new Uint8Array(length);
-    for (let i = 0; i < length; i++) bytes[i] = hashObj[i] ?? 0;
+    const hashBytes = new Uint8Array(length);
+    for (let i = 0; i < length; i++) hashBytes[i] = hashObj[i] ?? 0;
 
-    const cid = CID.decode(bytes);
+    // Decode the multihash bytes into a proper Digest, then create the CID
+    // with the correct version and multicodec preserved from the original ref.
+    const digest = Digest.decode(hashBytes);
+    const cid = CID.create(version as Version, code, digest);
     return cid.toString();
   } catch {
     return null;
@@ -92,7 +105,7 @@ export function toBlobRef(raw: unknown): unknown {
   if (typeof ref["$link"] === "string") {
     try { cidObj = CID.parse(ref["$link"]); } catch { /* ignore */ }
   }
-  if (!cidObj) cidObj = (() => { try { return CID.decode(toUint8Array(ref)); } catch { return null; } })();
+  if (!cidObj) cidObj = (() => { try { return cidFromRef(ref); } catch { return null; } })();
   if (!cidObj) return raw;
 
   return { $type: "blob", ref: cidObj, mimeType, size };
@@ -118,13 +131,26 @@ export function prepareBlobsForValidation<T>(record: T): T {
   return result as unknown as T;
 }
 
-function toUint8Array(ref: Record<string, unknown>): Uint8Array {
-  const hash = ref["hash"] as Record<string, number> | null;
-  if (!hash) return new Uint8Array(0);
-  const length = Object.keys(hash).length;
-  const bytes = new Uint8Array(length);
-  for (let i = 0; i < length; i++) bytes[i] = hash[i] ?? 0;
-  return bytes;
+/**
+ * Reconstruct a CID instance from a decoded ref object using the correct
+ * version, multicodec, and multihash — same logic as cidRefToString().
+ * Used by toBlobRef() which needs a CID instance (not a string).
+ */
+function cidFromRef(ref: Record<string, unknown>): CID {
+  const version = ref["version"];
+  const code = ref["code"];
+  const hash = ref["hash"];
+
+  if (hash == null || typeof hash !== "object") throw new Error("missing hash");
+  if (typeof version !== "number" || typeof code !== "number") throw new Error("missing version/code");
+
+  const hashObj = hash as Record<string, number>;
+  const length = Object.keys(hashObj).length;
+  const hashBytes = new Uint8Array(length);
+  for (let i = 0; i < length; i++) hashBytes[i] = hashObj[i] ?? 0;
+
+  const digest = Digest.decode(hashBytes);
+  return CID.create(version as Version, code, digest);
 }
 
 /**

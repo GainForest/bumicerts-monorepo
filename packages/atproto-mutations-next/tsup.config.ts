@@ -13,5 +13,12 @@ export default defineConfig({
   sourcemap: true,
   // Server actions and server utilities must not be bundled for the client.
   // Consumers' Next.js config handles that boundary; we just ship the code.
-  external: ["next", "react", "@atproto/api", "@gainforest/atproto-auth-next"],
+  external: [
+    "next",
+    "react",
+    "@atproto/api",
+    "@gainforest/atproto-auth-next",
+    "@gainforest/atproto-mutations-core",
+    "@gainforest/internal-utils",
+  ],
 });

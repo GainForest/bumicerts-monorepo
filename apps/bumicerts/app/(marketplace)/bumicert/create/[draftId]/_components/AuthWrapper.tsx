@@ -3,15 +3,13 @@ import Container from "@/components/ui/container";
 import ErrorPage from "@/components/error-page";
 import React from "react";
 import { useAtprotoStore } from "@/components/stores/atproto";
-import { BuildingIcon, Loader2 } from "lucide-react";
+import { BuildingIcon, Loader2Icon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AtprotoSignInButton from "@/components/global/Header/AtprotoSignInButton";
-import { allowedPDSDomains } from "@/lib/config/gainforest-sdk";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { trpcApi } from "@/components/providers/TrpcProvider";
-import { ProgressiveBlur } from "@/components/ui/progressive-blur";
+import { queries } from "@/lib/graphql/queries/index";
 
 const AuthWrapper = ({
   children,
@@ -27,16 +25,9 @@ const AuthWrapper = ({
   const {
     isPending: isPendingOrganizationInfo,
     error: organizationInfoError,
+    data: orgData,
     isPlaceholderData: isOlderData,
-  } = trpcApi.gainforest.organization.info.get.useQuery(
-    {
-      did: auth.user?.did ?? "",
-      pdsDomain: allowedPDSDomains[0],
-    },
-    {
-      enabled: !!auth.user?.did,
-    }
-  );
+  } = queries.organization.useQuery({ did: auth.user?.did ?? "" });
 
   const isLoadingOrganizationInfo = isPendingOrganizationInfo || isOlderData;
   const isAuthenticated = auth.status === "AUTHENTICATED";
@@ -81,7 +72,7 @@ const AuthWrapper = ({
     if (isResuming || isLoadingOrganizationInfo) {
       return (
         <div className="flex flex-col items-center justify-center">
-          <Loader2 className="animate-spin text-primary" />
+          <Loader2Icon className="animate-spin text-primary" />
           <span className="text-muted-foreground font-medium mt-2">
             Please wait...
           </span>

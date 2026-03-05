@@ -1,12 +1,9 @@
 import { Resend } from "resend";
 
-const resendApiKey = process.env.RESEND_API_KEY;
+// Validated at runtime in each handler; empty string at build time is fine
+const resendApiKey = process.env.RESEND_API_KEY ?? "";
 
-if (!resendApiKey) {
-  throw new Error("Missing RESEND_API_KEY env var");
-}
-
-export const resend = new Resend(resendApiKey);
+export const resend = new Resend(resendApiKey || "placeholder");
 
 export const getInviteEmailConfig = () => {
   const from = "noreply@gainforest.id";

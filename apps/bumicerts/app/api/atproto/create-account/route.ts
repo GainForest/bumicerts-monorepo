@@ -1,20 +1,23 @@
 import { NextRequest } from "next/server";
 import { headers } from "next/headers";
 import postgres from "postgres";
-import { allowedPDSDomains } from "@/lib/config/gainforest-sdk";
+import { signupPDSDomains } from "@/lib/config/pds";
 import { env } from "process";
 import { checkRateLimit, recordRateLimitAttempt } from "@/lib/rate-limit";
 
-if (!env.POSTGRES_URL_NON_POOLING_ATPROTO_AUTH_MAPPING) {
-  throw new Error(
-    "Missing POSTGRES_URL_NON_POOLING_ATPROTO_AUTH_MAPPING env var"
-  );
-}
-const sql = postgres(env.POSTGRES_URL_NON_POOLING_ATPROTO_AUTH_MAPPING, {
-  ssl: "require",
-});
+// Force dynamic so Next.js never tries to statically collect this route
+export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
+  if (!env.POSTGRES_URL_NON_POOLING_ATPROTO_AUTH_MAPPING) {
+    return new Response(
+      JSON.stringify({ error: "Server misconfiguration" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
+  const sql = postgres(env.POSTGRES_URL_NON_POOLING_ATPROTO_AUTH_MAPPING, {
+    ssl: "require",
+  });
   const clientIp =
     (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() ??
     "unknown";
@@ -76,7 +79,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const service = allowedPDSDomains[0];
+    const service = signupPDSDomains[0];
 
     const response = await fetch(
       `https://${service}/xrpc/com.atproto.server.createAccount`,

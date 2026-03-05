@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, Lightbulb } from "lucide-react";
+import { CalendarIcon, LightbulbIcon } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
@@ -53,7 +53,7 @@ export function CalendarRange({ value, onValueChange }: CalendarRangeProps) {
       />
       <div className="w-full flex items-center text-center justify-center text-sm text-primary mb-2">
         <span className="px-2 py-1 bg-muted rounded-lg flex items-center gap-2">
-          <Lightbulb className="size-4" />
+          <LightbulbIcon className="size-4" />
           Double click a date to change the start date.
         </span>
       </div>

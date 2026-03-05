@@ -8,7 +8,7 @@ import { useModal } from "@/components/ui/modal/context";
 import SaveAsDraftModal, { SaveAsDraftModalId } from "./SaveAsDraftModal";
 import DeleteDraftModal, { DeleteDraftModalId } from "./DeleteDraftModal";
 import { usePathname } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { Trash2Icon } from "lucide-react";
 import { HeaderContent } from "@/app/(marketplace)/_components/Header/HeaderContent";
 
 // ── Slot components ─────────────────────────────────────────────────────────
@@ -44,7 +44,7 @@ const RightContent = () => {
           onClick={handleDeleteDraft}
           className="text-destructive hover:text-destructive"
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2Icon />
         </Button>
       )}
       <Button size={"sm"} onClick={handleSaveDraft}>

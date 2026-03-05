@@ -22,7 +22,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { AllowedPDSDomain } from "@/lib/config/gainforest-sdk";
+import type { SignupPDSDomain } from "@/lib/config/pds";
 
 interface InviteCodeError extends Error {
   status: number;
@@ -40,7 +40,7 @@ function throwInviteError(
   throw error;
 }
 
-const resolvePdsServiceUrl = (pdsDomain: AllowedPDSDomain) =>`https://${pdsDomain}`;
+const resolvePdsServiceUrl = (pdsDomain: SignupPDSDomain) => `https://${pdsDomain}`;
 
 const getAdminBasicAuth = () => {
   if (!process.env.PDS_ADMIN_IDENTIFIER || !process.env.PDS_ADMIN_PASSWORD) {
@@ -61,7 +61,7 @@ type XrpcInviteResponse = {
 };
 
 export const mintInviteCodes = async (
-  pdsDomain: AllowedPDSDomain,
+  pdsDomain: SignupPDSDomain,
   codeCount: number
 ): Promise<string[]> => {
   if (!Number.isInteger(codeCount) || codeCount <= 0) {
@@ -106,7 +106,7 @@ export const mintInviteCodes = async (
 export const getOrCreateInviteCode = async (
   supabase: SupabaseClient,
   email: string,
-  pdsDomain: AllowedPDSDomain
+  pdsDomain: SignupPDSDomain
 ): Promise<string> => {
   // NOTE: Requires UNIQUE constraint on invites(email, pds_domain) in the database.
   // Without it, concurrent requests can create duplicate invite rows.
@@ -161,7 +161,7 @@ export const getOrCreateInviteCode = async (
 export const fetchExistingInvites = async (
   supabase: SupabaseClient,
   emails: string[],
-  pdsDomain: AllowedPDSDomain
+  pdsDomain: SignupPDSDomain
 ): Promise<Array<{ email: string; inviteCode: string }>> => {
   if (emails.length === 0) {
     return [];

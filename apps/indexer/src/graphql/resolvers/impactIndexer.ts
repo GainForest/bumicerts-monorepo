@@ -3,13 +3,22 @@
  *
  * Every paginated query accepts:
  *   cursor, limit, did, handle, sortBy, order
+ *
+ * Every leaf returns:
+ *   { data: [XxxItem!]!, pageInfo: { endCursor, hasNextPage, count } }
+ *
+ * Each item has:
+ *   metadata   – AT Protocol envelope (uri, did, collection, rkey, cid, indexedAt, createdAt)
+ *   creatorInfo – resolved org name + logo from gainforest.organization.info
+ *   record      – pure lexicon payload fields
  */
 
 import { builder } from "../builder.ts";
 import {
-  PageInfoType, RecordMetaType, IiSubjectRefType,
+  PageInfoType, RecordMetaType, IiSubjectRefType, CreatorInfoType,
   SortOrderEnum, SortFieldEnum,
   rowToMeta, payload, extractIiSubjectRef, fetchCollectionPage, WhereInputRef,
+  resolveCreatorInfo,
 } from "../types.ts";
 import type { RecordRow } from "@/db/types.ts";
 
@@ -40,12 +49,11 @@ const IiEip712MessageType = builder.simpleObject("IiEip712Message", {
   }),
 });
 
-// ── Leaf types ──
+// ── Pure record types (lexicon payload only) ──
 
-const IiAttestationType = builder.simpleObject("IiAttestation", {
-  description: "An on-chain attestation link (org.impactindexer.link.attestation).",
+const IiAttestationRecordType = builder.simpleObject("IiAttestationRecord", {
+  description: "Pure payload for an on-chain attestation link (org.impactindexer.link.attestation).",
   fields: (t) => ({
-    meta:          t.field({ type: RecordMetaType }),
     address:       t.string({ nullable: true }),
     chainId:       t.int({ nullable: true }),
     signature:     t.string({ nullable: true }),
@@ -54,39 +62,66 @@ const IiAttestationType = builder.simpleObject("IiAttestation", {
     createdAt:     t.field({ type: "DateTime", nullable: true }),
   }),
 });
-const IiAttestationPageType = builder.simpleObject("IiAttestationPage", {
-  fields: (t) => ({ records: t.field({ type: [IiAttestationType] }), pageInfo: t.field({ type: PageInfoType }) }),
-});
 
-const IiCommentType = builder.simpleObject("IiComment", {
-  description: "A review comment (org.impactindexer.review.comment).",
+const IiCommentRecordType = builder.simpleObject("IiCommentRecord", {
+  description: "Pure payload for a review comment (org.impactindexer.review.comment).",
   fields: (t) => ({
-    meta:      t.field({ type: RecordMetaType }),
     subject:   t.field({ type: IiSubjectRefType, nullable: true }),
     text:      t.string({ nullable: true }),
     replyTo:   t.string({ nullable: true }),
     createdAt: t.field({ type: "DateTime", nullable: true }),
   }),
 });
-const IiCommentPageType = builder.simpleObject("IiCommentPage", {
-  fields: (t) => ({ records: t.field({ type: [IiCommentType] }), pageInfo: t.field({ type: PageInfoType }) }),
-});
 
-const IiLikeType = builder.simpleObject("IiLike", {
-  description: "A review like (org.impactindexer.review.like).",
+const IiLikeRecordType = builder.simpleObject("IiLikeRecord", {
+  description: "Pure payload for a review like (org.impactindexer.review.like).",
   fields: (t) => ({
-    meta:      t.field({ type: RecordMetaType }),
     subject:   t.field({ type: IiSubjectRefType, nullable: true }),
     createdAt: t.field({ type: "DateTime", nullable: true }),
   }),
 });
+
+// ── Item wrapper types ──
+
+const IiAttestationItemType = builder.simpleObject("IiAttestationItem", {
+  description: "An on-chain attestation link (org.impactindexer.link.attestation).",
+  fields: (t) => ({
+    metadata:    t.field({ type: RecordMetaType }),
+    creatorInfo: t.field({ type: CreatorInfoType }),
+    record:      t.field({ type: IiAttestationRecordType }),
+  }),
+});
+const IiAttestationPageType = builder.simpleObject("IiAttestationPage", {
+  fields: (t) => ({ data: t.field({ type: [IiAttestationItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
+});
+
+const IiCommentItemType = builder.simpleObject("IiCommentItem", {
+  description: "A review comment (org.impactindexer.review.comment).",
+  fields: (t) => ({
+    metadata:    t.field({ type: RecordMetaType }),
+    creatorInfo: t.field({ type: CreatorInfoType }),
+    record:      t.field({ type: IiCommentRecordType }),
+  }),
+});
+const IiCommentPageType = builder.simpleObject("IiCommentPage", {
+  fields: (t) => ({ data: t.field({ type: [IiCommentItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
+});
+
+const IiLikeItemType = builder.simpleObject("IiLikeItem", {
+  description: "A review like (org.impactindexer.review.like).",
+  fields: (t) => ({
+    metadata:    t.field({ type: RecordMetaType }),
+    creatorInfo: t.field({ type: CreatorInfoType }),
+    record:      t.field({ type: IiLikeRecordType }),
+  }),
+});
 const IiLikePageType = builder.simpleObject("IiLikePage", {
-  fields: (t) => ({ records: t.field({ type: [IiLikeType] }), pageInfo: t.field({ type: PageInfoType }) }),
+  fields: (t) => ({ data: t.field({ type: [IiLikeItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
 });
 
 // ── Row mappers ──
 
-function mapAttestation(row: RecordRow) {
+async function mapAttestation(row: RecordRow) {
   const p = payload(row);
   const msgRaw = j(p,"message");
   let message: {
@@ -101,27 +136,37 @@ function mapAttestation(row: RecordRow) {
     };
   }
   return {
-    meta: rowToMeta(row), address: s(p,"address"), chainId: n(p,"chainId"),
-    signature: s(p,"signature"), message, signatureType: s(p,"signatureType"),
-    createdAt: s(p,"createdAt"),
+    metadata:    rowToMeta(row),
+    creatorInfo: await resolveCreatorInfo(row.did),
+    record: {
+      address: s(p,"address"), chainId: n(p,"chainId"),
+      signature: s(p,"signature"), message, signatureType: s(p,"signatureType"),
+      createdAt: s(p,"createdAt"),
+    },
   };
 }
 
-function mapComment(row: RecordRow) {
+async function mapComment(row: RecordRow) {
   const p = payload(row);
   return {
-    meta: rowToMeta(row),
-    subject: extractIiSubjectRef(j(p,"subject")),
-    text: s(p,"text"), replyTo: s(p,"replyTo"), createdAt: s(p,"createdAt"),
+    metadata:    rowToMeta(row),
+    creatorInfo: await resolveCreatorInfo(row.did),
+    record: {
+      subject: extractIiSubjectRef(j(p,"subject")),
+      text: s(p,"text"), replyTo: s(p,"replyTo"), createdAt: s(p,"createdAt"),
+    },
   };
 }
 
-function mapLike(row: RecordRow) {
+async function mapLike(row: RecordRow) {
   const p = payload(row);
   return {
-    meta: rowToMeta(row),
-    subject: extractIiSubjectRef(j(p,"subject")),
-    createdAt: s(p,"createdAt"),
+    metadata:    rowToMeta(row),
+    creatorInfo: await resolveCreatorInfo(row.did),
+    record: {
+      subject: extractIiSubjectRef(j(p,"subject")),
+      createdAt: s(p,"createdAt"),
+    },
   };
 }
 
@@ -131,7 +176,7 @@ builder.objectType(ImpactIndexerNS, {
   name: "ImpactIndexerNamespace",
   description: "Impact Indexer AT Protocol records (org.impactindexer.*).",
   fields: (t) => ({
-    attestations: t.field({
+    attestation: t.field({
       type: IiAttestationPageType,
       args: {
         cursor: t.arg.string(), limit: t.arg.int(),
@@ -140,7 +185,7 @@ builder.objectType(ImpactIndexerNS, {
       },
       resolve: (_, args) => fetchCollectionPage("org.impactindexer.link.attestation", args, mapAttestation),
     }),
-    comments: t.field({
+    comment: t.field({
       type: IiCommentPageType,
       args: {
         cursor: t.arg.string(), limit: t.arg.int(),
@@ -149,7 +194,7 @@ builder.objectType(ImpactIndexerNS, {
       },
       resolve: (_, args) => fetchCollectionPage("org.impactindexer.review.comment", args, mapComment),
     }),
-    likes: t.field({
+    like: t.field({
       type: IiLikePageType,
       args: {
         cursor: t.arg.string(), limit: t.arg.int(),

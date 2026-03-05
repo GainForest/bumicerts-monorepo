@@ -1,20 +1,20 @@
 import {
-  BookImage,
-  EarthLock,
-  FlagTriangleRight,
-  PenLine,
-  ScanSearch,
+  BookImageIcon,
+  EarthLockIcon,
+  FlagTriangleRightIcon,
+  PenLineIcon,
+  ScanSearchIcon,
 } from "lucide-react";
 import Step1 from "../_components/Steps/Step1";
 import Step2 from "../_components/Steps/Step2";
 import Step3 from "../_components/Steps/Step3";
 import Step4 from "../_components/Steps/Step4";
 import Step5 from "../_components/Steps/Step5";
-import BiokoNeutralImage from "./assets/bioko-neutral.png";
-import BiokoHoldingLoudspeakerImage from "./assets/bioko-holding-loudspeaker.png";
-import BiokoHoldingEarthImage from "./assets/bioko-holding-earth.png";
-import BiokoHoldingMagnifierImage from "./assets/bioko-holding-magnifier.png";
-import BiokoHoldingConfettiImage from "./assets/bioko-holding-confetti.png";
+import BiokoNeutralImage from "../_assets/bioko-neutral.png";
+import BiokoHoldingLoudspeakerImage from "../_assets/bioko-holding-loudspeaker.png";
+import BiokoHoldingEarthImage from "../_assets/bioko-holding-earth.png";
+import BiokoHoldingMagnifierImage from "../_assets/bioko-holding-magnifier.png";
+import BiokoHoldingConfettiImage from "../_assets/bioko-holding-confetti.png";
 
 type StepData = {
   title: string;
@@ -36,7 +36,7 @@ export const STEPS: StepData[] = [
     title: "Cover Details",
     description: "Tell us about your project.",
     Component: Step1,
-    icon: BookImage,
+    icon: BookImageIcon,
     tips: {
       bullets: [
         "This part of your Bumicert shows the key details at a glance, so it’s important to make a strong impression.",
@@ -52,7 +52,7 @@ export const STEPS: StepData[] = [
     title: "Impact Details",
     description: "Tell us about the impact of your project.",
     Component: Step2,
-    icon: PenLine,
+    icon: PenLineIcon,
     tips: {
       pre: "When writing your impact story, use this STAR framework:",
       bullets: [
@@ -71,7 +71,7 @@ export const STEPS: StepData[] = [
     title: "Site Details",
     description: "Tell us about the site of your project.",
     Component: Step3,
-    icon: EarthLock,
+    icon: EarthLockIcon,
     tips: {
       bullets: [
         "When adding contributors, include your organisation first, then other contributors, and make sure everyone agrees to be included.",
@@ -86,7 +86,7 @@ export const STEPS: StepData[] = [
     title: "Review",
     description: "Review your project details.",
     Component: Step4,
-    icon: ScanSearch,
+    icon: ScanSearchIcon,
     tips: {
       bullets: [
         "Make sure you have completed all the previous steps.",
@@ -101,7 +101,7 @@ export const STEPS: StepData[] = [
     title: "Submit",
     description: "Submit your project details.",
     Component: Step5,
-    icon: FlagTriangleRight,
+    icon: FlagTriangleRightIcon,
     tips: {
       bullets: [
         "You have completed all the steps! No more tips for this section.",

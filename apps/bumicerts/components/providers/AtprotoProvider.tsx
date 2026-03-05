@@ -39,22 +39,20 @@ export function AtprotoProvider({ children }: { children: React.ReactNode }) {
         const result = await checkSessionAndGetProfile();
         if (result.isLoggedIn && result.did) {
           const profile = result.profile;
-          if (!profile) {
-            setAuth(null);
-            return;
-          }
 
-          // Use handle from session cookie if profile.get() returns invalid handle
+          // Use handle from session cookie if profile returns invalid handle
           const validHandle =
-            profile.handle && profile.handle !== "handle.invalid"
+            profile?.handle && profile.handle !== "handle.invalid"
               ? profile.handle
               : result.handle;
 
+          // Profile data is optional — a missing profile doesn't mean logged out.
+          // The session cookie is the source of truth for auth state.
           setAuth({
             did: result.did,
             handle: validHandle,
-            displayName: profile.displayName,
-            avatar: profile.avatar,
+            displayName: profile?.displayName,
+            avatar: profile?.avatar,
           });
         } else {
           setAuth(null);

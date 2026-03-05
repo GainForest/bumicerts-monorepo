@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import React from "react";
-import { ArrowRightIcon, CircleCheck } from "lucide-react";
+import { ArrowRightIcon, CircleCheckIcon } from "lucide-react";
 import CircularProgressBar from "@/components/circular-progressbar";
 import z from "zod";
 
@@ -117,7 +117,7 @@ const ReviewStepCard = <
                   text={`${percentage}%`}
                   textSize={0.4}
                 />
-              : <CircleCheck className="size-6 text-primary" />}
+              : <CircleCheckIcon className="size-6 text-primary" />}
               {hasErrors && (
                 <Button
                   className="rounded-full"

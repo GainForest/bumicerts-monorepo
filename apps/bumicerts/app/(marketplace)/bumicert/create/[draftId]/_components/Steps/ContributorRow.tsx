@@ -3,17 +3,9 @@
 import React, { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Trash2, Pencil, Check, X } from "lucide-react";
+import { Trash2Icon, PencilIcon, CheckIcon, XIcon } from "lucide-react";
 import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
-import { useQuery } from "@tanstack/react-query";
-import { links } from "@/lib/links";
-
-interface ActorProfile {
-    did: string;
-    handle: string;
-    displayName?: string;
-    avatar?: string;
-}
+import { queries, type ActorProfile } from "@/lib/graphql/queries/index";
 
 interface ContributorRowProps {
     value: string;
@@ -35,17 +27,7 @@ export function ContributorRow({ value, onEdit, onRemove }: ContributorRowProps)
 
     const shouldFetch = isDidOrHandle(value);
 
-    const { data: profile, isPending } = useQuery<ActorProfile>({
-        queryKey: ["actor-profile", value],
-        queryFn: async () => {
-            const res = await fetch(links.api.getProfile(value));
-            if (!res.ok) throw new Error("Failed to fetch profile");
-            return res.json();
-        },
-        enabled: shouldFetch,
-        staleTime: 1000 * 60 * 5, // 5 minutes
-        retry: false,
-    });
+    const { data: profile, isPending } = queries.actor.useQuery({ handleOrDid: value });
 
     const handleSave = () => {
         onEdit(editValue);
@@ -78,10 +60,10 @@ export function ContributorRow({ value, onEdit, onRemove }: ContributorRowProps)
                     />
                 </InputGroup>
                 <Button size="icon-sm" variant="ghost" onClick={handleSave}>
-                    <Check className="size-4 text-green-500" />
+                    <CheckIcon className="size-4 text-green-500" />
                 </Button>
                 <Button size="icon-sm" variant="ghost" onClick={handleCancel}>
-                    <X className="size-4 text-muted-foreground" />
+                    <XIcon className="size-4 text-muted-foreground" />
                 </Button>
             </div>
         );
@@ -115,7 +97,7 @@ export function ContributorRow({ value, onEdit, onRemove }: ContributorRowProps)
                     onClick={() => setIsEditing(true)}
                     className="text-muted-foreground hover:text-foreground"
                 >
-                    <Pencil className="size-4" />
+                    <PencilIcon className="size-4" />
                 </Button>
                 <Button
                     size="icon-sm"
@@ -123,7 +105,7 @@ export function ContributorRow({ value, onEdit, onRemove }: ContributorRowProps)
                     onClick={onRemove}
                     className="text-muted-foreground hover:text-destructive"
                 >
-                    <Trash2 className="size-4" />
+                    <Trash2Icon className="size-4" />
                 </Button>
             </div>
         </div>

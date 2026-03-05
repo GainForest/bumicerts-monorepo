@@ -9,7 +9,7 @@ const $nsid = 'app.certified.actor.profile'
 
 export { $nsid }
 
-/** A declaration of a Hypercert account profile. */
+/** A declaration of a Certified account profile. */
 type Main = {
   $type: 'app.certified.actor.profile'
 
@@ -52,12 +52,12 @@ type Main = {
   /**
    * Client-declared timestamp when this record was originally created
    */
-  createdAt?: l.DatetimeString
+  createdAt: l.DatetimeString
 }
 
 export type { Main }
 
-/** A declaration of a Hypercert account profile. */
+/** A declaration of a Certified account profile. */
 const main = l.record<'literal:self', Main>(
   'literal:self',
   $nsid,
@@ -88,7 +88,7 @@ const main = l.record<'literal:self', Main>(
         false,
       ),
     ),
-    createdAt: l.optional(l.string({ format: 'datetime' })),
+    createdAt: l.string({ format: 'datetime' }),
   }),
 )
 

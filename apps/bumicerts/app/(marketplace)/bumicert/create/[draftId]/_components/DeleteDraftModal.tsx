@@ -12,9 +12,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
 import { links } from "@/lib/links";
-import { CircleCheck, Loader2, Trash2 } from "lucide-react";
+import { CircleCheckIcon, Loader2Icon, Trash2Icon } from "lucide-react";
 import { useFormStore } from "../form-store";
 import { useAtprotoStore } from "@/components/stores/atproto";
+import { queryKeys } from "@/lib/query-keys";
 
 export const DeleteDraftModalId = "bumicert/delete-draft";
 
@@ -82,7 +83,7 @@ const DeleteDraftModal = ({
       // Invalidate drafts query to refresh the list
       if (auth.user?.did) {
         queryClient.invalidateQueries({
-          queryKey: ["drafts", auth.user.did],
+          queryKey: queryKeys.drafts.byDid(auth.user.did),
         });
       }
 
@@ -185,12 +186,12 @@ const DeleteDraftModal = ({
               >
                 {isPending ? (
                   <>
-                    <Loader2 className="animate-spin" />
+                    <Loader2Icon className="animate-spin" />
                     Deleting...
                   </>
                 ) : (
                   <>
-                    <Trash2 />
+                    <Trash2Icon />
                     Delete Draft
                   </>
                 )}
@@ -207,7 +208,7 @@ const DeleteDraftModal = ({
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="h-20 w-20 bg-primary blur-2xl rounded-full animate-pulse"></div>
               </div>
-              <CircleCheck className="size-20 text-primary" />
+              <CircleCheckIcon className="size-20 text-primary" />
             </div>
             <p className="text-center text-muted-foreground font-medium text-pretty">
               The draft has been deleted successfully.

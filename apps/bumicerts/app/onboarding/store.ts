@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { defaultSignupPdsDomain } from "@/lib/config/pds";
 
 export type OnboardingStep =
   | "intro"
@@ -39,6 +40,8 @@ export type OnboardingData = {
   handle: string;
   password: string;
   confirmPassword: string;
+  /** The PDS domain selected during sign-up (one of signupPDSDomains). */
+  selectedPdsDomain: string;
 
   // Step 5: Complete
   did: string;
@@ -78,6 +81,7 @@ const initialData: OnboardingData = {
   handle: "",
   password: "",
   confirmPassword: "",
+  selectedPdsDomain: defaultSignupPdsDomain,
   did: "",
   accountCreated: false,
   organizationInitialized: false,

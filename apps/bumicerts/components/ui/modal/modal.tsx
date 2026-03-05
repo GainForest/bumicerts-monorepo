@@ -4,7 +4,7 @@ import React, { useContext } from "react";
 import { DialogClose, DialogFooter } from "./dialog";
 import { DrawerFooter } from "./drawer";
 import { ModalModeContext } from "./context";
-import { ChevronLeft, XIcon } from "lucide-react";
+import { ChevronLeftIcon, XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "../button";
 
@@ -35,7 +35,7 @@ export const ModalHeader = ({
               backAction();
             }}
           >
-            <ChevronLeft />
+            <ChevronLeftIcon />
           </Button>
           <div {...props} />
         </>

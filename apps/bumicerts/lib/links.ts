@@ -6,8 +6,14 @@ const didCatcher = (callback: (did: string) => string): DidDynamicLink => {
 export const links = {
   home: "/home",
   myOrganization: (did?: string) =>
-    did ? `/organization/${did}` : "/organization",
+    did ? `/organization/${encodeURIComponent(did)}` : "/organization",
   allOrganizations: "/organization/all",
+
+  /** Tab routes for an organization profile page. */
+  organization: {
+    home:      (did: string) => `/organization/${encodeURIComponent(did)}`,
+    bumicerts: (did: string) => `/organization/${encodeURIComponent(did)}/bumicerts`,
+  },
   upload: {
     organization: didCatcher((did) => `/upload/organization/${did}`),
     projects: didCatcher((did) => `/upload/organization/${did}/projects`),

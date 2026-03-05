@@ -1,112 +1,69 @@
 import { cache } from "react";
 import { notFound } from "next/navigation";
-import { gainforestSdk } from "@/lib/config/gainforest-sdk.server";
-import { allowedPDSDomains } from "@/lib/config/gainforest-sdk";
-import { tryCatch } from "@/lib/tryCatch";
-import { TRPCError } from "@trpc/server";
-import { getBlobUrl, parseAtUri } from "gainforest-sdk/utilities/atproto";
-import type { BumicertData } from "@/lib/types";
-import type {
-  AppGainforestOrganizationInfo,
-  OrgHypercertsClaimActivity,
-} from "gainforest-sdk/lex-api";
-import { BumicertHero } from "./_components/Hero";
-import { BumicertBody } from "./_components/Body";
-import { BumicertDetailHeader } from "./_components/BumicertDetailHeader";
+import type { Metadata } from "next";
+import { queries, type Activity, type ActivityOrgInfo } from "@/lib/graphql/queries/index";
+import { activityToBumicertData } from "@/lib/adapters";
+import { BumicertDetail } from "./_components/BumicertDetail";
+import ErrorPage from "@/components/error-page";
+import Container from "@/components/ui/container";
 
-type SupportedImageData = Parameters<typeof getBlobUrl>[1];
-type ImageParam = SupportedImageData | { $type?: string } | null | undefined;
+const BASE_URL = "https://bumicerts.com";
 
-const pdsDomain = allowedPDSDomains[0];
-
-const getActivity = cache(async (did: string, rkey: string) => {
-  const caller = gainforestSdk.getServerCaller();
-  type ActivityGetResponse = Awaited<ReturnType<typeof caller.hypercerts.claim.activity.get>>;
-  return tryCatch<ActivityGetResponse>(
-    caller.hypercerts.claim.activity.get({ did, rkey, pdsDomain })
-  );
+const getActivityData = cache(async (did: string) => {
+  try {
+    const data = await queries.activities.fetch({ did, orgDid: did }) as { activities: Activity[]; org: ActivityOrgInfo | null };
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error };
+  }
 });
 
-function resolveImageUrl(did: string, image: ImageParam): string | null {
-  if (!image || typeof image === "string") return null;
-  if (typeof image !== "object" || !("$type" in image) || !image.$type) return null;
-  try {
-    return getBlobUrl(did, image as SupportedImageData, pdsDomain);
-  } catch {
-    return null;
-  }
-}
-
-function extractObjectives(
-  workScope: OrgHypercertsClaimActivity.Record["workScope"]
-): string[] {
-  if (!workScope) return [];
-  if ("scope" in workScope && typeof workScope.scope === "string") {
-    return workScope.scope
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-  }
-  return [];
-}
-
-function extractRichtext(rt: { text?: string } | undefined): string {
-  return rt?.text ?? "";
-}
-
-function buildBumicertData(
-  did: string,
-  rkey: string,
-  activity: OrgHypercertsClaimActivity.Record,
-  orgInfo: AppGainforestOrganizationInfo.Record
-): BumicertData {
-  const logoUrl = resolveImageUrl(did, orgInfo.logo);
-  const coverImageUrl = resolveImageUrl(did, activity.image) ?? resolveImageUrl(did, orgInfo.coverImage);
-
-  return {
-    id: `${did}-${rkey}`,
-    organizationDid: did,
-    rkey,
-    title: activity.title,
-    shortDescription: activity.shortDescription ?? "",
-    description: activity.description ?? activity.shortDescription ?? "",
-    coverImageUrl,
-    logoUrl,
-    organizationName: orgInfo.displayName,
-    country: orgInfo.country ?? "",
-    objectives: extractObjectives(activity.workScope),
-    startDate: activity.startDate ?? null,
-    endDate: activity.endDate ?? null,
-    createdAt: activity.createdAt,
-  };
-}
+// ── Metadata ──────────────────────────────────────────────────────────────────
 
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ bumicertId: string }>;
-}) {
+}): Promise<Metadata> {
   const { bumicertId } = await params;
   const id = decodeURIComponent(bumicertId);
   const parsed = id.includes("-") ? id.split("-") : null;
   if (!parsed) return { title: "Bumicert Not Found" };
 
   const [did, rkey] = parsed;
-  const [response, error] = await getActivity(did, rkey);
+  const { data, error } = await getActivityData(did);
+  if (error || !data) return { title: "Bumicert Not Found" };
 
-  if (error || !response) return { title: "Bumicert Not Found" };
+  const activity = (data.activities ?? []).find((a) => a.metadata?.rkey === rkey);
+  if (!activity) return { title: "Bumicert Not Found" };
 
-  const activity = response.value;
+  const bumicert = activityToBumicertData(activity);
+  const pageUrl = `${BASE_URL}/bumicert/${encodeURIComponent(id)}`;
+  const description = bumicert.shortDescription || bumicert.description.slice(0, 160) || "";
+
   return {
-    title: `${activity.title} — Bumicerts`,
-    description: activity.shortDescription ?? activity.description?.slice(0, 160) ?? "",
+    title: `${bumicert.title} — Bumicerts`,
+    description,
+    alternates: { canonical: pageUrl },
     openGraph: {
-      title: `${activity.title} — Bumicerts`,
-      description: activity.shortDescription ?? "",
+      title: bumicert.title,
+      description,
+      url: pageUrl,
+      siteName: "Bumicerts",
       type: "article",
+      ...(bumicert.coverImageUrl
+        ? { images: [{ url: bumicert.coverImageUrl, width: 1200, height: 630, alt: bumicert.title }] }
+        : {}),
+    },
+    twitter: {
+      card: bumicert.coverImageUrl ? "summary_large_image" : "summary",
+      title: bumicert.title,
+      description,
     },
   };
 }
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function BumicertDetailPage({
   params,
@@ -120,38 +77,57 @@ export default async function BumicertDetailPage({
   if (!parsed) notFound();
 
   const [did, rkey] = parsed;
-  const caller = gainforestSdk.getServerCaller();
+  const { data, error } = await getActivityData(did);
 
-  type OrgInfoResponse = Awaited<ReturnType<typeof caller.gainforest.organization.info.get>>;
-  const [[activityResponse, activityError], [orgInfoResponse, orgInfoError]] = await Promise.all([
-    getActivity(did, rkey),
-    tryCatch<OrgInfoResponse>(caller.gainforest.organization.info.get({ did, pdsDomain })),
-  ]);
-
-  const fetchError = activityError ?? orgInfoError;
-  if (fetchError) {
-    if (
-      fetchError instanceof TRPCError &&
-      fetchError.code === "NOT_FOUND"
-    ) {
-      notFound();
-    }
-    console.error("Error fetching Bumicert", did, rkey, fetchError);
-    throw new Error("Failed to load this bumicert. Please try again.");
+  if (error) {
+    console.error("Error fetching Bumicert", did, rkey, error);
+    return (
+      <Container className="pt-4">
+        <ErrorPage
+          title="Couldn't load this bumicert"
+          description="We had trouble fetching this bumicert's data. Please try again or go back to the homepage."
+          error={error}
+        />
+      </Container>
+    );
   }
 
-  const bumicert = buildBumicertData(
-    did,
-    rkey,
-    activityResponse!.value,
-    orgInfoResponse!.value
-  );
+  const activity = (data?.activities ?? []).find((a) => a.metadata?.rkey === rkey);
+  if (!activity) notFound();
+
+  const bumicert = activityToBumicertData(activity);
+  const pageUrl = `${BASE_URL}/bumicert/${encodeURIComponent(id)}`;
+
+  // ── JSON-LD structured data ─────────────────────────────────────────────────
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "@id": pageUrl,
+    headline: bumicert.title,
+    description: bumicert.shortDescription || bumicert.description.slice(0, 160) || undefined,
+    author: {
+      "@type": "Organization",
+      name: bumicert.organizationName,
+      url: `${BASE_URL}/organization/${encodeURIComponent(bumicert.organizationDid)}`,
+    },
+    ...(bumicert.coverImageUrl
+      ? { image: { "@type": "ImageObject", url: bumicert.coverImageUrl } }
+      : {}),
+    ...(bumicert.startDate ? { datePublished: bumicert.startDate } : {}),
+    ...(bumicert.createdAt ? { dateCreated: bumicert.createdAt } : {}),
+  };
 
   return (
-    <div className="w-full">
-      <BumicertDetailHeader bumicertId={id} />
-      <BumicertHero bumicert={bumicert} />
-      <BumicertBody bumicert={bumicert} />
-    </div>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <main className="w-full">
+        <Container className="pt-3 pb-12">
+          <BumicertDetail bumicert={bumicert} />
+        </Container>
+      </main>
+    </>
   );
 }

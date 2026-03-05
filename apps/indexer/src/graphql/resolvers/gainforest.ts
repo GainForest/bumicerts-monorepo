@@ -8,16 +8,25 @@
  *   sortBy  – CREATED_AT | INDEXED_AT
  *   order   – DESC (default) | ASC
  *
- * organization.infos additionally accepts a richer OrgInfoWhereInput
+ * organization.info additionally accepts a richer OrgInfoWhereInput
  * with displayName / shortDescription / longDescription / text search fields.
+ *
+ * Every leaf returns:
+ *   { data: [XxxItem!]!, pageInfo: { endCursor, hasNextPage, count } }
+ *
+ * Each item has:
+ *   metadata   – AT Protocol envelope (uri, did, collection, rkey, cid, indexedAt, createdAt)
+ *   creatorInfo – resolved org name + logo from gainforest.organization.info
+ *   record      – pure lexicon payload fields
  */
 
 import { builder } from "../builder.ts";
 import {
-  PageInfoType, RecordMetaType, BlobRefType,
+  PageInfoType, RecordMetaType, BlobRefType, CreatorInfoType,
   SortOrderEnum, SortFieldEnum,
   rowToMeta, payload, extractBlobRef, fetchCollectionPage, toPageInfo,
   WhereInputRef, OrgInfoWhereInputRef, orgInfoWhereToFilter, orgInfoWhereHasText,
+  resolveCreatorInfo,
 } from "../types.ts";
 import type { OrgInfoWhereInput } from "../types.ts";
 import { getRecordsByCollection, searchOrganizations } from "@/db/queries.ts";
@@ -60,13 +69,12 @@ class OrgNS {}
 class GainforestNS {}
 
 // ================================================================
-// ── DWC leaf types ───────────────────────────────────────────────
+// ── DWC pure record types ────────────────────────────────────────
 // ================================================================
 
-const DwcEventType = builder.simpleObject("DwcEvent", {
-  description: "A Darwin Core sampling event (app.gainforest.dwc.event).",
+const DwcEventRecordType = builder.simpleObject("DwcEventRecord", {
+  description: "Pure payload for a Darwin Core sampling event (app.gainforest.dwc.event).",
   fields: (t) => ({
-    meta:                          t.field({ type: RecordMetaType }),
     eventID:                       t.string({ nullable: true }),
     parentEventID:                 t.string({ nullable: true }),
     parentEventRef:                t.string({ nullable: true }),
@@ -96,14 +104,21 @@ const DwcEventType = builder.simpleObject("DwcEvent", {
     createdAt:                     t.field({ type: "DateTime", nullable: true }),
   }),
 });
+const DwcEventItemType = builder.simpleObject("DwcEventItem", {
+  description: "A Darwin Core sampling event (app.gainforest.dwc.event).",
+  fields: (t) => ({
+    metadata:    t.field({ type: RecordMetaType }),
+    creatorInfo: t.field({ type: CreatorInfoType }),
+    record:      t.field({ type: DwcEventRecordType }),
+  }),
+});
 const DwcEventPageType = builder.simpleObject("DwcEventPage", {
-  fields: (t) => ({ records: t.field({ type: [DwcEventType] }), pageInfo: t.field({ type: PageInfoType }) }),
+  fields: (t) => ({ data: t.field({ type: [DwcEventItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
 });
 
-const DwcMeasurementType = builder.simpleObject("DwcMeasurement", {
-  description: "A Darwin Core measurement (app.gainforest.dwc.measurement).",
+const DwcMeasurementRecordType = builder.simpleObject("DwcMeasurementRecord", {
+  description: "Pure payload for a Darwin Core measurement (app.gainforest.dwc.measurement).",
   fields: (t) => ({
-    meta:                       t.field({ type: RecordMetaType }),
     measurementID:              t.string({ nullable: true }),
     occurrenceRef:              t.string({ nullable: true }),
     occurrenceID:               t.string({ nullable: true }),
@@ -118,14 +133,21 @@ const DwcMeasurementType = builder.simpleObject("DwcMeasurement", {
     createdAt:                  t.field({ type: "DateTime", nullable: true }),
   }),
 });
+const DwcMeasurementItemType = builder.simpleObject("DwcMeasurementItem", {
+  description: "A Darwin Core measurement (app.gainforest.dwc.measurement).",
+  fields: (t) => ({
+    metadata:    t.field({ type: RecordMetaType }),
+    creatorInfo: t.field({ type: CreatorInfoType }),
+    record:      t.field({ type: DwcMeasurementRecordType }),
+  }),
+});
 const DwcMeasurementPageType = builder.simpleObject("DwcMeasurementPage", {
-  fields: (t) => ({ records: t.field({ type: [DwcMeasurementType] }), pageInfo: t.field({ type: PageInfoType }) }),
+  fields: (t) => ({ data: t.field({ type: [DwcMeasurementItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
 });
 
-const DwcOccurrenceType = builder.simpleObject("DwcOccurrence", {
-  description: "A Darwin Core species occurrence (app.gainforest.dwc.occurrence).",
+const DwcOccurrenceRecordType = builder.simpleObject("DwcOccurrenceRecord", {
+  description: "Pure payload for a Darwin Core species occurrence (app.gainforest.dwc.occurrence).",
   fields: (t) => ({
-    meta:                          t.field({ type: RecordMetaType }),
     occurrenceID:                  t.string({ nullable: true }),
     basisOfRecord:                 t.string({ nullable: true }),
     dcType:                        t.string({ nullable: true }),
@@ -207,45 +229,59 @@ const DwcOccurrenceType = builder.simpleObject("DwcOccurrence", {
     createdAt:                     t.field({ type: "DateTime", nullable: true }),
   }),
 });
+const DwcOccurrenceItemType = builder.simpleObject("DwcOccurrenceItem", {
+  description: "A Darwin Core species occurrence (app.gainforest.dwc.occurrence).",
+  fields: (t) => ({
+    metadata:    t.field({ type: RecordMetaType }),
+    creatorInfo: t.field({ type: CreatorInfoType }),
+    record:      t.field({ type: DwcOccurrenceRecordType }),
+  }),
+});
 const DwcOccurrencePageType = builder.simpleObject("DwcOccurrencePage", {
-  fields: (t) => ({ records: t.field({ type: [DwcOccurrenceType] }), pageInfo: t.field({ type: PageInfoType }) }),
+  fields: (t) => ({ data: t.field({ type: [DwcOccurrenceItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
 });
 
-// ── mappers ──
+// ── DWC mappers ──
 
-function mapDwcEvent(row: RecordRow) {
+async function mapDwcEvent(row: RecordRow) {
   const p = payload(row);
   return {
-    meta: rowToMeta(row),
-    eventID: s(p,"eventID"), parentEventID: s(p,"parentEventID"),
-    parentEventRef: s(p,"parentEventRef"), eventDate: s(p,"eventDate"),
-    eventTime: s(p,"eventTime"), habitat: s(p,"habitat"),
-    samplingProtocol: s(p,"samplingProtocol"), sampleSizeValue: s(p,"sampleSizeValue"),
-    sampleSizeUnit: s(p,"sampleSizeUnit"), samplingEffort: s(p,"samplingEffort"),
-    fieldNotes: s(p,"fieldNotes"), eventRemarks: s(p,"eventRemarks"),
-    locationID: s(p,"locationID"), decimalLatitude: s(p,"decimalLatitude"),
-    decimalLongitude: s(p,"decimalLongitude"), geodeticDatum: s(p,"geodeticDatum"),
-    coordinateUncertaintyInMeters: n(p,"coordinateUncertaintyInMeters"),
-    country: s(p,"country"), countryCode: s(p,"countryCode"),
-    stateProvince: s(p,"stateProvince"), county: s(p,"county"),
-    municipality: s(p,"municipality"), locality: s(p,"locality"),
-    minimumElevationInMeters: n(p,"minimumElevationInMeters"),
-    maximumElevationInMeters: n(p,"maximumElevationInMeters"),
-    locationRemarks: s(p,"locationRemarks"), createdAt: s(p,"createdAt"),
+    metadata:    rowToMeta(row),
+    creatorInfo: await resolveCreatorInfo(row.did),
+    record: {
+      eventID: s(p,"eventID"), parentEventID: s(p,"parentEventID"),
+      parentEventRef: s(p,"parentEventRef"), eventDate: s(p,"eventDate"),
+      eventTime: s(p,"eventTime"), habitat: s(p,"habitat"),
+      samplingProtocol: s(p,"samplingProtocol"), sampleSizeValue: s(p,"sampleSizeValue"),
+      sampleSizeUnit: s(p,"sampleSizeUnit"), samplingEffort: s(p,"samplingEffort"),
+      fieldNotes: s(p,"fieldNotes"), eventRemarks: s(p,"eventRemarks"),
+      locationID: s(p,"locationID"), decimalLatitude: s(p,"decimalLatitude"),
+      decimalLongitude: s(p,"decimalLongitude"), geodeticDatum: s(p,"geodeticDatum"),
+      coordinateUncertaintyInMeters: n(p,"coordinateUncertaintyInMeters"),
+      country: s(p,"country"), countryCode: s(p,"countryCode"),
+      stateProvince: s(p,"stateProvince"), county: s(p,"county"),
+      municipality: s(p,"municipality"), locality: s(p,"locality"),
+      minimumElevationInMeters: n(p,"minimumElevationInMeters"),
+      maximumElevationInMeters: n(p,"maximumElevationInMeters"),
+      locationRemarks: s(p,"locationRemarks"), createdAt: s(p,"createdAt"),
+    },
   };
 }
 
-function mapDwcMeasurement(row: RecordRow) {
+async function mapDwcMeasurement(row: RecordRow) {
   const p = payload(row);
   return {
-    meta: rowToMeta(row),
-    measurementID: s(p,"measurementID"), occurrenceRef: s(p,"occurrenceRef"),
-    occurrenceID: s(p,"occurrenceID"), measurementType: s(p,"measurementType"),
-    measurementValue: s(p,"measurementValue"), measurementUnit: s(p,"measurementUnit"),
-    measurementAccuracy: s(p,"measurementAccuracy"), measurementMethod: s(p,"measurementMethod"),
-    measurementDeterminedBy: s(p,"measurementDeterminedBy"),
-    measurementDeterminedDate: s(p,"measurementDeterminedDate"),
-    measurementRemarks: s(p,"measurementRemarks"), createdAt: s(p,"createdAt"),
+    metadata:    rowToMeta(row),
+    creatorInfo: await resolveCreatorInfo(row.did),
+    record: {
+      measurementID: s(p,"measurementID"), occurrenceRef: s(p,"occurrenceRef"),
+      occurrenceID: s(p,"occurrenceID"), measurementType: s(p,"measurementType"),
+      measurementValue: s(p,"measurementValue"), measurementUnit: s(p,"measurementUnit"),
+      measurementAccuracy: s(p,"measurementAccuracy"), measurementMethod: s(p,"measurementMethod"),
+      measurementDeterminedBy: s(p,"measurementDeterminedBy"),
+      measurementDeterminedDate: s(p,"measurementDeterminedDate"),
+      measurementRemarks: s(p,"measurementRemarks"), createdAt: s(p,"createdAt"),
+    },
   };
 }
 
@@ -253,57 +289,60 @@ async function mapDwcOccurrence(row: RecordRow) {
   const p = payload(row);
   const { did } = row;
   return {
-    meta: rowToMeta(row),
-    occurrenceID: s(p,"occurrenceID"), basisOfRecord: s(p,"basisOfRecord"),
-    dcType: s(p,"dcType"), license: s(p,"license"), rightsHolder: s(p,"rightsHolder"),
-    institutionCode: s(p,"institutionCode"), collectionCode: s(p,"collectionCode"),
-    datasetName: s(p,"datasetName"), informationWithheld: s(p,"informationWithheld"),
-    dataGeneralizations: s(p,"dataGeneralizations"), references: s(p,"references"),
-    recordedBy: s(p,"recordedBy"), recordedByID: s(p,"recordedByID"),
-    individualCount: n(p,"individualCount"), organismQuantity: s(p,"organismQuantity"),
-    organismQuantityType: s(p,"organismQuantityType"), sex: s(p,"sex"),
-    lifeStage: s(p,"lifeStage"), reproductiveCondition: s(p,"reproductiveCondition"),
-    behavior: s(p,"behavior"), occurrenceStatus: s(p,"occurrenceStatus"),
-    occurrenceRemarks: s(p,"occurrenceRemarks"), associatedMedia: s(p,"associatedMedia"),
-    associatedReferences: s(p,"associatedReferences"),
-    associatedSequences: s(p,"associatedSequences"),
-    associatedOccurrences: s(p,"associatedOccurrences"),
-    eventID: s(p,"eventID"), eventRef: s(p,"eventRef"),
-    eventDate: s(p,"eventDate"), eventTime: s(p,"eventTime"),
-    habitat: s(p,"habitat"), samplingProtocol: s(p,"samplingProtocol"),
-    samplingEffort: s(p,"samplingEffort"), fieldNotes: s(p,"fieldNotes"),
-    locationID: s(p,"locationID"),
-    decimalLatitude: s(p,"decimalLatitude"), decimalLongitude: s(p,"decimalLongitude"),
-    geodeticDatum: s(p,"geodeticDatum"),
-    coordinateUncertaintyInMeters: n(p,"coordinateUncertaintyInMeters"),
-    country: s(p,"country"), countryCode: s(p,"countryCode"),
-    stateProvince: s(p,"stateProvince"), county: s(p,"county"),
-    municipality: s(p,"municipality"), locality: s(p,"locality"),
-    verbatimLocality: s(p,"verbatimLocality"),
-    minimumElevationInMeters: n(p,"minimumElevationInMeters"),
-    maximumElevationInMeters: n(p,"maximumElevationInMeters"),
-    minimumDepthInMeters: n(p,"minimumDepthInMeters"),
-    maximumDepthInMeters: n(p,"maximumDepthInMeters"),
-    locationRemarks: s(p,"locationRemarks"),
-    gbifTaxonKey: s(p,"gbifTaxonKey"), scientificName: s(p,"scientificName"),
-    scientificNameAuthorship: s(p,"scientificNameAuthorship"),
-    kingdom: s(p,"kingdom"), phylum: s(p,"phylum"), class: s(p,"class"),
-    order: s(p,"order"), family: s(p,"family"), genus: s(p,"genus"),
-    specificEpithet: s(p,"specificEpithet"), infraspecificEpithet: s(p,"infraspecificEpithet"),
-    taxonRank: s(p,"taxonRank"), vernacularName: s(p,"vernacularName"),
-    taxonomicStatus: s(p,"taxonomicStatus"), nomenclaturalCode: s(p,"nomenclaturalCode"),
-    higherClassification: s(p,"higherClassification"),
-    identifiedBy: s(p,"identifiedBy"), identifiedByID: s(p,"identifiedByID"),
-    dateIdentified: s(p,"dateIdentified"),
-    identificationQualifier: s(p,"identificationQualifier"),
-    identificationRemarks: s(p,"identificationRemarks"),
-    previousIdentifications: s(p,"previousIdentifications"),
-    dynamicProperties: s(p,"dynamicProperties"),
-    imageEvidence:       await extractBlobRef(j(p,"imageEvidence"),       did),
-    audioEvidence:       await extractBlobRef(j(p,"audioEvidence"),       did),
-    videoEvidence:       await extractBlobRef(j(p,"videoEvidence"),       did),
-    spectrogramEvidence: await extractBlobRef(j(p,"spectrogramEvidence"), did),
-    createdAt: s(p,"createdAt"),
+    metadata:    rowToMeta(row),
+    creatorInfo: await resolveCreatorInfo(did),
+    record: {
+      occurrenceID: s(p,"occurrenceID"), basisOfRecord: s(p,"basisOfRecord"),
+      dcType: s(p,"dcType"), license: s(p,"license"), rightsHolder: s(p,"rightsHolder"),
+      institutionCode: s(p,"institutionCode"), collectionCode: s(p,"collectionCode"),
+      datasetName: s(p,"datasetName"), informationWithheld: s(p,"informationWithheld"),
+      dataGeneralizations: s(p,"dataGeneralizations"), references: s(p,"references"),
+      recordedBy: s(p,"recordedBy"), recordedByID: s(p,"recordedByID"),
+      individualCount: n(p,"individualCount"), organismQuantity: s(p,"organismQuantity"),
+      organismQuantityType: s(p,"organismQuantityType"), sex: s(p,"sex"),
+      lifeStage: s(p,"lifeStage"), reproductiveCondition: s(p,"reproductiveCondition"),
+      behavior: s(p,"behavior"), occurrenceStatus: s(p,"occurrenceStatus"),
+      occurrenceRemarks: s(p,"occurrenceRemarks"), associatedMedia: s(p,"associatedMedia"),
+      associatedReferences: s(p,"associatedReferences"),
+      associatedSequences: s(p,"associatedSequences"),
+      associatedOccurrences: s(p,"associatedOccurrences"),
+      eventID: s(p,"eventID"), eventRef: s(p,"eventRef"),
+      eventDate: s(p,"eventDate"), eventTime: s(p,"eventTime"),
+      habitat: s(p,"habitat"), samplingProtocol: s(p,"samplingProtocol"),
+      samplingEffort: s(p,"samplingEffort"), fieldNotes: s(p,"fieldNotes"),
+      locationID: s(p,"locationID"),
+      decimalLatitude: s(p,"decimalLatitude"), decimalLongitude: s(p,"decimalLongitude"),
+      geodeticDatum: s(p,"geodeticDatum"),
+      coordinateUncertaintyInMeters: n(p,"coordinateUncertaintyInMeters"),
+      country: s(p,"country"), countryCode: s(p,"countryCode"),
+      stateProvince: s(p,"stateProvince"), county: s(p,"county"),
+      municipality: s(p,"municipality"), locality: s(p,"locality"),
+      verbatimLocality: s(p,"verbatimLocality"),
+      minimumElevationInMeters: n(p,"minimumElevationInMeters"),
+      maximumElevationInMeters: n(p,"maximumElevationInMeters"),
+      minimumDepthInMeters: n(p,"minimumDepthInMeters"),
+      maximumDepthInMeters: n(p,"maximumDepthInMeters"),
+      locationRemarks: s(p,"locationRemarks"),
+      gbifTaxonKey: s(p,"gbifTaxonKey"), scientificName: s(p,"scientificName"),
+      scientificNameAuthorship: s(p,"scientificNameAuthorship"),
+      kingdom: s(p,"kingdom"), phylum: s(p,"phylum"), class: s(p,"class"),
+      order: s(p,"order"), family: s(p,"family"), genus: s(p,"genus"),
+      specificEpithet: s(p,"specificEpithet"), infraspecificEpithet: s(p,"infraspecificEpithet"),
+      taxonRank: s(p,"taxonRank"), vernacularName: s(p,"vernacularName"),
+      taxonomicStatus: s(p,"taxonomicStatus"), nomenclaturalCode: s(p,"nomenclaturalCode"),
+      higherClassification: s(p,"higherClassification"),
+      identifiedBy: s(p,"identifiedBy"), identifiedByID: s(p,"identifiedByID"),
+      dateIdentified: s(p,"dateIdentified"),
+      identificationQualifier: s(p,"identificationQualifier"),
+      identificationRemarks: s(p,"identificationRemarks"),
+      previousIdentifications: s(p,"previousIdentifications"),
+      dynamicProperties: s(p,"dynamicProperties"),
+      imageEvidence:       await extractBlobRef(j(p,"imageEvidence"),       did),
+      audioEvidence:       await extractBlobRef(j(p,"audioEvidence"),       did),
+      videoEvidence:       await extractBlobRef(j(p,"videoEvidence"),       did),
+      spectrogramEvidence: await extractBlobRef(j(p,"spectrogramEvidence"), did),
+      createdAt: s(p,"createdAt"),
+    },
   };
 }
 
@@ -312,7 +351,7 @@ builder.objectType(DwcNS, {
   name: "DwcNamespace",
   description: "Darwin Core biodiversity records (app.gainforest.dwc.*).",
   fields: (t) => ({
-    events: t.field({
+    event: t.field({
       type: DwcEventPageType,
       args: {
         cursor: t.arg.string(), limit: t.arg.int(),
@@ -321,7 +360,7 @@ builder.objectType(DwcNS, {
       },
       resolve: (_, args) => fetchCollectionPage("app.gainforest.dwc.event", args, mapDwcEvent),
     }),
-    measurements: t.field({
+    measurement: t.field({
       type: DwcMeasurementPageType,
       args: {
         cursor: t.arg.string(), limit: t.arg.int(),
@@ -330,7 +369,7 @@ builder.objectType(DwcNS, {
       },
       resolve: (_, args) => fetchCollectionPage("app.gainforest.dwc.measurement", args, mapDwcMeasurement),
     }),
-    occurrences: t.field({
+    occurrence: t.field({
       type: DwcOccurrencePageType,
       args: {
         cursor: t.arg.string(), limit: t.arg.int(),
@@ -348,20 +387,20 @@ builder.objectType(DwcNS, {
           sortOrder: (order as "asc" | "desc") ?? undefined,
         });
         await getPdsHostsBatch([...new Set(page.records.map((r) => r.did))]);
-        return { records: await Promise.all(page.records.map(mapDwcOccurrence)), pageInfo: toPageInfo(page.cursor) };
+        const data = await Promise.all(page.records.map(mapDwcOccurrence));
+        return { data, pageInfo: toPageInfo(page.cursor, data.length) };
       },
     }),
   }),
 });
 
 // ================================================================
-// ── EVALUATOR leaf types ─────────────────────────────────────────
+// ── EVALUATOR pure record types ──────────────────────────────────
 // ================================================================
 
 const EvaluationRecordType = builder.simpleObject("EvaluationRecord", {
-  description: "An evaluator evaluation (app.gainforest.evaluator.evaluation).",
+  description: "Pure payload for an evaluator evaluation (app.gainforest.evaluator.evaluation).",
   fields: (t) => ({
-    meta:              t.field({ type: RecordMetaType }),
     subject:           t.field({ type: "JSON", nullable: true }),
     subjects:          t.field({ type: "JSON", nullable: true }),
     evaluationType:    t.string({ nullable: true }),
@@ -374,83 +413,117 @@ const EvaluationRecordType = builder.simpleObject("EvaluationRecord", {
     createdAt:         t.field({ type: "DateTime", nullable: true }),
   }),
 });
+const EvaluationItemType = builder.simpleObject("EvaluationItem", {
+  description: "An evaluator evaluation (app.gainforest.evaluator.evaluation).",
+  fields: (t) => ({
+    metadata:    t.field({ type: RecordMetaType }),
+    creatorInfo: t.field({ type: CreatorInfoType }),
+    record:      t.field({ type: EvaluationRecordType }),
+  }),
+});
 const EvaluationPageType = builder.simpleObject("EvaluationPage", {
-  fields: (t) => ({ records: t.field({ type: [EvaluationRecordType] }), pageInfo: t.field({ type: PageInfoType }) }),
+  fields: (t) => ({ data: t.field({ type: [EvaluationItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
 });
 
-const EvaluatorServiceType = builder.simpleObject("EvaluatorService", {
-  description: "An evaluator service (app.gainforest.evaluator.service).",
+const EvaluatorServiceRecordType = builder.simpleObject("EvaluatorServiceRecord", {
+  description: "Pure payload for an evaluator service (app.gainforest.evaluator.service).",
   fields: (t) => ({
-    meta:      t.field({ type: RecordMetaType }),
     policies:  t.field({ type: "JSON", nullable: true }),
     createdAt: t.field({ type: "DateTime", nullable: true }),
   }),
 });
+const EvaluatorServiceItemType = builder.simpleObject("EvaluatorServiceItem", {
+  description: "An evaluator service (app.gainforest.evaluator.service).",
+  fields: (t) => ({
+    metadata:    t.field({ type: RecordMetaType }),
+    creatorInfo: t.field({ type: CreatorInfoType }),
+    record:      t.field({ type: EvaluatorServiceRecordType }),
+  }),
+});
 const EvaluatorServicePageType = builder.simpleObject("EvaluatorServicePage", {
-  fields: (t) => ({ records: t.field({ type: [EvaluatorServiceType] }), pageInfo: t.field({ type: PageInfoType }) }),
+  fields: (t) => ({ data: t.field({ type: [EvaluatorServiceItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
 });
 
-const EvaluatorSubscriptionType = builder.simpleObject("EvaluatorSubscription", {
-  description: "An evaluator subscription (app.gainforest.evaluator.subscription).",
+const EvaluatorSubscriptionRecordType = builder.simpleObject("EvaluatorSubscriptionRecord", {
+  description: "Pure payload for an evaluator subscription (app.gainforest.evaluator.subscription).",
   fields: (t) => ({
-    meta:            t.field({ type: RecordMetaType }),
     evaluator:       t.string({ nullable: true }),
     collections:     t.stringList({ nullable: true }),
     evaluationTypes: t.stringList({ nullable: true }),
     createdAt:       t.field({ type: "DateTime", nullable: true }),
   }),
 });
+const EvaluatorSubscriptionItemType = builder.simpleObject("EvaluatorSubscriptionItem", {
+  description: "An evaluator subscription (app.gainforest.evaluator.subscription).",
+  fields: (t) => ({
+    metadata:    t.field({ type: RecordMetaType }),
+    creatorInfo: t.field({ type: CreatorInfoType }),
+    record:      t.field({ type: EvaluatorSubscriptionRecordType }),
+  }),
+});
 const EvaluatorSubscriptionPageType = builder.simpleObject("EvaluatorSubscriptionPage", {
-  fields: (t) => ({ records: t.field({ type: [EvaluatorSubscriptionType] }), pageInfo: t.field({ type: PageInfoType }) }),
+  fields: (t) => ({ data: t.field({ type: [EvaluatorSubscriptionItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
 });
 
 builder.objectType(EvaluatorNS, {
   name: "EvaluatorNamespace",
   description: "Evaluator records (app.gainforest.evaluator.*).",
   fields: (t) => ({
-    evaluations: t.field({
+    evaluation: t.field({
       type: EvaluationPageType,
       args: {
         cursor: t.arg.string(), limit: t.arg.int(),
         where: t.arg({ type: WhereInputRef, required: false }),
         sortBy: t.arg({ type: SortFieldEnum }), order: t.arg({ type: SortOrderEnum }),
       },
-      resolve: (_, args) => fetchCollectionPage("app.gainforest.evaluator.evaluation", args, (row) => {
+      resolve: (_, args) => fetchCollectionPage("app.gainforest.evaluator.evaluation", args, async (row) => {
         const p = payload(row);
         return {
-          meta: rowToMeta(row), subject: j(p,"subject"), subjects: j(p,"subjects"),
-          evaluationType: s(p,"evaluationType"), result: j(p,"result"),
-          confidence: n(p,"confidence"), method: j(p,"method"),
-          neg: b(p,"neg"), supersedes: s(p,"supersedes"),
-          dynamicProperties: s(p,"dynamicProperties"), createdAt: s(p,"createdAt"),
+          metadata:    rowToMeta(row),
+          creatorInfo: await resolveCreatorInfo(row.did),
+          record: {
+            subject: j(p,"subject"), subjects: j(p,"subjects"),
+            evaluationType: s(p,"evaluationType"), result: j(p,"result"),
+            confidence: n(p,"confidence"), method: j(p,"method"),
+            neg: b(p,"neg"), supersedes: s(p,"supersedes"),
+            dynamicProperties: s(p,"dynamicProperties"), createdAt: s(p,"createdAt"),
+          },
         };
       }),
     }),
-    services: t.field({
+    service: t.field({
       type: EvaluatorServicePageType,
       args: {
         cursor: t.arg.string(), limit: t.arg.int(),
         where: t.arg({ type: WhereInputRef, required: false }),
         sortBy: t.arg({ type: SortFieldEnum }), order: t.arg({ type: SortOrderEnum }),
       },
-      resolve: (_, args) => fetchCollectionPage("app.gainforest.evaluator.service", args, (row) => {
+      resolve: (_, args) => fetchCollectionPage("app.gainforest.evaluator.service", args, async (row) => {
         const p = payload(row);
-        return { meta: rowToMeta(row), policies: j(p,"policies"), createdAt: s(p,"createdAt") };
+        return {
+          metadata:    rowToMeta(row),
+          creatorInfo: await resolveCreatorInfo(row.did),
+          record: { policies: j(p,"policies"), createdAt: s(p,"createdAt") },
+        };
       }),
     }),
-    subscriptions: t.field({
+    subscription: t.field({
       type: EvaluatorSubscriptionPageType,
       args: {
         cursor: t.arg.string(), limit: t.arg.int(),
         where: t.arg({ type: WhereInputRef, required: false }),
         sortBy: t.arg({ type: SortFieldEnum }), order: t.arg({ type: SortOrderEnum }),
       },
-      resolve: (_, args) => fetchCollectionPage("app.gainforest.evaluator.subscription", args, (row) => {
+      resolve: (_, args) => fetchCollectionPage("app.gainforest.evaluator.subscription", args, async (row) => {
         const p = payload(row);
         return {
-          meta: rowToMeta(row), evaluator: s(p,"evaluator"),
-          collections: arr(p,"collections"), evaluationTypes: arr(p,"evaluationTypes"),
-          createdAt: s(p,"createdAt"),
+          metadata:    rowToMeta(row),
+          creatorInfo: await resolveCreatorInfo(row.did),
+          record: {
+            evaluator: s(p,"evaluator"),
+            collections: arr(p,"collections"), evaluationTypes: arr(p,"evaluationTypes"),
+            createdAt: s(p,"createdAt"),
+          },
         };
       }),
     }),
@@ -458,13 +531,12 @@ builder.objectType(EvaluatorNS, {
 });
 
 // ================================================================
-// ── ORGANIZATION leaf types ──────────────────────────────────────
+// ── ORGANIZATION pure record types ───────────────────────────────
 // ================================================================
 
-const OrgInfoType = builder.simpleObject("OrgInfo", {
-  description: "Organization profile (app.gainforest.organization.info).",
+const OrgInfoRecordType = builder.simpleObject("OrgInfoRecord", {
+  description: "Pure payload for an organization profile (app.gainforest.organization.info).",
   fields: (t) => ({
-    meta:             t.field({ type: RecordMetaType }),
     displayName:      t.string({ nullable: true }),
     shortDescription: t.field({ type: "JSON", nullable: true }),
     longDescription:  t.field({ type: "JSON", nullable: true }),
@@ -478,14 +550,21 @@ const OrgInfoType = builder.simpleObject("OrgInfo", {
     createdAt:        t.field({ type: "DateTime", nullable: true }),
   }),
 });
+const OrgInfoItemType = builder.simpleObject("OrgInfoItem", {
+  description: "An organization profile (app.gainforest.organization.info).",
+  fields: (t) => ({
+    metadata:    t.field({ type: RecordMetaType }),
+    creatorInfo: t.field({ type: CreatorInfoType }),
+    record:      t.field({ type: OrgInfoRecordType }),
+  }),
+});
 const OrgInfoPageType = builder.simpleObject("OrgInfoPage", {
-  fields: (t) => ({ records: t.field({ type: [OrgInfoType] }), pageInfo: t.field({ type: PageInfoType }) }),
+  fields: (t) => ({ data: t.field({ type: [OrgInfoItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
 });
 
-const OrgLayerType = builder.simpleObject("OrgLayer", {
-  description: "A geospatial map layer (app.gainforest.organization.layer).",
+const OrgLayerRecordType = builder.simpleObject("OrgLayerRecord", {
+  description: "Pure payload for a geospatial map layer (app.gainforest.organization.layer).",
   fields: (t) => ({
-    meta:        t.field({ type: RecordMetaType }),
     name:        t.string({ nullable: true }),
     type:        t.string({ nullable: true }),
     uri:         t.string({ nullable: true }),
@@ -493,88 +572,141 @@ const OrgLayerType = builder.simpleObject("OrgLayer", {
     createdAt:   t.field({ type: "DateTime", nullable: true }),
   }),
 });
+const OrgLayerItemType = builder.simpleObject("OrgLayerItem", {
+  description: "A geospatial map layer (app.gainforest.organization.layer).",
+  fields: (t) => ({
+    metadata:    t.field({ type: RecordMetaType }),
+    creatorInfo: t.field({ type: CreatorInfoType }),
+    record:      t.field({ type: OrgLayerRecordType }),
+  }),
+});
 const OrgLayerPageType = builder.simpleObject("OrgLayerPage", {
-  fields: (t) => ({ records: t.field({ type: [OrgLayerType] }), pageInfo: t.field({ type: PageInfoType }) }),
+  fields: (t) => ({ data: t.field({ type: [OrgLayerItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
 });
 
-const OrgDefaultSiteType = builder.simpleObject("OrgDefaultSite", {
-  description: "Default site declaration (app.gainforest.organization.defaultSite).",
+const OrgDefaultSiteRecordType = builder.simpleObject("OrgDefaultSiteRecord", {
+  description: "Pure payload for a default site declaration (app.gainforest.organization.defaultSite).",
   fields: (t) => ({
-    meta:      t.field({ type: RecordMetaType }),
     site:      t.string({ nullable: true }),
     createdAt: t.field({ type: "DateTime", nullable: true }),
   }),
 });
+const OrgDefaultSiteItemType = builder.simpleObject("OrgDefaultSiteItem", {
+  description: "Default site declaration (app.gainforest.organization.defaultSite).",
+  fields: (t) => ({
+    metadata:    t.field({ type: RecordMetaType }),
+    creatorInfo: t.field({ type: CreatorInfoType }),
+    record:      t.field({ type: OrgDefaultSiteRecordType }),
+  }),
+});
 const OrgDefaultSitePageType = builder.simpleObject("OrgDefaultSitePage", {
-  fields: (t) => ({ records: t.field({ type: [OrgDefaultSiteType] }), pageInfo: t.field({ type: PageInfoType }) }),
+  fields: (t) => ({ data: t.field({ type: [OrgDefaultSiteItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
 });
 
-const OrgFaunaObsType = builder.simpleObject("OrgFaunaObservation", {
+const OrgFaunaObsRecordType = builder.simpleObject("OrgFaunaObservationRecord", {
   fields: (t) => ({
-    meta:          t.field({ type: RecordMetaType }),
     gbifTaxonKeys: t.stringList({ nullable: true }),
     createdAt:     t.field({ type: "DateTime", nullable: true }),
+  }),
+});
+const OrgFaunaObsItemType = builder.simpleObject("OrgFaunaObservationItem", {
+  fields: (t) => ({
+    metadata:    t.field({ type: RecordMetaType }),
+    creatorInfo: t.field({ type: CreatorInfoType }),
+    record:      t.field({ type: OrgFaunaObsRecordType }),
   }),
 });
 const OrgFaunaObsPageType = builder.simpleObject("OrgFaunaObservationPage", {
-  fields: (t) => ({ records: t.field({ type: [OrgFaunaObsType] }), pageInfo: t.field({ type: PageInfoType }) }),
+  fields: (t) => ({ data: t.field({ type: [OrgFaunaObsItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
 });
 
-const OrgFloraObsType = builder.simpleObject("OrgFloraObservation", {
+const OrgFloraObsRecordType = builder.simpleObject("OrgFloraObservationRecord", {
   fields: (t) => ({
-    meta:          t.field({ type: RecordMetaType }),
     gbifTaxonKeys: t.stringList({ nullable: true }),
     createdAt:     t.field({ type: "DateTime", nullable: true }),
   }),
 });
+const OrgFloraObsItemType = builder.simpleObject("OrgFloraObservationItem", {
+  fields: (t) => ({
+    metadata:    t.field({ type: RecordMetaType }),
+    creatorInfo: t.field({ type: CreatorInfoType }),
+    record:      t.field({ type: OrgFloraObsRecordType }),
+  }),
+});
 const OrgFloraObsPageType = builder.simpleObject("OrgFloraObservationPage", {
-  fields: (t) => ({ records: t.field({ type: [OrgFloraObsType] }), pageInfo: t.field({ type: PageInfoType }) }),
+  fields: (t) => ({ data: t.field({ type: [OrgFloraObsItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
 });
 
-const OrgDendogramType = builder.simpleObject("OrgDendogram", {
-  description: "A dendogram observation (app.gainforest.organization.observations.dendogram).",
+const OrgDendogramRecordType = builder.simpleObject("OrgDendogramRecord", {
+  description: "Pure payload for a dendogram observation (app.gainforest.organization.observations.dendogram).",
   fields: (t) => ({
-    meta:      t.field({ type: RecordMetaType }),
     dendogram: t.field({ type: BlobRefType, nullable: true }),
     createdAt: t.field({ type: "DateTime", nullable: true }),
   }),
 });
+const OrgDendogramItemType = builder.simpleObject("OrgDendogramItem", {
+  description: "A dendogram observation (app.gainforest.organization.observations.dendogram).",
+  fields: (t) => ({
+    metadata:    t.field({ type: RecordMetaType }),
+    creatorInfo: t.field({ type: CreatorInfoType }),
+    record:      t.field({ type: OrgDendogramRecordType }),
+  }),
+});
 const OrgDendogramPageType = builder.simpleObject("OrgDendogramPage", {
-  fields: (t) => ({ records: t.field({ type: [OrgDendogramType] }), pageInfo: t.field({ type: PageInfoType }) }),
+  fields: (t) => ({ data: t.field({ type: [OrgDendogramItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
 });
 
-const OrgMeasuredTreesClusterType = builder.simpleObject("OrgMeasuredTreesCluster", {
-  description: "A measured trees cluster (app.gainforest.organization.observations.measuredTreesCluster).",
+const OrgMeasuredTreesClusterRecordType = builder.simpleObject("OrgMeasuredTreesClusterRecord", {
+  description: "Pure payload for a measured trees cluster (app.gainforest.organization.observations.measuredTreesCluster).",
   fields: (t) => ({
-    meta:      t.field({ type: RecordMetaType }),
     shapefile: t.field({ type: BlobRefType, nullable: true }),
     createdAt: t.field({ type: "DateTime", nullable: true }),
   }),
 });
+const OrgMeasuredTreesClusterItemType = builder.simpleObject("OrgMeasuredTreesClusterItem", {
+  description: "A measured trees cluster (app.gainforest.organization.observations.measuredTreesCluster).",
+  fields: (t) => ({
+    metadata:    t.field({ type: RecordMetaType }),
+    creatorInfo: t.field({ type: CreatorInfoType }),
+    record:      t.field({ type: OrgMeasuredTreesClusterRecordType }),
+  }),
+});
 const OrgMeasuredTreesClusterPageType = builder.simpleObject("OrgMeasuredTreesClusterPage", {
-  fields: (t) => ({ records: t.field({ type: [OrgMeasuredTreesClusterType] }), pageInfo: t.field({ type: PageInfoType }) }),
+  fields: (t) => ({ data: t.field({ type: [OrgMeasuredTreesClusterItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
 });
 
-const OrgFaunaPredType = builder.simpleObject("OrgFaunaPrediction", {
+const OrgFaunaPredRecordType = builder.simpleObject("OrgFaunaPredictionRecord", {
   fields: (t) => ({
-    meta:          t.field({ type: RecordMetaType }),
     gbifTaxonKeys: t.stringList({ nullable: true }),
     createdAt:     t.field({ type: "DateTime", nullable: true }),
+  }),
+});
+const OrgFaunaPredItemType = builder.simpleObject("OrgFaunaPredictionItem", {
+  fields: (t) => ({
+    metadata:    t.field({ type: RecordMetaType }),
+    creatorInfo: t.field({ type: CreatorInfoType }),
+    record:      t.field({ type: OrgFaunaPredRecordType }),
   }),
 });
 const OrgFaunaPredPageType = builder.simpleObject("OrgFaunaPredictionPage", {
-  fields: (t) => ({ records: t.field({ type: [OrgFaunaPredType] }), pageInfo: t.field({ type: PageInfoType }) }),
+  fields: (t) => ({ data: t.field({ type: [OrgFaunaPredItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
 });
 
-const OrgFloraPredType = builder.simpleObject("OrgFloraPrediction", {
+const OrgFloraPredRecordType = builder.simpleObject("OrgFloraPredictionRecord", {
   fields: (t) => ({
-    meta:          t.field({ type: RecordMetaType }),
     gbifTaxonKeys: t.stringList({ nullable: true }),
     createdAt:     t.field({ type: "DateTime", nullable: true }),
   }),
 });
+const OrgFloraPredItemType = builder.simpleObject("OrgFloraPredictionItem", {
+  fields: (t) => ({
+    metadata:    t.field({ type: RecordMetaType }),
+    creatorInfo: t.field({ type: CreatorInfoType }),
+    record:      t.field({ type: OrgFloraPredRecordType }),
+  }),
+});
 const OrgFloraPredPageType = builder.simpleObject("OrgFloraPredictionPage", {
-  fields: (t) => ({ records: t.field({ type: [OrgFloraPredType] }), pageInfo: t.field({ type: PageInfoType }) }),
+  fields: (t) => ({ data: t.field({ type: [OrgFloraPredItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
 });
 
 const OrgAudioMetadataType = builder.simpleObject("OrgAudioMetadata", {
@@ -588,10 +720,9 @@ const OrgAudioMetadataType = builder.simpleObject("OrgAudioMetadata", {
     coordinates: t.string({ nullable: true }),
   }),
 });
-const OrgAudioType = builder.simpleObject("OrgAudio", {
-  description: "An audio recording (app.gainforest.organization.recordings.audio).",
+const OrgAudioRecordType = builder.simpleObject("OrgAudioRecord", {
+  description: "Pure payload for an audio recording (app.gainforest.organization.recordings.audio).",
   fields: (t) => ({
-    meta:        t.field({ type: RecordMetaType }),
     name:        t.string({ nullable: true }),
     description: t.field({ type: "JSON", nullable: true }),
     blob:        t.field({ type: BlobRefType, nullable: true }),
@@ -599,8 +730,16 @@ const OrgAudioType = builder.simpleObject("OrgAudio", {
     createdAt:   t.field({ type: "DateTime", nullable: true }),
   }),
 });
+const OrgAudioItemType = builder.simpleObject("OrgAudioItem", {
+  description: "An audio recording (app.gainforest.organization.recordings.audio).",
+  fields: (t) => ({
+    metadata:    t.field({ type: RecordMetaType }),
+    creatorInfo: t.field({ type: CreatorInfoType }),
+    record:      t.field({ type: OrgAudioRecordType }),
+  }),
+});
 const OrgAudioPageType = builder.simpleObject("OrgAudioPage", {
-  fields: (t) => ({ records: t.field({ type: [OrgAudioType] }), pageInfo: t.field({ type: PageInfoType }) }),
+  fields: (t) => ({ data: t.field({ type: [OrgAudioItemType] }), pageInfo: t.field({ type: PageInfoType }) }),
 });
 
 // ── Sub-namespace objectTypes ──
@@ -615,9 +754,10 @@ builder.objectType(OrgObservationsNS, {
         where: t.arg({ type: WhereInputRef, required: false }),
         sortBy: t.arg({ type: SortFieldEnum }), order: t.arg({ type: SortOrderEnum }),
       },
-      resolve: (_, args) => fetchCollectionPage("app.gainforest.organization.observations.fauna", args, (row) => ({
-        meta: rowToMeta(row), gbifTaxonKeys: arr(payload(row),"gbifTaxonKeys"),
-        createdAt: s(payload(row),"createdAt"),
+      resolve: (_, args) => fetchCollectionPage("app.gainforest.organization.observations.fauna", args, async (row) => ({
+        metadata:    rowToMeta(row),
+        creatorInfo: await resolveCreatorInfo(row.did),
+        record: { gbifTaxonKeys: arr(payload(row),"gbifTaxonKeys"), createdAt: s(payload(row),"createdAt") },
       })),
     }),
     flora: t.field({
@@ -627,12 +767,13 @@ builder.objectType(OrgObservationsNS, {
         where: t.arg({ type: WhereInputRef, required: false }),
         sortBy: t.arg({ type: SortFieldEnum }), order: t.arg({ type: SortOrderEnum }),
       },
-      resolve: (_, args) => fetchCollectionPage("app.gainforest.organization.observations.flora", args, (row) => ({
-        meta: rowToMeta(row), gbifTaxonKeys: arr(payload(row),"gbifTaxonKeys"),
-        createdAt: s(payload(row),"createdAt"),
+      resolve: (_, args) => fetchCollectionPage("app.gainforest.organization.observations.flora", args, async (row) => ({
+        metadata:    rowToMeta(row),
+        creatorInfo: await resolveCreatorInfo(row.did),
+        record: { gbifTaxonKeys: arr(payload(row),"gbifTaxonKeys"), createdAt: s(payload(row),"createdAt") },
       })),
     }),
-    dendograms: t.field({
+    dendogram: t.field({
       type: OrgDendogramPageType,
       args: {
         cursor: t.arg.string(), limit: t.arg.int(),
@@ -650,14 +791,18 @@ builder.objectType(OrgObservationsNS, {
           sortOrder: (order as "asc" | "desc") ?? undefined,
         });
         await getPdsHostsBatch([...new Set(page.records.map((r) => r.did))]);
-        const records = await Promise.all(page.records.map(async (row) => {
+        const data = await Promise.all(page.records.map(async (row) => {
           const p = payload(row);
-          return { meta: rowToMeta(row), dendogram: await extractBlobRef(j(p,"dendogram"), row.did), createdAt: s(p,"createdAt") };
+          return {
+            metadata:    rowToMeta(row),
+            creatorInfo: await resolveCreatorInfo(row.did),
+            record: { dendogram: await extractBlobRef(j(p,"dendogram"), row.did), createdAt: s(p,"createdAt") },
+          };
         }));
-        return { records, pageInfo: toPageInfo(page.cursor) };
+        return { data, pageInfo: toPageInfo(page.cursor, data.length) };
       },
     }),
-    measuredTreesClusters: t.field({
+    measuredTreesCluster: t.field({
       type: OrgMeasuredTreesClusterPageType,
       args: {
         cursor: t.arg.string(), limit: t.arg.int(),
@@ -675,11 +820,15 @@ builder.objectType(OrgObservationsNS, {
           sortOrder: (order as "asc" | "desc") ?? undefined,
         });
         await getPdsHostsBatch([...new Set(page.records.map((r) => r.did))]);
-        const records = await Promise.all(page.records.map(async (row) => {
+        const data = await Promise.all(page.records.map(async (row) => {
           const p = payload(row);
-          return { meta: rowToMeta(row), shapefile: await extractBlobRef(j(p,"shapefile"), row.did), createdAt: s(p,"createdAt") };
+          return {
+            metadata:    rowToMeta(row),
+            creatorInfo: await resolveCreatorInfo(row.did),
+            record: { shapefile: await extractBlobRef(j(p,"shapefile"), row.did), createdAt: s(p,"createdAt") },
+          };
         }));
-        return { records, pageInfo: toPageInfo(page.cursor) };
+        return { data, pageInfo: toPageInfo(page.cursor, data.length) };
       },
     }),
   }),
@@ -695,9 +844,10 @@ builder.objectType(OrgPredictionsNS, {
         where: t.arg({ type: WhereInputRef, required: false }),
         sortBy: t.arg({ type: SortFieldEnum }), order: t.arg({ type: SortOrderEnum }),
       },
-      resolve: (_, args) => fetchCollectionPage("app.gainforest.organization.predictions.fauna", args, (row) => ({
-        meta: rowToMeta(row), gbifTaxonKeys: arr(payload(row),"gbifTaxonKeys"),
-        createdAt: s(payload(row),"createdAt"),
+      resolve: (_, args) => fetchCollectionPage("app.gainforest.organization.predictions.fauna", args, async (row) => ({
+        metadata:    rowToMeta(row),
+        creatorInfo: await resolveCreatorInfo(row.did),
+        record: { gbifTaxonKeys: arr(payload(row),"gbifTaxonKeys"), createdAt: s(payload(row),"createdAt") },
       })),
     }),
     flora: t.field({
@@ -707,9 +857,10 @@ builder.objectType(OrgPredictionsNS, {
         where: t.arg({ type: WhereInputRef, required: false }),
         sortBy: t.arg({ type: SortFieldEnum }), order: t.arg({ type: SortOrderEnum }),
       },
-      resolve: (_, args) => fetchCollectionPage("app.gainforest.organization.predictions.flora", args, (row) => ({
-        meta: rowToMeta(row), gbifTaxonKeys: arr(payload(row),"gbifTaxonKeys"),
-        createdAt: s(payload(row),"createdAt"),
+      resolve: (_, args) => fetchCollectionPage("app.gainforest.organization.predictions.flora", args, async (row) => ({
+        metadata:    rowToMeta(row),
+        creatorInfo: await resolveCreatorInfo(row.did),
+        record: { gbifTaxonKeys: arr(payload(row),"gbifTaxonKeys"), createdAt: s(payload(row),"createdAt") },
       })),
     }),
   }),
@@ -736,29 +887,34 @@ builder.objectType(OrgRecordingsNS, {
           sortOrder: (order as "asc" | "desc") ?? undefined,
         });
         await getPdsHostsBatch([...new Set(page.records.map((r) => r.did))]);
-        const records = await Promise.all(page.records.map(async (row) => {
+        const data = await Promise.all(page.records.map(async (row) => {
           const p = payload(row);
           const meta_raw = j(p,"metadata");
-          let metadata: {
+          let audioMeta: {
             codec: string | null; channels: number | null; duration: string | null;
             recordedAt: string | null; sampleRate: number | null; coordinates: string | null;
           } | null = null;
           if (meta_raw != null && typeof meta_raw === "object") {
             const m = meta_raw as Record<string, unknown>;
-            metadata = {
+            audioMeta = {
               codec: s(m,"codec"), channels: n(m,"channels"),
               duration: s(m,"duration"), recordedAt: s(m,"recordedAt"),
               sampleRate: n(m,"sampleRate"), coordinates: s(m,"coordinates"),
             };
           }
           return {
-            meta: rowToMeta(row), name: s(p,"name"),
-            description: j(p,"description"),
-            blob: await extractBlobRef(j(p,"blob"), row.did),
-            metadata, createdAt: s(p,"createdAt"),
+            metadata:    rowToMeta(row),
+            creatorInfo: await resolveCreatorInfo(row.did),
+            record: {
+              name: s(p,"name"),
+              description: j(p,"description"),
+              blob: await extractBlobRef(j(p,"blob"), row.did),
+              metadata: audioMeta,
+              createdAt: s(p,"createdAt"),
+            },
           };
         }));
-        return { records, pageInfo: toPageInfo(page.cursor) };
+        return { data, pageInfo: toPageInfo(page.cursor, data.length) };
       },
     }),
   }),
@@ -768,7 +924,7 @@ builder.objectType(OrgNS, {
   name: "OrgNamespace",
   description: "Organization records (app.gainforest.organization.*).",
   fields: (t) => ({
-    infos: t.field({
+    info: t.field({
       type: OrgInfoPageType,
       description:
         "Paginated list of app.gainforest.organization.info records. " +
@@ -805,48 +961,60 @@ builder.objectType(OrgNS, {
 
         await getPdsHostsBatch([...new Set(page.records.map((r) => r.did))]);
 
-        const records = await Promise.all(page.records.map(async (row) => {
+        const data = await Promise.all(page.records.map(async (row) => {
           const p = payload(row);
           return {
-            meta: rowToMeta(row), displayName: s(p,"displayName"),
-            shortDescription: j(p,"shortDescription"), longDescription: j(p,"longDescription"),
-            coverImage: await extractBlobRef(j(p,"coverImage"), row.did),
-            logo:       await extractBlobRef(j(p,"logo"),       row.did),
-            objectives: arr(p,"objectives"),
-            country: s(p,"country"), website: s(p,"website"),
-            visibility: s(p,"visibility"), startDate: s(p,"startDate"),
-            createdAt: s(p,"createdAt"),
+            metadata:    rowToMeta(row),
+            creatorInfo: await resolveCreatorInfo(row.did),
+            record: {
+              displayName: s(p,"displayName"),
+              shortDescription: j(p,"shortDescription"), longDescription: j(p,"longDescription"),
+              coverImage: await extractBlobRef(j(p,"coverImage"), row.did),
+              logo:       await extractBlobRef(j(p,"logo"),       row.did),
+              objectives: arr(p,"objectives"),
+              country: s(p,"country"), website: s(p,"website"),
+              visibility: s(p,"visibility"), startDate: s(p,"startDate"),
+              createdAt: s(p,"createdAt"),
+            },
           };
         }));
 
-        return { records, pageInfo: toPageInfo(page.cursor) };
+        return { data, pageInfo: toPageInfo(page.cursor, data.length) };
       },
     }),
-    layers: t.field({
+    layer: t.field({
       type: OrgLayerPageType,
       args: {
         cursor: t.arg.string(), limit: t.arg.int(),
         where: t.arg({ type: WhereInputRef, required: false }),
         sortBy: t.arg({ type: SortFieldEnum }), order: t.arg({ type: SortOrderEnum }),
       },
-      resolve: (_, args) => fetchCollectionPage("app.gainforest.organization.layer", args, (row) => {
+      resolve: (_, args) => fetchCollectionPage("app.gainforest.organization.layer", args, async (row) => {
         const p = payload(row);
         return {
-          meta: rowToMeta(row), name: s(p,"name"), type: s(p,"type"), uri: s(p,"uri"),
-          description: s(p,"description"), createdAt: s(p,"createdAt"),
+          metadata:    rowToMeta(row),
+          creatorInfo: await resolveCreatorInfo(row.did),
+          record: {
+            name: s(p,"name"), type: s(p,"type"), uri: s(p,"uri"),
+            description: s(p,"description"), createdAt: s(p,"createdAt"),
+          },
         };
       }),
     }),
-    defaultSites: t.field({
+    defaultSite: t.field({
       type: OrgDefaultSitePageType,
       args: {
         cursor: t.arg.string(), limit: t.arg.int(),
         where: t.arg({ type: WhereInputRef, required: false }),
         sortBy: t.arg({ type: SortFieldEnum }), order: t.arg({ type: SortOrderEnum }),
       },
-      resolve: (_, args) => fetchCollectionPage("app.gainforest.organization.defaultSite", args, (row) => {
+      resolve: (_, args) => fetchCollectionPage("app.gainforest.organization.defaultSite", args, async (row) => {
         const p = payload(row);
-        return { meta: rowToMeta(row), site: s(p,"site"), createdAt: s(p,"createdAt") };
+        return {
+          metadata:    rowToMeta(row),
+          creatorInfo: await resolveCreatorInfo(row.did),
+          record: { site: s(p,"site"), createdAt: s(p,"createdAt") },
+        };
       }),
     }),
     observations: t.field({ type: OrgObservationsNS, resolve: () => new OrgObservationsNS() }),

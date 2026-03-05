@@ -6,10 +6,10 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import {
-  CalendarClock,
-  Club,
-  Globe,
-  HandHeart,
+  CalendarClockIcon,
+  ClubIcon,
+  GlobeIcon,
+  HandHeartIcon,
   ImagePlusIcon,
 } from "lucide-react";
 import FileInput from "../../../../../../../components/ui/FileInput";
@@ -89,7 +89,7 @@ const Step1 = () => {
           </FormField>
           <div className="flex flex-col gap-2">
             <FormField
-              Icon={Club}
+              Icon={ClubIcon}
               label="Project Title"
               error={errors.projectName}
               showError={shouldShowValidationErrors}
@@ -112,7 +112,7 @@ const Step1 = () => {
               </InputGroup>
             </FormField>
             <FormField
-              Icon={CalendarClock}
+              Icon={CalendarClockIcon}
               label="Project Date Range"
               className="flex-1"
               error={errors.projectDateRange}
@@ -151,7 +151,7 @@ const Step1 = () => {
               </div>
             </FormField>
             <FormField
-              Icon={HandHeart}
+              Icon={HandHeartIcon}
               label="What kind of work are you doing?"
               className="flex-1"
               error={errors.workType}

@@ -28,6 +28,7 @@
 
 import { Effect } from "effect";
 import type { Layer } from "effect";
+import type { ValidationIssue } from "@gainforest/atproto-mutations-core";
 import {
   mutations,
   ok,
@@ -159,6 +160,117 @@ type AudioRecordingErrorCode =
   | "PDS_ERROR";
 
 // ---------------------------------------------------------------------------
+// Record serializer — strips non-JSON-safe class instances from mutation results
+// ---------------------------------------------------------------------------
+
+/**
+ * Recursively walks a mutation result value and replaces any BlobRef whose
+ * `.ref` is a CID class instance with a plain-object version that Next.js
+ * can serialize across the server→client action boundary.
+ *
+ * ATProto BlobRefs returned after a PDS write have the shape:
+ *   { $type: "blob", ref: <CID instance>, mimeType: string, size: number }
+ *
+ * The CID instance is a class from @atproto/lex-data — not JSON-safe.
+ * We convert it to { $link: "<cid string>" } which is the standard AT Protocol
+ * plain-object CID representation and is fully JSON-serializable.
+ */
+function serializeForClient(value: unknown): unknown {
+  if (value === null || value === undefined) return value;
+
+  // Detect a BlobRef: plain-object with $type:"blob" and a ref that has a toString
+  if (
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    (value as Record<string, unknown>)["$type"] === "blob"
+  ) {
+    const blob = value as Record<string, unknown>;
+    const ref = blob["ref"];
+    // CID instances have a toString() — convert to { $link: "..." }
+    const serializedRef =
+      ref != null && typeof ref === "object" && typeof (ref as { toString?: unknown }).toString === "function"
+        ? { $link: (ref as { toString(): string }).toString() }
+        : ref;
+    return {
+      $type: "blob",
+      ref: serializedRef,
+      mimeType: blob["mimeType"],
+      size: blob["size"],
+    };
+  }
+
+  if (Array.isArray(value)) return value.map(serializeForClient);
+
+  if (typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as object)) {
+      out[k] = serializeForClient(v);
+    }
+    return out;
+  }
+
+  return value;
+}
+
+// ---------------------------------------------------------------------------
+// Validation issue extractor
+// ---------------------------------------------------------------------------
+
+/**
+ * Pulls structured `ValidationIssue[]` out of the raw `cause` stored on a
+ * TaggedError. The cause is a `ValidationError` from `@atproto/lex-schema`,
+ * whose `.issues` array contains rich Issue subclass instances that each
+ * expose a `.toJSON()` method with structured constraint data.
+ *
+ * We avoid importing `@atproto/lex-schema` directly to keep the dependency
+ * surface clean — instead we duck-type the shape we expect.
+ */
+function extractValidationIssues(cause: unknown): ValidationIssue[] | undefined {
+  if (!cause || typeof cause !== "object") return undefined;
+
+  // ValidationError exposes `.issues: Issue[]`
+  const issues = (cause as { issues?: unknown }).issues;
+  if (!Array.isArray(issues) || issues.length === 0) return undefined;
+
+  const result: ValidationIssue[] = [];
+  for (const issue of issues) {
+    if (!issue || typeof issue !== "object") continue;
+
+    // Every Issue subclass has a .toJSON() that returns structured data
+    const json: Record<string, unknown> =
+      typeof (issue as { toJSON?: () => unknown }).toJSON === "function"
+        ? ((issue as { toJSON: () => unknown }).toJSON() as Record<string, unknown>)
+        : (issue as Record<string, unknown>);
+
+    const code = (json.code as ValidationIssue["code"]) ?? "custom";
+    const path = Array.isArray(json.path) ? (json.path as (string | number)[]) : [];
+    const message = typeof json.message === "string" ? json.message : String(issue);
+
+    result.push({
+      code,
+      path,
+      message,
+      minimum: typeof json.minimum === "number" ? json.minimum : undefined,
+      maximum: typeof json.maximum === "number" ? json.maximum : undefined,
+      type: typeof json.type === "string" ? json.type : undefined,
+      actual:
+        typeof json.actual === "number" || typeof json.actual === "string"
+          ? json.actual
+          : undefined,
+      expected: Array.isArray(json.expected) ? (json.expected as string[]) : undefined,
+      values: Array.isArray(json.values) ? json.values : undefined,
+      format: typeof json.format === "string" ? json.format : undefined,
+      key:
+        typeof json.key === "string" || typeof json.key === "number"
+          ? json.key
+          : undefined,
+    });
+  }
+
+  return result.length > 0 ? result : undefined;
+}
+
+// ---------------------------------------------------------------------------
 // Error mappers — Effect errors → MutationResult error codes
 // ---------------------------------------------------------------------------
 
@@ -185,7 +297,7 @@ function mapOrgInfoError(
     case "OrganizationInfoNotFoundError":
       return err("NOT_FOUND", `organization.info not found for repo: ${e.repo}`);
     case "OrganizationInfoValidationError":
-      return err("INVALID_RECORD", e.message);
+      return err("INVALID_RECORD", e.message, extractValidationIssues(e.cause));
     case "FileConstraintError":
       return err("FILE_CONSTRAINT", e.reason);
     case "BlobUploadError":
@@ -215,7 +327,7 @@ function mapClaimActivityError(
     case "ClaimActivityNotFoundError":
       return err("NOT_FOUND", `claim.activity not found at rkey: ${e.rkey}`);
     case "ClaimActivityValidationError":
-      return err("INVALID_RECORD", e.message);
+      return err("INVALID_RECORD", e.message, extractValidationIssues(e.cause));
     case "FileConstraintError":
       return err("FILE_CONSTRAINT", e.reason);
     case "BlobUploadError":
@@ -271,7 +383,7 @@ function mapCertifiedLocationError(
     case "CertifiedLocationIsDefaultError":
       return err("IS_DEFAULT", `Cannot delete the default site: ${e.uri}. Set a different default first.`);
     case "CertifiedLocationValidationError":
-      return err("INVALID_RECORD", e.message);
+      return err("INVALID_RECORD", e.message, extractValidationIssues(e.cause));
     case "GeoJsonValidationError":
       return err("INVALID_GEOJSON", e.message);
     case "GeoJsonProcessingError":
@@ -303,7 +415,7 @@ function mapDefaultSiteError(
     case "DefaultSiteLocationNotFoundError":
       return err("NOT_FOUND", `certified.location not found: ${e.locationUri}`);
     case "DefaultSiteValidationError":
-      return err("INVALID_RECORD", e.message);
+      return err("INVALID_RECORD", e.message, extractValidationIssues(e.cause));
     case "DefaultSitePdsError":
       return err("PDS_ERROR", e.message);
   }
@@ -327,7 +439,7 @@ function mapLayerError(
     case "LayerNotFoundError":
       return err("NOT_FOUND", `organization.layer not found at rkey: ${e.rkey}`);
     case "LayerValidationError":
-      return err("INVALID_RECORD", e.message);
+      return err("INVALID_RECORD", e.message, extractValidationIssues(e.cause));
     case "LayerPdsError":
       return err("PDS_ERROR", e.message);
   }
@@ -353,7 +465,7 @@ function mapAudioRecordingError(
     case "AudioRecordingNotFoundError":
       return err("NOT_FOUND", `organization.recordings.audio not found at rkey: ${e.rkey}`);
     case "AudioRecordingValidationError":
-      return err("INVALID_RECORD", e.message);
+      return err("INVALID_RECORD", e.message, extractValidationIssues(e.cause));
     case "FileConstraintError":
       return err("FILE_CONSTRAINT", e.reason);
     case "BlobUploadError":
@@ -379,7 +491,7 @@ export async function createOrganizationInfoAction(
 ): Promise<MutationResult<OrganizationInfoMutationResult, OrgInfoErrorCode>> {
   return Effect.runPromise(
     mutations.organization.info.create(input).pipe(
-      Effect.map((result) => ok(result)),
+      Effect.map((result) => ok(serializeForClient(result) as typeof result)),
       Effect.catchAll((e: OrgInfoEffectError) => Effect.succeed(mapOrgInfoError(e))),
       Effect.provide(agentLayer)
     )
@@ -392,7 +504,7 @@ export async function updateOrganizationInfoAction(
 ): Promise<MutationResult<OrganizationInfoMutationResult, OrgInfoErrorCode>> {
   return Effect.runPromise(
     mutations.organization.info.update(input).pipe(
-      Effect.map((result) => ok(result)),
+      Effect.map((result) => ok(serializeForClient(result) as typeof result)),
       Effect.catchAll((e: OrgInfoEffectError) => Effect.succeed(mapOrgInfoError(e))),
       Effect.provide(agentLayer)
     )
@@ -407,7 +519,7 @@ export async function upsertOrganizationInfoAction(
 > {
   return Effect.runPromise(
     mutations.organization.info.upsert(input).pipe(
-      Effect.map((result) => ok(result)),
+      Effect.map((result) => ok(serializeForClient(result) as typeof result)),
       Effect.catchAll((e: OrgInfoEffectError) => Effect.succeed(mapOrgInfoError(e))),
       Effect.provide(agentLayer)
     )
@@ -424,7 +536,7 @@ export async function setDefaultSiteAction(
 ): Promise<MutationResult<DefaultSiteMutationResult, DefaultSiteErrorCode>> {
   return Effect.runPromise(
     mutations.organization.defaultSite.set(input).pipe(
-      Effect.map((result) => ok(result)),
+      Effect.map((result) => ok(serializeForClient(result) as typeof result)),
       Effect.catchAll((e: DefaultSiteEffectError) => Effect.succeed(mapDefaultSiteError(e))),
       Effect.provide(agentLayer)
     )
@@ -441,7 +553,7 @@ export async function createLayerAction(
 ): Promise<MutationResult<LayerMutationResult, LayerErrorCode>> {
   return Effect.runPromise(
     mutations.organization.layer.create(input).pipe(
-      Effect.map((result) => ok(result)),
+      Effect.map((result) => ok(serializeForClient(result) as typeof result)),
       Effect.catchAll((e: LayerEffectError) => Effect.succeed(mapLayerError(e))),
       Effect.provide(agentLayer)
     )
@@ -454,7 +566,7 @@ export async function updateLayerAction(
 ): Promise<MutationResult<LayerMutationResult, LayerErrorCode>> {
   return Effect.runPromise(
     mutations.organization.layer.update(input).pipe(
-      Effect.map((result) => ok(result)),
+      Effect.map((result) => ok(serializeForClient(result) as typeof result)),
       Effect.catchAll((e: LayerEffectError) => Effect.succeed(mapLayerError(e))),
       Effect.provide(agentLayer)
     )
@@ -467,7 +579,7 @@ export async function upsertLayerAction(
 ): Promise<MutationResult<LayerMutationResult & { created: boolean }, LayerErrorCode>> {
   return Effect.runPromise(
     mutations.organization.layer.upsert(input).pipe(
-      Effect.map((result) => ok(result)),
+      Effect.map((result) => ok(serializeForClient(result) as typeof result)),
       Effect.catchAll((e: LayerEffectError) => Effect.succeed(mapLayerError(e))),
       Effect.provide(agentLayer)
     )
@@ -480,7 +592,7 @@ export async function deleteLayerAction(
 ): Promise<MutationResult<DeleteRecordResult, LayerErrorCode>> {
   return Effect.runPromise(
     mutations.organization.layer.delete(input).pipe(
-      Effect.map((result) => ok(result)),
+      Effect.map((result) => ok(serializeForClient(result) as typeof result)),
       Effect.catchAll((e: LayerEffectError) => Effect.succeed(mapLayerError(e))),
       Effect.provide(agentLayer)
     )
@@ -497,7 +609,7 @@ export async function createAudioRecordingAction(
 ): Promise<MutationResult<AudioRecordingMutationResult, AudioRecordingErrorCode>> {
   return Effect.runPromise(
     mutations.organization.recordings.audio.create(input).pipe(
-      Effect.map((result) => ok(result)),
+      Effect.map((result) => ok(serializeForClient(result) as typeof result)),
       Effect.catchAll((e: AudioRecordingEffectError) => Effect.succeed(mapAudioRecordingError(e))),
       Effect.provide(agentLayer)
     )
@@ -510,7 +622,7 @@ export async function updateAudioRecordingAction(
 ): Promise<MutationResult<AudioRecordingMutationResult, AudioRecordingErrorCode>> {
   return Effect.runPromise(
     mutations.organization.recordings.audio.update(input).pipe(
-      Effect.map((result) => ok(result)),
+      Effect.map((result) => ok(serializeForClient(result) as typeof result)),
       Effect.catchAll((e: AudioRecordingEffectError) => Effect.succeed(mapAudioRecordingError(e))),
       Effect.provide(agentLayer)
     )
@@ -523,7 +635,7 @@ export async function upsertAudioRecordingAction(
 ): Promise<MutationResult<AudioRecordingMutationResult & { created: boolean }, AudioRecordingErrorCode>> {
   return Effect.runPromise(
     mutations.organization.recordings.audio.upsert(input).pipe(
-      Effect.map((result) => ok(result)),
+      Effect.map((result) => ok(serializeForClient(result) as typeof result)),
       Effect.catchAll((e: AudioRecordingEffectError) => Effect.succeed(mapAudioRecordingError(e))),
       Effect.provide(agentLayer)
     )
@@ -536,7 +648,7 @@ export async function deleteAudioRecordingAction(
 ): Promise<MutationResult<DeleteRecordResult, AudioRecordingErrorCode>> {
   return Effect.runPromise(
     mutations.organization.recordings.audio.delete(input).pipe(
-      Effect.map((result) => ok(result)),
+      Effect.map((result) => ok(serializeForClient(result) as typeof result)),
       Effect.catchAll((e: AudioRecordingEffectError) => Effect.succeed(mapAudioRecordingError(e))),
       Effect.provide(agentLayer)
     )
@@ -553,7 +665,7 @@ export async function createClaimActivityAction(
 ): Promise<MutationResult<ClaimActivityMutationResult, ClaimActivityErrorCode>> {
   return Effect.runPromise(
     mutations.claim.activity.create(input).pipe(
-      Effect.map((result) => ok(result)),
+      Effect.map((result) => ok(serializeForClient(result) as typeof result)),
       Effect.catchAll((e: ClaimActivityEffectError) =>
         Effect.succeed(mapClaimActivityError(e))
       ),
@@ -568,7 +680,7 @@ export async function updateClaimActivityAction(
 ): Promise<MutationResult<ClaimActivityMutationResult, ClaimActivityErrorCode>> {
   return Effect.runPromise(
     mutations.claim.activity.update(input).pipe(
-      Effect.map((result) => ok(result)),
+      Effect.map((result) => ok(serializeForClient(result) as typeof result)),
       Effect.catchAll((e: ClaimActivityEffectError) =>
         Effect.succeed(mapClaimActivityError(e))
       ),
@@ -585,7 +697,7 @@ export async function upsertClaimActivityAction(
 > {
   return Effect.runPromise(
     mutations.claim.activity.upsert(input).pipe(
-      Effect.map((result) => ok(result)),
+      Effect.map((result) => ok(serializeForClient(result) as typeof result)),
       Effect.catchAll((e: ClaimActivityEffectError) =>
         Effect.succeed(mapClaimActivityError(e))
       ),
@@ -600,7 +712,7 @@ export async function deleteClaimActivityAction(
 ): Promise<MutationResult<DeleteRecordResult, ClaimActivityErrorCode>> {
   return Effect.runPromise(
     mutations.claim.activity.delete(input).pipe(
-      Effect.map((result) => ok(result)),
+      Effect.map((result) => ok(serializeForClient(result) as typeof result)),
       Effect.catchAll((e: ClaimActivityEffectError) =>
         Effect.succeed(mapClaimActivityError(e))
       ),
@@ -619,7 +731,7 @@ export async function createCertifiedLocationAction(
 ): Promise<MutationResult<CertifiedLocationMutationResult, CertifiedLocationErrorCode>> {
   return Effect.runPromise(
     mutations.certified.location.create(input).pipe(
-      Effect.map((result) => ok(result)),
+      Effect.map((result) => ok(serializeForClient(result) as typeof result)),
       Effect.catchAll((e: CertifiedLocationEffectError) => Effect.succeed(mapCertifiedLocationError(e))),
       Effect.provide(agentLayer)
     )
@@ -632,7 +744,7 @@ export async function updateCertifiedLocationAction(
 ): Promise<MutationResult<CertifiedLocationMutationResult, CertifiedLocationErrorCode>> {
   return Effect.runPromise(
     mutations.certified.location.update(input).pipe(
-      Effect.map((result) => ok(result)),
+      Effect.map((result) => ok(serializeForClient(result) as typeof result)),
       Effect.catchAll((e: CertifiedLocationEffectError) => Effect.succeed(mapCertifiedLocationError(e))),
       Effect.provide(agentLayer)
     )
@@ -645,7 +757,7 @@ export async function upsertCertifiedLocationAction(
 ): Promise<MutationResult<CertifiedLocationMutationResult & { created: boolean }, CertifiedLocationErrorCode>> {
   return Effect.runPromise(
     mutations.certified.location.upsert(input).pipe(
-      Effect.map((result) => ok(result)),
+      Effect.map((result) => ok(serializeForClient(result) as typeof result)),
       Effect.catchAll((e: CertifiedLocationEffectError) => Effect.succeed(mapCertifiedLocationError(e))),
       Effect.provide(agentLayer)
     )
@@ -658,7 +770,7 @@ export async function deleteCertifiedLocationAction(
 ): Promise<MutationResult<DeleteRecordResult, CertifiedLocationErrorCode>> {
   return Effect.runPromise(
     mutations.certified.location.delete(input).pipe(
-      Effect.map((result) => ok(result)),
+      Effect.map((result) => ok(serializeForClient(result) as typeof result)),
       Effect.catchAll((e: CertifiedLocationEffectError) => Effect.succeed(mapCertifiedLocationError(e))),
       Effect.provide(agentLayer)
     )
@@ -675,7 +787,7 @@ export async function uploadBlobAction(
 ): Promise<MutationResult<UploadBlobResult, BlobErrorCode>> {
   return Effect.runPromise(
     mutations.blob.upload(input).pipe(
-      Effect.map((result) => ok(result)),
+      Effect.map((result) => ok(serializeForClient(result) as typeof result)),
       Effect.catchAll((e: BlobEffectError) => Effect.succeed(mapBlobError(e))),
       Effect.provide(agentLayer)
     )

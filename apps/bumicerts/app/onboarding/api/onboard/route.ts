@@ -29,14 +29,19 @@
 import { NextRequest, after } from "next/server";
 import { z } from "zod";
 import {
-  allowedPDSDomains,
-  defaultPdsDomain,
-  type AllowedPDSDomain,
-} from "@/lib/config/gainforest-sdk";
-import { gainforestSdk } from "@/lib/config/gainforest-sdk.server";
+  signupPDSDomains,
+  defaultSignupPdsDomain,
+} from "@/lib/config/pds";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { checkRateLimit, recordRateLimitAttempt, getClientIp, RATE_LIMITS } from "@/lib/rate-limit";
 import { organizationInfoSchema } from "./schema";
+import { plainTextToLinearDocument } from "@/lib/utils/linearDocument";
+import { Effect } from "effect";
+import {
+  mutations,
+  makeCredentialAgentLayer,
+  toSerializableFile,
+} from "@gainforest/atproto-mutations-next";
 
 const VALID_OBJECTIVES = ["Conservation", "Research", "Education", "Community", "Other"] as const;
 type Objective = (typeof VALID_OBJECTIVES)[number];
@@ -51,9 +56,9 @@ const requestSchema = z.object({
     .trim()
     .toLowerCase()
     .optional()
-    .default(defaultPdsDomain)
+    .default(defaultSignupPdsDomain)
     .refine(
-      (value) => (allowedPDSDomains as string[]).includes(value),
+      (value) => ([...signupPDSDomains] as string[]).includes(value),
       { message: "Unsupported pdsDomain" }
     ),
   displayName: z.string().min(1).max(100),
@@ -86,21 +91,6 @@ async function fileToBase64(file: File): Promise<{ name: string; type: string; d
 }
 
 
-/**
- * Convert a plain text string to a LinearDocument format expected by the SDK.
- * Splits by double newlines into separate text blocks for paragraph separation.
- */
-function plainTextToLinearDocument(text: string) {
-  const paragraphs = text.split(/\n\n+/).filter(p => p.trim().length > 0);
-  return {
-    blocks: paragraphs.map(paragraph => ({
-      block: {
-        $type: "pub.leaflet.blocks.text" as const,
-        plaintext: paragraph.trim(),
-      },
-    })),
-  };
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -144,7 +134,7 @@ export async function POST(req: NextRequest) {
       password: formData.get("password") as string,
       handle: formData.get("handle") as string,
       inviteCode: formData.get("inviteCode") as string,
-      pdsDomain: (formData.get("pdsDomain") as string) || defaultPdsDomain,
+      pdsDomain: (formData.get("pdsDomain") as string) || defaultSignupPdsDomain,
       displayName: formData.get("displayName") as string,
       shortDescription: formData.get("shortDescription") as string,
       longDescription: formData.get("longDescription") as string,
@@ -307,31 +297,40 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Step 5: Initialize organization using SDK's onboard method
+    // Step 5: Initialize organization using mutations package
     let organizationInitialized = false;
     try {
-      const apiCaller = gainforestSdk.getServerCaller();
-      await apiCaller.miscellaneous.onboard({
-        credentials: {
-          did,
-          handle: fullHandle,
-          accessJwt,
-          refreshJwt,
-        },
-        pdsDomain: pdsDomain as AllowedPDSDomain,
-        info: {
-          displayName: orgInfo.displayName,
-          shortDescription: orgInfo.shortDescription,
-          longDescription: plainTextToLinearDocument(orgInfo.longDescription),
-          objectives: parsed.data.objectives,
-          country: orgInfo.country,
-          visibility: "Public",
-          website: orgInfo.website || undefined,
-          // SDK expects full ISO datetime, convert date-only to datetime
-          startDate: orgInfo.startDate ? `${orgInfo.startDate}T00:00:00.000Z` : undefined,
-        },
-        uploads: logoUpload ? { logo: logoUpload } : undefined,
+      // Create a credential-based agent layer for the new account
+      const agentLayer = makeCredentialAgentLayer({
+        service: `https://${pdsDomain}`,
+        identifier: did,
+        password: password, // Use the password directly for credential auth
       });
+
+      // Prepare logo as SerializableFile if provided
+      let logoInput: Awaited<ReturnType<typeof toSerializableFile>> | undefined;
+      if (logoFile && logoFile.size > 0) {
+        logoInput = await toSerializableFile(logoFile);
+      }
+
+      // Create organization info record using Effect-based API
+      const program = mutations.organization.info.upsert({
+        displayName: orgInfo.displayName,
+        shortDescription: { text: orgInfo.shortDescription },
+        longDescription: plainTextToLinearDocument(orgInfo.longDescription),
+        objectives: parsed.data.objectives,
+        country: orgInfo.country,
+        visibility: "Public",
+        website: orgInfo.website as `${string}:${string}` | undefined,
+        startDate: orgInfo.startDate ? `${orgInfo.startDate}T00:00:00.000Z` as `${string}-${string}-${string}T${string}:${string}:${string}Z` : undefined,
+        logo: logoInput ? { image: logoInput } : undefined,
+      });
+
+      // Run the Effect with the credential layer
+      await Effect.runPromise(
+        program.pipe(Effect.provide(agentLayer))
+      );
+
       organizationInitialized = true;
     } catch (error) {
       // If org creation fails, log it but don't fail the request

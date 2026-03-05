@@ -3,11 +3,11 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useOnboardingStore } from "../store";
-import { ArrowLeft, ArrowRight, Loader2, Mail, RefreshCw, KeyRound } from "lucide-react";
+import { ArrowLeftIcon, ArrowRightIcon, Loader2Icon, MailIcon, RefreshCwIcon, KeyRoundIcon } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { links } from "@/lib/links";
-import { defaultPdsDomain } from "@/lib/config/gainforest-sdk";
+import { defaultPdsDomain } from "@/lib/config/pds";
 
 type Phase = "email" | "code";
 
@@ -233,7 +233,7 @@ export function StepEmail() {
                 disabled={isLoading}
                 className="text-sm text-primary hover:text-foreground inline-flex items-center gap-1.5 underline underline-offset-2"
               >
-                <KeyRound className="w-3.5 h-3.5" />
+                <KeyRoundIcon className="w-3.5 h-3.5" />
                 Already have a code?
               </button>
             </div>
@@ -242,7 +242,7 @@ export function StepEmail() {
           {/* Navigation */}
           <div className="w-full flex justify-between mt-2">
             <Button onClick={prevStep} variant="ghost" disabled={isLoading}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
+              <ArrowLeftIcon className="mr-2" />
               Back
             </Button>
             <Button
@@ -251,7 +251,7 @@ export function StepEmail() {
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader2Icon className="mr-2 animate-spin" />
                   Sending...
                 </>
               ) : countdown > 0 ? (
@@ -260,7 +260,7 @@ export function StepEmail() {
                 </>
               ) : (
                 <>
-                  <Mail className="w-4 h-4 mr-2" />
+                  <MailIcon className="mr-2" />
                   Send Code
                 </>
               )}
@@ -335,7 +335,7 @@ export function StepEmail() {
               disabled={isLoading || countdown > 0}
               className="text-primary hover:text-primary/80 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
             >
-              <RefreshCw className="w-3 h-3" />
+              <RefreshCwIcon className="w-3 h-3" />
               {countdown > 0
                 ? `Resend in ${formatCountdown(countdown)}`
                 : hasExistingCode
@@ -358,19 +358,19 @@ export function StepEmail() {
         {/* Navigation */}
         <div className="w-full flex justify-between mt-2">
           <Button onClick={handleChangeEmail} variant="ghost" disabled={isLoading}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeftIcon className="mr-2" />
             Back
           </Button>
           <Button onClick={handleVerifyCode} disabled={!isValidCode || isLoading}>
             {isLoading ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2Icon className="mr-2 animate-spin" />
                 Verifying...
               </>
             ) : (
               <>
                 Verify
-                <ArrowRight className="w-4 h-4 ml-2" />
+                <ArrowRightIcon className="ml-2" />
               </>
             )}
           </Button>

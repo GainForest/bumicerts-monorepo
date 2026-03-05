@@ -6,23 +6,19 @@ import {
   ModalHeader,
   ModalTitle,
 } from "@/components/ui/modal/modal";
-import { getBlobUrl } from "gainforest-sdk/utilities/atproto";
-import { BlobRef } from "gainforest-sdk/zod";
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useModal } from "@/components/ui/modal/context";
-import { allowedPDSDomains } from "@/lib/config/gainforest-sdk";
 
-const isBlobRef = (value: unknown): value is BlobRef => {
-  return Boolean(value && typeof value === "object" && "ref" in value);
-};
-
+/**
+ * Fetch a remote image URL and return it as a File object.
+ * Used when `initialImage` is a pre-resolved blob URI from the indexer.
+ */
 const getFileFromURL = async (url: string) => {
   const response = await fetch(url);
   const blob = await response.blob();
-
   const filetype = blob.type.split("/")[1];
   return new File([blob], `image.${filetype}`, { type: blob.type });
 };
@@ -32,59 +28,61 @@ export const ImageEditorModalId = "image-editor-modal";
 export const ImageEditorModal = ({
   title,
   description,
+  /**
+   * The initial image to display.
+   *
+   * - `File`   — a locally-selected file (e.g. during onboarding)
+   * - `string` — a pre-resolved blob URI returned by the GraphQL API (indexer
+   *              always resolves blobs to URIs, so this is safe to fetch)
+   * - `undefined` — no initial image
+   */
   initialImage,
-  did,
   onImageChange,
 }: {
   title: string;
   description: string;
-  initialImage: File | BlobRef | undefined;
-  did?: string;
-  onImageChange: (image: File | BlobRef | undefined) => void;
+  initialImage: File | string | undefined;
+  onImageChange: (image: File | undefined) => void;
 }) => {
   const { popModal, stack, hide } = useModal();
-  const initialBlobImageURL =
-    isBlobRef(initialImage) && did
-      ? getBlobUrl(did, initialImage, allowedPDSDomains[0])
-      : null;
-  const [isInitialBlobImageLoading, setIsInitialBlobImageLoading] = useState(
-    Boolean(initialBlobImageURL)
-  );
-  const { mutate: getInitialBlobImage } = useMutation({
-    mutationKey: [initialBlobImageURL],
+
+  const initialUri = typeof initialImage === "string" ? initialImage : null;
+  const initialFile = initialImage instanceof File ? initialImage : undefined;
+
+  const [isInitialUriLoading, setIsInitialUriLoading] = useState(Boolean(initialUri));
+  const [image, setImage] = useState<File | undefined>(initialFile);
+
+  const { mutate: fetchFromUri } = useMutation({
+    mutationKey: ["image-editor-fetch", initialUri],
     mutationFn: async () => {
-      if (!initialBlobImageURL) return null;
-      return await getFileFromURL(initialBlobImageURL);
+      if (!initialUri) return null;
+      return getFileFromURL(initialUri);
     },
     onSuccess: (data) => {
       setImage(data ?? undefined);
-      setIsInitialBlobImageLoading(false);
+      setIsInitialUriLoading(false);
     },
     onError: (error) => {
-      console.error(error);
-      setIsInitialBlobImageLoading(false);
+      console.error("[ImageEditorModal] Failed to load initial image from URI:", error);
+      setIsInitialUriLoading(false);
     },
   });
-  const [image, setImage] = useState<File | undefined>(
-    isBlobRef(initialImage) ? undefined : initialImage
-  );
 
   useEffect(() => {
-    if (initialBlobImageURL) {
-      getInitialBlobImage();
+    if (initialUri) {
+      fetchFromUri();
     }
-  }, [initialBlobImageURL, getInitialBlobImage]);
+  }, [initialUri, fetchFromUri]);
 
   const handleDone = () => {
     onImageChange(image);
     if (stack.length === 1) {
-      hide().then(() => {
-        popModal();
-      });
+      hide().then(() => popModal());
     } else {
       popModal();
     }
   };
+
   return (
     <ModalContent>
       <ModalHeader>
@@ -92,7 +90,7 @@ export const ImageEditorModal = ({
         <ModalDescription>{description}</ModalDescription>
       </ModalHeader>
       <div className="flex flex-col gap-4 mt-4">
-        {isInitialBlobImageLoading ? (
+        {isInitialUriLoading ? (
           <div className="w-full h-40 rounded-lg bg-muted flex flex-col gap-1 items-center justify-center">
             <Loader2Icon className="size-5 animate-spin" />
             <span className="text-sm text-muted-foreground">Loading...</span>
@@ -107,20 +105,12 @@ export const ImageEditorModal = ({
             ]}
             maxSizeInMB={5}
             value={image}
-            onFileChange={(file) => {
-              setImage(file ?? undefined);
-            }}
+            onFileChange={(file) => setImage(file ?? undefined)}
           />
         )}
       </div>
       <ModalFooter>
-        <Button
-          onClick={() => {
-            handleDone();
-          }}
-        >
-          Done
-        </Button>
+        <Button onClick={handleDone}>Done</Button>
       </ModalFooter>
     </ModalContent>
   );

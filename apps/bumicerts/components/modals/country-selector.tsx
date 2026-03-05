@@ -67,22 +67,26 @@ const CountrySelectorModal = ({
         value={searchText}
         onChange={(e) => setSearchText(e.target.value)}
       />
-      <div className="w-full h-full max-h-[max(45vh,500px)] overflow-y-auto mt-2">
-        <div className="grid grid-cols-2 gap-2">
-          {filteredCountries.map((c) => {
-            const isSelected = c[0] === countryCode;
-            return (
-              <CountryButton
-                key={c[0]}
-                ref={isSelected ? selectedCountryRef : null}
-                countryCode={c[0]}
-                countryData={c[1]}
-                selectedCountry={countryCode}
-                onClick={() => setCountryCode(c[0])}
-              />
-            );
-          })}
+      <div className="relative mt-2">
+        <div className="w-full max-h-[max(45vh,500px)] overflow-y-auto rounded-xl">
+          <div className="grid grid-cols-2 gap-2 my-4">
+            {filteredCountries.map((c) => {
+              const isSelected = c[0] === countryCode;
+              return (
+                <CountryButton
+                  key={c[0]}
+                  ref={isSelected ? selectedCountryRef : null}
+                  countryCode={c[0]}
+                  countryData={c[1]}
+                  selectedCountry={countryCode}
+                  onClick={() => setCountryCode(c[0])}
+                />
+              );
+            })}
+          </div>
         </div>
+        <div className="absolute top-0 h-[4%] bg-linear-to-b from-background to-transparent w-full z-5 rounded-t-xl"></div>
+        <div className="absolute bottom-0 h-[4%] bg-linear-to-t from-foreground/10 to-transparent w-full z-5 rounded-b-xl"></div>
       </div>
 
       <ModalFooter className="mt-4 flex justify-end">
@@ -106,9 +110,9 @@ const CountryButton = forwardRef<
       ref={ref}
       variant={"secondary"}
       className={cn(
-        "flex flex-col h-auto items-start justify-between gap-0 px-2 py-1 text-wrap border-2 border-transparent",
+        "flex flex-col h-auto items-start justify-between gap-0 px-2 py-1 text-wrap border-2 border-transparent rounded-xl bg-background shadow-none",
         countryCode === selectedCountry &&
-          "border-primary text-primary bg-primary/10 hover:bg-primary/15"
+        "border-primary text-primary bg-primary/10 hover:bg-primary/15"
       )}
       onClick={onClick}
     >

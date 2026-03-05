@@ -3,10 +3,6 @@
  */
 
 export * as activity from './claim/activity.ts'
-export * as attachment from './claim/attachment.ts'
-export * as collection from './claim/collection.ts'
-export * as contributionDetails from './claim/contributionDetails.ts'
+export * as contribution from './claim/contribution.ts'
 export * as contributorInformation from './claim/contributorInformation.ts'
-export * as evaluation from './claim/evaluation.ts'
-export * as measurement from './claim/measurement.ts'
 export * as rights from './claim/rights.ts'

@@ -2,11 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRightIcon, LoaderIcon } from "lucide-react";
+import { ArrowRightIcon, LoaderIcon, ChevronDownIcon, CheckIcon } from "lucide-react";
 import { authorize } from "@/components/actions/oauth";
-import { allowedPDSDomains } from "@/lib/config/gainforest-sdk";
+import { loginPDSDomains, isValidPdsDomain } from "@/lib/config/pds";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -27,27 +29,94 @@ function PillToggle({
     <div className="flex w-full rounded-full bg-muted p-1">
       <button
         type="button"
-        onClick={() => onChange("handle")}
-        className={`flex-1 rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
-          active === "handle"
-            ? "bg-background text-foreground shadow-sm"
-            : "text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        Handle
-      </button>
-      <button
-        type="button"
         onClick={() => onChange("email")}
-        className={`flex-1 rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
+        className={cn(
+          "flex-1 rounded-full px-4 py-1.5 text-sm font-medium transition-all",
           active === "email"
             ? "bg-background text-foreground shadow-sm"
             : "text-muted-foreground hover:text-foreground"
-        }`}
+        )}
       >
         Email
       </button>
+      <button
+        type="button"
+        onClick={() => onChange("handle")}
+        className={cn(
+          "flex-1 rounded-full px-4 py-1.5 text-sm font-medium transition-all",
+          active === "handle"
+            ? "bg-background text-foreground shadow-sm"
+            : "text-muted-foreground hover:text-foreground"
+        )}
+      >
+        Handle
+      </button>
     </div>
+  );
+}
+
+// ─── PDS Domain Dropdown ──────────────────────────────────────────────────────
+
+const CUSTOM_SENTINEL = "__custom__";
+
+function PdsDomainDropdown({
+  value,
+  customValue,
+  onChange,
+  onCustomChange,
+}: {
+  value: string;
+  customValue: string;
+  onChange: (domain: string) => void;
+  onCustomChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const isCustom = value === CUSTOM_SENTINEL;
+
+  const displayLabel = isCustom ? (customValue || "custom PDS") : value;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="flex items-center gap-1 h-9 px-2 bg-muted border-y border-r border-input rounded-r-md text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0 max-w-[160px]"
+        >
+          <span className="truncate font-mono">.{displayLabel}</span>
+          <ChevronDownIcon className={cn("w-3 h-3 shrink-0 transition-transform", open && "rotate-180")} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-48 p-1">
+        {loginPDSDomains.map((domain) => (
+          <button
+            key={domain}
+            type="button"
+            onClick={() => { onChange(domain); setOpen(false); }}
+            className={cn(
+              "w-full text-left flex items-center justify-between px-3 py-2 text-xs rounded-sm hover:bg-accent transition-colors",
+              value === domain && "bg-accent/60"
+            )}
+          >
+            <span className="font-mono">{domain}</span>
+            {value === domain && <CheckIcon className="w-3 h-3 shrink-0 text-primary" />}
+          </button>
+        ))}
+
+        <div className="h-px bg-border mx-2 my-1" />
+
+        <button
+          type="button"
+          onClick={() => { onChange(CUSTOM_SENTINEL); setOpen(false); }}
+          className={cn(
+            "w-full text-left flex items-center justify-between px-3 py-2 text-xs rounded-sm hover:bg-accent transition-colors",
+            isCustom && "bg-accent/60"
+          )}
+        >
+          <span className="text-muted-foreground">Custom PDS…</span>
+          {isCustom && <CheckIcon className="w-3 h-3 shrink-0 text-primary" />}
+        </button>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -60,7 +129,6 @@ function EmailForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsRedirecting(true);
-    // Safety net: if navigation doesn't happen within 10s, reset
     setTimeout(() => setIsRedirecting(false), 10_000);
     const url = email
       ? `/api/oauth/epds/login?email=${encodeURIComponent(email)}`
@@ -71,11 +139,11 @@ function EmailForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-1.5">
-        <label htmlFor="email" className="text-sm font-medium">
+        <label htmlFor="login-email" className="text-sm font-medium">
           Email
         </label>
         <Input
-          id="email"
+          id="login-email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -85,20 +153,20 @@ function EmailForm() {
           disabled={isRedirecting}
         />
         <p className="text-xs text-muted-foreground">
-          Enter your email for a verification code
+          We&apos;ll send you a verification code
         </p>
       </div>
 
       <Button type="submit" disabled={isRedirecting || !email.trim()} className="w-full">
         {isRedirecting ? (
           <>
-            <LoaderIcon className="h-4 w-4 animate-spin" />
+            <LoaderIcon className="animate-spin" />
             Redirecting…
           </>
         ) : (
           <>
             Continue
-            <ArrowRightIcon className="h-4 w-4" />
+            <ArrowRightIcon />
           </>
         )}
       </Button>
@@ -110,26 +178,47 @@ function EmailForm() {
 
 function HandleForm() {
   const [handle, setHandle] = useState("");
+  const [selectedDomain, setSelectedDomain] = useState<string>(loginPDSDomains[0]);
+  const [customDomain, setCustomDomain] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const domain = allowedPDSDomains[0];
-  const handleWithDomain = handle.includes(".") ? handle : handle ? `${handle}.${domain}` : "";
+  const isCustom = selectedDomain === CUSTOM_SENTINEL;
+  // The effective PDS domain — either a preset or the custom input
+  const effectiveDomain = isCustom ? customDomain.trim() : selectedDomain;
+
+  // If the user typed a full handle (contains "."), use it as-is.
+  // Otherwise, append the effective PDS domain.
+  const fullHandle = handle.includes(".")
+    ? handle.trim()
+    : handle.trim() && effectiveDomain
+    ? `${handle.trim()}.${effectiveDomain}`
+    : "";
+
+  const customDomainError =
+    isCustom && customDomain && !isValidPdsDomain(customDomain)
+      ? "Enter a valid PDS domain (e.g. pds.example.com)"
+      : null;
 
   const handleError =
     handle && /[^a-zA-Z0-9\-.]/.test(handle)
-      ? "Only letters, numbers, and hyphens are allowed."
-      : handle && (handle.match(/\./g) ?? []).length > 2
-      ? "Handle cannot contain more than two periods."
+      ? "Only letters, numbers, hyphens and dots are allowed."
       : null;
+
+  const canSubmit =
+    handle.trim() &&
+    !handleError &&
+    effectiveDomain &&
+    !customDomainError &&
+    (!isCustom || isValidPdsDomain(customDomain));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!handle.trim()) return;
+    if (!canSubmit) return;
     setError(null);
     startTransition(async () => {
       try {
-        const { authorizationUrl } = await authorize(handle.trim());
+        const { authorizationUrl } = await authorize(fullHandle || handle.trim());
         window.location.href = authorizationUrl;
       } catch (err) {
         setError("Unable to start sign-in. Please try again.");
@@ -141,49 +230,79 @@ function HandleForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-1.5">
-        <label htmlFor="handle" className="text-sm font-medium">
+        <label htmlFor="login-handle" className="text-sm font-medium">
           Username
         </label>
-        <div className="flex rounded-md overflow-hidden border border-input">
+        <div className="flex rounded-md border border-input">
           <Input
-            id="handle"
+            id="login-handle"
             type="text"
             value={handle}
-            onChange={(e) => setHandle(e.target.value)}
+            onChange={(e) => { setHandle(e.target.value); setError(null); }}
             placeholder="your-handle"
             autoComplete="username"
             autoFocus
             disabled={isPending}
-            className="flex-1 rounded-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+            className="flex-1 rounded-l-md rounded-r-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
           />
-          <span className="flex items-center px-3 text-xs text-muted-foreground bg-muted border-l border-input shrink-0">
-            .{domain}
-          </span>
+          <PdsDomainDropdown
+            value={selectedDomain}
+            customValue={customDomain}
+            onChange={setSelectedDomain}
+            onCustomChange={setCustomDomain}
+          />
         </div>
 
+        {/* Custom PDS input — revealed when "Custom PDS…" is selected */}
+        <AnimatePresence>
+          {isCustom && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.15 }}
+            >
+              <Input
+                type="text"
+                value={customDomain}
+                onChange={(e) => setCustomDomain(e.target.value.toLowerCase().trim())}
+                placeholder="pds.example.com"
+                autoFocus
+                disabled={isPending}
+                className={cn(
+                  "mt-1.5 h-8 text-xs font-mono",
+                  customDomainError && "border-destructive focus-visible:ring-destructive/50"
+                )}
+              />
+              {customDomainError && (
+                <p className="text-xs text-destructive mt-1">{customDomainError}</p>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Handle preview / error */}
         <AnimatePresence mode="wait">
           {handleError ? (
             <motion.p
-              key="error"
+              key="herr"
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.15 }}
               className="text-xs text-destructive"
             >
               {handleError}
             </motion.p>
-          ) : handleWithDomain ? (
+          ) : fullHandle ? (
             <motion.p
-              key="preview"
+              key="hpreview"
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.15 }}
               className="text-xs text-muted-foreground"
             >
               Signing in as{" "}
-              <span className="font-mono">{handleWithDomain}</span>
+              <span className="font-mono text-foreground">{fullHandle}</span>
             </motion.p>
           ) : null}
         </AnimatePresence>
@@ -204,18 +323,18 @@ function HandleForm() {
 
       <Button
         type="submit"
-        disabled={!handle.trim() || !!handleError || isPending}
+        disabled={!canSubmit || isPending}
         className="w-full"
       >
         {isPending ? (
           <>
-            <LoaderIcon className="h-4 w-4 animate-spin" />
+            <LoaderIcon className="animate-spin" />
             Redirecting…
           </>
         ) : (
           <>
             Continue
-            <ArrowRightIcon className="h-4 w-4" />
+            <ArrowRightIcon />
           </>
         )}
       </Button>
@@ -228,8 +347,6 @@ function HandleForm() {
 export function LoginModal({ onClose }: LoginModalProps) {
   const [activeTab, setActiveTab] = useState<"handle" | "email">("email");
   const hasEpds = !!process.env.NEXT_PUBLIC_EPDS_URL;
-
-  const domain = allowedPDSDomains[0];
 
   return (
     <motion.div
@@ -259,48 +376,38 @@ export function LoginModal({ onClose }: LoginModalProps) {
           Welcome back
         </h2>
         <p className="text-sm text-muted-foreground">
-          {hasEpds && activeTab === "email" ? (
-            "Sign in with your email"
-          ) : (
-            <>
-              Sign in with your{" "}
-              <span className="text-foreground font-medium">{domain}</span> account
-            </>
-          )}
+          Sign in to your ATProto account
         </p>
       </div>
 
-      {/* TODO: Re-enable handle login toggle when ready */}
-      {/* {hasEpds && (
-        <div className="mb-6">
-          <PillToggle active={activeTab} onChange={setActiveTab} />
-        </div>
-      )} */}
+      {/* Tab toggle — always show since both methods are available */}
+      <div className="mb-6">
+        <PillToggle active={activeTab} onChange={setActiveTab} />
+      </div>
 
       {/* Form */}
       <AnimatePresence mode="wait">
-        {/* TODO: Re-enable handle login when ready */}
-        {/* {hasEpds && activeTab === "email" ? ( */}
+        {hasEpds && activeTab === "email" ? (
           <motion.div
             key="email"
-            initial={{ opacity: 0, x: 8 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -8 }}
-            transition={{ duration: 0.2 }}
-          >
-            <EmailForm />
-          </motion.div>
-        {/* ) : (
-          <motion.div
-            key="handle"
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 8 }}
             transition={{ duration: 0.2 }}
           >
+            <EmailForm />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="handle"
+            initial={{ opacity: 0, x: 8 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -8 }}
+            transition={{ duration: 0.2 }}
+          >
             <HandleForm />
           </motion.div>
-        )} */}
+        )}
       </AnimatePresence>
 
       <div className="flex items-center gap-3 my-4">

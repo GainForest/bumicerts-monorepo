@@ -29,8 +29,12 @@ jobs:
       - name: Generate types
         run: bun run gen:types
 
-      - name: Build packages (dependencies)
-        run: bun run build
+      - name: Build library packages (sequential to respect dependency order)
+        run: |
+          bun run --filter '@gainforest/internal-utils' build
+          bun run --filter '@gainforest/atproto-mutations-core' build
+          bun run --filter '@gainforest/atproto-auth-next' build
+          bun run --filter '@gainforest/atproto-mutations-next' build
 
       - name: Typecheck bumicerts
         run: bun run typecheck
@@ -40,5 +44,4 @@ jobs:
         run: bun run build
         working-directory: apps/bumicerts
         env:
-          # Add any required env vars for build
           NEXT_PUBLIC_APP_URL: https://bumicerts.example.com

@@ -17,7 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { DraftBumicertResponse } from "@/app/api/supabase/drafts/bumicert/type";
 import { cheapHash } from "@/lib/cheapHash";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangleIcon } from "lucide-react";
 
 const CreateBumicertHydrationErrorModalId = "create-bumicert-hydration-error";
 const CreateBumicertHydrationErrorModalContent = () => {
@@ -67,7 +67,7 @@ const CoverImageWarningBanner = ({
       <div className="relative bg-amber-50 dark:bg-amber-950 border-2 border-amber-300 dark:border-amber-700 rounded-xl p-6 shadow-2xl max-w-lg w-full animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-start gap-4">
           <div className="flex-shrink-0 p-2 bg-amber-100 dark:bg-amber-900 rounded-full">
-            <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+            <AlertTriangleIcon className="h-6 w-6 text-amber-600 dark:text-amber-400" />
           </div>
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-amber-800 dark:text-amber-200">

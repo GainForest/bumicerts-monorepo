@@ -1,5 +1,5 @@
 "use client";
-import { ClipboardIcon, FolderUpIcon, FileIcon, Trash2 } from "lucide-react";
+import { ClipboardIcon, FolderUpIcon, FileIcon, Trash2Icon } from "lucide-react";
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -306,7 +306,7 @@ const FileInput = ({
             className="absolute top-2 right-2 px-1.5 z-10 h-5 flex items-center justify-center gap-1 bg-background/50 hover:bg-red-100 dark:hover:bg-red-900 backdrop-blur-lg transition-colors rounded-full shadow-lg cursor-pointer"
             onClick={handleRemoveFile}
           >
-            <Trash2 className="size-3 text-foreground" />
+            <Trash2Icon className="size-3 text-foreground" />
             <span className="text-xs font-medium text-red-700 dark:text-red-300">
               Remove
             </span>

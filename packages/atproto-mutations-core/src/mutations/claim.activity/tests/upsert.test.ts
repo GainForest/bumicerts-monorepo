@@ -45,6 +45,26 @@ function makeTinyPng(overrides?: { size?: number; type?: string }): Serializable
   };
 }
 
+/**
+ * Create a LinearDocument from a plain text string.
+ * The description field in org.hypercerts.claim.activity now expects a
+ * pub.leaflet.pages.linearDocument object instead of a plain string.
+ */
+function makeLinearDocument(text: string) {
+  return {
+    $type: "pub.leaflet.pages.linearDocument" as const,
+    blocks: [
+      {
+        $type: "pub.leaflet.pages.linearDocument#block" as const,
+        block: {
+          $type: "pub.leaflet.blocks.text" as const,
+          plaintext: text,
+        },
+      },
+    ],
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Fixture
 // ---------------------------------------------------------------------------
@@ -132,14 +152,14 @@ describe("upsertClaimActivity", () => {
         ...baseInput,
         rkey,
         title: "Replaced Title",
-        description: "Now with a description.",
+        description: makeLinearDocument("Now with a description."),
       }).pipe(Effect.provide(layer))
     );
 
     expect(second.created).toBe(false);
     expect(second.rkey).toBe(rkey);
     expect(second.record.title).toBe("Replaced Title");
-    expect(second.record.description).toBe("Now with a description.");
+    expect(second.record.description).toEqual(makeLinearDocument("Now with a description."));
     console.log(
       `[ok] Upsert (replace) — created=${second.created}, title="${second.record.title}"`
     );
@@ -182,7 +202,7 @@ describe("upsertClaimActivity", () => {
       upsertClaimActivity({
         ...baseInput,
         rkey,
-        description: "This will disappear on the next upsert.",
+        description: makeLinearDocument("This will disappear on the next upsert."),
       }).pipe(Effect.provide(layer))
     );
 

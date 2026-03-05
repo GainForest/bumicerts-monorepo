@@ -1,14 +1,8 @@
 "use client";
 
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { CompassIcon } from "lucide-react";
-import { deserialize, type SerializedSuperjson } from "gainforest-sdk/utilities/transform";
-import { getBlobUrl, parseAtUri } from "gainforest-sdk/utilities/atproto";
-import { allowedPDSDomains } from "@/lib/config/gainforest-sdk";
-
-type SupportedImageData = Parameters<typeof getBlobUrl>[1];
-type ImageParam = SupportedImageData | { $type?: string } | null | undefined;
 import type { BumicertData } from "@/lib/types";
 import { BumicertGrid } from "./BumicertGrid";
 import { ExploreHeaderSlots, type Filters } from "./ExploreHeader";
@@ -17,73 +11,33 @@ import ExploreHydrator from "./ExploreHydrator";
 
 const EMPTY_FILTERS: Filters = { organizations: [], countries: [], objectives: [] };
 
-export function ExploreClient({ initialData }: { initialData: SerializedSuperjson<BumicertData[]> }) {
+interface ExploreClientProps {
+  /**
+   * Server-rendered initial data for instant display.
+   * Once the client-side query completes, live data takes over.
+   */
+  initialData?: BumicertData[];
+}
+
+export function ExploreClient({ initialData = [] }: ExploreClientProps) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("newest");
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
 
-  // Deserialize server-rendered initial data
-  const initialBumicerts = useMemo<BumicertData[]>(() => {
-    try {
-      return deserialize<BumicertData[]>(initialData);
-    } catch {
-      return [];
-    }
-  }, [initialData]);
-
-  const pdsDomain = allowedPDSDomains[0];
-
-  function resolveActivityImageUrl(did: string, image: ImageParam): string | null {
-    if (!image || typeof image === "string") return null;
-    if (typeof image !== "object" || !("$type" in image) || !image.$type) return null;
-    try {
-      return getBlobUrl(did, image as SupportedImageData, pdsDomain);
-    } catch {
-      return null;
-    }
-  }
-
-  // Get live data from the store (populated by ExploreHydrator via tRPC)
-  const storeState = useExploreStore();
+  // Fine-grained selectors — each returns a primitive/stable ref, no new object on every render
+  const storeBumicerts = useExploreStore((s) => s.bumicerts);
+  const storeLoading = useExploreStore((s) => s.loading);
+  const storeError = useExploreStore((s) => s.error);
 
   // Prefer live store data once loaded; fall back to server-rendered initial data
   const allBumicerts: BumicertData[] = useMemo(() => {
-    if (!storeState.loading && !storeState.error && storeState.bumicerts) {
-      // Map Ecocert[] from store → BumicertData[] shape
-      return storeState.bumicerts.map((e) => {
-        const { rkey } = parseAtUri(e.claimActivity.uri);
-        return {
-          id: `${e.repo.did}-${rkey}`,
-          organizationDid: e.repo.did,
-          rkey,
-          title: e.claimActivity.value.title,
-          shortDescription: e.claimActivity.value.shortDescription ?? "",
-          description: e.claimActivity.value.description ?? e.claimActivity.value.shortDescription ?? "",
-          coverImageUrl:
-            resolveActivityImageUrl(e.repo.did, e.claimActivity.value.image) ??
-            e.organizationInfo.coverImageUrl ??
-            null,
-          logoUrl: e.organizationInfo.logoUrl ?? null,
-          organizationName: e.organizationInfo.name,
-          country: "",
-          objectives: (() => {
-            const ws = e.claimActivity.value.workScope;
-            if (!ws) return [];
-            if ("scope" in ws && typeof ws.scope === "string") {
-              return ws.scope.split(",").map((s: string) => s.trim()).filter(Boolean);
-            }
-            return [];
-          })(),
-          startDate: e.claimActivity.value.startDate ?? null,
-          endDate: e.claimActivity.value.endDate ?? null,
-          createdAt: e.claimActivity.value.createdAt,
-        };
-      });
+    if (!storeLoading && !storeError && storeBumicerts) {
+      return storeBumicerts;
     }
-    return initialBumicerts;
-  }, [storeState, initialBumicerts]);
+    return initialData;
+  }, [storeLoading, storeError, storeBumicerts, initialData]);
 
-  const isLoading = storeState.loading && initialBumicerts.length === 0;
+  const isLoading = storeLoading && initialData.length === 0;
 
   // Toggle a filter value (add if not present, remove if present)
   const toggleFilter = useCallback((category: keyof Filters, value: string) => {
@@ -139,7 +93,7 @@ export function ExploreClient({ initialData }: { initialData: SerializedSuperjso
     filters.organizations.length + filters.countries.length + filters.objectives.length;
 
   return (
-    // ExploreHydrator fires the tRPC query and feeds the store
+    // ExploreHydrator fires the GraphQL query and feeds the store
     <ExploreHydrator>
       <section className="pt-6 pb-20 md:pb-28 px-6">
         <div className="max-w-6xl mx-auto">

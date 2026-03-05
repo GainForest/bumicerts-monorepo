@@ -23,8 +23,17 @@ WORKDIR /repo
 
 # Copy workspace manifests first for layer caching
 COPY package.json bun.lock* ./
+# All workspace package.json files must be present so bun can resolve the
+# full workspace graph without mutating the frozen lockfile
 COPY apps/indexer/package.json apps/indexer/
-COPY apps/indexer/patches/ apps/indexer/patches/
+COPY apps/bumicerts/package.json apps/bumicerts/
+COPY packages/atproto-auth-next/package.json packages/atproto-auth-next/
+COPY packages/atproto-mutations-core/package.json packages/atproto-mutations-core/
+COPY packages/atproto-mutations-next/package.json packages/atproto-mutations-next/
+COPY packages/internal-utils/package.json packages/internal-utils/
+COPY GENERATED/package.json GENERATED/
+# Patches must live at the workspace root so bun can find them during install
+COPY apps/indexer/patches/ patches/
 
 # Install only the indexer's dependencies (hoisted into /repo/node_modules)
 RUN bun install --frozen-lockfile --filter @gainforest/indexer

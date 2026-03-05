@@ -1,25 +1,34 @@
 "use client";
 import React, { useMemo } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowRight,
-  Clock,
-  PartyPopper,
-  Loader2,
-  AlertCircle,
+  ArrowRightIcon,
+  ClockIcon,
+  PartyPopperIcon,
+  Loader2Icon,
+  AlertCircleIcon,
 } from "lucide-react";
 
 import CircularProgressBar from "@/components/circular-progressbar";
 import { useAtprotoStore } from "@/components/stores/atproto";
 import { Button } from "@/components/ui/button";
 import TimeText from "@/components/time-text";
+import { useQuery } from "@tanstack/react-query";
 import { links } from "@/lib/links";
-import {
-  DraftBumicertDataV0,
-  DraftBumicertResponse,
-  GetDraftBumicertResponse,
-} from "@/app/api/supabase/drafts/bumicert/type";
+import { queryKeys } from "@/lib/query-keys";
+import type { DraftBumicertDataV0, DraftBumicertResponse, GetDraftBumicertResponse } from "@/app/api/supabase/drafts/bumicert/type";
+
+async function fetchDrafts(): Promise<DraftBumicertResponse[]> {
+  const res = await fetch(links.api.drafts.bumicert.get(), { method: "GET", credentials: "include" });
+  if (!res.ok) {
+    if (res.status === 401) throw new Error("Unauthorized");
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to fetch drafts");
+  }
+  const data: GetDraftBumicertResponse = await res.json();
+  if (!data.success || !data.drafts) throw new Error("Invalid response from server");
+  return data.drafts;
+}
 
 // Calculate progress based on filled fields
 const calculateProgress = (data: DraftBumicertDataV0): number => {
@@ -42,29 +51,6 @@ const calculateProgress = (data: DraftBumicertDataV0): number => {
   return Math.round((filledFields / fields.length) * 100);
 };
 
-const getDrafts = async (): Promise<DraftBumicertResponse[]> => {
-  const response = await fetch(links.api.drafts.bumicert.get(), {
-    method: "GET",
-    credentials: "include",
-  });
-
-  if (!response.ok) {
-    if (response.status === 401) {
-      throw new Error("Unauthorized");
-    }
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || "Failed to fetch drafts");
-  }
-
-  const data: GetDraftBumicertResponse = await response.json();
-
-  if (!data.success || !data.drafts) {
-    throw new Error("Invalid response from server");
-  }
-
-  return data.drafts;
-};
-
 const DraftBumicerts = () => {
   const auth = useAtprotoStore((state) => state.auth);
 
@@ -73,8 +59,8 @@ const DraftBumicerts = () => {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["drafts", auth.user?.did],
-    queryFn: getDrafts,
+    queryKey: queryKeys.drafts.byDid(auth.user?.did),
+    queryFn: fetchDrafts,
     enabled: auth.authenticated && !!auth.user?.did,
   });
 
@@ -90,7 +76,7 @@ const DraftBumicerts = () => {
   if (!auth.authenticated) {
     return (
       <div className="bg-muted/50 rounded-xl p-4 text-muted-foreground flex flex-col items-center justify-center text-center">
-        <AlertCircle className="size-8 opacity-50" />
+        <AlertCircleIcon className="size-8 opacity-50" />
         <span className="text-center text-pretty mt-2">
           Please sign in to view your drafts.
         </span>
@@ -101,7 +87,7 @@ const DraftBumicerts = () => {
   if (isLoading) {
     return (
       <div className="bg-muted/50 rounded-xl p-4 text-muted-foreground flex flex-col items-center justify-center text-center">
-        <Loader2 className="size-8 opacity-50 animate-spin" />
+        <Loader2Icon className="size-8 opacity-50 animate-spin" />
         <span className="text-center text-pretty mt-2">Loading drafts...</span>
       </div>
     );
@@ -110,7 +96,7 @@ const DraftBumicerts = () => {
   if (error) {
     return (
       <div className="bg-muted/50 rounded-xl p-4 text-muted-foreground flex flex-col items-center justify-center text-center">
-        <AlertCircle className="size-8 opacity-50" />
+        <AlertCircleIcon className="size-8 opacity-50" />
         <span className="text-center text-pretty mt-2">
           {error instanceof Error
             ? error.message
@@ -123,7 +109,7 @@ const DraftBumicerts = () => {
   if (!draftsWithProgress || draftsWithProgress.length === 0) {
     return (
       <div className="bg-muted/50 rounded-xl p-4 text-muted-foreground flex flex-col items-center justify-center text-center">
-        <PartyPopper className="size-8 opacity-50" />
+        <PartyPopperIcon className="size-8 opacity-50" />
         <span className="text-center text-pretty mt-2">
           You do not have any pending applications.
         </span>
@@ -142,7 +128,7 @@ const DraftBumicerts = () => {
           <div className="flex flex-col flex-1 ml-2">
             <h3 className="font-medium">{draft.title}</h3>
             <p className="text-sm text-muted-foreground flex items-center gap-1">
-              <Clock className="h-3 w-3" />
+              <ClockIcon className="h-3 w-3" />
               <TimeText date={new Date(draft.updated_at)} />
             </p>
           </div>
@@ -152,7 +138,7 @@ const DraftBumicerts = () => {
               size="icon-sm"
               className="gap-2 rounded-full"
             >
-              <ArrowRight className="h-3 w-3" />
+              <ArrowRightIcon />
             </Button>
           </Link>
         </div>

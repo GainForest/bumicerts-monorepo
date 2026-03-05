@@ -1,8 +1,7 @@
 import {
-  allowedPDSDomains,
-  defaultPdsDomain,
-  type AllowedPDSDomain,
-} from "@/lib/config/gainforest-sdk";
+  signupPDSDomains,
+  defaultSignupPdsDomain,
+} from "@/lib/config/pds";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
@@ -21,9 +20,9 @@ const requestSchema = z.object({
     .trim()
     .toLowerCase()
     .optional()
-    .default(defaultPdsDomain)
+    .default(defaultSignupPdsDomain)
     .refine(
-      (value) => (allowedPDSDomains as string[]).includes(value),
+      (value) => ([...signupPDSDomains] as string[]).includes(value),
       { message: "Unsupported pdsDomain" }
     ),
 });

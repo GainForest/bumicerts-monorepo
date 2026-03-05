@@ -1,4 +1,4 @@
-import { Asterisk, CircleAlert, InfoIcon, LucideIcon } from "lucide-react";
+import { AsteriskIcon, CircleAlertIcon, InfoIcon, LucideIcon } from "lucide-react";
 import React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
@@ -74,7 +74,7 @@ const FormField = ({
                 size="icon-sm"
                 className="bg-transparent hover:bg-transparent h-5 w-5 flex items-center justify-center"
               >
-                <CircleAlert className="text-destructive" />
+                <CircleAlertIcon className="text-destructive" />
               </Button>
             </QuickTooltip>
           )}
@@ -85,7 +85,7 @@ const FormField = ({
                 size="icon-sm"
                 className="bg-transparent hover:bg-transparent h-5 w-5 flex items-center justify-center"
               >
-                <Asterisk className="text-muted-foreground" />
+                <AsteriskIcon className="text-muted-foreground" />
               </Button>
             </QuickTooltip>
           )}

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import supabase from "../../client";
-import { getAppSession } from "gainforest-sdk/oauth";
+import { auth } from "@/lib/auth";
 import {
   draftBumicertDataSchemaV0,
   getDraftBumicertRequestSchema,
@@ -15,8 +15,8 @@ import {
  */
 async function getAuthenticatedUserDid(): Promise<string | null> {
   try {
-    const session = await getAppSession();
-    if (session.isLoggedIn && session.did) {
+    const session = await auth.session.getSession();
+    if (session.isLoggedIn) {
       return session.did;
     }
     return null;

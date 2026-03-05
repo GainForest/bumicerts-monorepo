@@ -7,13 +7,13 @@ import { STEPS as steps } from "../_data/steps";
 import { useFormStore } from "../form-store";
 import CircularProgressBar from "@/components/circular-progressbar";
 import {
-  BookImage,
-  Check,
-  ChevronRight,
-  EarthLock,
-  FlagTriangleRight,
-  PenLine,
-  ScanSearch,
+  BookImageIcon,
+  CheckIcon,
+  ChevronRightIcon,
+  EarthLockIcon,
+  FlagTriangleRightIcon,
+  PenLineIcon,
+  ScanSearchIcon,
 } from "lucide-react";
 import { useStep5Store } from "./Steps/Step5/store";
 
@@ -56,7 +56,7 @@ const StepHeader = () => {
       <div className="flex items-center gap-1 px-1 justify-center">
         {steps.map((step, index) => {
           const progress = stepProgressesByIndex[index];
-          const Icon = progress >= 100 ? Check : step.icon;
+          const Icon = progress >= 100 ? CheckIcon : step.icon;
           return (
             <React.Fragment key={index}>
               <motion.div className={cn("flex flex-col")} layout>
@@ -109,7 +109,7 @@ const StepHeader = () => {
                 </motion.button>
               </motion.div>
               {index < steps.length - 1 && (
-                <ChevronRight className="size-4 text-foreground/40" />
+                <ChevronRightIcon className="size-4 text-foreground/40" />
               )}
             </React.Fragment>
           );

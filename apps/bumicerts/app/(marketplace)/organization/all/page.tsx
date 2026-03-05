@@ -1,7 +1,8 @@
-import { gainforestSdk } from "@/lib/config/gainforest-sdk.server";
-import { allowedPDSDomains } from "@/lib/config/gainforest-sdk";
-import { tryCatch } from "@/lib/tryCatch";
-import { claimsToOrganizationDataArray } from "@/lib/adapters";
+import { queries, type OrgInfo } from "@/lib/graphql/queries/index";
+import {
+  orgInfoToOrganizationData,
+  type GraphQLOrgInfoItem,
+} from "@/lib/adapters";
 import { AllOrgsClient } from "./_components/AllOrgsClient";
 
 export const metadata = {
@@ -11,15 +12,21 @@ export const metadata = {
 };
 
 export default async function AllOrganizationsPage() {
-  const caller = gainforestSdk.getServerCaller();
+  try {
+    // Fetch all organizations
+    const response = await queries.organization.fetch({ limit: 1000 }) as { data: OrgInfo[]; pageInfo: unknown };
 
-  const [data, error] = await tryCatch(
-    caller.hypercerts.claim.activity.getAllAcrossOrgs({
-      pdsDomain: allowedPDSDomains[0],
-    })
-  );
+    const orgInfos = response.data as GraphQLOrgInfoItem[];
 
-  if (error) {
+    // Convert each org info item to OrganizationData — bumicertCount not available here, default to 0
+    const organizations = orgInfos.map((item) => orgInfoToOrganizationData(item, 0));
+
+    return (
+      <div className="w-full">
+        <AllOrgsClient organizations={organizations} />
+      </div>
+    );
+  } catch (error) {
     console.error("Failed to fetch organizations:", error);
     return (
       <div className="w-full pt-20 flex items-center justify-center">
@@ -31,14 +38,4 @@ export default async function AllOrganizationsPage() {
       </div>
     );
   }
-
-  const organizations = claimsToOrganizationDataArray(
-    data as Parameters<typeof claimsToOrganizationDataArray>[0]
-  );
-
-  return (
-    <div className="w-full">
-      <AllOrgsClient organizations={organizations} />
-    </div>
-  );
 }

@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+html {
+  scroll-behavior: smooth;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 /* ── Custom breakpoints ─────────────────────────────── */
@@ -173,4 +177,43 @@ body {
 ::view-transition-new(bumicert-image) {
   animation-duration: 350ms;
   animation-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+/* ── Page-level entrance animations (SSR-safe, CSS-only) ── */
+/* Used for SEO-critical content that must render immediately but animate in gracefully */
+
+@keyframes org-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes org-fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0);     }
+}
+
+/* Base class — play once, fill forwards so element stays visible */
+.org-animate {
+  animation-fill-mode: both;
+  animation-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
+  animation-duration: 0.6s;
+}
+
+.org-fade-in     { animation-name: org-fade-in;    }
+.org-fade-in-up  { animation-name: org-fade-in-up; }
+
+/* Stagger helpers — combine with .org-animate + .org-fade-in-up */
+.org-delay-0  { animation-delay: 0s;    }
+.org-delay-1  { animation-delay: 0.1s;  }
+.org-delay-2  { animation-delay: 0.2s;  }
+.org-delay-3  { animation-delay: 0.3s;  }
+.org-delay-4  { animation-delay: 0.4s;  }
+
+/* Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .org-animate {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }

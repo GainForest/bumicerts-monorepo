@@ -1,7 +1,7 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { useModal } from "@/components/ui/modal/context";
-import { Loader2, LogIn } from "lucide-react";
+import { Loader2Icon, LogInIcon } from "lucide-react";
 import React from "react";
 import dynamic from "next/dynamic";
 import { useAtprotoStore } from "@/components/stores/atproto";
@@ -19,7 +19,7 @@ const AtprotoSignInButton = () => {
   const auth = useAtprotoStore((state) => state.auth);
 
   if (auth.status === "RESUMING") {
-    return <Loader2 className="animate-spin text-primary size-5 mx-1" />;
+    return <Loader2Icon className="animate-spin text-primary size-5 mx-1" />;
   }
 
   return (
@@ -36,7 +36,7 @@ const AtprotoSignInButton = () => {
         show();
       }}
     >
-      <LogIn />
+      <LogInIcon />
       Sign in
     </Button>
   );

@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useOnboardingStore } from "../store";
-import { ArrowRight } from "lucide-react";
+import { ArrowRightIcon } from "lucide-react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 
@@ -99,7 +99,7 @@ export function StepIntro() {
               className="w-full"
             >
               Continue
-              <ArrowRight className="w-4 h-4 ml-2" />
+              <ArrowRightIcon className="ml-2" />
             </Button>
             <Button
               type="button"

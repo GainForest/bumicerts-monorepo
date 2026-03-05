@@ -7,7 +7,7 @@ import {
   ModalTitle,
 } from "@/components/ui/modal/modal";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeftIcon } from "lucide-react";
 import { useModal } from "@/components/ui/modal/context";
 import { VisuallyHidden } from "radix-ui";
 
@@ -166,7 +166,7 @@ const DrawPolygonModal = ({ onSubmit }: DrawPolygonModalProps) => {
               stack.length > 1 && popModal();
             }}
           >
-            <ChevronLeft />
+            <ChevronLeftIcon />
           </Button>
         )}
       </div>

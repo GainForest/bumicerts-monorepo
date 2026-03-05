@@ -64,7 +64,7 @@ export function restoreDpopKeyPair(privateJwk: crypto.JsonWebKey): {
   publicJwk: crypto.JsonWebKey;
 } {
   const privateKey = crypto.createPrivateKey({
-    key: privateJwk as Parameters<typeof crypto.createPrivateKey>[0] & object,
+    key: privateJwk as crypto.JsonWebKey,
     format: "jwk",
   });
   const publicKey = crypto.createPublicKey(privateKey);

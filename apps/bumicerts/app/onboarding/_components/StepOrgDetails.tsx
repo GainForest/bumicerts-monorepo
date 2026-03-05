@@ -5,20 +5,20 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useOnboardingStore, generateHandle, type Objective } from "../store";
 import {
-  ArrowRight,
-  ArrowLeft,
-  Calendar as CalendarIcon,
-  Globe,
-  Loader2,
-  MapPin,
+  ArrowRightIcon,
+  ArrowLeftIcon,
+  CalendarIcon,
+  GlobeIcon,
+  Loader2Icon,
+  MapPinIcon,
   ImageIcon,
-  X,
-  Wand2,
-  Sparkle,
-  Sparkles,
-  Trash2,
+  XIcon,
+  Wand2Icon,
+  SparkleIcon,
+  SparklesIcon,
+  Trash2Icon,
   UploadIcon,
-  Building2,
+  Building2Icon,
   BuildingIcon,
 } from "lucide-react";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
@@ -293,11 +293,7 @@ export function StepOrgDetails() {
             description="Upload a logo for your organization"
             initialImage={data.logo}
             onImageChange={(image) => {
-              if (image instanceof File) {
-                updateData({ logo: image });
-              } else {
-                updateData({ logo: undefined });
-              }
+              updateData({ logo: image });
             }}
           />
         ),
@@ -365,7 +361,7 @@ export function StepOrgDetails() {
 
             <InputGroup>
               <InputGroupAddon>
-                <Globe />
+                <GlobeIcon />
               </InputGroupAddon>
               <InputGroupInput
                 id="website"
@@ -387,9 +383,9 @@ export function StepOrgDetails() {
                 disabled={!canFetchBrandInfo}
               >
                 {isFetchingBrandInfo ? (
-                  <Loader2 className="animate-spin" />
+                  <Loader2Icon className="animate-spin" />
                 ) : (
-                  <Sparkles className="fill-current" />
+                  <SparklesIcon className="fill-current" />
                 )} Generate
               </Button>
             </QuickTooltip>
@@ -418,7 +414,7 @@ export function StepOrgDetails() {
                   },
                 }}
               >
-                <Sparkle
+                <SparkleIcon
                   className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-16 text-primary animate-pulse fill-current" />
               </motion.div>
             )}
@@ -470,7 +466,7 @@ export function StepOrgDetails() {
                           onClick={handleRemoveLogo}
                           className="px-2!"
                         >
-                          <Trash2 className="text-destructive" />
+                          <Trash2Icon className="text-destructive" />
                         </Button>
                       </>
                     }
@@ -495,7 +491,7 @@ export function StepOrgDetails() {
                 </InputGroup>
                 <ul className="flex flex-col gap-1.5 mt-2">
                   <li className="flex items-center gap-3">
-                    <MapPin className="size-3 -mr-2" />
+                    <MapPinIcon className="size-3 -mr-2" />
                     <span className="font-medium text-sm">
 
                       Based <span className="text-destructive">*</span></span>
@@ -587,19 +583,19 @@ export function StepOrgDetails() {
         {/* Navigation */}
         <div className="w-full flex justify-between mt-1">
           <Button onClick={prevStep} variant="ghost" disabled={isGenerating}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeftIcon className="mr-2" />
             Back
           </Button>
           <Button onClick={handleContinue} disabled={!canContinue || isGenerating}>
             {isGenerating ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2Icon className="mr-2 animate-spin" />
                 Processing...
               </>
             ) : (
               <>
                 Continue
-                <ArrowRight className="w-4 h-4 ml-2" />
+                <ArrowRightIcon className="ml-2" />
               </>
             )}
           </Button>

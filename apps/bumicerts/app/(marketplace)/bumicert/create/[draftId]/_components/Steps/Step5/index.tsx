@@ -6,28 +6,33 @@ import {
   ArrowRightIcon,
   CircleAlertIcon,
   CircleCheckIcon,
-  Hand,
-  Loader2,
+  HandIcon,
+  Loader2Icon,
   LucideIcon,
-  PartyPopper,
+  PartyPopperIcon,
   ShieldCheckIcon,
   ShieldXIcon,
 } from "lucide-react";
 
 import { useAtprotoStore } from "@/components/stores/atproto";
-import { allowedPDSDomains, trpcClient } from "@/lib/config/gainforest-sdk";
 import { cn } from "@/lib/utils";
 import { useFormStore, clearPersistedFormState } from "../../../form-store";
 import { useStep5Store } from "./store";
-import { toFileGenerator } from "gainforest-sdk/zod";
 import { links } from "@/lib/links";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { parseAtUri } from "gainforest-sdk/utilities/atproto";
-import { trpcApi } from "@/components/providers/TrpcProvider";
+import { toSerializableFile, parseAtUri, toStrongRefs } from "@/lib/mutations-utils";
+import type { SerializableFile } from "@/lib/mutations-utils";
+import { createBumicertAction } from "@/lib/actions/bumicerts";
+import { queryKeys } from "@/lib/query-keys"; // drafts key only
 import { usePathname } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { trackBumicertPublished, getFlowDurationSeconds } from "@/lib/analytics/hotjar";
+import {
+  MutationError,
+  formatMutationErrorMessage,
+} from "@gainforest/atproto-mutations-next";
+import { claimActivityLabels } from "@/lib/config/fieldLabels";
 import dynamic from "next/dynamic";
 const FeedbackModal = dynamic(() => import("./FeedbackModal"), { ssr: false });
 
@@ -97,10 +102,10 @@ const ProgressItem = ({
           iconset.Input ? (
             <iconset.Input className="size-8 text-muted-foreground animate-pulse" />
           ) : (
-            <Hand className="size-8 text-muted-foreground animate-pulse" />
+            <HandIcon className="size-8 text-muted-foreground animate-pulse" />
           )
         ) : (
-          <Loader2 className="size-8 animate-spin text-primary" />
+          <Loader2Icon className="size-8 animate-spin text-primary" />
         )}
       </div>
 
@@ -124,6 +129,11 @@ const ProgressItem = ({
   );
 };
 
+interface CreateBumicertResponse {
+  uri: string;
+  cid: string;
+}
+
 const Step5 = () => {
   const auth = useAtprotoStore((state) => state.auth);
   const pathname = usePathname();
@@ -142,11 +152,6 @@ const Step5 = () => {
 
   const setOverallStatus = useStep5Store((state) => state.setOverallStatus);
 
-  const createBumicertMutationFn =
-    trpcClient.hypercerts.claim.activity.create.mutate;
-  type CreateBumicertResponse = Awaited<
-    ReturnType<typeof createBumicertMutationFn>
-  >;
   const [createdBumicertResponse, setCreatedBumicertResponse] =
     useState<CreateBumicertResponse | null>(null);
   const [createBumicertError, setCreateBumicertError] = useState<string | null>(
@@ -168,63 +173,138 @@ const Step5 = () => {
           : "input"
         : "success";
 
-  const { mutate: createBumicert } =
-    trpcApi.hypercerts.claim.activity.create.useMutation({
-      onSuccess: async (data) => {
-        setCreatedBumicertResponse(data);
+  const { mutate: createBumicert } = useMutation({
+    mutationFn: async (data: {
+      title: string;
+      shortDescription: string;
+      description: string;
+      descriptionFacets?: unknown[];
+      workScopes: string[];
+      startDate: string;
+      endDate: string;
+      contributors: { identity: string }[];
+      locations: { cid: string; uri: string }[];
+      image: File;
+    }) => {
+      // Convert file to serializable format
+      const imageFile = await toSerializableFile(data.image);
 
-        // Delete draft if it exists (non-zero draftId in URL)
-        const draftIdMatch = pathname.match(/\/create\/(\d+)$/);
-        const draftId = draftIdMatch ? parseInt(draftIdMatch[1], 10) : null;
+      // Transform description string + facets into a LinearDocument
+      // The new lexicon expects description to be a pub.leaflet.pages.linearDocument
+      // Structure: { blocks: [ { block: { $type: "pub.leaflet.blocks.text", plaintext, facets } } ] }
+      // Note: We use type assertion because bsky-richtext-react outputs app.bsky.richtext.facet
+      // while the lexicon now expects pub.leaflet.richtext.facet. The structures are compatible.
+      const descriptionAsLinearDocument = {
+        $type: "pub.leaflet.pages.linearDocument" as const,
+        blocks: [
+          {
+            $type: "pub.leaflet.pages.linearDocument#block" as const,
+            block: {
+              $type: "pub.leaflet.blocks.text" as const,
+              plaintext: data.description,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              facets: (data.descriptionFacets ?? []) as any,
+            },
+          },
+        ],
+      };
 
-        if (draftId && draftId !== 0 && !isNaN(draftId)) {
-          try {
-            await fetch(links.api.drafts.bumicert.delete, {
-              method: "DELETE",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({ draftIds: [draftId] }),
+      // Call the mutation with properly typed inputs
+      const result = await createBumicertAction({
+        title: data.title,
+        shortDescription: data.shortDescription,
+        description: descriptionAsLinearDocument,
+        workScope: {
+          $type: "org.hypercerts.claim.activity#workScopeString" as const,
+          scope: data.workScopes.join(", "),
+        },
+        startDate: data.startDate as `${string}-${string}-${string}T${string}:${string}:${string}Z`,
+        endDate: data.endDate as `${string}-${string}-${string}T${string}:${string}:${string}Z`,
+        contributors: data.contributors.map((c) => ({
+          contributorIdentity: {
+            $type: "org.hypercerts.claim.activity#contributorIdentity" as const,
+            identity: c.identity,
+          },
+        })),
+        // locations are strongRefs to app.certified.location records
+        // The URIs come from certified location records already in the correct format
+        locations: toStrongRefs(data.locations),
+        image: {
+          $type: "org.hypercerts.defs#smallImage" as const,
+          image: imageFile,
+        },
+      });
+
+      return result;
+    },
+    onSuccess: async (data) => {
+      setCreatedBumicertResponse({
+        uri: data.uri,
+        cid: data.cid,
+      });
+
+      // Delete draft if it exists (non-zero draftId in URL)
+      const draftIdMatch = pathname.match(/\/create\/(\d+)$/);
+      const draftId = draftIdMatch ? parseInt(draftIdMatch[1], 10) : null;
+
+      if (draftId && draftId !== 0 && !isNaN(draftId)) {
+        try {
+          await fetch(links.api.drafts.bumicert.delete, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ draftIds: [draftId] }),
+          });
+
+          // Invalidate drafts query to refresh the list
+          if (auth.user?.did) {
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.drafts.byDid(auth.user.did),
             });
-
-            // Invalidate drafts query to refresh the list
-            if (auth.user?.did) {
-              queryClient.invalidateQueries({
-                queryKey: ["drafts", auth.user.did],
-              });
-            }
-          } catch (error) {
-            // Silently fail - draft deletion is not critical
-            console.error("Failed to delete draft after publishing:", error);
           }
+        } catch (error) {
+          // Silently fail - draft deletion is not critical
+          console.error("Failed to delete draft after publishing:", error);
         }
+      }
 
-        // Clear localStorage backup after successful publish
-        clearPersistedFormState();
-        
-        // Track successful bumicert publication
-        const duration = getFlowDurationSeconds() ?? 0;
-        trackBumicertPublished({
-          draftId: data.cid ?? "unknown",
-          totalDurationSeconds: duration,
-        });
+      // Clear localStorage backup after successful publish
+      clearPersistedFormState();
+      
+      // Track successful bumicert publication
+      const duration = getFlowDurationSeconds() ?? 0;
+      trackBumicertPublished({
+        draftId: data.cid ?? "unknown",
+        totalDurationSeconds: duration,
+      });
 
-        // Show feedback modal after successful publication
-        setShowFeedbackModal(true);
-        setOverallStatus("success");
-      },
-      onError: (error) => {
-        console.error(error);
-        setCreateBumicertError(error.message);
-        setHasClickedPublish(false);
-      },
-      onMutate: () => {
-        setIsBumicertCreationMutationInFlight(true);
-        setOverallStatus("pending");
-      },
-      onSettled: () => {
-        setIsBumicertCreationMutationInFlight(false);
-      },
-    });
+      // Show feedback modal after successful publication
+      setShowFeedbackModal(true);
+      setOverallStatus("success");
+    },
+    onError: (error) => {
+      console.error("Failed to publish bumicert:", error);
+
+      if (MutationError.is(error)) {
+        console.error(
+          "[dev] MutationError code:", error.code,
+          "| issues:", error.issues ?? error.message
+        );
+        setCreateBumicertError(formatMutationErrorMessage(error, claimActivityLabels));
+      } else {
+        setCreateBumicertError(error instanceof Error ? error.message : "An error occurred");
+      }
+
+      setHasClickedPublish(false);
+    },
+    onMutate: () => {
+      setIsBumicertCreationMutationInFlight(true);
+      setOverallStatus("pending");
+    },
+    onSettled: () => {
+      setIsBumicertCreationMutationInFlight(false);
+    },
+  });
 
   const handlePublishClick = async () => {
     if (
@@ -248,30 +328,20 @@ const Step5 = () => {
     }
 
     try {
-      const coverImageFileGen = await toFileGenerator(
-        step1FormValues.coverImage
-      );
-
       const data = {
-        did: auth.user.did,
-        activity: {
-          title: step1FormValues.projectName,
-          shortDescription: step2FormValues.shortDescription,
-          description: step2FormValues.description,
-          workScopes: step1FormValues.workType,
-          startDate: step1FormValues.projectDateRange[0].toISOString(),
-          endDate: step1FormValues.projectDateRange[1].toISOString(),
-          contributors: step3FormValues.contributors.map((contributor) => ({ identity: contributor.name })),
-          locations: step3FormValues.siteBoundaries.map((sb) => ({
-            $type: "com.atproto.repo.strongRef" as const,
-            cid: sb.cid,
-            uri: sb.uri,
-          })),
-        },
-        uploads: {
-          image: coverImageFileGen,
-        },
-        pdsDomain: allowedPDSDomains[0],
+        title: step1FormValues.projectName,
+        shortDescription: step2FormValues.shortDescription,
+        description: step2FormValues.description,
+        descriptionFacets: step2FormValues.descriptionFacets,
+        workScopes: step1FormValues.workType,
+        startDate: step1FormValues.projectDateRange[0].toISOString(),
+        endDate: step1FormValues.projectDateRange[1].toISOString(),
+        contributors: step3FormValues.contributors.map((contributor) => ({ identity: contributor.name })),
+        locations: step3FormValues.siteBoundaries.map((sb) => ({
+          cid: sb.cid,
+          uri: sb.uri,
+        })),
+        image: step1FormValues.coverImage,
       };
 
       if (authStatus === "success") {
@@ -314,7 +384,7 @@ const Step5 = () => {
           iconset={{
             Error: CircleAlertIcon,
             Success: CircleCheckIcon,
-            Input: Hand,
+            Input: HandIcon,
           }}
           title={
             createBumicertError
@@ -361,7 +431,7 @@ const Step5 = () => {
               filter: "blur(0px)",
             }}
             className="mt-4 flex flex-col items-center border border-border rounded-lg p-6">
-            <PartyPopper className="size-10 text-primary" />
+            <PartyPopperIcon className="size-10 text-primary" />
             <span className="mt-1">
               Your bumicert was published successfully!
             </span>
