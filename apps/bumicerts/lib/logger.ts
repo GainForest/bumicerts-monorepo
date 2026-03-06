@@ -10,11 +10,7 @@
  * inlines NODE_ENV at build time and VERCEL_ENV/DEBUG are server-only reads.
  */
 
-const isProduction =
-  process.env.VERCEL_ENV === "production" ||
-  (!process.env.VERCEL_ENV && process.env.NODE_ENV === "production");
-
-const isDebug = process.env.DEBUG && !isProduction;
+const isDebug = process.env.DEBUG;
 
 export const debug = {
   log: (...args: unknown[]) => { if (isDebug) console.log(...args); },
