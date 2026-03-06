@@ -14,7 +14,7 @@ const isProduction =
   process.env.VERCEL_ENV === "production" ||
   (!process.env.VERCEL_ENV && process.env.NODE_ENV === "production");
 
-const isDebug = process.env.DEBUG === "true" && !isProduction;
+const isDebug = process.env.DEBUG && !isProduction;
 
 export const debug = {
   log: (...args: unknown[]) => { if (isDebug) console.log(...args); },
