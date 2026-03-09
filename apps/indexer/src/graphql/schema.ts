@@ -10,12 +10,7 @@ import { builder } from "./builder.ts";
 
 // Register all types and resolvers on the builder
 import "./types.ts";
-import "./resolvers/gainforest.ts";
-import "./resolvers/hypercerts.ts";
-import "./resolvers/impactIndexer.ts";
-import "./resolvers/stats.ts";
-import "./resolvers/tap.ts";
-import "./resolvers/certified.ts";
+import "./resolvers/index.ts";
 
 // Root Query type (required by Pothos)
 builder.queryType({
