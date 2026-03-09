@@ -181,8 +181,10 @@ app/(marketplace)/{path}/
   _components/
     {Route}Shell.tsx      ← "use client", animate prop, motion heading, children slot
     {Route}Skeleton.tsx   ← placeholder <Skeleton> blocks (fill in to mirror real layout)
+    {Route}Header.tsx     ← injects content into the sticky header slots (left, right, sub)
   loading.tsx             ← <{Route}Shell animate={true}><{Route}Skeleton /></{Route}Shell>
   page.tsx                ← async server component, <{Route}Shell animate={false}>
+  error.tsx               ← error boundary using the shared ErrorPage component
 ```
 
 **Route name derivation** — walks path segments from right to left, picks the first

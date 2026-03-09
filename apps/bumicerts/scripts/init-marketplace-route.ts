@@ -167,6 +167,52 @@ export default async function ${name}Page() {
 `;
 }
 
+function errorTemplate(name: string): string {
+  return `"use client";
+
+import ErrorPage from "@/components/error-page";
+
+export default function ${name}Error({
+  error,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  return (
+    <ErrorPage
+      error={error}
+      showRefreshButton
+      showHomeButton
+    />
+  );
+}
+`;
+}
+
+function headerTemplate(name: string): string {
+  return `"use client";
+
+import { HeaderContent } from "@/app/(marketplace)/_components/Header/HeaderContent";
+
+/**
+ * ${name}Header — injects content into the sticky header for this route.
+ *
+ * HeaderContent auto-clears slots on unmount.
+ *
+ * @see app/(marketplace)/_components/Header/context.tsx for slot docs
+ */
+export function ${name}Header() {
+  return (
+    <HeaderContent
+      // left={...}
+      // right={...}
+      // sub={...}
+    />
+  );
+}
+`;
+}
+
 // ── Main ───────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -235,8 +281,10 @@ async function main() {
   const filesToCreate = [
     join(componentsDir, `${routeName}Shell.tsx`),
     join(componentsDir, `${routeName}Skeleton.tsx`),
+    join(componentsDir, `${routeName}Header.tsx`),
     join(targetDir, "loading.tsx"),
     join(targetDir, "page.tsx"),
+    join(targetDir, "error.tsx"),
   ];
 
   if (!force) {
@@ -263,8 +311,10 @@ async function main() {
   await Promise.all([
     writeFile(join(componentsDir, `${routeName}Shell.tsx`),    shellTemplate(routeName)),
     writeFile(join(componentsDir, `${routeName}Skeleton.tsx`), skeletonTemplate(routeName)),
+    writeFile(join(componentsDir, `${routeName}Header.tsx`),   headerTemplate(routeName)),
     writeFile(join(targetDir, "loading.tsx"),                  loadingTemplate(routeName)),
     writeFile(join(targetDir, "page.tsx"),                     pageTemplate(routeName)),
+    writeFile(join(targetDir, "error.tsx"),                    errorTemplate(routeName)),
   ]);
 
   // ── Success ───────────────────────────────────────────────────────────────────
@@ -277,8 +327,10 @@ async function main() {
       `  ✓ Scaffolded ${routeName} route`,
       `    ${rel(join(targetDir, "page.tsx"))}`,
       `    ${rel(join(targetDir, "loading.tsx"))}`,
+      `    ${rel(join(targetDir, "error.tsx"))}`,
       `    ${rel(join(componentsDir, `${routeName}Shell.tsx`))}`,
       `    ${rel(join(componentsDir, `${routeName}Skeleton.tsx`))}`,
+      `    ${rel(join(componentsDir, `${routeName}Header.tsx`))}`,
       "",
     ].join("\n")
   );
