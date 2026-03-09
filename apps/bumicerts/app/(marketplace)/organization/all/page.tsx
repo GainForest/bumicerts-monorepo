@@ -3,7 +3,7 @@ import {
   orgInfoToOrganizationData,
   type GraphQLOrgInfoItem,
 } from "@/lib/adapters";
-import { AllOrgsClient } from "./_components/AllOrgsClient";
+import { AllOrgsShell } from "./_components/AllOrgsShell";
 
 export const metadata = {
   title: "Organizations — Bumicerts",
@@ -13,19 +13,11 @@ export const metadata = {
 
 export default async function AllOrganizationsPage() {
   try {
-    // Fetch all organizations
     const response = await queries.organization.fetch({ limit: 1000 }) as { data: OrgInfo[]; pageInfo: unknown };
-
     const orgInfos = response.data as GraphQLOrgInfoItem[];
-
-    // Convert each org info item to OrganizationData — bumicertCount not available here, default to 0
     const organizations = orgInfos.map((item) => orgInfoToOrganizationData(item, 0));
 
-    return (
-      <div className="w-full">
-        <AllOrgsClient organizations={organizations} />
-      </div>
-    );
+    return <AllOrgsShell organizations={organizations} animate={false} />;
   } catch (error) {
     console.error("Failed to fetch organizations:", error);
     return (

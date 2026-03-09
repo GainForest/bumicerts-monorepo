@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "graphql:schema": "gql.tada generate-schema $NEXT_PUBLIC_INDEXER_URL --output ./graphql/schema.graphql --header 'ngrok-skip-browser-warning: true'",
     "graphql:types": "gql.tada generate-output --tsconfig ./tsconfig.json",
-    "graphql:codegen": "bun run graphql:schema && bun run graphql:types"
+    "graphql:codegen": "bun run graphql:schema && bun run graphql:types",
+    "init-marketplace-route": "bun run scripts/init-marketplace-route.ts"
   },
   "dependencies": {
     "@0no-co/graphqlsp": "^1.15.2",

@@ -52,15 +52,13 @@ function buildFilterCategories(bumicerts: BumicertData[]) {
     new Map(bumicerts.map((b) => [b.organizationDid, b.organizationName])).entries()
   ).map(([did, name]) => ({ value: did, label: name }));
 
-  const countries = Array.from(new Set(bumicerts.map((b) => b.country).filter(Boolean))).map((c) => ({
-    value: c,
-    label: c,
-  }));
+  const countries = Array.from(
+    new Set(bumicerts.map((b) => b.country).filter(Boolean))
+  ).map((c) => ({ value: c, label: c }));
 
-  const objectives = Array.from(new Set(bumicerts.flatMap((b) => b.objectives))).map((o) => ({
-    value: o,
-    label: o,
-  }));
+  const objectives = Array.from(
+    new Set(bumicerts.flatMap((b) => b.objectives))
+  ).map((o) => ({ value: o, label: o }));
 
   return [
     { key: "organizations" as const, label: "Organization", icon: BuildingIcon, options: organizations },
@@ -86,10 +84,8 @@ function AllFiltersModalContent({
   onClose: () => void;
   filterCategories: FilterCategory[];
 }) {
-  // Local state for pending filter selections
   const [pendingFilters, setPendingFilters] = useState<Filters>(initialFilters);
 
-  // Toggle a filter in local state
   const togglePendingFilter = (category: keyof Filters, value: string) => {
     setPendingFilters((prev) => {
       const current = prev[category];
@@ -100,29 +96,27 @@ function AllFiltersModalContent({
     });
   };
 
-  // Clear a category in local state
   const clearPendingCategory = (category: keyof Filters) => {
     setPendingFilters((prev) => ({ ...prev, [category]: [] }));
   };
 
-  // Clear all in local state
   const clearAllPending = () => {
     setPendingFilters({ organizations: [], countries: [], objectives: [] });
   };
 
-  // Apply filters and close
   const handleApply = () => {
     onApply(pendingFilters);
     onClose();
   };
 
-  // Determine which accordions should be open by default (those with active filters)
   const defaultOpen = filterCategories
     .filter((cat) => initialFilters[cat.key].length > 0)
     .map((cat) => cat.key);
 
-  // Count pending filters
-  const pendingCount = pendingFilters.organizations.length + pendingFilters.countries.length + pendingFilters.objectives.length;
+  const pendingCount =
+    pendingFilters.organizations.length +
+    pendingFilters.countries.length +
+    pendingFilters.objectives.length;
 
   return (
     <ModalContent>
@@ -131,7 +125,6 @@ function AllFiltersModalContent({
         <ModalDescription>Filter projects by organization, country, or impact area</ModalDescription>
       </ModalHeader>
 
-      {/* Filter sections with Accordion */}
       <div className="max-h-[50vh] overflow-y-auto -mx-2 px-2">
         <Accordion
           type="multiple"
@@ -212,7 +205,7 @@ function AllFiltersModalContent({
 // ═══════════════════════════════════════════════════════════════════════════
 // Main Export
 // Row 1: Search + Sort
-// Row 2: Scrollable impact area chips + "All filters" button
+// Row 2: Scrollable filter chips + "All filters" button
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function ExploreHeaderSlots({
@@ -225,6 +218,7 @@ export function ExploreHeaderSlots({
   toggleFilter,
   activeFilterCount,
   bumicerts,
+  shouldAnimate,
 }: {
   query: string;
   setQuery: (q: string) => void;
@@ -235,6 +229,7 @@ export function ExploreHeaderSlots({
   toggleFilter: (category: keyof Filters, value: string) => void;
   activeFilterCount: number;
   bumicerts: BumicertData[];
+  shouldAnimate: boolean;
 }) {
   const { isUnauthenticated } = useHeaderContext();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
@@ -288,132 +283,129 @@ export function ExploreHeaderSlots({
 
   return (
     <>
-    <HeaderContent right={rightSlot} />
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-      className="space-y-3"
-    >
-      {/* Row 1: Search + Sort */}
-      <div className="flex items-center gap-3">
-        {/* Search */}
-        <div className="relative flex-1 min-w-0">
-          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search projects..."
-            className="w-full h-10 pl-10 pr-4 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-          />
-        </div>
-
-        {/* Sort dropdown */}
-        <div className="relative shrink-0">
-          <button
-            onClick={() => setOpenDropdown(prev => prev === "sort" ? null : "sort")}
-            className="flex items-center gap-2 h-10 px-3 text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg transition-colors"
-          >
-            <ArrowUpDownIcon className="h-4 w-4" />
-            <span className="hidden sm:inline">{SORT_OPTIONS.find((o) => o.value === sort)?.label}</span>
-            <ChevronDownIcon
-              className={cn("h-4 w-4 transition-transform", openDropdown === "sort" && "rotate-180")}
+      <HeaderContent right={rightSlot} />
+      <motion.div
+        initial={shouldAnimate ? { opacity: 0, y: 16 } : false}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+        className="space-y-3"
+      >
+        {/* Row 1: Search + Sort */}
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 min-w-0">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search projects..."
+              className="w-full h-10 pl-10 pr-4 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
             />
-          </button>
+          </div>
 
-          <AnimatePresence>
-            {openDropdown === "sort" && (
-              <motion.div
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                className="absolute right-0 top-full mt-1 w-32 bg-background border border-border rounded-lg shadow-xl z-20 py-1"
-              >
-                {SORT_OPTIONS.map((option) => (
-                  <button
-                    key={option.value}
-                    onClick={() => {
-                      setSort(option.value);
-                      setOpenDropdown(null);
-                    }}
-                    className={cn(
-                      "w-full text-left px-3 py-2 text-sm transition-colors",
-                      sort === option.value
-                        ? "text-primary bg-primary/5"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                    )}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
+          <div className="relative shrink-0">
+            <button
+              onClick={() => setOpenDropdown((prev) => (prev === "sort" ? null : "sort"))}
+              className="flex items-center gap-2 h-10 px-3 text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg transition-colors"
+            >
+              <ArrowUpDownIcon className="h-4 w-4" />
+              <span className="hidden sm:inline">
+                {SORT_OPTIONS.find((o) => o.value === sort)?.label}
+              </span>
+              <ChevronDownIcon
+                className={cn(
+                  "h-4 w-4 transition-transform",
+                  openDropdown === "sort" && "rotate-180"
+                )}
+              />
+            </button>
 
-      {/* Row 2: Scrollable filter chips (all categories) + All filters button */}
-      <div className="flex items-center gap-3">
-        {/* Scrollable chips container */}
-        <div className="flex-1 min-w-0 overflow-x-auto scrollbar-hidden">
-          <div className="flex items-center gap-2 pb-1">
-            {/* Build a sorted list: selected chips first, then unselected */}
-            {(() => {
-              // Flatten all filter options with their category info
-              const allChips = filterCategories.flatMap((category) =>
-                category.options.map((option) => ({
-                  category: category.key,
-                  value: option.value,
-                  label: option.label,
-                  isSelected: filters[category.key].includes(option.value),
-                }))
-              );
-
-              // Sort: selected first, then by original order
-              const sortedChips = [
-                ...allChips.filter((chip) => chip.isSelected),
-                ...allChips.filter((chip) => !chip.isSelected),
-              ];
-
-              return sortedChips.map((chip) => (
-                <button
-                  key={`${chip.category}-${chip.value}`}
-                  onClick={() => toggleFilter(chip.category, chip.value)}
-                  className={cn(
-                    "shrink-0 text-xs font-medium rounded-full px-3 py-1.5 border transition-all whitespace-nowrap",
-                    chip.isSelected
-                      ? "bg-foreground text-background border-foreground"
-                      : "text-muted-foreground border-border hover:border-foreground/50 hover:text-foreground"
-                  )}
+            <AnimatePresence>
+              {openDropdown === "sort" && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  className="absolute right-0 top-full mt-1 w-32 bg-background border border-border rounded-lg shadow-xl z-20 py-1"
                 >
-                  {chip.label}
-                </button>
-              ));
-            })()}
+                  {SORT_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        setSort(option.value);
+                        setOpenDropdown(null);
+                      }}
+                      className={cn(
+                        "w-full text-left px-3 py-2 text-sm transition-colors",
+                        sort === option.value
+                          ? "text-primary bg-primary/5"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      )}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
-        {/* All filters button - always visible */}
-        <button
-          onClick={openFiltersModal}
-          className={cn(
-            "shrink-0 flex items-center gap-2 h-8 px-3 text-xs font-medium rounded-full border transition-all",
-            activeFilterCount > 0
-              ? "border-primary/50 bg-primary/5 text-foreground"
-              : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/50"
-          )}
-        >
-          <SlidersHorizontalIcon className="h-3.5 w-3.5" />
-          <span>All filters</span>
-          {activeFilterCount > 0 && (
-            <span className="h-4 min-w-[16px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center">
-              {activeFilterCount}
-            </span>
-          )}
-        </button>
-      </div>
-    </motion.div>
+        {/* Row 2: Scrollable filter chips + All filters button */}
+        <div className="flex items-center gap-3">
+          <div className="flex-1 min-w-0 overflow-x-auto scrollbar-hidden">
+            <div className="flex items-center gap-2 pb-1">
+              {(() => {
+                const allChips = filterCategories.flatMap((category) =>
+                  category.options.map((option) => ({
+                    category: category.key,
+                    value: option.value,
+                    label: option.label,
+                    isSelected: filters[category.key].includes(option.value),
+                  }))
+                );
+                const sortedChips = [
+                  ...allChips.filter((chip) => chip.isSelected),
+                  ...allChips.filter((chip) => !chip.isSelected),
+                ];
+                return sortedChips.map((chip) => (
+                  <button
+                    key={`${chip.category}-${chip.value}`}
+                    onClick={() => toggleFilter(chip.category, chip.value)}
+                    className={cn(
+                      "shrink-0 text-xs font-medium rounded-full px-3 py-1.5 border transition-all whitespace-nowrap",
+                      chip.isSelected
+                        ? "bg-foreground text-background border-foreground"
+                        : "text-muted-foreground border-border hover:border-foreground/50 hover:text-foreground"
+                    )}
+                  >
+                    {chip.label}
+                  </button>
+                ));
+              })()}
+            </div>
+          </div>
+
+          {/* All filters button */}
+          <button
+            onClick={openFiltersModal}
+            className={cn(
+              "shrink-0 flex items-center gap-2 h-8 px-3 text-xs font-medium rounded-full border transition-all",
+              activeFilterCount > 0
+                ? "border-primary/50 bg-primary/5 text-foreground"
+                : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/50"
+            )}
+          >
+            <SlidersHorizontalIcon className="h-3.5 w-3.5" />
+            <span>All filters</span>
+            {activeFilterCount > 0 && (
+              <span className="h-4 min-w-[16px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+        </div>
+      </motion.div>
     </>
   );
 }
