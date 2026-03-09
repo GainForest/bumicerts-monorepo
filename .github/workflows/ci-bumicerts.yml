@@ -39,9 +39,12 @@ jobs:
       - name: Typecheck bumicerts
         run: bun run typecheck
         working-directory: apps/bumicerts
+        env:
+          SKIP_ENV_VALIDATION: 1
 
       - name: Build bumicerts
         run: bun run build
         working-directory: apps/bumicerts
         env:
           NEXT_PUBLIC_APP_URL: https://bumicerts.example.com
+          SKIP_ENV_VALIDATION: 1
