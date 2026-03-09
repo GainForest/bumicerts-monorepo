@@ -41,6 +41,7 @@ export class TapSync {
   private readonly enableDiscovery: boolean;
   private readonly discoveryRelayUrl: string;
   private readonly discoveryBatchSize: number;
+  private readonly blockedDids: string[];
 
   constructor(options: {
     tapUrl?: string;
@@ -56,6 +57,7 @@ export class TapSync {
     enableDiscovery?: boolean;
     discoveryRelayUrl?: string;
     discoveryBatchSize?: number;
+    blockedDids?: string[];
   } = {}) {
     const tapUrl = options.tapUrl ?? process.env["TAP_URL"] ?? "http://localhost:2480";
     const adminPassword = options.adminPassword ?? process.env["TAP_ADMIN_PASSWORD"];
@@ -87,6 +89,10 @@ export class TapSync {
     this.discoveryBatchSize =
       options.discoveryBatchSize ??
       (parseInt(process.env["DISCOVERY_BATCH_SIZE"] ?? "", 10) || 500);
+
+    this.blockedDids =
+      options.blockedDids ??
+      (process.env["BLOCKED_DIDS"]?.split(",").map((s) => s.trim()).filter(Boolean) ?? []);
 
     this.handler = new EventHandler({
       batchSize: options.batchSize ?? (parseInt(process.env["BATCH_SIZE"] ?? "", 10) || undefined),
@@ -137,9 +143,25 @@ export class TapSync {
       console.log(`  PDS crawl complete — ${pdssDids.length} DIDs found.`);
     }
 
-    // 3. Add all discovered DIDs to Tap in batches
-    if (allSeedDids.size > 0) {
-      const didsArray = Array.from(allSeedDids);
+    // 3. Remove blocked DIDs from Tap (handles the case where they were added in a previous run)
+    if (this.blockedDids.length > 0) {
+      console.log(`  Removing ${this.blockedDids.length} blocked DID(s) from Tap...`);
+      await this.consumer.removeRepos(this.blockedDids);
+      console.log(`  Blocked DIDs removed.`);
+    }
+
+    // 4. Filter out blocked DIDs before adding to Tap
+    const blockedSet = new Set(this.blockedDids);
+    const filteredDids = Array.from(allSeedDids).filter((did) => !blockedSet.has(did));
+
+    const skipped = allSeedDids.size - filteredDids.length;
+    if (skipped > 0) {
+      console.log(`  Skipped ${skipped} blocked DID(s) from discovery results.`);
+    }
+
+    // 5. Add all non-blocked DIDs to Tap in batches
+    if (filteredDids.length > 0) {
+      const didsArray = filteredDids;
       console.log(
         `  Adding ${didsArray.length} total DID(s) to Tap in batches of ${this.discoveryBatchSize}...`
       );
