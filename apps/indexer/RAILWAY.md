@@ -44,7 +44,7 @@ The indexer requires three services:
 ### Step 3: Add Tap Service
 
 1. Click **+ New** → **GitHub Repo**
-2. Select your `atproto-packages` repository
+2. Select your this repository
 3. Railway will auto-detect the monorepo. Click **Add Service** anyway.
 4. Go to **Settings** tab:
    - **Root Directory**: Leave empty (monorepo root)
@@ -72,7 +72,7 @@ TAP_LOG_LEVEL=info
 ### Step 4: Add Indexer Service
 
 1. Click **+ New** → **GitHub Repo**
-2. Select your `atproto-packages` repository again
+2. Select the repository again
 3. Go to **Settings** tab:
    - **Root Directory**: Leave empty
    - **Config Path**: `apps/indexer/railway.json`

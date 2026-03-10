@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "db:migrate": "bun run src/db/migrate.ts",
     "sync:filters": "bun run scripts/sync-collection-filters.ts",
+    "validate:railway": "bun run scripts/validate-railway-env.ts",
     "docker:up": "bun run sync:filters && docker compose up -d db tap",
     "docker:down": "docker compose down",
     "docker:reset": "docker compose down -v && bun run sync:filters && docker compose up -d db tap",

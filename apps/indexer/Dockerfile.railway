@@ -2,8 +2,8 @@
 #
 # Railway-optimized Dockerfile for @gainforest/indexer
 #
-# This Dockerfile generates TypeScript types from lexicons during build,
-# so you only need to commit lexicons (GENERATED/lexicons/) to git.
+# This Dockerfile uses pre-committed generated types from the repository.
+# No codegen step needed - just install dependencies and run.
 #
 # Build context must be the MONOREPO ROOT (atproto-packages/), not this directory.
 #
@@ -14,45 +14,7 @@
 #   docker run --env-file apps/indexer/.env gainforest-indexer
 
 # ─────────────────────────────────────────────────────────────
-# Stage 1: Generate types from lexicons
-# ─────────────────────────────────────────────────────────────
-FROM oven/bun:1.2-alpine AS codegen
-
-WORKDIR /repo
-
-# Install lex CLI globally (needed for type generation)
-RUN bun install -g @atproto/lex
-
-# Copy ALL workspace manifests (bun needs every package.json to resolve the
-# full workspace graph and keep the lockfile consistent)
-COPY package.json bun.lock* ./
-COPY GENERATED/package.json GENERATED/
-COPY apps/indexer/package.json apps/indexer/
-COPY apps/bumicerts/package.json apps/bumicerts/
-COPY packages/atproto-auth-next/package.json packages/atproto-auth-next/
-COPY packages/atproto-mutations-core/package.json packages/atproto-mutations-core/
-COPY packages/atproto-mutations-next/package.json packages/atproto-mutations-next/
-COPY packages/internal-utils/package.json packages/internal-utils/
-COPY apps/indexer/patches/ apps/indexer/patches/
-
-# Install root dependencies (needed for codegen scripts)
-RUN bun install --frozen-lockfile
-
-# Copy lexicons and codegen scripts
-COPY GENERATED/lexicons/ GENERATED/lexicons/
-COPY GENERATED/scripts/ GENERATED/scripts/
-
-# Generate types into GENERATED/types/
-RUN bun run gen:types
-
-# Generate indexer-specific files:
-#   - apps/indexer/src/generated/ (TypeScript types)
-#   - apps/indexer/src/tap/collections.ts (collection list)
-#   - apps/indexer/src/tap/validation.ts (validators)
-RUN bun run gen:indexer
-
-# ─────────────────────────────────────────────────────────────
-# Stage 2: Install indexer dependencies
+# Stage 1: Install dependencies
 # ─────────────────────────────────────────────────────────────
 FROM oven/bun:1.2-alpine AS builder
 
@@ -73,17 +35,12 @@ COPY apps/indexer/patches/ apps/indexer/patches/
 # Install only the indexer's dependencies (hoisted into /repo/node_modules)
 RUN bun install --frozen-lockfile --filter @gainforest/indexer
 
-# Copy generated types from stage 1
-COPY --from=codegen /repo/apps/indexer/src/generated/ apps/indexer/src/generated/
-COPY --from=codegen /repo/apps/indexer/src/tap/collections.ts apps/indexer/src/tap/collections.ts
-COPY --from=codegen /repo/apps/indexer/src/tap/validation.ts apps/indexer/src/tap/validation.ts
-
-# Copy the rest of the indexer source
+# Copy the indexer source (includes pre-committed generated files)
 COPY apps/indexer/src/ apps/indexer/src/
 COPY apps/indexer/tsconfig.json apps/indexer/
 
 # ─────────────────────────────────────────────────────────────
-# Stage 3: Minimal runtime image
+# Stage 2: Minimal runtime image
 # ─────────────────────────────────────────────────────────────
 FROM oven/bun:1.2-alpine AS runtime
 
