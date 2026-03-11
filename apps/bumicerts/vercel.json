@@ -1,4 +1,4 @@
 {
   "buildCommand": "bun run graphql:codegen && bun run build",
-  "ignoreCommand": "git diff --quiet $VERCEL_GIT_PREVIOUS_SHA $VERCEL_GIT_COMMIT_SHA -- apps/bumicerts/"
+  "ignoreCommand": "git fetch --depth=2 origin $VERCEL_GIT_COMMIT_SHA && git diff --quiet $VERCEL_GIT_COMMIT_SHA^ $VERCEL_GIT_COMMIT_SHA -- apps/bumicerts/"
 }
