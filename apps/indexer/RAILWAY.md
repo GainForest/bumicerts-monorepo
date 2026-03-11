@@ -265,11 +265,36 @@ query {
 
 ---
 
-## Setting Up GitHub Actions (Optional but Recommended)
+## CI/CD Setup (Recommended)
 
-The GitHub Action automatically syncs `TAP_COLLECTION_FILTERS` when you add new lexicons.
+The GitHub Action at `.github/workflows/deploy-indexer.yml` handles automated deployments when changes are pushed to the indexer or its dependencies.
 
-### Step 1: Create a Railway API Token
+### What It Does
+
+When you push changes to:
+- `apps/indexer/**`
+- `packages/internal-utils/**`
+- `GENERATED/lexicons/**`
+
+The workflow will:
+1. Validate and typecheck the indexer
+2. Generate `TAP_COLLECTION_FILTERS` from indexed collections
+3. Sync `TAP_COLLECTION_FILTERS` to the Tap service on Railway
+4. Trigger redeployment of both Tap and Indexer services
+
+### Step 1: Disable Railway Auto-Deploy
+
+To prevent Railway's built-in auto-deploy from clashing with the GitHub Action:
+
+1. Go to your Railway project
+2. Click on the **Tap** service → **Settings**
+3. Find "Branch connected to production" with `main` branch
+4. Click **"Disconnect"**
+5. Repeat for the **Indexer** service
+
+This ensures only the GitHub Action triggers deployments.
+
+### Step 2: Create a Railway API Token
 
 1. Go to [Railway Tokens](https://railway.app/account/tokens)
 2. Click **"Create Token"**
@@ -277,19 +302,27 @@ The GitHub Action automatically syncs `TAP_COLLECTION_FILTERS` when you add new 
 4. Name it something like `github-actions`
 5. Copy the token
 
-### Step 2: Add Token to GitHub
+### Step 3: Get Your Railway Project ID
+
+1. Go to your Railway project
+2. Click **Settings** (gear icon) → **General**
+3. Copy the **Project ID** (a UUID like `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`)
+
+### Step 4: Add Secrets to GitHub
 
 1. Go to your repo: `https://github.com/GainForest/atproto-packages/settings/secrets/actions`
-2. Click **"New repository secret"**
-3. Name: `RAILWAY_TOKEN`
-4. Value: paste the token from step 1
-5. Click **"Add secret"**
+2. Click **"New repository secret"** and add:
 
-### Step 3: Verify the Workflow
+| Secret Name | Value |
+|-------------|-------|
+| `RAILWAY_TOKEN` | The token from Step 2 |
+| `RAILWAY_PROJECT_ID` | The project ID from Step 3 |
 
-The workflow at `.github/workflows/deploy-indexer.yml` will now:
-- Automatically sync `TAP_COLLECTION_FILTERS` when lexicons change
-- Trigger redeployment of Tap and Indexer services
+### Step 5: Verify the Workflow
+
+Push a change to `apps/indexer/` and check:
+1. GitHub Actions tab → "Deploy Indexer to Railway" workflow
+2. Railway dashboard → both services should show new deployments
 
 ---
 

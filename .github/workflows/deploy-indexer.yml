@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'apps/indexer/**'
+      - 'packages/internal-utils/**'
       - 'GENERATED/lexicons/**'
   workflow_dispatch:
     inputs:
@@ -77,6 +78,7 @@ jobs:
         id: verify
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
           echo "Verifying Railway connection..."
           if railway whoami 2>/dev/null; then
@@ -90,6 +92,7 @@ jobs:
         if: steps.verify.outputs.connected == 'true'
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
           echo "Updating TAP_COLLECTION_FILTERS on Tap service..."
           if railway variables set "TAP_COLLECTION_FILTERS=${{ needs.validate.outputs.collection_filters }}" -s tap 2>&1; then
@@ -103,6 +106,7 @@ jobs:
         if: steps.verify.outputs.connected == 'true'
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
           echo "Redeploying Tap service..."
           if railway redeploy -s tap -y 2>&1; then
@@ -115,6 +119,7 @@ jobs:
         if: steps.verify.outputs.connected == 'true'
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
         run: |
           echo "Redeploying Indexer service..."
           if railway redeploy -s indexer -y 2>&1; then
