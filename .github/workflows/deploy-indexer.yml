@@ -75,14 +75,21 @@ jobs:
         if: steps.check_token.outputs.has_token == 'true'
         run: npm i -g @railway/cli
 
+      - name: Link Railway project
+        if: steps.check_token.outputs.has_token == 'true'
+        env:
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          echo "Linking Railway project..."
+          railway link ${{ secrets.RAILWAY_PROJECT_ID }}
+
       - name: Sync TAP_COLLECTION_FILTERS to Tap service
         if: steps.check_token.outputs.has_token == 'true'
         env:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
           echo "Updating TAP_COLLECTION_FILTERS on Tap service..."
-          OUTPUT=$(railway variables set "TAP_COLLECTION_FILTERS=${{ needs.validate.outputs.collection_filters }}" \
-            --project ${{ secrets.RAILWAY_PROJECT_ID }} -s tap 2>&1) && {
+          OUTPUT=$(railway variables --set "TAP_COLLECTION_FILTERS=${{ needs.validate.outputs.collection_filters }}" -s tap 2>&1) && {
             echo "✅ Updated TAP_COLLECTION_FILTERS"
             echo "$OUTPUT"
           } || {
@@ -95,7 +102,7 @@ jobs:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
           echo "Redeploying Tap service..."
-          OUTPUT=$(railway redeploy --project ${{ secrets.RAILWAY_PROJECT_ID }} -s tap -y 2>&1) && {
+          OUTPUT=$(railway redeploy -s tap -y 2>&1) && {
             echo "✅ Tap redeployment triggered"
             echo "$OUTPUT"
           } || {
@@ -108,7 +115,7 @@ jobs:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
           echo "Redeploying Indexer service..."
-          OUTPUT=$(railway redeploy --project ${{ secrets.RAILWAY_PROJECT_ID }} -s indexer -y 2>&1) && {
+          OUTPUT=$(railway redeploy -s indexer -y 2>&1) && {
             echo "✅ Indexer redeployment triggered"
             echo "$OUTPUT"
           } || {
