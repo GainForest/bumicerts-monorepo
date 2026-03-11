@@ -55,6 +55,15 @@ export const serverEnv = createEnv({
 
     // Debug
     DEBUG: z.string().optional(),
+
+    // Facilitator — pays gas for USDC donations, writes funding receipts
+    // NOTE: FACILITATOR_DID is public — use NEXT_PUBLIC_FACILITATOR_DID in client.ts
+    FACILITATOR_HANDLE: z.string().min(1).optional(),
+    FACILITATOR_PASSWORD: z.string().min(1).optional(),
+    FACILITATOR_PRIVATE_KEY: z.string().min(1).optional(),
+
+    // Base network RPC
+    BASE_RPC_URL: z.string().url().default("https://mainnet.base.org"),
   },
 
   client: {},
@@ -82,6 +91,10 @@ export const serverEnv = createEnv({
     RATE_LIMIT_HMAC_KEY: process.env.RATE_LIMIT_HMAC_KEY,
     RATE_LIMIT_FAIL_OPEN: process.env.RATE_LIMIT_FAIL_OPEN,
     DEBUG: process.env.DEBUG,
+    FACILITATOR_HANDLE: process.env.FACILITATOR_HANDLE,
+    FACILITATOR_PASSWORD: process.env.FACILITATOR_PASSWORD,
+    FACILITATOR_PRIVATE_KEY: process.env.FACILITATOR_PRIVATE_KEY,
+    BASE_RPC_URL: process.env.BASE_RPC_URL,
   },
 
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,

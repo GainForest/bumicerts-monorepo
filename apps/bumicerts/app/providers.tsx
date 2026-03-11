@@ -4,7 +4,9 @@ import { useState } from "react";
 import { ThemeProvider } from "next-themes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AtprotoProvider } from "@/components/providers/AtprotoProvider";
+import { WagmiProvider } from "@/components/providers/WagmiProvider";
 import { ModalProvider } from "@/components/ui/modal/context";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   // useState ensures each browser session gets its own QueryClient instance
@@ -21,14 +23,18 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-        <AtprotoProvider>
-          <ModalProvider>
-            {children}
-          </ModalProvider>
-        </AtprotoProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <NuqsAdapter>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          <AtprotoProvider>
+            <WagmiProvider>
+              <ModalProvider>
+                {children}
+              </ModalProvider>
+            </WagmiProvider>
+          </AtprotoProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </NuqsAdapter>
   );
 }

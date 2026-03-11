@@ -6,6 +6,7 @@ import { OrgHero } from "./_components/OrgHero";
 import { OrgTabBar } from "./_components/OrgTabBar";
 import { OrgAbout } from "./_components/OrgAbout";
 import { OrgSetupPage } from "./_components/OrgSetupPage";
+import { WalletLinkSection } from "./_components/WalletLinkSection";
 import { auth } from "@/lib/auth";
 import Container from "@/components/ui/container";
 
@@ -117,6 +118,8 @@ export default async function OrganizationPage({
     ...(organization.logoUrl ? { logo: { "@type": "ImageObject", url: organization.logoUrl } } : {}),
   };
 
+  const isOwner = session.isLoggedIn && session.did === did;
+
   return (
     <>
       <script
@@ -128,6 +131,11 @@ export default async function OrganizationPage({
           <OrgHero organization={organization} />
           <OrgTabBar did={organization.did} />
           <OrgAbout organization={organization} />
+          {isOwner && (
+            <div className="mt-8">
+              <WalletLinkSection orgDid={did} />
+            </div>
+          )}
         </Container>
       </main>
     </>

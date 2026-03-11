@@ -3,9 +3,11 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { queries, type Activity, type ActivityOrgInfo } from "@/lib/graphql/queries/index";
 import { activityToBumicertData } from "@/lib/adapters";
+import type { FundingConfigData } from "@/lib/types";
 import { BumicertDetail } from "./_components/BumicertDetail";
 import ErrorPage from "@/components/error-page";
 import Container from "@/components/ui/container";
+import { auth } from "@/lib/auth";
 
 const BASE_URL = "https://bumicerts.com";
 
@@ -77,7 +79,12 @@ export default async function BumicertDetailPage({
   if (!parsed) notFound();
 
   const [did, rkey] = parsed;
-  const { data, error } = await getActivityData(did);
+
+  // Fetch activity data and session in parallel
+  const [{ data, error }, session] = await Promise.all([
+    getActivityData(did),
+    auth.session.getSession(),
+  ]);
 
   if (error) {
     console.error("Error fetching Bumicert", did, rkey, error);
@@ -97,6 +104,36 @@ export default async function BumicertDetailPage({
 
   const bumicert = activityToBumicertData(activity);
   const pageUrl = `${BASE_URL}/bumicert/${encodeURIComponent(id)}`;
+
+  // ── Ownership check ─────────────────────────────────────────────────────────
+  const isOwner = session.isLoggedIn && session.did === bumicert.organizationDid;
+
+  // ── Extract funding config from the joined activity data ────────────────────
+  // The indexer joins funding.config onto the activity via shared rkey.
+  // Cast to FundingConfigData (shapes match the fragment we query).
+  const rawFc = activity.fundingConfig;
+  const fundingConfig: FundingConfigData | null = rawFc
+    ? {
+        receivingWallet: (() => {
+          const rw = rawFc.receivingWallet;
+          if (rw && typeof rw === "object" && "uri" in (rw as object)) {
+            return { uri: (rw as { uri: string }).uri };
+          }
+          return null;
+        })(),
+        status: (rawFc.status ?? null) as FundingConfigData["status"],
+        goalInUSD: rawFc.goalInUSD ?? null,
+        minDonationInUSD: rawFc.minDonationInUSD ?? null,
+        maxDonationInUSD: rawFc.maxDonationInUSD ?? null,
+        allowOversell: rawFc.allowOversell ?? null,
+        createdAt: rawFc.createdAt
+          ? String(rawFc.createdAt)
+          : null,
+        updatedAt: rawFc.updatedAt
+          ? String(rawFc.updatedAt)
+          : null,
+      }
+    : null;
 
   // ── JSON-LD structured data ─────────────────────────────────────────────────
   const structuredData = {
@@ -125,7 +162,11 @@ export default async function BumicertDetailPage({
       />
       <main className="w-full">
         <Container className="pt-3 pb-12">
-          <BumicertDetail bumicert={bumicert} />
+          <BumicertDetail
+            bumicert={bumicert}
+            isOwner={isOwner}
+            fundingConfig={fundingConfig}
+          />
         </Container>
       </main>
     </>

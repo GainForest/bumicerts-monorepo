@@ -81,17 +81,19 @@ export async function POST(req: NextRequest) {
       checkRateLimit(`ip:${clientIp}`, 'send-invite-email', RATE_LIMITS.sendInviteEmail.byIp),
       checkRateLimit(`email:${email}`, 'send-invite-email', RATE_LIMITS.sendInviteEmail.byEmail),
     ]);
-    if (!ipLimit.allowed) {
-      return Response.json(
-        { error: 'RateLimitExceeded', message: 'Too many requests', retryAfter: ipLimit.resetAt.toISOString() },
-        { status: 429, headers: { 'Retry-After': String(Math.ceil((ipLimit.resetAt.getTime() - Date.now()) / 1000)) } }
-      );
-    }
-    if (!emailLimit.allowed) {
-      return Response.json(
-        { error: 'RateLimitExceeded', message: 'Please wait before requesting another invite code', retryAfter: emailLimit.resetAt.toISOString() },
-        { status: 429, headers: { 'Retry-After': String(Math.ceil((emailLimit.resetAt.getTime() - Date.now()) / 1000)) } }
-      );
+    if (process.env.NODE_ENV !== 'development') {
+      if (!ipLimit.allowed) {
+        return Response.json(
+          { error: 'RateLimitExceeded', message: 'Too many requests', retryAfter: ipLimit.resetAt.toISOString() },
+          { status: 429, headers: { 'Retry-After': String(Math.ceil((ipLimit.resetAt.getTime() - Date.now()) / 1000)) } }
+        );
+      }
+      if (!emailLimit.allowed) {
+        return Response.json(
+          { error: 'RateLimitExceeded', message: 'Please wait before requesting another invite code', retryAfter: emailLimit.resetAt.toISOString() },
+          { status: 429, headers: { 'Retry-After': String(Math.ceil((emailLimit.resetAt.getTime() - Date.now()) / 1000)) } }
+        );
+      }
     }
 
     // Record rate limit attempts immediately after checks pass, before any email

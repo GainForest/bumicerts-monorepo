@@ -16,10 +16,10 @@ export const metadata = {
 
 const ExploreActivitiesQuery = graphql(
   `
-    query ExploreActivities($limit: Int, $cursor: String, $labelTier: String, $where: ActivityWhereInput) {
+    query ExploreActivities($limit: Int, $cursor: String, $where: ActivityWhereInput) {
       hypercerts {
         claim {
-          activity(limit: $limit, cursor: $cursor, labelTier: $labelTier, where: $where, order: DESC, sortBy: CREATED_AT) {
+          activity(limit: $limit, cursor: $cursor, where: $where, order: DESC, sortBy: CREATED_AT) {
             data {
               ...HcActivityFields
             }

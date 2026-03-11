@@ -68,10 +68,10 @@ const byDidAndOrgDocument = graphql(
 /** Paginated explore feed. */
 const listDocument = graphql(
   `
-    query ActivitiesList($limit: Int, $cursor: String, $labelTier: String, $where: ActivityWhereInput) {
+    query ActivitiesList($limit: Int, $cursor: String, $where: ActivityWhereInput) {
       hypercerts {
         claim {
-          activity(limit: $limit, cursor: $cursor, labelTier: $labelTier, where: $where, order: DESC, sortBy: CREATED_AT) {
+          activity(limit: $limit, cursor: $cursor, where: $where, order: DESC, sortBy: CREATED_AT) {
             data {
               ...HcActivityFields
             }
@@ -145,14 +145,14 @@ export async function fetch<P extends Params>(params: P): Promise<Result<P>> {
   }
 
   // List (explore)
-  const where: Record<string, boolean> = {};
+  const where: Record<string, unknown> = {};
   if (params.hasImage != null) where["hasImage"] = params.hasImage;
   if (params.hasOrganizationInfoRecord != null) where["hasOrganizationInfoRecord"] = params.hasOrganizationInfoRecord;
+  if (params.labelTier != null) where["labelTier"] = params.labelTier;
 
   const res = await graphqlClient.request(listDocument, {
     limit: params.limit,
     cursor: params.cursor,
-    labelTier: params.labelTier,
     where: Object.keys(where).length > 0 ? where : undefined,
   });
   const data = (res.hypercerts?.claim?.activity?.data ?? []) as Activity[];

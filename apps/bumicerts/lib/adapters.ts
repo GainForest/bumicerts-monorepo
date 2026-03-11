@@ -6,10 +6,12 @@
  *
  * Post-redesign schema shape:
  *   Every leaf returns { data: [XxxItem!]!, pageInfo: { endCursor, hasNextPage, count } }
- *   Each item: { metadata, creatorInfo, record }
- *     metadata   – AT Protocol envelope (+ labelTier/label for activities)
- *     creatorInfo – org name + logo resolved inline by the indexer (no second round-trip)
- *     record     – pure lexicon payload fields
+ *   Each item: { metadata, specialMetadata?, creatorInfo, record, fundingConfig? }
+ *     metadata        – standard AT Protocol envelope (RecordMeta)
+ *     specialMetadata – per-collection extras (labelTier/label for activities)
+ *     creatorInfo     – org name + logo resolved inline by the indexer (no second round-trip)
+ *     record          – pure lexicon payload fields
+ *     fundingConfig   – joined funding config record (activities only)
  */
 
 import type { BumicertData, BumicertContributor, OrganizationData } from "./types";
@@ -34,7 +36,10 @@ export interface GraphQLRecordMetadata {
   uri: string | null;
 }
 
-export interface GraphQLActivityMetadata extends GraphQLRecordMetadata {
+/** @deprecated Alias for GraphQLRecordMetadata — activities now use the same base type. */
+export type GraphQLActivityMetadata = GraphQLRecordMetadata;
+
+export interface GraphQLActivitySpecialMetadata {
   labelTier: string | null;
   label: {
     tier: string | null;
@@ -42,6 +47,17 @@ export interface GraphQLActivityMetadata extends GraphQLRecordMetadata {
     labeledAt: string | null;
     syncedAt: string | null;
   } | null;
+}
+
+export interface GraphQLFundingConfigRecord {
+  receivingWallet: unknown | null;
+  status: string | null;
+  goalInUSD: string | null;
+  minDonationInUSD: string | null;
+  maxDonationInUSD: string | null;
+  allowOversell: boolean | null;
+  createdAt: string | null;
+  updatedAt: string | null;
 }
 
 export interface GraphQLStrongRef {
@@ -57,10 +73,12 @@ export interface GraphQLCreatorInfo {
 
 /**
  * An HcActivityItem from the new indexer schema.
- * { metadata, creatorInfo, record }
+ * { metadata, specialMetadata, fundingConfig, creatorInfo, record }
  */
 export interface GraphQLHcActivityItem {
-  metadata: GraphQLActivityMetadata | null;
+  metadata: GraphQLRecordMetadata | null;
+  specialMetadata: GraphQLActivitySpecialMetadata | null;
+  fundingConfig: GraphQLFundingConfigRecord | null;
   creatorInfo: GraphQLCreatorInfo | null;
   record: {
     title: string | null;

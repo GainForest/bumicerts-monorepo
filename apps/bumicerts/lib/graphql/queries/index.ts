@@ -33,6 +33,9 @@ import * as organizationLogo from "./organization/logo";
 import * as activities from "./activities";
 import * as locations from "./locations";
 import * as actor from "./actor";
+import * as fundingReceipts from "./fundingReceipts";
+import * as linkEvm from "./linkEvm";
+import * as cartBumicert from "./cartBumicert";
 
 export const queries = {
   organization: {
@@ -59,6 +62,17 @@ export const queries = {
     /** Invalidates ALL actor profile queries. */
     key: () => ["actor"] as const,
   },
+
+  fundingReceipts: {
+    ...createQuery(["fundingReceipts"], fundingReceipts),
+    /** Invalidates ALL funding receipt queries. */
+    key: () => ["fundingReceipts"] as const,
+  },
+
+  linkEvm: createQuery(["linkEvm"], linkEvm),
+
+  /** Single bumicert card data for the cart modal. Keyed by bumicert ID ("{did}-{rkey}"). */
+  cartBumicert: createQuery(["cartBumicert"], cartBumicert),
 };
 
 // Re-export types that consumers commonly need
@@ -66,3 +80,6 @@ export type { OrgInfo, OrgActivity, SingleParams as OrgSingleParams, ListParams 
 export type { Activity, ActivityOrgInfo, ByDidParams as ActivityByDidParams, ByDidAndOrgParams as ActivityByDidAndOrgParams, ListParams as ActivityListParams } from "./activities";
 export type { CertifiedLocation } from "./locations";
 export type { ActorProfile } from "./actor";
+export type { FundingReceiptItem } from "./fundingReceipts";
+export type { EvmLink } from "./linkEvm";
+export type { CartBumicertItem } from "./cartBumicert";

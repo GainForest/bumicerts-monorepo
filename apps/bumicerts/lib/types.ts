@@ -45,6 +45,28 @@ export type BumicertData = {
   createdAt: string;
 };
 
+// ── Funding Config ────────────────────────────────────────────────────────────
+
+/**
+ * Serialisation-safe shape of a BumicertsFundingConfigRecord.
+ * Mirrors the indexer's `BumicertsFundingConfigRecord` GraphQL type
+ * and can be passed server → client without JSON issues.
+ */
+export type FundingConfigData = {
+  /**
+   * The receiving wallet — either an EvmLinkRef { $type, uri } or null.
+   * Stored as `unknown` since the lexicon uses an open union.
+   */
+  receivingWallet: { uri: string } | null;
+  status: "open" | "coming-soon" | "paused" | "closed" | null;
+  goalInUSD: string | null;
+  minDonationInUSD: string | null;
+  maxDonationInUSD: string | null;
+  allowOversell: boolean | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
 // ── Organization ─────────────────────────────────────────────────────────────
 
 export type OrganizationData = {

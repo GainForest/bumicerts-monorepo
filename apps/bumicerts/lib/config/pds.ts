@@ -24,7 +24,7 @@ const isProduction = env.NEXT_PUBLIC_VERCEL_ENV === "production";
 // ─── Sign-up (invite-code PDSes we own) ──────────────────────────────────────
 
 const PRODUCTION_SIGNUP_DOMAINS = ["gainforest.id"] as const;
-const DEV_SIGNUP_DOMAINS = ["gainforest.id", "climateai.org"] as const;
+const DEV_SIGNUP_DOMAINS = ["climateai.org"] as const;
 
 export const signupPDSDomains = isProduction
   ? PRODUCTION_SIGNUP_DOMAINS

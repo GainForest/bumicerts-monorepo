@@ -8,9 +8,11 @@
  * Schema shape (post-redesign):
  *   Every leaf returns { data: [XxxItem!]!, pageInfo: { endCursor, hasNextPage, count } }
  *   Each item: { metadata, creatorInfo, record }
- *     metadata   – AT Protocol envelope (+ labelTier/label for activities)
- *     creatorInfo – org name + logo resolved inline by the indexer
- *     record     – pure lexicon payload fields
+ *     metadata        – standard AT Protocol envelope (RecordMeta)
+ *     specialMetadata – per-collection extras (labelTier/label for activities)
+ *     creatorInfo     – org name + logo resolved inline by the indexer
+ *     record          – pure lexicon payload fields
+ *     fundingConfig   – joined BumicertsFundingConfigRecord (activities only)
  */
 
 import { graphql } from "./tada";
@@ -74,6 +76,8 @@ export const HcActivityFragment = graphql(`
       cid
       createdAt
       indexedAt
+    }
+    specialMetadata {
       labelTier
       label {
         tier
@@ -81,6 +85,16 @@ export const HcActivityFragment = graphql(`
         labeledAt
         syncedAt
       }
+    }
+    fundingConfig {
+      receivingWallet
+      status
+      goalInUSD
+      minDonationInUSD
+      maxDonationInUSD
+      allowOversell
+      createdAt
+      updatedAt
     }
     creatorInfo {
       did

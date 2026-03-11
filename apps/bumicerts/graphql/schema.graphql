@@ -1,5 +1,5 @@
 """
-Filter for activity records. Use `did` / `handle` to filter by author. Use `title`, `shortDescription`, `description` (StringFilter) for field-level search, or `text` for full-text search across all three fields at once. Combine with `and` / `or` / `not` for boolean logic.
+Filter for activity records. Use `did` / `handle` to filter by author. Use `rkey` to fetch a specific activity by key. Use `title`, `shortDescription`, `description` (StringFilter) for field-level search, or `text` for full-text search across all three fields at once. Use `labelTier` to filter by Hyperlabel quality tier. Combine with `and` / `or` / `not` for boolean logic.
 """
 input ActivityWhereInput {
   """All child filters must match."""
@@ -28,11 +28,21 @@ input ActivityWhereInput {
   """
   hasOrganizationInfoRecord: Boolean
 
+  """
+  Filter by Hyperlabel quality tier: high-quality | standard | draft | likely-test. Only returns activities whose author has been assigned this label by the Hyperlabel labeller.
+  """
+  labelTier: String
+
   """The child filter must NOT match."""
   not: ActivityWhereInput
 
   """At least one child filter must match."""
   or: [ActivityWhereInput!]
+
+  """
+  Filter by record key (rkey). Combine with `did` to fetch a single specific activity.
+  """
+  rkey: String
 
   """
   Filter on `shortDescription`. Supports equals, startsWith, endsWith, includes.
@@ -65,6 +75,163 @@ type BlobRef {
   Full URI to fetch the blob (e.g. https://pds.example.com/xrpc/com.atproto.sync.getBlob?did=...&cid=...). May be 'https://unknown.invalid/...' if the DID's PDS could not be resolved.
   """
   uri: String
+}
+
+"""A record from app.bumicerts.funding.config."""
+type BumicertsFundingConfigItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: BumicertsFundingConfigRecord
+}
+
+type BumicertsFundingConfigPage {
+  data: [BumicertsFundingConfigItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for app.bumicerts.funding.config. The funding / donations configuration for a given bumicert.
+"""
+type BumicertsFundingConfigRecord {
+  """
+  An optional field to determine if donations are accepted post the goal reach. Defaults to true (overselling is allowed).
+  """
+  allowOversell: Boolean
+
+  """Client-declared timestamp when this record was originally created."""
+  createdAt: DateTime
+
+  """An optional field to set a fundraising goal in USD (e.g. '1000.50')."""
+  goalInUSD: String
+
+  """
+  Optional maximum donation amount in USD (e.g. '10000.00'). Donations above this amount will be rejected.
+  """
+  maxDonationInUSD: String
+
+  """
+  Optional minimum donation amount in USD (e.g. '1.00'). Donations below this amount will be rejected.
+  """
+  minDonationInUSD: String
+
+  """
+  Reference to the wallet link record where funds should be received. Open union to support future wallet types (e.g. Solana, Cosmos).
+  """
+  receivingWallet: JSON
+
+  """The current status of the listing. Defaults to 'open'."""
+  status: String
+
+  """Client-declared timestamp when this record was last updated."""
+  updatedAt: DateTime
+}
+
+"""BumicertsFundingNamespace namespace (bumicerts.funding.*)."""
+type BumicertsFundingNamespace {
+  """Paginated list of app.bumicerts.funding.config records."""
+  config(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): BumicertsFundingConfigPage
+}
+
+"""The EIP-712 typed data message signed by the user's EVM wallet."""
+type BumicertsLinkEvmEip712Message {
+  """EVM chain ID (bigint serialized as string)."""
+  chainId: String
+
+  """The ATProto DID being linked."""
+  did: String
+
+  """The EVM wallet address (must match top-level address)."""
+  evmAddress: String
+
+  """Replay-protection nonce."""
+  nonce: String
+
+  """Unix timestamp when the attestation was created."""
+  timestamp: String
+}
+
+"""EOA wallet ownership proof via EIP-712 typed data signature."""
+type BumicertsLinkEvmEip712Proof {
+  message: BumicertsLinkEvmEip712Message
+
+  """User's ECDSA signature (0x-prefixed hex)."""
+  signature: String
+}
+
+"""A DID–EVM wallet link record (app.bumicerts.link.evm)."""
+type BumicertsLinkEvmItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: BumicertsLinkEvmRecord
+
+  """
+  Cryptographic validity metadata for this record, computed at query time. Always present for link.evm records.
+  """
+  specialMetadata: BumicertsLinkEvmSpecialMetadata
+}
+
+type BumicertsLinkEvmPage {
+  data: [BumicertsLinkEvmItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Platform's EIP-712 counter-signature attesting the link was created through a trusted service.
+"""
+type BumicertsLinkEvmPlatformAttestation {
+  """The platform's signing wallet address."""
+  platformAddress: String
+
+  """Platform's ECDSA signature (0x-prefixed hex)."""
+  signature: String
+
+  """The user signature that the platform signed over."""
+  signedData: String
+}
+
+"""
+Pure payload for app.bumicerts.link.evm — a DID–EVM wallet link record.
+"""
+type BumicertsLinkEvmRecord {
+  """EVM wallet address (0x-prefixed, checksummed)."""
+  address: String
+  createdAt: DateTime
+
+  """Optional user-defined label for this wallet link."""
+  name: String
+
+  """Platform's EIP-712 counter-signature."""
+  platformAttestation: BumicertsLinkEvmPlatformAttestation
+
+  """User's EIP-712 ownership proof."""
+  userProof: BumicertsLinkEvmEip712Proof
+}
+
+"""
+Cryptographic validity metadata for a link.evm record, computed at query time.
+"""
+type BumicertsLinkEvmSpecialMetadata {
+  """
+  True if both the user's EIP-712 ownership proof and the platform's counter-signature are cryptographically valid at query time. Stateless: does not check if platformAddress is a specific trusted wallet.
+  """
+  valid: Boolean
+}
+
+"""BumicertsLinkNamespace namespace (bumicerts.link.*)."""
+type BumicertsLinkNamespace {
+  """
+  Paginated list of app.bumicerts.link.evm records. Each record includes a `valid` field computed by verifying both the user's EIP-712 ownership proof and the platform's counter-signature. Use `where: { valid: true }` to fetch only cryptographically valid links.
+  """
+  evm(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: EvmLinkWhereInput): BumicertsLinkEvmPage
+}
+
+"""BumicertsNamespace namespace (bumicerts.*)."""
+type BumicertsNamespace {
+  """BumicertsFundingNamespace namespace."""
+  funding: BumicertsFundingNamespace
+
+  """BumicertsLinkNamespace namespace."""
+  link: BumicertsLinkNamespace
 }
 
 """CertifiedActorNamespace namespace (certified.actor.*)."""
@@ -359,6 +526,36 @@ type CreatorInfo {
 
 """ISO-8601 date-time string (e.g. 2024-01-15T12:00:00.000Z)"""
 scalar DateTime
+
+"""
+Filter for app.bumicerts.link.evm records. Supports all standard identity filters (`did`, `handle`, `rkey`) plus a `valid` boolean to filter by cryptographic signature validity.
+"""
+input EvmLinkWhereInput {
+  """All child filters must match."""
+  and: [EvmLinkWhereInput!]
+
+  """Filter to records authored by this DID."""
+  did: String
+
+  """
+  Filter by AT Protocol handle. Resolved to a DID (takes precedence over `did`).
+  """
+  handle: String
+
+  """The child filter must NOT match."""
+  not: EvmLinkWhereInput
+
+  """At least one child filter must match."""
+  or: [EvmLinkWhereInput!]
+
+  """Filter by record key (rkey)."""
+  rkey: String
+
+  """
+  If true, only return records where both the user proof and platform attestation signatures are cryptographically valid. If false, only return invalid records. If omitted, returns all records regardless of validity.
+  """
+  valid: Boolean
+}
 
 """A record from app.gainforest.dwc.event."""
 type GainforestDwcEventItem {
@@ -1224,8 +1421,18 @@ type HyperboardsNamespace {
 """A Hypercerts claim activity (org.hypercerts.claim.activity)."""
 type HypercertsClaimActivityItem {
   creatorInfo: CreatorInfo
-  metadata: HypercertsClaimActivityMetadata
+
+  """
+  The associated funding / donations configuration for this activity (app.bumicerts.funding.config record with the same rkey). Null if no funding configuration has been created for this activity.
+  """
+  fundingConfig: BumicertsFundingConfigRecord
+  metadata: RecordMeta
   record: HypercertsClaimActivityRecord
+
+  """
+  Optional Hyperlabel quality metadata for this activity. Null when the author has not been labelled by the Hyperlabel labeller.
+  """
+  specialMetadata: HypercertsClaimActivitySpecialMetadata
 }
 
 """Quality label from the Hyperlabel labeller (einstein.climateai.org)."""
@@ -1241,42 +1448,6 @@ type HypercertsClaimActivityLabel {
 
   """Quality tier: high-quality | standard | draft | likely-test"""
   tier: String
-}
-
-"""
-AT Protocol envelope fields for an activity record, including optional Hyperlabel quality metadata.
-"""
-type HypercertsClaimActivityMetadata {
-  """Content hash (CID)"""
-  cid: String
-
-  """Lexicon collection NSID"""
-  collection: String
-
-  """Creation time from record payload"""
-  createdAt: DateTime
-
-  """DID of the record author"""
-  did: String
-
-  """When the indexer stored this record"""
-  indexedAt: DateTime
-
-  """
-  Full quality label object from Hyperlabel (null if author not yet labelled).
-  """
-  label: HypercertsClaimActivityLabel
-
-  """
-  Hyperlabel quality tier for this record's author: high-quality | standard | draft | likely-test. Null if the author has not been labelled yet.
-  """
-  labelTier: String
-
-  """Record key (TID or literal)"""
-  rkey: String
-
-  """Full AT-URI (at://did/collection/rkey)"""
-  uri: String
 }
 
 type HypercertsClaimActivityPage {
@@ -1302,6 +1473,21 @@ type HypercertsClaimActivityRecord {
 
   """Work scope: CEL expression or free-form string"""
   workScope: JSON
+}
+
+"""
+Hyperlabel quality metadata for an activity record. Only present when the author has been labelled by the Hyperlabel labeller.
+"""
+type HypercertsClaimActivitySpecialMetadata {
+  """
+  Full quality label object from Hyperlabel (null if author not yet labelled).
+  """
+  label: HypercertsClaimActivityLabel
+
+  """
+  Hyperlabel quality tier for this record's author: high-quality | standard | draft | likely-test. Null if the author has not been labelled yet.
+  """
+  labelTier: String
 }
 
 """A record from org.hypercerts.claim.contribution."""
@@ -1376,11 +1562,6 @@ type HypercertsClaimNamespace {
   """
   activity(
     cursor: String
-
-    """
-    Filter by Hyperlabel quality tier: high-quality | standard | draft | likely-test
-    """
-    labelTier: String
     limit: Int
 
     """Sort direction when no text filter is present."""
@@ -1888,50 +2069,8 @@ type IiSubjectRef {
   uri: String
 }
 
-"""The EIP-712 typed data message that was signed."""
-type ImpactindexerLinkAttestationEip712Message {
-  chainId: String
-  did: String
-  evmAddress: String
-  nonce: String
-  timestamp: String
-}
-
-"""An on-chain attestation link (org.impactindexer.link.attestation)."""
-type ImpactindexerLinkAttestationItem {
-  creatorInfo: CreatorInfo
-  metadata: RecordMeta
-  record: ImpactindexerLinkAttestationRecord
-}
-
-type ImpactindexerLinkAttestationPage {
-  data: [ImpactindexerLinkAttestationItem!]
-  pageInfo: PageInfo
-}
-
-"""
-Pure payload for an on-chain attestation link (org.impactindexer.link.attestation).
-"""
-type ImpactindexerLinkAttestationRecord {
-  address: String
-  chainId: Int
-  createdAt: DateTime
-  message: ImpactindexerLinkAttestationEip712Message
-  signature: String
-  signatureType: String
-}
-
-"""ImpactindexerLinkNamespace namespace (impactindexer.link.*)."""
-type ImpactindexerLinkNamespace {
-  """Paginated list of org.impactindexer.link.attestation records."""
-  attestation(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): ImpactindexerLinkAttestationPage
-}
-
 """ImpactindexerNamespace namespace (impactindexer.*)."""
 type ImpactindexerNamespace {
-  """ImpactindexerLinkNamespace namespace."""
-  link: ImpactindexerLinkNamespace
-
   """ImpactindexerReviewNamespace namespace."""
   review: ImpactindexerReviewNamespace
 }
@@ -2073,6 +2212,9 @@ type PageInfo {
 
 """GainForest AT Protocol record index."""
 type Query {
+  """All BumicertsNamespace indexed records."""
+  bumicerts: BumicertsNamespace
+
   """All CertifiedNamespace indexed records."""
   certified: CertifiedNamespace
 
@@ -2163,7 +2305,7 @@ type StrongRef {
 }
 
 """
-Filter records by author identity. `handle` takes precedence over `did` if both are supplied. Combine conditions with `and` / `or` / `not`.
+Filter records by author identity and/or record key. `handle` takes precedence over `did` if both are supplied. Use `rkey` to fetch a specific record by key (combine with `did` for an exact lookup). Combine conditions with `and` / `or` / `not`.
 """
 input WhereInput {
   """All child filters must match (logical AND)."""
@@ -2182,4 +2324,9 @@ input WhereInput {
 
   """At least one child filter must match (logical OR)."""
   or: [WhereInput!]
+
+  """
+  Filter by record key (rkey). Combine with `did` to fetch a single specific record (e.g. where: { did: "did:plc:...", rkey: "3jzfcijpj2z2a" }).
+  """
+  rkey: String
 }

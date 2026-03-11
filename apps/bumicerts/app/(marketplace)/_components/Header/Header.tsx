@@ -4,6 +4,7 @@ import { useHeaderSlots } from "./context";
 import { motion, AnimatePresence } from "framer-motion";
 import { ProgressiveBlur } from "@/components/ui/progressive-blur";
 import { AuthButton } from "@/components/auth/AuthButton";
+import { CartButton } from "@/components/cart/CartButton";
 
 export function Header() {
   const leftContent = useHeaderSlots((s) => s.leftContent);
@@ -67,11 +68,12 @@ export function Header() {
                 </motion.div>
               ) : null}
             </AnimatePresence>
+            <CartButton />
             <AuthButton />
           </div>
         </div>
 
-        {/* Sub-header slot (e.g. step progress bar) — desktop only */}
+        {/* Sub-header slot (e.g. tabs, step progress bar) — all screen sizes */}
         <AnimatePresence>
           {subHeaderContent ? (
             <motion.div
@@ -80,7 +82,7 @@ export function Header() {
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-              className="hidden lg:block px-4 pb-1 overflow-hidden"
+              className="px-4 pb-1 overflow-hidden"
             >
               {subHeaderContent}
             </motion.div>
