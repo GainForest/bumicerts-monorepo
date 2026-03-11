@@ -107,12 +107,14 @@ TAP_DISABLE_ACKS=false
 TAP_LOG_LEVEL=info
 ```
 
-> **Note:** `PORT=2480` is required so Railway's healthcheck knows which port to check. Without this, the healthcheck will fail with "service unavailable".
+> **CRITICAL:** `PORT=2480` is **required** - Railway uses this to detect when the service is ready. Tap always listens on port 2480 internally, but Railway needs this env var to know which port to check. Without it, Railway will mark the service as unhealthy.
 
 3. For `TAP_ADMIN_PASSWORD`, click **"+ New Variable"** and:
    - Name: `TAP_ADMIN_PASSWORD`
    - Click the **"Generate"** button (or type `${{secret(32)}}`)
    - This creates a secure random password
+
+> **Note on healthchecks:** The Tap admin auth middleware protects ALL endpoints including `/health`. Railway uses TCP port detection (checking if port 2480 is open) instead of HTTP healthchecks. Do NOT configure a healthcheck path in Railway - just set `PORT=2480` and leave the healthcheck settings empty.
 
 #### 3.4: Add a volume for persistent storage
 
