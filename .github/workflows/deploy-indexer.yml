@@ -51,95 +51,96 @@ jobs:
     name: Deploy to Railway
     needs: validate
     runs-on: ubuntu-latest
-    # Only run if:
-    # 1. Not skipped via workflow input
-    # 2. RAILWAY_TOKEN secret exists
-    # 3. On the main repo (not forks)
     if: |
       github.event.inputs.skip_railway != 'true' &&
       github.repository == 'GainForest/atproto-packages'
+    env:
+      RAILWAY_API: https://backboard.railway.com/graphql/v2
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
     steps:
-      - name: Check RAILWAY_API_TOKEN
-        id: check_token
-        env:
-          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      - name: Check secrets
+        id: check
         run: |
-          if [ -z "$RAILWAY_API_TOKEN" ]; then
-            echo "has_token=false" >> $GITHUB_OUTPUT
-            echo "::warning::RAILWAY_TOKEN secret is not set. Skipping Railway deployment."
+          if [ -z "$RAILWAY_TOKEN" ] || [ -z "$RAILWAY_PROJECT_ID" ]; then
+            echo "ready=false" >> $GITHUB_OUTPUT
+            echo "::warning::RAILWAY_TOKEN or RAILWAY_PROJECT_ID is not set. Skipping deployment."
           else
-            echo "has_token=true" >> $GITHUB_OUTPUT
+            echo "ready=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Install Railway CLI
-        if: steps.check_token.outputs.has_token == 'true'
-        run: npm i -g @railway/cli
-
-      - name: Link Railway project
-        if: steps.check_token.outputs.has_token == 'true'
-        env:
-          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      - name: Resolve service and environment IDs
+        if: steps.check.outputs.ready == 'true'
+        id: resolve
         run: |
-          echo "Linking Railway project..."
-          railway link -p ${{ secrets.RAILWAY_PROJECT_ID }}
+          RESPONSE=$(curl -sf -X POST "$RAILWAY_API" \
+            -H "Authorization: Bearer $RAILWAY_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\":\"query { project(id: \\\"$RAILWAY_PROJECT_ID\\\") { environments { edges { node { id name } } } services { edges { node { id name } } } } }\"}")
+
+          echo "API response: $RESPONSE"
+
+          ENV_ID=$(echo "$RESPONSE" | jq -r '.data.project.environments.edges[0].node.id')
+          TAP_ID=$(echo "$RESPONSE" | jq -r '.data.project.services.edges[] | select(.node.name == "tap") | .node.id')
+          INDEXER_ID=$(echo "$RESPONSE" | jq -r '.data.project.services.edges[] | select(.node.name == "indexer") | .node.id')
+
+          echo "env_id=$ENV_ID" >> $GITHUB_OUTPUT
+          echo "tap_id=$TAP_ID" >> $GITHUB_OUTPUT
+          echo "indexer_id=$INDEXER_ID" >> $GITHUB_OUTPUT
+
+          echo "Environment ID: $ENV_ID"
+          echo "Tap service ID: $TAP_ID"
+          echo "Indexer service ID: $INDEXER_ID"
 
       - name: Sync TAP_COLLECTION_FILTERS to Tap service
-        if: steps.check_token.outputs.has_token == 'true'
-        env:
-          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        if: steps.check.outputs.ready == 'true'
         run: |
-          echo "Updating TAP_COLLECTION_FILTERS on Tap service..."
-          OUTPUT=$(railway variables --set "TAP_COLLECTION_FILTERS=${{ needs.validate.outputs.collection_filters }}" -s tap 2>&1) && {
-            echo "✅ Updated TAP_COLLECTION_FILTERS"
-            echo "$OUTPUT"
-          } || {
-            echo "::warning::Could not update Tap variables: $OUTPUT"
-          }
+          FILTERS="${{ needs.validate.outputs.collection_filters }}"
+          VARS_JSON=$(jq -n --arg v "$FILTERS" '{"TAP_COLLECTION_FILTERS": $v}')
+          RESPONSE=$(curl -sf -X POST "$RAILWAY_API" \
+            -H "Authorization: Bearer $RAILWAY_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --arg projectId "$RAILWAY_PROJECT_ID" \
+              --arg environmentId "${{ steps.resolve.outputs.env_id }}" \
+              --arg serviceId "${{ steps.resolve.outputs.tap_id }}" \
+              --argjson variables "$VARS_JSON" \
+              '{query: "mutation($input: VariableCollectionUpsertInput!) { variableCollectionUpsert(input: $input) }", variables: {input: {projectId: $projectId, environmentId: $environmentId, serviceId: $serviceId, variables: $variables}}}')")
+          echo "✅ TAP_COLLECTION_FILTERS synced"
+          echo "$RESPONSE"
 
       - name: Redeploy Tap service
-        if: steps.check_token.outputs.has_token == 'true'
-        env:
-          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        if: steps.check.outputs.ready == 'true'
         run: |
-          echo "Redeploying Tap service..."
-          OUTPUT=$(railway redeploy -s tap -y 2>&1) && {
-            echo "✅ Tap redeployment triggered"
-            echo "$OUTPUT"
-          } || {
-            echo "::warning::Could not redeploy Tap: $OUTPUT"
-          }
+          RESPONSE=$(curl -sf -X POST "$RAILWAY_API" \
+            -H "Authorization: Bearer $RAILWAY_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --arg serviceId "${{ steps.resolve.outputs.tap_id }}" \
+              --arg environmentId "${{ steps.resolve.outputs.env_id }}" \
+              '{query: "mutation($serviceId: String!, $environmentId: String!) { serviceInstanceDeploy(serviceId: $serviceId, environmentId: $environmentId) }", variables: {serviceId: $serviceId, environmentId: $environmentId}}')")
+          echo "✅ Tap redeploy triggered"
+          echo "$RESPONSE"
 
       - name: Redeploy Indexer service
-        if: steps.check_token.outputs.has_token == 'true'
-        env:
-          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        if: steps.check.outputs.ready == 'true'
         run: |
-          echo "Redeploying Indexer service..."
-          OUTPUT=$(railway redeploy -s indexer -y 2>&1) && {
-            echo "✅ Indexer redeployment triggered"
-            echo "$OUTPUT"
-          } || {
-            echo "::warning::Could not redeploy Indexer: $OUTPUT"
-          }
+          RESPONSE=$(curl -sf -X POST "$RAILWAY_API" \
+            -H "Authorization: Bearer $RAILWAY_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --arg serviceId "${{ steps.resolve.outputs.indexer_id }}" \
+              --arg environmentId "${{ steps.resolve.outputs.env_id }}" \
+              '{query: "mutation($serviceId: String!, $environmentId: String!) { serviceInstanceDeploy(serviceId: $serviceId, environmentId: $environmentId) }", variables: {serviceId: $serviceId, environmentId: $environmentId}}')")
+          echo "✅ Indexer redeploy triggered"
+          echo "$RESPONSE"
 
       - name: Deployment Summary
         if: always()
         run: |
-          echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Railway Deployment" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          if [ "${{ steps.check_token.outputs.has_token }}" != "true" ]; then
-            echo "⚠️ **Skipped:** RAILWAY_TOKEN secret not configured" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "To enable automatic deployment:" >> $GITHUB_STEP_SUMMARY
-            echo "1. Create an account token at https://railway.app/account/tokens" >> $GITHUB_STEP_SUMMARY
-            echo "2. Add it as \`RAILWAY_TOKEN\` in GitHub Secrets (used as RAILWAY_API_TOKEN by the CLI)" >> $GITHUB_STEP_SUMMARY
-            echo "3. Add \`RAILWAY_PROJECT_ID\` from your Railway project settings" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check.outputs.ready }}" != "true" ]; then
+            echo "⚠️ **Skipped:** RAILWAY_TOKEN or RAILWAY_PROJECT_ID not configured" >> $GITHUB_STEP_SUMMARY
           else
-            echo "✅ Deployment commands executed" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Check [Railway Dashboard](https://railway.app) for deployment status." >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "If deployments failed, check the logs above for specific errors." >> $GITHUB_STEP_SUMMARY
+            echo "✅ Deployment triggered — check [Railway Dashboard](https://railway.app) for status." >> $GITHUB_STEP_SUMMARY
           fi
