@@ -180,11 +180,11 @@ DISCOVERY_BATCH_SIZE=500
 
 **Server configuration**:
 ```
-GRAPHQL_PORT=4000
-HEALTH_PORT=4001
 HOST=0.0.0.0
 LOG_LEVEL=info
 ```
+
+> **Note:** Do NOT set `PORT` or `GRAPHQL_PORT` - Railway auto-injects `PORT` and the indexer uses it for both GraphQL and healthcheck endpoints. The `/health` endpoint is served on the same port as GraphQL.
 
 **Performance settings**:
 ```
