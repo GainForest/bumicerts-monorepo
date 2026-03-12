@@ -1,226 +1,126 @@
 # Bumicerts — Agent Guidelines
 
-## SSR, SEO & First Paint Strategy
-
-### The Problem
-
-Two goals are in tension:
-
-| Goal | Requires |
-|------|----------|
-| Fast first paint | Show UI immediately — don't block on data |
-| Good SEO | Data must be in the initial HTML — requires `await` |
-
-Using `await` in `page.tsx` blocks the entire server response until data is ready.
-Not using `await` means crawlers never see the real content.
-
-**`loading.tsx` is the resolution.** Next.js wraps `page.tsx` in a Suspense boundary
-and streams `loading.tsx` to the browser instantly while `page.tsx` executes. Crawlers
-that need full content wait for `page.tsx` to finish — so SEO sees everything.
+General rules that apply across the entire codebase. For domain-specific rules,
+follow the references at the bottom.
 
 ---
 
-### The Shell Pattern
+## Tooling
 
-For pages where some UI is static (heading, search bar, filters) but the main data
-needs fetching (a grid of cards), we use a **Shell component**.
-
-A Shell:
-- Renders all the static chrome immediately (heading, inputs, layout)
-- Accepts an `animate` prop — `true` in `loading.tsx`, `false` in `page.tsx`
-- Accepts `children` where the main data-driven content goes
-- Used in **both** `loading.tsx` and `page.tsx` — same wrapper, different props
-
-```
-loading.tsx  →  <Shell animate={true}>  <GridSkeleton />  </Shell>   ← streams instantly, animates in
-page.tsx     →  <Shell animate={false}> {/* content */}  </Shell>    ← swaps in silently
-```
-
-The user sees the shell + skeleton with entry animations immediately (fast first paint).
-When data arrives, `page.tsx` swaps in without re-running the animations (no double-flash).
-The crawler waits for `page.tsx` and sees the full content (good SEO).
-
-#### The `animate` prop
-
-Every Shell component has an `animate?: boolean` prop (default `true`). It gates the
-entry animations on the static chrome (heading, search row, etc.):
-
-```tsx
-<motion.div
-  initial={animate ? { opacity: 0, y: 16 } : false}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
->
-  <h1>...</h1>
-</motion.div>
-```
-
-- `loading.tsx` passes `animate={true}` → heading and chrome animate in on first display
-- `page.tsx` passes `animate={false}` → shell swaps in at its final position, no re-animation
-
-#### Secondary dynamic data inside the Shell
-
-Sometimes the shell itself contains data that isn't critical for SEO — e.g. filter
-chips derived from the dataset. For these, use `<Suspense>` with a skeleton fallback
-**inside the Shell**. We don't care if crawlers miss those chips; we do care about
-the main content grid.
-
-```tsx
-// ExploreShell example
-export function ExploreShell({ bumicerts, animate, children }: Props) {
-  return (
-    <section>
-      <motion.div initial={animate ? { opacity: 0, y: 16 } : false} ...>
-        <h1>Discover Regenerative Impact</h1>
-      </motion.div>
-      <SearchAndSortBar />                                         {/* static chrome */}
-      <Suspense fallback={<FilterChipsSkeleton />}>
-        <FilterChips bumicerts={bumicerts} />                      {/* secondary dynamic */}
-      </Suspense>
-      <div className="h-px ..." />
-      {children}                                                   {/* main data slot */}
-    </section>
-  );
-}
-```
-
-When the Shell needs data that both the secondary dynamic parts and the main children
-need (e.g. `bumicerts` for both filter chips and the grid), that data is fetched
-**once** in `page.tsx` and passed as a prop to the Shell. No duplicate fetches.
-
-```tsx
-// page.tsx
-const bumicerts = await fetchBumicerts();
-return <ExploreShell bumicerts={bumicerts} animate={false} />;
-
-// loading.tsx
-return (
-  <ExploreShell bumicerts={[]} animate={true}>
-    <BumicertGridSkeleton />
-  </ExploreShell>
-);
-```
+- **Always use `bun`** as the package manager and script runner. Never use npm or pnpm.
+- **Always run `bun run lint`** after making changes. Lint errors must be resolved —
+  never ignore them. Warnings are acceptable only if they are genuinely not important.
+- **Run `bun run build` before pushing.** Don't push speculatively and rely on CI to
+  catch build errors — it wastes build resources.
 
 ---
 
-### Page Classification
+## File Organisation
 
-#### Type A — Multiple sections, some static, one main data block (e.g. `/explore`, `/organization/all`)
-
-Use the Shell + `loading.tsx` pattern.
-
-```
-app/explore/
-  _components/
-    ExploreShell.tsx      ← "use client", animate prop, heading motion, children slot
-    ExploreShell.tsx      ← the main data content (or inline in Shell via children ?? <Grid>)
-  loading.tsx             ← <ExploreShell bumicerts={[]} animate={true}><Skeleton /></ExploreShell>
-  page.tsx                ← await data → <ExploreShell bumicerts={data} animate={false} />
-```
-
-#### Type B — Entire page is dynamic (e.g. `/bumicert/[id]`, `/organization/[did]`)
-
-Use `loading.tsx` with a full-page skeleton. No Shell needed — everything is one fetch.
-
-```
-app/bumicert/[id]/
-  loading.tsx   ← full skeleton (no text, pure visual divs)
-  page.tsx      ← await data → render full page
-```
+- **Prefer creating a new file** over appending more code to an existing one. If a
+  component, hook, or utility is growing large or serving a distinct purpose, split it.
 
 ---
 
-### Skeleton Rules
+## Type Safety
 
-- **No text** in skeletons — not even section labels like "Description". Only `<Skeleton>` blocks.
-- Skeletons use `<Skeleton>` from `@/components/ui/skeleton` which applies the shimmer animation.
-- Layout of the skeleton must **mirror the real layout** so there's no layout shift on swap.
-- The `BumicertCardSkeleton` already exists in `BumicertCard.tsx` — reuse it.
-- The `OrganizationCardSkeleton` already exists in `OrganizationCard.tsx` — reuse it.
-
----
-
-### Caching
-
-The app intentionally **never caches data**:
-
-- `graphql-request` does not use Next.js's extended `fetch` API, so no Data Cache applies.
-- All data-fetching pages `await` inside async Server Components, making them dynamically rendered.
-- React `cache()` is used only for **request deduplication within a single render pass** (e.g. `generateMetadata` + `page` both calling `getOrgData` for the same DID) — not for persistence across requests.
-- Next.js 15+ Router Cache does not cache page segments by default.
-
-No `export const dynamic = 'force-dynamic'` is needed on pages — they are already dynamic by virtue of `await`ing data.
+- **Never use `as any`.** No exceptions.
+- **Avoid `as` entirely** unless there is genuinely no other way. Prefer proper typing
+  or type guards. `as unknown as SomeType` is a red flag — exhaust other options first.
+- **Never use `!` to assert non-null.** Use optional chaining (`?.`), nullish
+  coalescing (`??`), or an explicit guard instead.
+- **No loose types.** Every variable, parameter, and return value should have a type
+  that accurately describes what it holds.
 
 ---
 
-### Scaffolding New Routes
+## Null / Undefined Handling
 
-Use the built-in CLI to scaffold a new Shell-pattern route:
-
-```bash
-# From the bumicerts app root:
-bun run init-marketplace-route <path>
-
-# path is relative to app/(marketplace)/
-bun run init-marketplace-route dashboard
-bun run init-marketplace-route reports/summary
-bun run init-marketplace-route 'organization/[did]/timeline'
-
-# Or CD into the target directory first:
-cd app/(marketplace)/my-new-route
-bun run init-marketplace-route .
-
-# Overwrite existing files:
-bun run init-marketplace-route dashboard --force
-```
-
-This creates:
-
-```
-app/(marketplace)/{path}/
-  _components/
-    {Route}Shell.tsx      ← "use client", animate prop, motion heading, children slot
-    {Route}Skeleton.tsx   ← placeholder <Skeleton> blocks (fill in to mirror real layout)
-    {Route}Header.tsx     ← injects content into the sticky header slots (left, right, sub)
-  loading.tsx             ← <{Route}Shell animate={true}><{Route}Skeleton /></{Route}Shell>
-  page.tsx                ← async server component, <{Route}Shell animate={false}>
-  error.tsx               ← error boundary using the shared ErrorPage component
-```
-
-**Route name derivation** — walks path segments from right to left, picks the first
-non-dynamic segment (one that doesn't start with `[`), strips route-group parens,
-converts to PascalCase (all non-alphanumeric characters become word boundaries):
-
-| Path | Route name |
-|------|------------|
-| `dashboard` | `Dashboard` |
-| `organization/all` | `All` |
-| `organization/[did]` | `Organization` |
-| `organization/[did]/bumicerts` | `Bumicerts` |
-| `my-cool-route` | `MyCoolRoute` |
-| `snake_case` | `SnakeCase` |
-
-After scaffolding:
-1. Fill in `{Route}Skeleton.tsx` to mirror the real page layout
-2. Add your data fetch in `page.tsx`
-3. Pass data as props to the Shell
-4. Delete the `{/* TODO */}` comments
+- **Prefer `??` over `||`** for fallbacks. `||` coerces all falsy values (including
+  `0`, `""`, `false`); `??` only falls back on `null` and `undefined`, which is almost
+  always the correct intent.
 
 ---
 
-### Summary Checklist for New Pages
+## Links & Routes
 
-1. Does the page have a clear "main data" section (a grid, a list) + static chrome around it?
-   - **Yes** → Use Shell pattern. Run `bun run init-marketplace-route <path>`.
-   - **No** → Use plain `loading.tsx` with full-page skeleton (Type B).
+- **Never hardcode URLs or paths inline.** Add the path to `lib/links.ts` and import
+  it from there. This keeps all navigation targets in one place and makes refactoring
+  safe.
 
-2. Does secondary dynamic content inside the Shell share data with the main content?
-   - **Yes** → Fetch once in `page.tsx`, pass as Shell prop. Shell passes to `<Suspense>` children.
-   - **No** → Secondary component fetches its own data inside `<Suspense>`.
+---
 
-3. Does the skeleton contain any readable text?
-   - **Yes** → Remove it. Skeletons must be text-free.
+## Icons
 
-4. Did you set the `animate` prop correctly?
-   - `loading.tsx` → `animate={true}`
-   - `page.tsx` → `animate={false}`
+- **For bumicert-specific icons**, use `BumicertIcon` from `icons/BumicertIcon.tsx`.
+  Bumicert is a concept defined by this project — there is no equivalent in Lucide, so
+  do not substitute a random Lucide icon.
+- **For all other icons**, use Lucide. Pick the icon that is semantically accurate for
+  the action or concept, not merely one that looks similar.
+
+---
+
+## Server ↔ Client Serialization
+
+When passing data across the server/client boundary (server component → client
+component props, or client → server via actions/tRPC), ensure the data is properly
+serialized. Plain objects, arrays, strings, numbers, and booleans are fine. Class
+instances, `Date` objects, `Map`, `Set`, `undefined` in object values, and other
+non-serializable types must be converted to a serializable form before crossing the
+boundary, and reconstructed on the other side if needed.
+
+---
+
+## Error Handling on Server Components
+
+- **Never `throw` inside an SSR page component.** In production, Next.js catches
+  unhandled throws in Server Components and renders a generic error page, hiding the
+  actual error from both the user and the logs in an unhelpful way.
+- **Return `<ErrorPage />` instead.** If a data fetch fails or a required resource is
+  missing, `return <ErrorPage ... />` so the page renders a meaningful, visible error.
+
+---
+
+## Buttons & Icons
+
+- **Do not set an explicit size on an icon inside a `<Button>` component.** The
+  `<Button>` component already handles icon sizing based on its own `size` prop. Adding
+  an explicit `className="size-4"` (or similar) on the icon overrides that and causes
+  inconsistency.
+
+---
+
+## Complex Systems Reference
+
+Before modifying a complex or non-obvious system, check `docs/` for a reference
+document on that system. These documents describe how existing flows work — architecture,
+data flow, API contracts, and key decisions — so you don't have to reverse-engineer
+them from the code.
+
+Current reference documents:
+- [`docs/DONATIONS_FLOW.md`](docs/DONATIONS_FLOW.md) — USDC donation flow (EIP-3009,
+  x402, modal sequence, facilitator, wallet attestation)
+
+---
+
+## Modals
+
+The app uses a custom stack-based modal system. Do not use plain Radix `<Dialog>` or
+shadcn `<Sheet>` directly for app-level modals.
+
+→ See [`agents/MODALS.md`](agents/MODALS.md) for the full API, usage patterns, and
+guidance on where to place a new modal.
+
+---
+
+## New Routes
+
+→ See [`agents/NEW_ROUTE.md`](agents/NEW_ROUTE.md) for the SSR/SEO strategy, the
+Shell pattern, skeleton rules, caching behaviour, and the scaffold CLI.
+
+---
+
+## Design
+
+→ See [`agents/DESIGN.md`](agents/DESIGN.md) for typography, colour, spacing, motion,
+and component patterns.
