@@ -43,16 +43,6 @@ jobs:
         env:
           SKIP_ENV_VALIDATION: 1
 
-      - name: Pull Vercel project settings and env vars
-        run: |
-          mkdir -p .vercel
-          printf '{"projectId":"%s","orgId":"%s"}' "$VERCEL_PROJECT_ID" "$VERCEL_ORG_ID" > .vercel/project.json
-          bunx vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-        working-directory: apps/bumicerts
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
       - name: Build bumicerts
         run: bunx vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
         working-directory: apps/bumicerts
