@@ -43,6 +43,14 @@ jobs:
         env:
           SKIP_ENV_VALIDATION: 1
 
+      - name: Pull Vercel project settings and env vars
+        if: github.event_name != 'pull_request'
+        run: bunx vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        working-directory: apps/bumicerts
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
       - name: Build bumicerts (via Vercel CLI to produce prebuilt output)
         if: github.event_name != 'pull_request'
         run: bunx vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
