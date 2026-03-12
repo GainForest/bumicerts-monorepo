@@ -1,6 +1,7 @@
 name: CI - Bumicerts
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
