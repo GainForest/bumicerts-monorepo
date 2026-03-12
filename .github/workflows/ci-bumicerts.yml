@@ -46,7 +46,12 @@ jobs:
         run: bun run build
         working-directory: apps/bumicerts
         env:
+          SKIP_ENV_VALIDATION: 1
+          # Public vars
           NEXT_PUBLIC_APP_URL: https://bumicerts.example.com
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
-          SKIP_ENV_VALIDATION: 1
+          # Server-side Supabase — SDK throws at instantiation if these are missing
+          SUPABASE_URL: https://placeholder.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
+          SUPABASE_KEY: placeholder-supabase-key
