@@ -9,17 +9,23 @@ import {
   Building2Icon,
   BadgePlusIcon,
   ChevronDownIcon,
-  ChevronUpIcon,
   GithubIcon,
   TwitterIcon,
   FileTextIcon,
   ExternalLinkIcon,
+  UploadCloudIcon,
+  ChevronRightIcon,
+  XIcon,
+  LeafIcon,
 } from "lucide-react";
 import { AnimatePresence, motion, LayoutGroup } from "framer-motion";
 import { useState, useEffect } from "react";
+import useLocalStorage from "use-local-storage";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { links } from "@/lib/links";
+import { useAtprotoStore } from "@/components/stores/atproto";
+import QuickTooltip from "@/components/ui/quick-tooltip";
 
 const NAV_GROUPS = [
   {
@@ -71,12 +77,107 @@ function isLeafActive(pathCheck: { equals?: string; startsWith?: string }, pathn
   return false;
 }
 
+// ── Upload Platform Link ───────────────────────────────────────────────────────
+
+function UploadPlatformLink() {
+  const auth = useAtprotoStore((s) => s.auth);
+  const isAuthenticated = auth.status === "AUTHENTICATED";
+
+  const inner = (
+    <motion.div
+      whileHover={{ x: 2 }}
+      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+      className={cn(
+        "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors duration-150",
+        isAuthenticated
+          ? "text-muted-foreground/80 hover:text-foreground hover:bg-muted/50 cursor-pointer"
+          : "text-muted-foreground/50 cursor-not-allowed"
+      )}
+    >
+      <UploadCloudIcon className="h-4 w-4 shrink-0" />
+      <span className="flex-1">Upload Platform</span>
+      <ChevronRightIcon className="h-3 w-3 opacity-40 shrink-0" />
+    </motion.div>
+  );
+
+  if (!isAuthenticated) {
+    return (
+      <QuickTooltip content="Sign in to access Upload" asChild={false}>
+        <div>{inner}</div>
+      </QuickTooltip>
+    );
+  }
+
+  return (
+    <Link href={links.upload.home} className="block">
+      {inner}
+    </Link>
+  );
+}
+
+// ── Welcome Card ──────────────────────────────────────────────────────────────
+
+const WELCOME_DISMISSED_KEY = "bumicerts:marketplace-welcome-dismissed";
+
+function MarketplaceWelcomeCard() {
+  const [dismissed, setDismissed] = useLocalStorage(WELCOME_DISMISSED_KEY, false);
+
+  if (dismissed) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -4, height: 0, marginBottom: 0 }}
+        transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+        className="mx-0.5 mb-2 p-3 rounded-xl bg-primary/5 border border-primary/10 relative"
+      >
+        {/* Dismiss button */}
+        <button
+          type="button"
+          onClick={() => setDismissed(true)}
+          aria-label="Dismiss"
+          className="absolute top-1.5 right-1.5 p-0.5 rounded-md text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/60 transition-colors"
+        >
+          <XIcon className="h-3 w-3" />
+        </button>
+
+        <div className="flex items-center gap-2.5 pr-4">
+          {/* Logo */}
+          <div className="h-7 w-7 rounded-lg border border-border/60 bg-background flex items-center justify-center shrink-0 shadow-sm">
+            <Image
+              src="/assets/media/images/logo.svg"
+              alt="Bumicerts"
+              width={16}
+              height={16}
+              className="dark:invert dark:brightness-200"
+              style={{ filter: "sepia(100%) saturate(0%) brightness(0.2)" }}
+            />
+          </div>
+
+          <div className="min-w-0">
+            <div className="flex items-center gap-1">
+              <LeafIcon className="h-2.5 w-2.5 text-primary shrink-0" />
+              <p className="text-xs font-semibold text-foreground">Marketplace</p>
+            </div>
+            <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">
+              Discover nature&apos;s guardians
+            </p>
+          </div>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+// ── Main Sidebar ──────────────────────────────────────────────────────────────
+
 export function DesktopSidebar() {
   const pathname = usePathname();
   const [expandedGroups, setExpandedGroups] = useState<string[]>(["explore"]);
 
   useEffect(() => {
-    // Auto-expand the group that has an active child
     NAV_GROUPS.forEach((group) => {
       if (group.children) {
         const hasActiveChild = group.children.some((child) =>
@@ -134,7 +235,6 @@ export function DesktopSidebar() {
           <ul className="flex flex-col gap-0.5">
             {NAV_GROUPS.map((item, idx) => {
               if (!item.children) {
-                // Leaf link — all non-group items have href + pathCheck defined
                 if (!item.href || !item.pathCheck) return null;
                 const isActive = isLeafActive(item.pathCheck, pathname);
                 return (
@@ -169,7 +269,6 @@ export function DesktopSidebar() {
                 );
               }
 
-              // Group with children
               const isExpanded = expandedGroups.includes(item.id);
               const hasActiveChild = item.children.some((child) =>
                 isLeafActive(child.pathCheck, pathname)
@@ -183,10 +282,7 @@ export function DesktopSidebar() {
                   transition={{ duration: 0.3, delay: 0.05 * idx, ease: [0.25, 0.1, 0.25, 1] }}
                   className="flex flex-col gap-0.5"
                 >
-                  <button
-                    onClick={() => toggleGroup(item.id)}
-                    className="w-full cursor-pointer"
-                  >
+                  <button onClick={() => toggleGroup(item.id)} className="w-full cursor-pointer">
                     <motion.div
                       whileHover={{ x: 2 }}
                       transition={{ type: "spring", stiffness: 400, damping: 30 }}
@@ -214,7 +310,6 @@ export function DesktopSidebar() {
                     </motion.div>
                   </button>
 
-                  {/* Children */}
                   <AnimatePresence>
                     {isExpanded && (
                       <motion.div
@@ -258,10 +353,24 @@ export function DesktopSidebar() {
             })}
           </ul>
         </LayoutGroup>
+
+        {/* Upload Platform link — separated, muted */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3, delay: 0.25 }}
+          className="mt-3"
+        >
+          <div className="h-px bg-border/60 mx-1 mb-2" />
+          <UploadPlatformLink />
+        </motion.div>
       </div>
 
       {/* Footer section */}
       <div className="flex flex-col gap-2">
+        {/* Dismissible welcome card */}
+        <MarketplaceWelcomeCard />
+
         <div className="h-px bg-border" />
 
         <ul className="flex flex-col gap-0.5">

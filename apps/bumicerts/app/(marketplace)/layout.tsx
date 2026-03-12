@@ -8,6 +8,7 @@ import { TopNavbar } from "./_components/Navbar/TopNavbar";
 import { DesktopSidebar } from "./_components/Navbar/DesktopSidebar";
 import { MobileBottomNav } from "./_components/Navbar/MobileBottomNav";
 import { Header } from "./_components/Header/Header";
+import { usePlatformTransitionToast } from "@/hooks/usePlatformTransitionToast";
 
 export default function MarketplaceLayout({
   children,
@@ -16,6 +17,8 @@ export default function MarketplaceLayout({
 }) {
   const pathname = usePathname();
   const isHomePage = pathname === "/";
+
+  usePlatformTransitionToast();
 
   if (isHomePage) {
     return (

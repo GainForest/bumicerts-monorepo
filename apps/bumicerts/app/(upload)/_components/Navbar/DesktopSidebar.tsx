@@ -3,11 +3,19 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowLeftIcon, ExternalLinkIcon, GithubIcon, TwitterIcon, FileTextIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  ExternalLinkIcon,
+  GithubIcon,
+  TwitterIcon,
+  FileTextIcon,
+  UserIcon,
+} from "lucide-react";
 import { motion, LayoutGroup } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { links } from "@/lib/links";
+import { useAtprotoStore } from "@/components/stores/atproto";
 import { UPLOAD_NAV_ITEMS } from "./data";
 
 const FOOTER_LINKS = [
@@ -25,6 +33,47 @@ function isNavItemActive(
   return false;
 }
 
+// ── Profile Card ──────────────────────────────────────────────────────────────
+
+function UploadProfileCard() {
+  const auth = useAtprotoStore((s) => s.auth);
+
+  if (auth.status !== "AUTHENTICATED") return null;
+
+  const { displayName, handle, avatar } = auth.user;
+  const label = displayName ?? handle ?? "My Organisation";
+
+  return (
+    <div className="mx-0.5 mb-3 p-2.5 rounded-xl bg-muted/30 border border-border/50">
+      <div className="flex items-center gap-2.5">
+        {/* Avatar */}
+        <div className="h-9 w-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 overflow-hidden">
+          {avatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatar} alt={label} className="h-full w-full object-cover" />
+          ) : (
+            <UserIcon className="h-4 w-4 text-primary" />
+          )}
+        </div>
+
+        {/* Name + handle */}
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-foreground truncate leading-tight">
+            {label}
+          </p>
+          {handle && (
+            <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+              @{handle}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Sidebar ──────────────────────────────────────────────────────────────
+
 export function UploadDesktopSidebar() {
   const pathname = usePathname();
 
@@ -32,13 +81,13 @@ export function UploadDesktopSidebar() {
     <nav className="w-[240px] h-full flex flex-col justify-between p-4 border-r border-border bg-foreground/3">
       {/* Top section */}
       <div className="flex flex-col gap-1">
-        {/* Logo + Wordmark */}
+        {/* Logo + "Upload" wordmark */}
         <motion.div
           initial={{ opacity: 0, x: -8 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
         >
-          <Link href={links.root} className="group flex items-center gap-2.5 mb-1 py-1">
+          <div className="flex items-center gap-2.5 mb-1 py-1">
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -54,18 +103,43 @@ export function UploadDesktopSidebar() {
                 style={{ filter: "sepia(100%) saturate(0%) brightness(0.2)" }}
               />
             </motion.div>
-            <span className="font-serif text-xl font-bold tracking-tight text-foreground group-hover:text-primary transition-colors duration-200">
-              Bumicerts
+            <span className="font-serif text-xl font-bold tracking-tight text-foreground/80">
+              Upload
             </span>
+          </div>
+        </motion.div>
+
+        {/* Back to home — subtle, just below logo */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3, delay: 0.12 }}
+          className="mb-3"
+        >
+          <Link
+            href={links.root}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors duration-150 w-fit"
+          >
+            <ArrowLeftIcon className="h-3 w-3 shrink-0" />
+            <span>Back to home</span>
           </Link>
+        </motion.div>
+
+        {/* Profile card */}
+        <motion.div
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.18 }}
+        >
+          <UploadProfileCard />
         </motion.div>
 
         {/* Section label */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.3, delay: 0.15 }}
-          className="flex items-center gap-2 px-3 mb-2"
+          transition={{ duration: 0.3, delay: 0.22 }}
+          className="flex items-center gap-2 px-3 mb-1"
         >
           <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/60 font-medium">
             Upload
@@ -82,7 +156,7 @@ export function UploadDesktopSidebar() {
                   key={item.id}
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.3, delay: 0.05 * idx, ease: [0.25, 0.1, 0.25, 1] }}
+                  transition={{ duration: 0.3, delay: 0.05 * idx + 0.22, ease: [0.25, 0.1, 0.25, 1] }}
                 >
                   <Link href={item.href} className="block relative">
                     <motion.div
@@ -110,22 +184,6 @@ export function UploadDesktopSidebar() {
             })}
           </ul>
         </LayoutGroup>
-
-        {/* Back to marketplace */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3, delay: 0.3 }}
-          className="mt-4"
-        >
-          <Link
-            href={links.root}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors duration-150"
-          >
-            <ArrowLeftIcon className="h-3.5 w-3.5 shrink-0" />
-            <span>Back to marketplace</span>
-          </Link>
-        </motion.div>
       </div>
 
       {/* Footer section */}
