@@ -106,7 +106,7 @@ export default function OnboardingPage() {
 
             <div className="flex flex-col gap-3">
               <Link
-                href={`/organization/${auth.user.did}`}
+                href={links.organization.home(auth.user.did)}
                 className="group flex items-center gap-4 p-4 rounded-lg bg-muted/40 hover:bg-accent/50 transition-colors"
               >
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">

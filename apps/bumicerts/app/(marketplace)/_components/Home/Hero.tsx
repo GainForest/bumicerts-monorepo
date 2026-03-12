@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowDownIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { links } from "@/lib/links";
 
 export function Hero() {
   return (
@@ -96,7 +97,7 @@ export function Hero() {
           transition={{ duration: 0.6, delay: 0.7, ease: [0.25, 0.1, 0.25, 1] }}
           className="mt-8 md:mt-10"
         >
-          <Link href="/explore">
+          <Link href={links.explore}>
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}

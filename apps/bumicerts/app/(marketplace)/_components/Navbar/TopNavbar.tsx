@@ -7,12 +7,13 @@ import { useState } from "react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Drawer } from "vaul";
 import { ProgressiveBlur } from "@/components/ui/progressive-blur";
+import { links } from "@/lib/links";
 
 const NAV_LINKS = [
-  { href: "/", label: "Home" },
-  { href: "/explore", label: "Explore" },
-  { href: "/organization/all", label: "Organizations" },
-  { href: "/bumicert/create", label: "Create" },
+  { href: links.root, label: "Home" },
+  { href: links.explore, label: "Explore" },
+  { href: links.allOrganizations, label: "Organizations" },
+  { href: links.bumicert.create, label: "Create" },
 ];
 
 export function TopNavbar() {
@@ -44,7 +45,7 @@ export function TopNavbar() {
 
       <div className="relative z-10 h-16 flex items-center w-full max-w-7xl mx-auto px-6 justify-between">
         {/* Logo + Wordmark */}
-        <Link href="/" className="flex items-center gap-2 group">
+        <Link href={links.root} className="flex items-center gap-2 group">
           <motion.div
             whileHover={{ scale: 1.05 }}
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
@@ -75,7 +76,7 @@ export function TopNavbar() {
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
           >
             <Link
-              href="/explore"
+              href={links.explore}
               className="text-sm font-medium bg-primary text-primary-foreground rounded-full px-4 py-1.5 hover:bg-primary/90 transition-colors"
             >
               Launch App

@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
+import { links } from "@/lib/links";
 
 interface LoginModalProps {
   onClose: () => void;
@@ -420,7 +421,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
       <p className="text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{" "}
         <Link
-          href="/onboarding"
+          href={links.onboarding}
           onClick={onClose}
           className="text-primary font-medium hover:underline"
         >

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { BumicertCardVisual, BumicertCardSkeleton, cardVariants } from "./BumicertCard";
 import type { BumicertData } from "@/lib/types";
 import { LeafIcon, SearchIcon } from "lucide-react";
+import { links } from "@/lib/links";
 
 // Container variants with design system stagger timing
 const containerVariants = {
@@ -84,7 +85,7 @@ export function BumicertGrid({
       <AnimatePresence mode="popLayout">
         {bumicerts.map((bumicert) => (
           <motion.div key={bumicert.id} variants={cardVariants} className="h-full">
-            <Link href={`/bumicert/${encodeURIComponent(bumicert.id)}`} className="h-full block">
+            <Link href={links.bumicert.view(bumicert.id)} className="h-full block">
               <BumicertCardVisual
                 coverImage={bumicert.coverImageUrl}
                 logoUrl={bumicert.logoUrl}

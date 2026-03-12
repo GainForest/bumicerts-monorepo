@@ -145,7 +145,7 @@ export function OrgSetupPage({ did }: { did: string }) {
       const response = await fetch(logoUrl);
       if (!response.ok) return null;
       const blob = await response.blob();
-      const extension = logoUrl.split(".").pop()?.split("?")[0] || "png";
+      const extension = logoUrl.split(".").pop()?.split("?")[0] ?? "png";
       const mimeType = blob.type || `image/${extension}`;
       return new File([blob], `logo.${extension}`, { type: mimeType });
     } catch {

@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { BuildingIcon, LeafIcon } from "lucide-react";
 import type { OrganizationData } from "@/lib/types";
+import { links } from "@/lib/links";
 
 const COUNTRY_MAP: Record<string, { emoji: string; name: string }> = {
   ID: { emoji: "🇮🇩", name: "Indonesia" },
@@ -30,7 +31,7 @@ export function OrganizationCard({ org }: { org: OrganizationData }) {
 
   return (
     <motion.div variants={orgCardVariants} className="h-full">
-      <Link href={`/organization/${encodeURIComponent(org.did)}`} className="h-full">
+      <Link href={links.organization.home(org.did)} className="h-full">
         <motion.div
           whileHover={{ y: -3 }}
           whileTap={{ scale: 0.98 }}

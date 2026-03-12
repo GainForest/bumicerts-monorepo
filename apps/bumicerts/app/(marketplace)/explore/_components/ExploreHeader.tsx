@@ -14,6 +14,7 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { links } from "@/lib/links";
 import { useHeaderContext } from "../../_components/Header/context";
 import { HeaderContent } from "../../_components/Header/HeaderContent";
 import type { BumicertData } from "@/lib/types";
@@ -239,7 +240,7 @@ export function ExploreHeaderSlots({
   // Stable reference so HeaderContent's useEffect dependency doesn't fire every render
   const rightSlot = useMemo(
     () => (
-      <Link href="/bumicert/create">
+      <Link href={links.bumicert.create}>
         <motion.span
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}

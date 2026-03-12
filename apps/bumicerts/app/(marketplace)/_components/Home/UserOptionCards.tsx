@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowUpRightIcon } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { links } from "@/lib/links";
 
 export function UserOptionCards() {
   return (
@@ -37,7 +38,7 @@ export function UserOptionCards() {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1, ease: [0.25, 0.1, 0.25, 1] }}
           >
-            <Link href="/explore" className="block group">
+            <Link href={links.explore} className="block group">
               <div className="relative overflow-hidden rounded-2xl bg-card border border-border h-[320px] md:h-[360px] transition-all duration-500 hover:shadow-2xl hover:border-primary/20">
                 {/* Background image */}
                 <div className="absolute inset-0">
@@ -92,7 +93,7 @@ export function UserOptionCards() {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
           >
-            <Link href="/bumicert/create" className="block group">
+            <Link href={links.bumicert.create} className="block group">
               <div className="relative overflow-hidden rounded-2xl bg-card border border-border h-[320px] md:h-[360px] transition-all duration-500 hover:shadow-2xl hover:border-primary/20">
                 {/* Background image */}
                 <div className="absolute inset-0">

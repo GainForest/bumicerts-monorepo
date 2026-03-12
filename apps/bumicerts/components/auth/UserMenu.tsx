@@ -9,6 +9,7 @@ import { logout } from "@/components/actions/oauth";
 import { useModal } from "@/components/ui/modal/context";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { links } from "@/lib/links";
 
 const AuthModal = dynamic(
   () => import("./AuthModal").then((m) => ({ default: m.AuthModal })),
@@ -135,7 +136,7 @@ function AuthenticatedMenu({ did, handle, displayName, avatar }: {
             {/* Menu items */}
             <div className="p-1">
               <Link
-                href={`/organization/${encodeURIComponent(did)}`}
+                href={links.organization.home(did)}
                 onClick={() => setOpen(false)}
                 className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-foreground hover:bg-muted/60 transition-colors w-full text-left"
               >

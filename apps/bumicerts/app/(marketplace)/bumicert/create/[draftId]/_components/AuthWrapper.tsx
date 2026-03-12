@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { queries } from "@/lib/graphql/queries/index";
+import { links } from "@/lib/links";
 
 const AuthWrapper = ({
   children,
@@ -57,7 +58,7 @@ const AuthWrapper = ({
             isUnauthenticated ? (
               <AtprotoSignInButton />
             ) : (
-              <Link href={`/upload/organization/${auth.user?.did}`}>
+              <Link href={links.upload.organization(auth.user?.did)}>
                 <Button>
                   <BuildingIcon />
                   Manage my organization

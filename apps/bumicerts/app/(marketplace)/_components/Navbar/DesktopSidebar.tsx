@@ -19,14 +19,15 @@ import { AnimatePresence, motion, LayoutGroup } from "framer-motion";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { links } from "@/lib/links";
 
 const NAV_GROUPS = [
   {
     id: "home",
     text: "Home",
     Icon: HomeIcon,
-    href: "/",
-    pathCheck: { equals: "/" },
+    href: links.root,
+    pathCheck: { equals: links.root },
   },
   {
     id: "explore",
@@ -37,14 +38,14 @@ const NAV_GROUPS = [
         id: "bumicerts",
         text: "Bumicerts",
         Icon: CompassIcon,
-        href: "/explore",
-        pathCheck: { startsWith: "/explore" },
+        href: links.explore,
+        pathCheck: { startsWith: links.explore },
       },
       {
         id: "organizations",
         text: "Organizations",
         Icon: Building2Icon,
-        href: "/organization/all",
+        href: links.allOrganizations,
         pathCheck: { startsWith: "/organization" },
       },
     ],
@@ -53,8 +54,8 @@ const NAV_GROUPS = [
     id: "create",
     text: "Create",
     Icon: BadgePlusIcon,
-    href: "/bumicert/create",
-    pathCheck: { startsWith: "/bumicert/create" },
+    href: links.bumicert.create,
+    pathCheck: { startsWith: links.bumicert.create },
   },
 ];
 
@@ -106,7 +107,7 @@ export function DesktopSidebar() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
         >
-          <Link href="/" className="group flex items-center gap-2.5 mb-4 py-1">
+          <Link href={links.root} className="group flex items-center gap-2.5 mb-4 py-1">
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -133,8 +134,9 @@ export function DesktopSidebar() {
           <ul className="flex flex-col gap-0.5">
             {NAV_GROUPS.map((item, idx) => {
               if (!item.children) {
-                // Leaf link
-                const isActive = isLeafActive(item.pathCheck!, pathname);
+                // Leaf link — all non-group items have href + pathCheck defined
+                if (!item.href || !item.pathCheck) return null;
+                const isActive = isLeafActive(item.pathCheck, pathname);
                 return (
                   <motion.li
                     key={item.id}
@@ -142,7 +144,7 @@ export function DesktopSidebar() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3, delay: 0.05 * idx, ease: [0.25, 0.1, 0.25, 1] }}
                   >
-                    <Link href={item.href!} className="block relative">
+                    <Link href={item.href} className="block relative">
                       <motion.div
                         whileHover={{ x: 2 }}
                         transition={{ type: "spring", stiffness: 400, damping: 30 }}

@@ -41,7 +41,7 @@ export async function generateMetadata({
 
   const bumicert = activityToBumicertData(activity);
   const pageUrl = `${BASE_URL}/bumicert/${encodeURIComponent(id)}`;
-  const description = bumicert.shortDescription || bumicert.description.slice(0, 160) || "";
+  const description = bumicert.shortDescription ?? bumicert.description.slice(0, 160) ?? "";
 
   return {
     title: `${bumicert.title} — Bumicerts`,
@@ -141,7 +141,7 @@ export default async function BumicertDetailPage({
     "@type": "Article",
     "@id": pageUrl,
     headline: bumicert.title,
-    description: bumicert.shortDescription || bumicert.description.slice(0, 160) || undefined,
+    description: bumicert.shortDescription ?? bumicert.description.slice(0, 160) ?? undefined,
     author: {
       "@type": "Organization",
       name: bumicert.organizationName,

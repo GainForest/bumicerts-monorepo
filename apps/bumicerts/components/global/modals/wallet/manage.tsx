@@ -77,7 +77,7 @@ function WalletRow({
           {formatAddress(address)}
         </span>
         <span className={`text-xs leading-tight ${hasLabel ? "text-muted-foreground" : "text-muted-foreground/50 italic"}`}>
-          {hasLabel ? link.record!.name : "No label"}
+          {hasLabel ? link.record?.name : "No label"}
           {!valid && <span className="text-destructive ml-1">· Unverified</span>}
         </span>
       </div>

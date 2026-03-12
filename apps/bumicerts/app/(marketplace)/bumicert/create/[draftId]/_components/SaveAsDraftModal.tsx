@@ -86,7 +86,7 @@ const SaveAsDraftModal = () => {
           currentCoverImageHash === draftCoverImageHash
         ) {
           const draftResponse = await fetch(
-            links.api.drafts.bumicert.get({ draftIds: [draftId!] }),
+            links.api.drafts.bumicert.get({ draftIds: draftId !== null ? [draftId] : [] }),
             {
               method: "GET",
               credentials: "include",

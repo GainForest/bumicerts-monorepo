@@ -85,10 +85,18 @@ async function resolveRecipientWallet(
 // ---------------------------------------------------------------------------
 
 function getFacilitatorLayer() {
+  const handle = serverEnv.FACILITATOR_HANDLE;
+  const did = clientEnv.NEXT_PUBLIC_FACILITATOR_DID;
+  const password = serverEnv.FACILITATOR_PASSWORD;
+
+  if (!handle) throw new Error("FACILITATOR_HANDLE env var is not set");
+  if (!did) throw new Error("NEXT_PUBLIC_FACILITATOR_DID env var is not set");
+  if (!password) throw new Error("FACILITATOR_PASSWORD env var is not set");
+
   return makeCredentialAgentLayer({
-    service:    serverEnv.FACILITATOR_HANDLE!.split(".").slice(1).join(".") || "bsky.social",
-    identifier: clientEnv.NEXT_PUBLIC_FACILITATOR_DID!,
-    password:   serverEnv.FACILITATOR_PASSWORD!,
+    service:    handle.split(".").slice(1).join(".") ?? "bsky.social",
+    identifier: did,
+    password,
   });
 }
 

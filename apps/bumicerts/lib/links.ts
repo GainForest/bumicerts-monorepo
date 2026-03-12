@@ -4,7 +4,9 @@ const didCatcher = (callback: (did: string) => string): DidDynamicLink => {
 };
 
 export const links = {
+  root: "/",
   home: "/home",
+  onboarding: "/onboarding",
   myOrganization: (did?: string) =>
     did ? `/organization/${encodeURIComponent(did)}` : "/organization",
   allOrganizations: "/organization/all",

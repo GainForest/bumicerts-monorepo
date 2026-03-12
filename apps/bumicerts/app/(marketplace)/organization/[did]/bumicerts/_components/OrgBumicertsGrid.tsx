@@ -5,6 +5,7 @@ import { BadgeIcon } from "lucide-react";
 import Link from "next/link";
 import { BumicertCardVisual, cardVariants } from "@/app/(marketplace)/explore/_components/BumicertCard";
 import type { BumicertData } from "@/lib/types";
+import { links } from "@/lib/links";
 
 const containerVariants = {
   hidden: {},
@@ -64,7 +65,7 @@ export function OrgBumicertsGrid({ bumicerts }: OrgBumicertsGridProps) {
       >
         {bumicerts.map((b) => (
           <motion.div key={b.id} variants={cardVariants}>
-            <Link href={`/bumicert/${encodeURIComponent(b.id)}`} className="block">
+            <Link href={links.bumicert.view(b.id)} className="block">
               <BumicertCardVisual
                 coverImage={b.coverImageUrl}
                 logoUrl={b.logoUrl}

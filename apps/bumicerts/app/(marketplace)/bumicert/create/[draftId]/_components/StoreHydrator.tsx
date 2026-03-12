@@ -99,7 +99,7 @@ const urlToFile = async (url: string): Promise<File | null> => {
     const blob = await response.blob();
     const urlObj = new URL(url);
     const filename =
-      urlObj.pathname.split("/").pop()?.split("?")[0] || "image.png";
+      urlObj.pathname.split("/").pop()?.split("?")[0] ?? "image.png";
     const finalFilename = filename.includes(".") ? filename : `${filename}.png`;
 
     return new File([blob], finalFilename, { type: blob.type });
@@ -170,23 +170,23 @@ const StoreHydrator = ({
 
         // Map draft data to form values
         const step1Data: Step1FormValues = {
-          projectName: draftData.title || "",
+          projectName: draftData.title ?? "",
           coverImage: coverImageFile,
-          workType: draftData.workScopes || [],
+          workType: draftData.workScopes ?? [],
           projectDateRange: [startDate, endDate],
         };
 
         const step2Data: Step2FormValues = {
-          shortDescription: draftData.shortDescription || "",
-          description: draftData.description || "",
+          shortDescription: draftData.shortDescription ?? "",
+          description: draftData.description ?? "",
         };
 
         const step3Data: Step3FormValues = {
-          contributors: (draftData.contributors || []).map((name) => ({
+          contributors: (draftData.contributors ?? []).map((name) => ({
             id: crypto.randomUUID(),
             name,
           })),
-          siteBoundaries: draftData.siteBoundaries || [],
+          siteBoundaries: draftData.siteBoundaries ?? [],
           confirmPermissions: false,
           agreeTnc: false,
         };

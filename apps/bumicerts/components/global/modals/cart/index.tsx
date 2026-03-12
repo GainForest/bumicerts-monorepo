@@ -32,6 +32,7 @@ import { Button } from "@/components/ui/button";
 import { ShoppingCartIcon, Trash2Icon, ExternalLinkIcon } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { links } from "@/lib/links";
 
 // ── Validity helper ────────────────────────────────────────────────────────────
 
@@ -271,7 +272,7 @@ function EmptyState() {
         </p>
       </div>
       <Button asChild variant="outline" size="sm" className="mt-2">
-        <Link href="/explore">Explore Bumicerts</Link>
+        <Link href={links.explore}>Explore Bumicerts</Link>
       </Button>
     </div>
   );
