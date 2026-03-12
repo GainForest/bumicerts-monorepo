@@ -14,7 +14,8 @@ import {
   ModalTitle,
   ModalDescription,
 } from "@/components/ui/modal/modal";
-import { deleteLinkEvm } from "@/lib/actions/linkEvm";
+import { trpc } from "@/lib/trpc/client";
+import { formatError } from "@/lib/utils/trpc-errors";
 
 interface DeleteWalletModalProps {
   rkey: string;
@@ -39,6 +40,8 @@ export function DeleteWalletModal({
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const deleteEvm = trpc.link.evm.delete.useMutation();
+
   const label = name ? `${name} (${formatAddress(address)})` : formatAddress(address);
 
   const handleBack = () => {
@@ -53,14 +56,10 @@ export function DeleteWalletModal({
     setError(null);
     setIsDeleting(true);
     try {
-      const result = await deleteLinkEvm(rkey);
-      if (!result.success) {
-        setError(result.message ?? "Failed to remove wallet.");
-        return;
-      }
+      await deleteEvm.mutateAsync({ rkey });
       onDeleted();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to remove wallet.");
+      setError(formatError(e));
     } finally {
       setIsDeleting(false);
     }

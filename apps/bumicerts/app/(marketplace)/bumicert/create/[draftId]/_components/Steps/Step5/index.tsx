@@ -22,17 +22,12 @@ import { links } from "@/lib/links";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { toSerializableFile, parseAtUri, toStrongRefs } from "@/lib/mutations-utils";
-import type { SerializableFile } from "@/lib/mutations-utils";
-import { createBumicertAction } from "@/lib/actions/bumicerts";
 import { queryKeys } from "@/lib/query-keys"; // drafts key only
 import { usePathname } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { trackBumicertPublished, getFlowDurationSeconds } from "@/lib/analytics/hotjar";
-import {
-  MutationError,
-  formatMutationErrorMessage,
-} from "@gainforest/atproto-mutations-next";
-import { claimActivityLabels } from "@/lib/config/fieldLabels";
+import { trpc } from "@/lib/trpc/client";
+import { formatError } from "@/lib/utils/trpc-errors";
 import dynamic from "next/dynamic";
 const FeedbackModal = dynamic(() => import("./FeedbackModal"), { ssr: false });
 
@@ -173,70 +168,7 @@ const Step5 = () => {
           : "input"
         : "success";
 
-  const { mutate: createBumicert } = useMutation({
-    mutationFn: async (data: {
-      title: string;
-      shortDescription: string;
-      description: string;
-      descriptionFacets?: unknown[];
-      workScopes: string[];
-      startDate: string;
-      endDate: string;
-      contributors: { identity: string }[];
-      locations: { cid: string; uri: string }[];
-      image: File;
-    }) => {
-      // Convert file to serializable format
-      const imageFile = await toSerializableFile(data.image);
-
-      // Transform description string + facets into a LinearDocument
-      // The new lexicon expects description to be a pub.leaflet.pages.linearDocument
-      // Structure: { blocks: [ { block: { $type: "pub.leaflet.blocks.text", plaintext, facets } } ] }
-      // Note: We use type assertion because bsky-richtext-react outputs app.bsky.richtext.facet
-      // while the lexicon now expects pub.leaflet.richtext.facet. The structures are compatible.
-      const descriptionAsLinearDocument = {
-        $type: "pub.leaflet.pages.linearDocument" as const,
-        blocks: [
-          {
-            $type: "pub.leaflet.pages.linearDocument#block" as const,
-            block: {
-              $type: "pub.leaflet.blocks.text" as const,
-              plaintext: data.description,
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              facets: (data.descriptionFacets ?? []) as any,
-            },
-          },
-        ],
-      };
-
-      // Call the mutation with properly typed inputs
-      const result = await createBumicertAction({
-        title: data.title,
-        shortDescription: data.shortDescription,
-        description: descriptionAsLinearDocument,
-        workScope: {
-          $type: "org.hypercerts.claim.activity#workScopeString" as const,
-          scope: data.workScopes.join(", "),
-        },
-        startDate: data.startDate as `${string}-${string}-${string}T${string}:${string}:${string}Z`,
-        endDate: data.endDate as `${string}-${string}-${string}T${string}:${string}:${string}Z`,
-        contributors: data.contributors.map((c) => ({
-          contributorIdentity: {
-            $type: "org.hypercerts.claim.activity#contributorIdentity" as const,
-            identity: c.identity,
-          },
-        })),
-        // locations are strongRefs to app.certified.location records
-        // The URIs come from certified location records already in the correct format
-        locations: toStrongRefs(data.locations),
-        image: {
-          $type: "org.hypercerts.defs#smallImage" as const,
-          image: imageFile,
-        },
-      });
-
-      return result;
-    },
+  const { mutate: createBumicert } = trpc.claim.activity.create.useMutation({
     onSuccess: async (data) => {
       setCreatedBumicertResponse({
         uri: data.uri,
@@ -270,7 +202,7 @@ const Step5 = () => {
 
       // Clear localStorage backup after successful publish
       clearPersistedFormState();
-      
+
       // Track successful bumicert publication
       const duration = getFlowDurationSeconds() ?? 0;
       trackBumicertPublished({
@@ -284,17 +216,7 @@ const Step5 = () => {
     },
     onError: (error) => {
       console.error("Failed to publish bumicert:", error);
-
-      if (MutationError.is(error)) {
-        console.error(
-          "[dev] MutationError code:", error.code,
-          "| issues:", error.issues ?? error.message
-        );
-        setCreateBumicertError(formatMutationErrorMessage(error, claimActivityLabels));
-      } else {
-        setCreateBumicertError(error instanceof Error ? error.message : "An error occurred");
-      }
-
+      setCreateBumicertError(formatError(error));
       setHasClickedPublish(false);
     },
     onMutate: () => {
@@ -327,35 +249,63 @@ const Step5 = () => {
       return;
     }
 
+    if (authStatus !== "success") {
+      setCreateBumicertError("You must be signed in to publish.");
+      return;
+    }
+
     try {
-      const data = {
-        title: step1FormValues.projectName,
-        shortDescription: step2FormValues.shortDescription,
-        description: step2FormValues.description,
-        descriptionFacets: step2FormValues.descriptionFacets,
-        workScopes: step1FormValues.workType,
-        startDate: step1FormValues.projectDateRange[0].toISOString(),
-        endDate: step1FormValues.projectDateRange[1].toISOString(),
-        contributors: step3FormValues.contributors.map((contributor) => ({ identity: contributor.name })),
-        locations: step3FormValues.siteBoundaries.map((sb) => ({
-          cid: sb.cid,
-          uri: sb.uri,
-        })),
-        image: step1FormValues.coverImage,
+      // Convert file to serializable format (base64 + metadata)
+      const imageFile = await toSerializableFile(step1FormValues.coverImage);
+
+      // Transform description string + facets into a LinearDocument.
+      // The lexicon expects pub.leaflet.pages.linearDocument.
+      // Note: bsky-richtext-react outputs app.bsky.richtext.facet but the structures
+      // are compatible at runtime.
+      const descriptionAsLinearDocument = {
+        $type: "pub.leaflet.pages.linearDocument" as const,
+        blocks: [
+          {
+            $type: "pub.leaflet.pages.linearDocument#block" as const,
+            block: {
+              $type: "pub.leaflet.blocks.text" as const,
+              plaintext: step2FormValues.description,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              facets: (step2FormValues.descriptionFacets ?? []) as any,
+            },
+          },
+        ],
       };
 
-      if (authStatus === "success") {
-        setHasClickedPublish(true);
-        createBumicert(data);
-      } else {
-        setCreateBumicertError("You must be signed in to publish.");
-      }
+      setHasClickedPublish(true);
+      createBumicert({
+        title: step1FormValues.projectName,
+        shortDescription: step2FormValues.shortDescription,
+        description: descriptionAsLinearDocument,
+        workScope: {
+          $type: "org.hypercerts.claim.activity#workScopeString" as const,
+          scope: step1FormValues.workType.join(", "),
+        },
+        startDate: step1FormValues.projectDateRange[0].toISOString() as `${string}-${string}-${string}T${string}:${string}:${string}Z`,
+        endDate: step1FormValues.projectDateRange[1].toISOString() as `${string}-${string}-${string}T${string}:${string}:${string}Z`,
+        contributors: step3FormValues.contributors.map((contributor) => ({
+          contributorIdentity: {
+            $type: "org.hypercerts.claim.activity#contributorIdentity" as const,
+            identity: contributor.name,
+          },
+        })),
+        locations: toStrongRefs(
+          step3FormValues.siteBoundaries.map((sb) => ({ uri: sb.uri, cid: sb.cid }))
+        ),
+        image: {
+          $type: "org.hypercerts.defs#smallImage" as const,
+          image: imageFile,
+        },
+      });
     } catch (error) {
       console.error(error);
       setCreateBumicertError(
-        error instanceof Error
-          ? error.message
-          : "Failed to prepare publish data."
+        error instanceof Error ? error.message : "Failed to prepare publish data."
       );
     }
   };

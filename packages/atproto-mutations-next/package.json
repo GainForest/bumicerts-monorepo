@@ -1,7 +1,7 @@
 {
   "name": "@gainforest/atproto-mutations-next",
   "version": "0.0.1",
-  "description": "ATProto mutations for Next.js — server actions, server utilities, and typed client namespace.",
+  "description": "ATProto mutations for Next.js — tRPC router, server utilities, and typed client namespace.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -14,30 +14,23 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./actions": {
-      "source": "./src/actions/index.ts",
-      "types": "./dist/actions.d.ts",
-      "import": "./dist/actions.js",
-      "require": "./dist/actions.cjs"
-    },
     "./server": {
       "source": "./src/server/index.ts",
       "types": "./dist/server.d.ts",
       "import": "./dist/server.js",
       "require": "./dist/server.cjs"
     },
-    "./client": {
-      "source": "./src/client/index.ts",
-      "types": "./dist/client.d.ts",
-      "import": "./dist/client.js",
-      "require": "./dist/client.cjs"
+    "./trpc": {
+      "source": "./src/trpc/index.ts",
+      "types": "./dist/trpc.d.ts",
+      "import": "./dist/trpc.js",
+      "require": "./dist/trpc.cjs"
     }
   },
   "typesVersions": {
     "*": {
-      "actions": ["dist/actions.d.ts"],
       "server": ["dist/server.d.ts"],
-      "client": ["dist/client.d.ts"]
+      "trpc": ["dist/trpc.d.ts"]
     }
   },
   "files": ["dist"],
@@ -51,10 +44,16 @@
     "@gainforest/atproto-auth-next": "workspace:*",
     "@gainforest/atproto-mutations-core": "workspace:*",
     "@gainforest/internal-utils": "workspace:*",
-    "effect": "^3.19.19"
+    "@trpc/client": "^11.0.0",
+    "@trpc/react-query": "^11.0.0",
+    "@trpc/server": "^11.0.0",
+    "effect": "^3.19.19",
+    "superjson": "^2.2.1"
   },
   "peerDependencies": {
+    "@tanstack/react-query": "^5.0.0",
     "next": ">=14.0.0",
+    "react": "^18.0.0 || ^19.0.0",
     "typescript": "^5.0.0"
   },
   "devDependencies": {

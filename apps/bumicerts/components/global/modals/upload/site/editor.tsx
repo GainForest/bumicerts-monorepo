@@ -9,7 +9,6 @@ import {
 import { useState, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { parseAtUri, toSerializableFile } from "@/lib/mutations-utils";
-import { createLocationAction, updateLocationAction } from "@/lib/actions/locations";
 import { queries } from "@/lib/graphql/queries/index";
 import FileInput from "@/components/ui/FileInput";
 import { Input } from "@/components/ui/input";
@@ -20,7 +19,8 @@ import DrawPolygonModal, {
   DrawPolygonModalId,
 } from "@/components/global/modals/draw-polygon";
 import { useAtprotoStore } from "@/components/stores/atproto";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { trpc } from "@/lib/trpc/client";
 
 export const SiteEditorModalId = "site/editor";
 
@@ -91,61 +91,49 @@ export const SiteEditorModal = ({ initialData }: SiteEditorModalProps) => {
   const { stack, popModal, hide, pushModal, show } = useModal();
   const queryClient = useQueryClient();
 
-  // Create mutation using TanStack Query with the mutations package
+  // Create mutation
   const {
-    mutate: handleAdd,
+    mutate: _addMutation,
     isPending: isAdding,
     error: addError,
-  } = useMutation({
-    mutationFn: async ({
-      name,
-      shapefile,
-    }: {
-      name: string;
-      shapefile: File;
-    }) => {
-      const shapefileData = await toSerializableFile(shapefile);
-      return createLocationAction({
-        name,
-        shapefile: shapefileData,
-      });
-    },
+  } = trpc.certified.location.create.useMutation({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queries.locations.key() });
       setIsCompleted(true);
     },
   });
+
+  // Wrapper to handle async file serialization before calling the tRPC mutation
+  const handleAdd = async ({ name, shapefile }: { name: string; shapefile: File }) => {
+    const shapefileData = await toSerializableFile(shapefile);
+    _addMutation({ name, shapefile: shapefileData });
+  };
 
   // Update mutation
   const {
-    mutate: handleUpdate,
+    mutate: _updateMutation,
     isPending: isUpdating,
     error: updateError,
-  } = useMutation({
-    mutationFn: async ({
-      rkey,
-      name,
-      shapefile,
-    }: {
-      rkey: string;
-      name: string;
-      shapefile?: File | null;
-    }) => {
-      const newShapefile = shapefile
-        ? await toSerializableFile(shapefile)
-        : undefined;
-
-      return updateLocationAction({
-        rkey,
-        data: { name },
-        newShapefile,
-      });
-    },
+  } = trpc.certified.location.update.useMutation({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queries.locations.key() });
       setIsCompleted(true);
     },
   });
+
+  // Wrapper to handle async file serialization before calling the tRPC mutation
+  const handleUpdate = async ({
+    rkey,
+    name,
+    shapefile,
+  }: {
+    rkey: string;
+    name: string;
+    shapefile?: File | null;
+  }) => {
+    const newShapefile = shapefile ? await toSerializableFile(shapefile) : undefined;
+    _updateMutation({ rkey, data: { name }, newShapefile });
+  };
 
   const executeAddOrEdit = async () => {
     if (mode === "add") {
@@ -153,7 +141,7 @@ export const SiteEditorModal = ({ initialData }: SiteEditorModalProps) => {
         throw new Error("Shapefile is required");
       }
 
-      handleAdd({
+      await handleAdd({
         name: name.trim(),
         shapefile,
       });
@@ -163,7 +151,7 @@ export const SiteEditorModal = ({ initialData }: SiteEditorModalProps) => {
         throw new Error("Record key is required for editing");
       }
 
-      handleUpdate({
+      await handleUpdate({
         rkey,
         name: name.trim(),
         shapefile: hasShapefileInput ? shapefile : null,

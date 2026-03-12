@@ -6,7 +6,6 @@
  */
 
 // Re-export useful types and utilities
-export { MutationError } from "@gainforest/atproto-mutations-next/client";
 export {
   toSerializableFile,
   parseAtUri,

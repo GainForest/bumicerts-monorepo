@@ -30,9 +30,10 @@
  */
 
 import { NextRequest } from "next/server";
+import { Effect } from "effect";
 import { auth } from "@/lib/auth";
 import { makeUserAgentLayer } from "@gainforest/atproto-mutations-next/server";
-import { createLinkEvmAction } from "@gainforest/atproto-mutations-next/actions";
+import { mutations } from "@gainforest/atproto-mutations-next";
 import { serverEnv } from "@/lib/env/server";
 import { signMessage, privateKeyToAccount } from "viem/accounts";
 
@@ -93,56 +94,59 @@ export async function POST(req: NextRequest) {
   });
   const platformAddress = platformAccount.address;
 
-  // --- Write link.evm record ---
-  const result = await createLinkEvmAction(
-    {
-      ...(body.name ? { name: body.name } : {}),
-      address: body.address,
-      userProof: {
-        $type: "app.bumicerts.link.evm#eip712Proof",
-        signature: body.signature,
-        message: {
-          $type: "app.bumicerts.link.evm#eip712Message",
-          did:        body.message.did as `did:${string}:${string}`,
-          evmAddress: body.message.evmAddress,
-          chainId:    body.message.chainId,
-          timestamp:  body.message.timestamp,
-          nonce:      body.message.nonce,
+  // --- Write link.evm record via Effect ---
+  let result: { uri: string; rkey: string };
+  try {
+    const data = await Effect.runPromise(
+      mutations.link.evm.create({
+        ...(body.name ? { name: body.name } : {}),
+        address: body.address,
+        userProof: {
+          $type: "app.bumicerts.link.evm#eip712Proof",
+          signature: body.signature,
+          message: {
+            $type: "app.bumicerts.link.evm#eip712Message",
+            did:        body.message.did as `did:${string}:${string}`,
+            evmAddress: body.message.evmAddress,
+            chainId:    body.message.chainId,
+            timestamp:  body.message.timestamp,
+            nonce:      body.message.nonce,
+          },
         },
-      },
-      platformAttestation: {
-        $type: "app.bumicerts.link.evm#eip712PlatformAttestation",
-        signature:       platformSignature,
-        platformAddress: platformAddress,
-        signedData:      body.signature, // platform signed over the user's raw sig
-      },
-    },
-    agentLayer
-  );
-
-  if (!result.success) {
-    const code = result.code;
-    if (code === "UNAUTHORIZED") {
-      return Response.json(
-        { error: "Not authenticated — please sign in first" },
-        { status: 401 }
-      );
+        platformAttestation: {
+          $type: "app.bumicerts.link.evm#eip712PlatformAttestation",
+          signature:       platformSignature,
+          platformAddress: platformAddress,
+          signedData:      body.signature, // platform signed over the user's raw sig
+        },
+      }).pipe(Effect.provide(agentLayer))
+    );
+    result = { uri: data.uri, rkey: data.rkey };
+  } catch (err) {
+    if (err && typeof err === "object" && "_tag" in err) {
+      const tag = (err as { _tag: string })._tag;
+      if (tag === "UnauthorizedError") {
+        return Response.json(
+          { error: "Not authenticated — please sign in first" },
+          { status: 401 }
+        );
+      }
+      if (tag === "SessionExpiredError") {
+        return Response.json(
+          { error: "Session expired — please sign in again" },
+          { status: 401 }
+        );
+      }
     }
-    if (code === "SESSION_EXPIRED") {
-      return Response.json(
-        { error: "Session expired — please sign in again" },
-        { status: 401 }
-      );
-    }
-    console.error("[identity-link] Failed to write link.evm record:", result);
+    console.error("[identity-link] Failed to write link.evm record:", err);
     return Response.json(
-      { error: result.message ?? "Failed to write link.evm record" },
+      { error: err instanceof Error ? err.message : "Failed to write link.evm record" },
       { status: 500 }
     );
   }
 
   return Response.json({
-    uri:  result.data.uri,
-    rkey: result.data.rkey,
+    uri:  result.uri,
+    rkey: result.rkey,
   });
 }

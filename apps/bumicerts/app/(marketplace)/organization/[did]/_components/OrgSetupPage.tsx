@@ -45,12 +45,9 @@ import { countries } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { links } from "@/lib/links";
 import { plainTextToLinearDocument } from "@/lib/utils/linearDocument";
-import { upsertOrganizationInfoAction } from "@/lib/actions/organizations";
-import {
-  MutationError,
-  formatMutationErrorMessage,
-} from "@gainforest/atproto-mutations-next";
-import { organizationInfoLabels } from "@/lib/config/fieldLabels";
+import { trpc } from "@/lib/trpc/client";
+import { formatError } from "@/lib/utils/trpc-errors";
+import { toSerializableFile } from "@/lib/mutations-utils";
 
 const CountrySelectorModal = dynamic(
   () => import("@/components/modals/country-selector"),
@@ -124,6 +121,8 @@ export function OrgSetupPage({ did }: { did: string }) {
   const [isFetchingBrandInfo, setIsFetchingBrandInfo] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const upsertOrgInfo = trpc.organization.info.upsert.useMutation();
 
   const updateForm = (patch: Partial<FormState>) =>
     setForm((prev) => ({ ...prev, ...patch }));
@@ -280,8 +279,11 @@ export function OrgSetupPage({ did }: { did: string }) {
           ? `https://${form.website}`
           : form.website || undefined;
 
-      // Step 3: Upsert org info via server action
-      await upsertOrganizationInfoAction({
+      // Step 3: Serialize logo if present
+      const logoInput = form.logo ? { image: await toSerializableFile(form.logo) } : undefined;
+
+      // Step 4: Upsert org info via tRPC
+      await upsertOrgInfo.mutateAsync({
         displayName: form.organizationName,
         shortDescription: { text: shortDescription },
         longDescription: plainTextToLinearDocument(form.longDescription),
@@ -292,30 +294,15 @@ export function OrgSetupPage({ did }: { did: string }) {
         startDate: form.startDate
           ? (`${form.startDate}T00:00:00.000Z` as `${string}-${string}-${string}T${string}:${string}:${string}Z`)
           : undefined,
-        logo: form.logo ? { image: form.logo } : undefined,
+        logo: logoInput,
       });
 
-      // Step 4: Refresh the page — the server will now find the org data and
+      // Step 5: Refresh the page — the server will now find the org data and
       // render OrgPageClient instead of OrgSetupPage.
       router.refresh();
     } catch (caughtError) {
       console.error("Failed to save org info:", caughtError);
-
-      if (MutationError.is(caughtError)) {
-        // Log structured dev details, show user-friendly message
-        console.error(
-          "[dev] MutationError code:", caughtError.code,
-          "| issues:", caughtError.issues ?? caughtError.message
-        );
-        setSubmitError(formatMutationErrorMessage(caughtError, organizationInfoLabels));
-      } else {
-        setSubmitError(
-          caughtError instanceof Error
-            ? caughtError.message
-            : "Something went wrong. Please try again."
-        );
-      }
-
+      setSubmitError(formatError(caughtError));
       setIsSubmitting(false);
     }
   };

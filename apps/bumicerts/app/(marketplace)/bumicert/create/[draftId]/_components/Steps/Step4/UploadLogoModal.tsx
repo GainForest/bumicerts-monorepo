@@ -11,9 +11,9 @@ import { Loader2Icon, UploadIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAtprotoStore } from "@/components/stores/atproto";
 import { useModal } from "@/components/ui/modal/context";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { toSerializableFile } from "@/lib/mutations-utils";
-import { updateOrganizationInfoAction } from "@/lib/actions/organizations";
+import { trpc } from "@/lib/trpc/client";
 import { queries } from "@/lib/graphql/queries/index";
 
 export const UploadLogoModalId = "upload/organization/logo";
@@ -25,29 +25,28 @@ export const UploadLogoModal = () => {
   const queryClient = useQueryClient();
 
   const {
-    mutate: uploadLogo,
+    mutate: _updateMutation,
     isPending: isUploadingLogo,
     isSuccess: isUploaded,
-  } = useMutation({
-    mutationFn: async () => {
-      if (!auth.user?.did) throw new Error("User is not authenticated");
-      if (!logo) throw new Error("Logo is required");
-
-      const logoFile = await toSerializableFile(logo);
-
-      return updateOrganizationInfoAction({
-        data: {
-          logo: {
-            $type: "org.hypercerts.defs#smallImage" as const,
-            image: logoFile,
-          },
-        },
-      });
-    },
+  } = trpc.organization.info.update.useMutation({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queries.organization.key() });
     },
   });
+
+  const uploadLogo = async () => {
+    if (!auth.user?.did) throw new Error("User is not authenticated");
+    if (!logo) throw new Error("Logo is required");
+    const logoFile = await toSerializableFile(logo);
+    _updateMutation({
+      data: {
+        logo: {
+          $type: "org.hypercerts.defs#smallImage" as const,
+          image: logoFile,
+        },
+      },
+    });
+  };
 
   return (
     <ModalContent>

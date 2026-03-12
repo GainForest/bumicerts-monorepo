@@ -29,7 +29,8 @@ import { queries } from "@/lib/graphql/queries";
 import { clientEnv } from "@/lib/env/client";
 import type { FundingConfigData } from "@/lib/types";
 import type { EvmLink } from "@/lib/graphql/queries/linkEvm";
-import { upsertFundingConfig } from "@/lib/actions/fundingConfig";
+import { trpc } from "@/lib/trpc/client";
+import { formatError } from "@/lib/utils/trpc-errors";
 import { AddWalletModal } from "@/components/global/modals/wallet/add";
 import { ManageWalletsModal } from "@/components/global/modals/wallet/manage";
 import { MODAL_IDS } from "@/components/global/modals/ids";
@@ -147,6 +148,8 @@ export function FundingConfigModal({
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const upsertConfig = trpc.funding.config.upsert.useMutation();
+
   // Auto-select first valid wallet when none is pre-selected
   useEffect(() => {
     if (!selectedWalletUri && evmLinks.length > 0) {
@@ -216,25 +219,25 @@ export function FundingConfigModal({
     setIsSaving(true);
 
     try {
-      const result = await upsertFundingConfig({
+      await upsertConfig.mutateAsync({
         rkey: bumicertRkey,
-        receivingWalletUri: selectedWalletUri,
+        receivingWallet: {
+          $type: "app.bumicerts.funding.config#evmLinkRef",
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          uri: selectedWalletUri as any,
+        },
         status,
+        updatedAt: new Date().toISOString(),
         ...(goalInUSD.trim()        ? { goalInUSD: goalInUSD.trim() }               : {}),
         ...(minDonationInUSD.trim() ? { minDonationInUSD: minDonationInUSD.trim() } : {}),
         ...(maxDonationInUSD.trim() ? { maxDonationInUSD: maxDonationInUSD.trim() } : {}),
         allowOversell,
       });
 
-      if (!result.success) {
-        setSaveError(result.message ?? "Failed to save. Please try again.");
-        return;
-      }
-
       onSaved();
       handleClose();
     } catch (e) {
-      setSaveError(e instanceof Error ? e.message : "Failed to save. Please try again.");
+      setSaveError(formatError(e));
     } finally {
       setIsSaving(false);
     }
