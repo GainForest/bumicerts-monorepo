@@ -4,19 +4,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ArrowLeftIcon,
   ExternalLinkIcon,
   GithubIcon,
   TwitterIcon,
   FileTextIcon,
-  UserIcon,
   ChevronLeftIcon,
 } from "lucide-react";
 import { motion, LayoutGroup, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { links } from "@/lib/links";
-import { useAtprotoStore } from "@/components/stores/atproto";
 import { UPLOAD_NAV_ITEMS } from "./data";
 import { useSidebarTransition } from "@/hooks/useSidebarTransition";
 import { SidebarTransitionOverlay } from "@/components/ui/SidebarTransitionOverlay";
@@ -35,45 +32,6 @@ function isNavItemActive(
   if (pathCheck.equals) return pathname === pathCheck.equals;
   if (pathCheck.startsWith) return pathname.startsWith(pathCheck.startsWith);
   return false;
-}
-
-// ── Profile Card ──────────────────────────────────────────────────────────────
-
-function UploadProfileCard() {
-  const auth = useAtprotoStore((s) => s.auth);
-
-  if (auth.status !== "AUTHENTICATED") return null;
-
-  const { displayName, handle, avatar } = auth.user;
-  const label = displayName ?? handle ?? "My Organisation";
-
-  return (
-    <div className="mx-0.5 mb-3 p-2.5 rounded-xl bg-muted/30 border border-border/50">
-      <div className="flex items-center gap-2.5">
-        {/* Avatar */}
-        <div className="h-9 w-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 overflow-hidden">
-          {avatar ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatar} alt={label} className="h-full w-full object-cover" />
-          ) : (
-            <UserIcon className="h-4 w-4 text-primary" />
-          )}
-        </div>
-
-        {/* Name + handle */}
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-foreground truncate leading-tight">
-            {label}
-          </p>
-          {handle && (
-            <p className="text-[11px] text-muted-foreground truncate mt-0.5">
-              @{handle}
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
 }
 
 // ── Main Sidebar ──────────────────────────────────────────────────────────────

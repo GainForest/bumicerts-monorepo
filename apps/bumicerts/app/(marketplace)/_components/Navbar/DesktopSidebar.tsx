@@ -15,7 +15,6 @@ import {
   UploadCloudIcon,
   ChevronRightIcon,
   XIcon,
-  LeafIcon,
 } from "lucide-react";
 import { AnimatePresence, motion, LayoutGroup } from "framer-motion";
 import { useState, useEffect } from "react";
