@@ -143,28 +143,31 @@ function MarketplaceWelcomeCard() {
           <XIcon className="h-3 w-3" />
         </button>
 
-        <div className="flex items-center gap-2.5 pr-4">
-          {/* Logo */}
-          <div className="h-7 w-7 rounded-lg border border-border/60 bg-background flex items-center justify-center shrink-0 shadow-sm">
+        {/* Logo centred at the top */}
+        <div className="flex justify-center mb-3 mt-1">
+          <div className="h-10 w-10 rounded-xl border border-border/60 bg-background flex items-center justify-center shadow-sm">
             <Image
               src="/assets/media/images/logo.svg"
               alt="Bumicerts"
-              width={16}
-              height={16}
+              width={22}
+              height={22}
               className="dark:invert dark:brightness-200"
               style={{ filter: "sepia(100%) saturate(0%) brightness(0.2)" }}
             />
           </div>
+        </div>
 
-          <div className="min-w-0">
-            <div className="flex items-center gap-1">
-              <LeafIcon className="h-2.5 w-2.5 text-primary shrink-0" />
-              <p className="text-xs font-semibold text-foreground">Marketplace</p>
-            </div>
-            <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">
-              Discover nature&apos;s guardians
+        {/* Text — centred, vertical stack */}
+        <div className="text-center">
+          <div className="flex items-center justify-center gap-1 mb-0.5">
+            <LeafIcon className="h-2.5 w-2.5 text-primary shrink-0" />
+            <p className="text-xs font-semibold text-foreground tracking-wide">
+              Marketplace
             </p>
           </div>
+          <p className="text-[10px] text-muted-foreground leading-snug">
+            Discover nature&apos;s guardians
+          </p>
         </div>
       </motion.div>
     </AnimatePresence>

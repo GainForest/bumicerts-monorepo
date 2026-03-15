@@ -85,15 +85,9 @@ export function TopNavbar() {
 
           {/* Menu drawer */}
           <Drawer.Root open={drawerOpen} onOpenChange={setDrawerOpen}>
-            <Drawer.Trigger asChild>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="flex items-center gap-2 text-sm font-medium text-foreground/70 hover:text-foreground transition-colors cursor-pointer"
-              >
-                Menu
-                <span className="text-foreground/30">=</span>
-              </motion.button>
+            <Drawer.Trigger className="flex items-center gap-2 text-sm font-medium text-foreground/70 hover:text-foreground transition-colors cursor-pointer">
+              Menu
+              <span className="text-foreground/30">=</span>
             </Drawer.Trigger>
 
             <Drawer.Portal>
