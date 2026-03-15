@@ -10,13 +10,17 @@ import {
   TwitterIcon,
   FileTextIcon,
   UserIcon,
+  ChevronLeftIcon,
 } from "lucide-react";
-import { motion, LayoutGroup } from "framer-motion";
+import { motion, LayoutGroup, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { links } from "@/lib/links";
 import { useAtprotoStore } from "@/components/stores/atproto";
 import { UPLOAD_NAV_ITEMS } from "./data";
+import { useSidebarTransition } from "@/hooks/useSidebarTransition";
+import { SidebarTransitionOverlay } from "@/components/ui/SidebarTransitionOverlay";
+import { useMobileNav } from "@/hooks/useMobileNav";
 
 const FOOTER_LINKS = [
   { href: "https://github.com/gainforest-earth", text: "GitHub", Icon: GithubIcon },
@@ -76,9 +80,16 @@ function UploadProfileCard() {
 
 export function UploadDesktopSidebar() {
   const pathname = usePathname();
+  const { switching, isExiting, targetPlatform } = useSidebarTransition();
+  const closeMobileNav = useMobileNav((s) => s.setOpen);
 
   return (
-    <nav className="w-[240px] h-full flex flex-col justify-between p-4 border-r border-border bg-foreground/3">
+    <nav className="w-[240px] h-full flex flex-col justify-between p-4 border-r border-border bg-foreground/3 relative">
+      {/* Platform transition overlay */}
+      <AnimatePresence>
+        {switching && <SidebarTransitionOverlay targetPlatform={targetPlatform} isExiting={isExiting} />}
+      </AnimatePresence>
+
       {/* Top section */}
       <div className="flex flex-col gap-1">
         {/* Logo + "Upload" wordmark */}
@@ -103,9 +114,12 @@ export function UploadDesktopSidebar() {
                 style={{ filter: "sepia(100%) saturate(0%) brightness(0.2)" }}
               />
             </motion.div>
-            <span className="font-serif text-xl font-bold tracking-tight text-foreground/80">
+            <motion.span
+              layoutId="sidebar-platform-name"
+              className="font-serif text-xl font-bold tracking-tight text-foreground/80 inline-block"
+            >
               Upload
-            </span>
+            </motion.span>
           </div>
         </motion.div>
 
@@ -114,36 +128,16 @@ export function UploadDesktopSidebar() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3, delay: 0.12 }}
-          className="mb-3"
+          className="my-4"
         >
           <Link
-            href={links.root}
+            href={links.home}
+            onClick={() => closeMobileNav(false)}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors duration-150 w-fit"
           >
-            <ArrowLeftIcon className="h-3 w-3 shrink-0" />
-            <span>Back to home</span>
+            <ChevronLeftIcon className="size-5" />
+            <span className="text-sm">Go to Marketplace</span>
           </Link>
-        </motion.div>
-
-        {/* Profile card */}
-        <motion.div
-          initial={{ opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.18 }}
-        >
-          <UploadProfileCard />
-        </motion.div>
-
-        {/* Section label */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3, delay: 0.22 }}
-          className="flex items-center gap-2 px-3 mb-1"
-        >
-          <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/60 font-medium">
-            Upload
-          </span>
         </motion.div>
 
         {/* Nav links */}
@@ -158,7 +152,7 @@ export function UploadDesktopSidebar() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.3, delay: 0.05 * idx + 0.22, ease: [0.25, 0.1, 0.25, 1] }}
                 >
-                  <Link href={item.href} className="block relative">
+                  <Link href={item.href} onClick={() => closeMobileNav(false)} className="block relative">
                     <motion.div
                       whileHover={{ x: 2 }}
                       transition={{ type: "spring", stiffness: 400, damping: 30 }}

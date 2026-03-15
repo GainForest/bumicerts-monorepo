@@ -6,9 +6,8 @@ import { HeaderProvider } from "./_components/Header/context";
 import { ModalProvider } from "@/components/ui/modal/context";
 import { TopNavbar } from "./_components/Navbar/TopNavbar";
 import { DesktopSidebar } from "./_components/Navbar/DesktopSidebar";
-import { MobileBottomNav } from "./_components/Navbar/MobileBottomNav";
 import { Header } from "./_components/Header/Header";
-import { usePlatformTransitionToast } from "@/hooks/usePlatformTransitionToast";
+import { MobileNavDrawer } from "@/components/ui/MobileNavDrawer";
 
 export default function MarketplaceLayout({
   children,
@@ -17,8 +16,6 @@ export default function MarketplaceLayout({
 }) {
   const pathname = usePathname();
   const isHomePage = pathname === "/";
-
-  usePlatformTransitionToast();
 
   if (isHomePage) {
     return (
@@ -45,14 +42,15 @@ export default function MarketplaceLayout({
             </main>
           </div>
 
-          {/* Mobile: full width with bottom nav */}
+          {/* Mobile: full width + floating sidebar drawer */}
           <div className="md:hidden flex flex-col h-screen overflow-hidden">
-            <div className="flex-1 relative overflow-y-auto pb-16">
-              {/* Header overlays content for translucency effect, same as desktop */}
+            <MobileNavDrawer>
+              <DesktopSidebar />
+            </MobileNavDrawer>
+            <div className="flex-1 relative overflow-y-auto">
               <Header />
               {children}
             </div>
-            <MobileBottomNav />
           </div>
         </ModalProvider>
       </HeaderProvider>

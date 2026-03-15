@@ -4,8 +4,7 @@ import { ModalProvider } from "@/components/ui/modal/context";
 import { HeaderProvider } from "@/app/(marketplace)/_components/Header/context";
 import { UploadHeader } from "./Header/UploadHeader";
 import { UploadDesktopSidebar } from "./Navbar/DesktopSidebar";
-import { UploadMobileBottomNav } from "./Navbar/MobileBottomNav";
-import { usePlatformTransitionToast } from "@/hooks/usePlatformTransitionToast";
+import { MobileNavDrawer } from "@/components/ui/MobileNavDrawer";
 
 interface UploadLayoutClientProps {
   did: string;
@@ -25,8 +24,6 @@ interface UploadLayoutClientProps {
  * Uses UploadHeader (no cart) instead of the marketplace Header.
  */
 function UploadLayoutInner({ children }: { children: React.ReactNode }) {
-  usePlatformTransitionToast();
-
   return (
     <>
       {/* Desktop: sidebar + content */}
@@ -38,13 +35,15 @@ function UploadLayoutInner({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
-      {/* Mobile: full width + bottom nav */}
+      {/* Mobile: full width + floating sidebar drawer */}
       <div className="md:hidden flex flex-col h-screen overflow-hidden">
-        <div className="flex-1 relative overflow-y-auto pb-16">
+        <MobileNavDrawer>
+          <UploadDesktopSidebar />
+        </MobileNavDrawer>
+        <div className="flex-1 relative overflow-y-auto">
           <UploadHeader />
           {children}
         </div>
-        <UploadMobileBottomNav />
       </div>
     </>
   );

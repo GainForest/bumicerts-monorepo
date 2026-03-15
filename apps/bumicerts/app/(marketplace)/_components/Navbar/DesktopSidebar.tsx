@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  HomeIcon,
   CompassIcon,
   Building2Icon,
   BadgePlusIcon,
@@ -26,15 +25,11 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { links } from "@/lib/links";
 import { useAtprotoStore } from "@/components/stores/atproto";
 import QuickTooltip from "@/components/ui/quick-tooltip";
+import { useSidebarTransition } from "@/hooks/useSidebarTransition";
+import { SidebarTransitionOverlay } from "@/components/ui/SidebarTransitionOverlay";
+import { useMobileNav } from "@/hooks/useMobileNav";
 
 const NAV_GROUPS = [
-  {
-    id: "home",
-    text: "Home",
-    Icon: HomeIcon,
-    href: links.root,
-    pathCheck: { equals: links.root },
-  },
   {
     id: "explore",
     text: "Explore",
@@ -82,6 +77,7 @@ function isLeafActive(pathCheck: { equals?: string; startsWith?: string }, pathn
 function UploadPlatformLink() {
   const auth = useAtprotoStore((s) => s.auth);
   const isAuthenticated = auth.status === "AUTHENTICATED";
+  const closeMobileNav = useMobileNav((s) => s.setOpen);
 
   const inner = (
     <motion.div
@@ -109,7 +105,7 @@ function UploadPlatformLink() {
   }
 
   return (
-    <Link href={links.upload.home} className="block">
+    <Link href={links.upload.home} onClick={() => closeMobileNav(false)} className="block">
       {inner}
     </Link>
   );
@@ -131,7 +127,7 @@ function MarketplaceWelcomeCard() {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -4, height: 0, marginBottom: 0 }}
         transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
-        className="mx-0.5 mb-2 p-3 rounded-xl bg-primary/5 border border-primary/10 relative"
+        className="mx-0.5 mb-2 p-3 rounded-xl bg-background border border-border relative"
       >
         {/* Dismiss button */}
         <button
@@ -145,28 +141,19 @@ function MarketplaceWelcomeCard() {
 
         {/* Logo centred at the top */}
         <div className="flex justify-center mb-3 mt-1">
-          <div className="h-10 w-10 rounded-xl border border-border/60 bg-background flex items-center justify-center shadow-sm">
-            <Image
-              src="/assets/media/images/logo.svg"
-              alt="Bumicerts"
-              width={22}
-              height={22}
-              className="dark:invert dark:brightness-200"
-              style={{ filter: "sepia(100%) saturate(0%) brightness(0.2)" }}
-            />
-          </div>
+          <Image
+            src="/assets/media/images/logo.svg"
+            alt="Bumicerts"
+            width={32}
+            height={32}
+            className="dark:invert dark:brightness-200 -mb-2"
+            style={{ filter: "sepia(100%) saturate(0%) brightness(0.2)" }}
+          />
         </div>
-
-        {/* Text — centred, vertical stack */}
-        <div className="text-center">
-          <div className="flex items-center justify-center gap-1 mb-0.5">
-            <LeafIcon className="h-2.5 w-2.5 text-primary shrink-0" />
-            <p className="text-xs font-semibold text-foreground tracking-wide">
-              Marketplace
-            </p>
-          </div>
-          <p className="text-[10px] text-muted-foreground leading-snug">
-            Discover nature&apos;s guardians
+        <div className="flex flex-col w-full items-center gap-1">
+          <span className="font-instrument text-2xl">Marketplace</span>
+          <p className="text-xs text-muted-foreground text-pretty text-center">
+            This is Bumicerts Marketplace. Discover and support regenerative impact projects.
           </p>
         </div>
       </motion.div>
@@ -179,6 +166,8 @@ function MarketplaceWelcomeCard() {
 export function DesktopSidebar() {
   const pathname = usePathname();
   const [expandedGroups, setExpandedGroups] = useState<string[]>(["explore"]);
+  const { switching, isExiting, targetPlatform } = useSidebarTransition();
+  const closeMobileNav = useMobileNav((s) => s.setOpen);
 
   useEffect(() => {
     NAV_GROUPS.forEach((group) => {
@@ -202,7 +191,12 @@ export function DesktopSidebar() {
   };
 
   return (
-    <nav className="w-[240px] h-full flex flex-col justify-between p-4 border-r border-border bg-foreground/3">
+    <nav className="w-[240px] h-full flex flex-col justify-between p-4 border-r border-border bg-foreground/3 relative">
+      {/* Platform transition overlay */}
+      <AnimatePresence>
+        {switching && <SidebarTransitionOverlay targetPlatform={targetPlatform} isExiting={isExiting} />}
+      </AnimatePresence>
+
       {/* Top section */}
       <div className="flex flex-col gap-1">
         {/* Logo + Wordmark */}
@@ -211,7 +205,7 @@ export function DesktopSidebar() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
         >
-          <Link href={links.root} className="group flex items-center gap-2.5 mb-4 py-1">
+          <Link href={links.root} onClick={() => closeMobileNav(false)} className="group flex items-center gap-2.5 mb-4 py-1">
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -227,9 +221,12 @@ export function DesktopSidebar() {
                 style={{ filter: "sepia(100%) saturate(0%) brightness(0.2)" }}
               />
             </motion.div>
-            <span className="font-serif text-xl font-bold tracking-tight text-foreground group-hover:text-primary transition-colors duration-200">
-              Bumicerts
-            </span>
+            <motion.span
+              layoutId="sidebar-platform-name"
+              className="font-serif text-xl font-bold tracking-tight text-foreground group-hover:text-primary transition-colors duration-200 inline-block"
+            >
+              Marketplace
+            </motion.span>
           </Link>
         </motion.div>
 
@@ -247,7 +244,7 @@ export function DesktopSidebar() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3, delay: 0.05 * idx, ease: [0.25, 0.1, 0.25, 1] }}
                   >
-                    <Link href={item.href} className="block relative">
+                    <Link href={item.href} onClick={() => closeMobileNav(false)} className="block relative">
                       <motion.div
                         whileHover={{ x: 2 }}
                         transition={{ type: "spring", stiffness: 400, damping: 30 }}
@@ -325,7 +322,7 @@ export function DesktopSidebar() {
                         {item.children.map((child) => {
                           const isActive = isLeafActive(child.pathCheck, pathname);
                           return (
-                            <Link key={child.id} href={child.href} className="block">
+                            <Link key={child.id} href={child.href} onClick={() => closeMobileNav(false)} className="block">
                               <motion.div
                                 whileHover={{ x: 2 }}
                                 transition={{ type: "spring", stiffness: 400, damping: 30 }}

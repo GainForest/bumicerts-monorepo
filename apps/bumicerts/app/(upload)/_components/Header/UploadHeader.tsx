@@ -12,11 +12,14 @@ import { useHeaderSlots } from "@/app/(marketplace)/_components/Header/context";
 import { motion, AnimatePresence } from "framer-motion";
 import { ProgressiveBlur } from "@/components/ui/progressive-blur";
 import { AuthButton } from "@/components/auth/AuthButton";
+import { MenuIcon } from "lucide-react";
+import { useMobileNav } from "@/hooks/useMobileNav";
 
 export function UploadHeader() {
   const leftContent = useHeaderSlots((s) => s.leftContent);
   const rightContent = useHeaderSlots((s) => s.rightContent);
   const subHeaderContent = useHeaderSlots((s) => s.subHeaderContent);
+  const setMobileNavOpen = useMobileNav((s) => s.setOpen);
 
   return (
     <div className="sticky top-0 z-30" data-header>
@@ -34,6 +37,18 @@ export function UploadHeader() {
 
       <div className="relative z-10 flex flex-col">
         <div className="h-14 flex items-center justify-between px-4 gap-3">
+          {/* Hamburger — mobile only, extreme left */}
+          <motion.button
+            type="button"
+            onClick={() => setMobileNavOpen(true)}
+            whileTap={{ scale: 0.88 }}
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            className="md:hidden shrink-0 flex items-center justify-center w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+            aria-label="Open navigation"
+          >
+            <MenuIcon className="h-5 w-5" />
+          </motion.button>
+
           {/* Left slot */}
           <div className="flex-1 flex items-center gap-2 min-w-0">
             <AnimatePresence mode="wait">
