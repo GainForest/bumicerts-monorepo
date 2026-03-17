@@ -15,7 +15,8 @@
  */
 
 import type { BumicertData, BumicertContributor, OrganizationData } from "./types";
-import { parseAtUri } from "@gainforest/atproto-mutations-next";
+import type { LeafletLinearDocument } from "@gainforest/leaflet-react";
+import type { Facet, FacetFeature } from "@gainforest/leaflet-react/richtext";
 
 // ── GraphQL Response Types ───────────────────────────────────────────────────
 // These match the post-redesign GraphQL schema from the indexer.
@@ -83,7 +84,8 @@ export interface GraphQLHcActivityItem {
   record: {
     title: string | null;
     shortDescription: string | null;
-    description: unknown; // JSON scalar — now a LinearDocument (pub.leaflet.pages.linearDocument), not a string
+    shortDescriptionFacets: unknown; // JSON scalar — app.bsky.richtext.facet.Main[]
+    description: unknown; // JSON scalar — pub.leaflet.pages.linearDocument
     startDate: string | null;
     endDate: string | null;
     createdAt: string | null;
@@ -103,8 +105,8 @@ export interface GraphQLOrgInfoItem {
   creatorInfo: GraphQLCreatorInfo | null;
   record: {
     displayName: string | null;
-    shortDescription: unknown; // JSON scalar (Richtext)
-    longDescription: unknown; // JSON scalar (LinearDocument)
+    shortDescription: unknown; // JSON scalar (Richtext — { text: string, facets?: ... })
+    longDescription: unknown; // JSON scalar (pub.leaflet.pages.linearDocument)
     logo: GraphQLBlobRef | null;
     coverImage: GraphQLBlobRef | null;
     objectives: string[] | null;
@@ -141,34 +143,120 @@ function extractWorkScopeObjectives(workScope: unknown): string[] {
 }
 
 /**
- * Extract plain text from a Richtext JSON field.
+ * Type guard: checks if a value is a valid FacetFeature.
+ * Must have a string $type and the required feature-specific fields.
  */
-function extractRichtext(rt: unknown): string {
-  if (!rt) return "";
-  if (typeof rt === "string") return rt;
-  if (typeof rt === "object" && "text" in rt) return (rt as Record<string, unknown>)["text"] as string ?? "";
-  return "";
+function isFacetFeature(val: unknown): val is FacetFeature {
+  if (!val || typeof val !== "object") return false;
+  const obj = val as Record<string, unknown>;
+  const t = obj["$type"];
+  if (t === "app.bsky.richtext.facet#mention") return typeof obj["did"] === "string";
+  if (t === "app.bsky.richtext.facet#link") return typeof obj["uri"] === "string";
+  if (t === "app.bsky.richtext.facet#tag") return typeof obj["tag"] === "string";
+  return false;
 }
 
 /**
- * Extract plain text from a LinearDocument JSON field (array of blocks).
+ * Type guard: checks if a value is a valid Facet.
+ * Requires index.byteStart, index.byteEnd (numbers) and features array.
  */
-function extractLinearDocument(doc: unknown): string {
-  if (!doc) return "";
-  if (typeof doc === "string") return doc;
-  if (typeof doc === "object" && "blocks" in doc && Array.isArray((doc as Record<string, unknown>)["blocks"])) {
-    return ((doc as Record<string, unknown>)["blocks"] as unknown[])
-      .map((block) => {
-        if (!block || typeof block !== "object") return "";
-        const b = (block as Record<string, unknown>)["block"];
-        if (!b || typeof b !== "object") return "";
-        const plaintext = (b as Record<string, unknown>)["plaintext"];
-        return typeof plaintext === "string" ? plaintext : "";
-      })
-      .filter(Boolean)
-      .join("\n\n");
+function isFacet(val: unknown): val is Facet {
+  if (!val || typeof val !== "object") return false;
+  const obj = val as Record<string, unknown>;
+  const idx = obj["index"];
+  if (!idx || typeof idx !== "object") return false;
+  const index = idx as Record<string, unknown>;
+  if (typeof index["byteStart"] !== "number" || typeof index["byteEnd"] !== "number") return false;
+  if (!Array.isArray(obj["features"])) return false;
+  return true;
+}
+
+/**
+ * Parse a raw JSON value as Facet[].
+ * Filters out any malformed entries and normalises feature arrays.
+ */
+function parseFacets(raw: unknown): Facet[] {
+  if (!Array.isArray(raw)) return [];
+  // After filter(isFacet), each element is a validated Facet
+  return (raw as unknown[]).filter(isFacet).map((facet) => ({
+    index: {
+      byteStart: facet.index.byteStart,
+      byteEnd: facet.index.byteEnd,
+    },
+    // Filter features to only those with recognised $types
+    features: facet.features.filter(isFacetFeature),
+  }));
+}
+
+/**
+ * Extract text and facets from a Richtext JSON field.
+ * For org shortDescription which is stored as { text, facets? }.
+ * Also handles legacy plain-string values.
+ */
+function extractRichtextWithFacets(rt: unknown): { text: string; facets: Facet[] } {
+  if (!rt) return { text: "", facets: [] };
+  if (typeof rt === "string") return { text: rt, facets: [] };
+  if (typeof rt === "object" && "text" in rt) {
+    const obj = rt as Record<string, unknown>;
+    return {
+      text: typeof obj["text"] === "string" ? obj["text"] : "",
+      facets: parseFacets(obj["facets"]),
+    };
   }
-  return "";
+  return { text: "", facets: [] };
+}
+
+/**
+ * Type guard: checks if a value is a valid LeafletLinearDocument.
+ * Validates the minimum required structure: an object with a `blocks` array.
+ */
+function isLinearDocument(value: unknown): value is LeafletLinearDocument {
+  if (!value || typeof value !== "object") return false;
+  const obj = value as Record<string, unknown>;
+  return Array.isArray(obj["blocks"]);
+}
+
+/**
+ * Parse a raw JSON value as a LeafletLinearDocument.
+ *
+ * If the value is already a valid LinearDocument, returns it as-is.
+ * If the value is a plain string (legacy data), wraps it in a single text block.
+ * Otherwise returns an empty document.
+ */
+function parseLinearDocument(raw: unknown): LeafletLinearDocument {
+  if (isLinearDocument(raw)) return raw;
+  // Legacy: plain string stored before LinearDocument was adopted
+  if (typeof raw === "string" && raw.trim()) {
+    return {
+      blocks: raw.split(/\n\n+/).filter((p) => p.trim()).map((paragraph) => ({
+        block: {
+          $type: "pub.leaflet.blocks.text" as const,
+          plaintext: paragraph.trim(),
+        },
+      })),
+    };
+  }
+  return { blocks: [] };
+}
+
+/**
+ * Extract plain text from a LeafletLinearDocument for search / SEO purposes.
+ *
+ * This is the ONLY legitimate use of extracting text from a LinearDocument.
+ * For display, always use <LeafletRenderer> instead.
+ */
+export function extractTextFromLinearDocument(doc: LeafletLinearDocument): string {
+  return doc.blocks
+    .map((wrapper) => {
+      const block = wrapper.block;
+      if (!block || typeof block !== "object") return "";
+      if ("plaintext" in block && typeof block.plaintext === "string") {
+        return block.plaintext;
+      }
+      return "";
+    })
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 /**
@@ -227,23 +315,14 @@ export function activityToBumicertData(item: GraphQLHcActivityItem): BumicertDat
   // Get logo from creatorInfo (resolved inline by indexer)
   const logoUrl = creatorInfo?.organizationLogo?.uri ?? null;
 
-  // Use org logo as cover image fallback if activity has no image
-  if (!coverImageUrl && !logoUrl) {
-    // no fallback available
-  }
-
-  // Extract description: now a LinearDocument, use extractLinearDocument to get plaintext
-  // Fall back to shortDescription if description is empty
-  const descriptionText = extractLinearDocument(record?.description);
-  const description = descriptionText || record?.shortDescription || "";
-
   return {
     id: `${did}-${rkey}`,
     organizationDid: did,
     rkey,
     title: record?.title ?? "",
     shortDescription: record?.shortDescription ?? "",
-    description,
+    shortDescriptionFacets: parseFacets(record?.shortDescriptionFacets),
+    description: parseLinearDocument(record?.description),
     coverImageUrl,
     logoUrl,
     organizationName: creatorInfo?.organizationName ?? "",
@@ -269,11 +348,14 @@ export function orgInfoToOrganizationData(
   const record = item.record;
   const did = metadata?.did ?? "";
 
+  const shortDesc = extractRichtextWithFacets(record?.shortDescription);
+
   return {
     did,
     displayName: record?.displayName ?? "",
-    shortDescription: extractRichtext(record?.shortDescription),
-    longDescription: extractLinearDocument(record?.longDescription),
+    shortDescription: shortDesc.text,
+    shortDescriptionFacets: shortDesc.facets,
+    longDescription: parseLinearDocument(record?.longDescription),
     logoUrl: record?.logo?.uri ?? null,
     coverImageUrl: record?.coverImage?.uri ?? null,
     objectives: record?.objectives ?? [],
@@ -334,7 +416,8 @@ export function orgInfosToOrganizationDataArray(
       did,
       displayName: creatorInfo?.organizationName ?? "",
       shortDescription: "",
-      longDescription: "",
+      shortDescriptionFacets: [],
+      longDescription: { blocks: [] },
       logoUrl: creatorInfo?.organizationLogo?.uri ?? null,
       coverImageUrl: null,
       objectives: [],

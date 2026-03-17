@@ -6,6 +6,9 @@
  * via JSON serialization.
  */
 
+import type { LeafletLinearDocument } from "@gainforest/leaflet-react";
+import type { Facet } from "@gainforest/leaflet-react/richtext";
+
 // ── Bumicert ────────────────────────────────────────────────────────────────
 
 export type BumicertContributor = {
@@ -22,8 +25,24 @@ export type BumicertData = {
   rkey: string;
 
   title: string;
+  /**
+   * Short plain-text summary (app.bsky.richtext string field).
+   * Used for cards, previews, SEO metadata, and search.
+   * For the full rich-text description use `description`.
+   */
   shortDescription: string;
-  description: string;
+  /**
+   * Bluesky-style richtext facets for shortDescription (mentions, links, hashtags).
+   * Render with <BskyRichTextDisplay> in full-display contexts.
+   * Empty array when there are no annotations.
+   */
+  shortDescriptionFacets: Facet[];
+  /**
+   * Full rich-text description as a Leaflet LinearDocument.
+   * Always render with <LeafletRenderer> — never extract plain text from this
+   * except for keyword search purposes (use extractTextFromLinearDocument).
+   */
+  description: LeafletLinearDocument;
 
   /** Resolved blob URL or null */
   coverImageUrl: string | null;
@@ -72,8 +91,23 @@ export type FundingConfigData = {
 export type OrganizationData = {
   did: string;
   displayName: string;
+  /**
+   * Short plain-text summary (Richtext string field).
+   * Used for cards, previews, SEO, and search.
+   */
   shortDescription: string;
-  longDescription: string;
+  /**
+   * Bluesky-style richtext facets for shortDescription (mentions, links, hashtags).
+   * Render with <BskyRichTextDisplay> in full-display contexts.
+   * Empty array when there are no annotations.
+   */
+  shortDescriptionFacets: Facet[];
+  /**
+   * Full rich-text about section as a Leaflet LinearDocument.
+   * Always render with <LeafletRenderer> — never extract plain text from this
+   * except for keyword search purposes (use extractTextFromLinearDocument).
+   */
+  longDescription: LeafletLinearDocument;
 
   logoUrl: string | null;
   coverImageUrl: string | null;

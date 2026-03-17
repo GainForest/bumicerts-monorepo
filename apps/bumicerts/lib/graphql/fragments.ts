@@ -109,6 +109,7 @@ export const HcActivityFragment = graphql(`
     record {
       title
       shortDescription
+      shortDescriptionFacets
       description
       image
       workScope

@@ -18,6 +18,7 @@ export const links = {
   },
   upload: {
     home: "/upload",
+    edit: "/upload?mode=edit",
     sites: "/upload/sites",
     audio: "/upload/audio",
     bumicerts: "/upload/bumicerts",
@@ -28,6 +29,9 @@ export const links = {
     create: "/bumicert/create",
     createWithDraftId: (draftId: string) => `/bumicert/create/${draftId}`,
     view: (bumicertId: string) => `/bumicert/${bumicertId}`,
+    api: {
+      generateShortDescription: "/bumicert/create/api/generate-short-description",
+    },
   },
   api: {
     onboarding: {
