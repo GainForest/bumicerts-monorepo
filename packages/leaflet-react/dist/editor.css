@@ -1,0 +1,635 @@
+/**
+ * @gainforest/leaflet-react — Editor & Renderer Styles
+ *
+ * This stylesheet provides styles for both the LeafletEditor (WYSIWYG) and
+ * the LeafletRenderer (readonly) components.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * CSS Custom Properties (variables)
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * By default this stylesheet reads standard design-system tokens that are
+ * expected to be defined by the consuming app (e.g. in globals.css / :root).
+ * These match the Tailwind v4 / shadcn-ui convention used in bumicerts:
+ *
+ *   --foreground          body text colour
+ *   --muted-foreground    placeholder / secondary text
+ *   --background          page / editor content background
+ *   --card                toolbar / surface background
+ *   --border              borders and dividers
+ *   --primary             accent / active button colour
+ *   --primary-foreground  text on primary-coloured backgrounds
+ *   --destructive         error colour
+ *
+ * If those tokens are not available you can override the leaflet-specific
+ * fallback variables below:
+ *
+ *   --leaflet-color-text      body text
+ *   --leaflet-color-muted     placeholder / secondary
+ *   --leaflet-color-accent    links, active buttons
+ *   --leaflet-color-border    borders
+ *   --leaflet-color-surface   toolbar background
+ *   --leaflet-color-bg        editor content background
+ *   --leaflet-color-heading   headings
+ *   --leaflet-color-active-fg text on active toolbar buttons
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+/* ── Leaflet variable defaults — fall back to platform tokens ───────────── */
+:root {
+  --leaflet-color-text:      var(--foreground,       #2d3748);
+  --leaflet-color-muted:     var(--muted-foreground,  #718096);
+  --leaflet-color-accent:    var(--primary,           #3182ce);
+  --leaflet-color-border:    var(--border,            #e2e8f0);
+  --leaflet-color-surface:   var(--card,              #f7fafc);
+  --leaflet-color-bg:        var(--background,        #ffffff);
+  --leaflet-color-heading:   var(--foreground,        #1a365d);
+  --leaflet-color-active-fg: var(--primary-foreground, #ffffff);
+
+  /* Status colours — kept explicit since they express semantic meaning */
+  --leaflet-color-upload-bg:      oklch(0.97 0.012 220 / 1);
+  --leaflet-color-upload-border:  oklch(0.84 0.04  220 / 1);
+  --leaflet-color-upload-text:    var(--primary, #3182ce);
+  --leaflet-color-error-bg:       oklch(0.98 0.01  27 / 1);
+  --leaflet-color-error-border:   oklch(0.88 0.05  27 / 1);
+  --leaflet-color-error-text:     var(--destructive, #c53030);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   EDITOR CONTAINER
+   ───────────────────────────────────────────────────────────────────────── */
+
+.leaflet-editor {
+  border: 1px solid var(--leaflet-color-border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  font-family: inherit;
+  background: var(--leaflet-color-bg);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   TOOLBAR
+   ───────────────────────────────────────────────────────────────────────── */
+
+.leaflet-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.125rem;
+  padding: 0.375rem 0.625rem;
+  border-bottom: 1px solid var(--leaflet-color-border);
+  background: var(--leaflet-color-surface);
+  border-radius: 0.5rem 0.5rem 0 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.leaflet-toolbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: transparent;
+  cursor: pointer;
+  color: var(--leaflet-color-muted);
+  transition: background 120ms ease, color 120ms ease;
+  padding: 0;
+}
+
+.leaflet-toolbar-btn:hover:not(:disabled) {
+  background: var(--leaflet-color-border);
+  color: var(--leaflet-color-text);
+}
+
+.leaflet-toolbar-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.leaflet-toolbar-btn--active {
+  background: var(--leaflet-color-accent) !important;
+  color: var(--leaflet-color-active-fg) !important;
+}
+
+.leaflet-toolbar-divider {
+  width: 1px;
+  height: 1.25rem;
+  background: var(--leaflet-color-border);
+  margin: 0 0.25rem;
+  align-self: center;
+}
+
+/* Status banners inside the toolbar */
+.leaflet-toolbar-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.375rem 0.625rem;
+  font-size: 0.75rem;
+  border-top: 1px solid transparent;
+}
+
+.leaflet-toolbar-status--uploading {
+  color: var(--leaflet-color-upload-text);
+  background: var(--leaflet-color-upload-bg);
+  border-color: var(--leaflet-color-upload-border);
+}
+
+.leaflet-toolbar-status--error {
+  color: var(--leaflet-color-error-text);
+  background: var(--leaflet-color-error-bg);
+  border-color: var(--leaflet-color-error-border);
+}
+
+.leaflet-toolbar-status__dismiss {
+  margin-left: 0.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  color: inherit;
+  font-size: inherit;
+  padding: 0;
+}
+
+.leaflet-toolbar-status__dismiss:hover {
+  text-decoration: none;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   EDITOR CONTENT BANNERS (below toolbar, above content area)
+   ───────────────────────────────────────────────────────────────────────── */
+
+.leaflet-editor-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  border-bottom: 1px solid transparent;
+}
+
+.leaflet-editor-banner--error {
+  color: var(--leaflet-color-error-text);
+  background: var(--leaflet-color-error-bg);
+  border-color: var(--leaflet-color-error-border);
+}
+
+.leaflet-editor-banner--uploading {
+  color: var(--leaflet-color-upload-text);
+  background: var(--leaflet-color-upload-bg);
+  border-color: var(--leaflet-color-upload-border);
+}
+
+.leaflet-editor-banner__dismiss {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  color: inherit;
+  font-size: inherit;
+  padding: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   RESIZABLE CONTENT AREA
+   ───────────────────────────────────────────────────────────────────────── */
+
+.leaflet-editor__resizable {
+  resize: vertical;
+  overflow-y: auto;
+  position: relative;
+  height: 400px;
+  min-height: 200px;
+  max-height: 80vh;
+}
+
+.leaflet-editor__resizable .leaflet-editor__content {
+  height: 100%;
+}
+
+.leaflet-editor__resizable .leaflet-editor__content .ProseMirror {
+  min-height: 100%;
+  height: auto;
+  overflow-y: visible;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   PROSEMIRROR CONTENT
+   ───────────────────────────────────────────────────────────────────────── */
+
+.leaflet-editor__content .ProseMirror {
+  padding: 0.875rem 1rem;
+  outline: none;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--leaflet-color-text);
+  background: var(--leaflet-color-bg);
+}
+
+/* Placeholder */
+.leaflet-editor__content .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--leaflet-color-muted);
+  pointer-events: none;
+  float: left;
+  height: 0;
+}
+
+/* Paragraphs */
+.leaflet-editor__content .ProseMirror p {
+  margin: 0 0 0.625rem 0;
+}
+
+.leaflet-editor__content .ProseMirror p:last-child {
+  margin-bottom: 0;
+}
+
+/* Headings */
+.leaflet-editor__content .ProseMirror h1,
+.leaflet-editor__content .ProseMirror h2,
+.leaflet-editor__content .ProseMirror h3,
+.leaflet-editor__content .ProseMirror h4,
+.leaflet-editor__content .ProseMirror h5,
+.leaflet-editor__content .ProseMirror h6 {
+  font-weight: 600;
+  color: var(--leaflet-color-heading);
+  margin: 1.25rem 0 0.375rem 0;
+  line-height: 1.3;
+}
+
+.leaflet-editor__content .ProseMirror h1 { font-size: 1.875rem; }
+.leaflet-editor__content .ProseMirror h2 { font-size: 1.5rem; }
+.leaflet-editor__content .ProseMirror h3 { font-size: 1.25rem; }
+.leaflet-editor__content .ProseMirror h4 { font-size: 1.125rem; }
+.leaflet-editor__content .ProseMirror h5 { font-size: 1rem; }
+.leaflet-editor__content .ProseMirror h6 { font-size: 0.875rem; }
+
+/* Images */
+.leaflet-editor__content .ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 0.875rem 0;
+  display: block;
+}
+
+.leaflet-editor__content .ProseMirror img.ProseMirror-selectednode {
+  outline: 2px solid var(--leaflet-color-accent);
+}
+
+/* YouTube embed wrapper */
+.leaflet-editor__content .ProseMirror div[data-youtube-video] {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin: 0.875rem 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.leaflet-editor__content .ProseMirror div[data-youtube-video] iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* iframes */
+.leaflet-editor__content .ProseMirror iframe {
+  width: 100%;
+  max-width: 100%;
+  border-radius: 0.5rem;
+  margin: 0.875rem 0;
+  border: none;
+  display: block;
+}
+
+/* Blockquote */
+.leaflet-editor__content .ProseMirror blockquote {
+  border-left: 3px solid var(--leaflet-color-accent);
+  padding-left: 1rem;
+  margin: 0.875rem 0;
+  color: var(--leaflet-color-muted);
+  font-style: italic;
+}
+
+.leaflet-editor__content .ProseMirror blockquote p {
+  margin-bottom: 0.25rem;
+}
+
+/* Inline code */
+.leaflet-editor__content .ProseMirror code {
+  background: var(--leaflet-color-surface);
+  border: 1px solid var(--leaflet-color-border);
+  padding: 1px 4px;
+  border-radius: 0.25rem;
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
+  font-size: 0.875em;
+  color: var(--leaflet-color-text);
+}
+
+/* Code block */
+.leaflet-editor__content .ProseMirror pre {
+  background: var(--leaflet-color-heading);
+  color: oklch(0.9 0 0);
+  padding: 0.875rem 1rem;
+  border-radius: 0.375rem;
+  margin: 0.875rem 0;
+  overflow-x: auto;
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.leaflet-editor__content .ProseMirror pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+/* Links */
+.leaflet-editor__content .ProseMirror a {
+  color: var(--leaflet-color-accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.leaflet-editor__content .ProseMirror a:hover {
+  opacity: 0.8;
+}
+
+/* Lists */
+.leaflet-editor__content .ProseMirror ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin: 0.625rem 0;
+}
+
+.leaflet-editor__content .ProseMirror ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin: 0.625rem 0;
+}
+
+.leaflet-editor__content .ProseMirror li {
+  margin-bottom: 0.2rem;
+}
+
+.leaflet-editor__content .ProseMirror li > p {
+  margin-bottom: 0;
+}
+
+/* Horizontal rule */
+.leaflet-editor__content .ProseMirror hr {
+  border: none;
+  border-top: 1px solid var(--leaflet-color-border);
+  margin: 1.25rem 0;
+}
+
+/* Bold */
+.leaflet-editor__content .ProseMirror strong {
+  font-weight: 600;
+  color: var(--leaflet-color-heading);
+}
+
+/* Underline */
+.leaflet-editor__content .ProseMirror u {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Strikethrough */
+.leaflet-editor__content .ProseMirror s,
+.leaflet-editor__content .ProseMirror del {
+  text-decoration: line-through;
+  color: var(--leaflet-color-muted);
+}
+
+/* Selection */
+.leaflet-editor__content .ProseMirror ::selection {
+  background: color-mix(in oklch, var(--primary, #3182ce) 20%, transparent);
+}
+
+/* Focus (accessibility) */
+.leaflet-editor__content .ProseMirror:focus-visible {
+  outline: none;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   RENDERER (readonly) — leaflet-renderer.*
+   ───────────────────────────────────────────────────────────────────────── */
+
+.leaflet-renderer {
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--leaflet-color-text);
+}
+
+.leaflet-renderer .leaflet-text {
+  margin: 0 0 0.75rem 0;
+}
+
+.leaflet-renderer .leaflet-heading {
+  font-weight: 600;
+  color: var(--leaflet-color-heading);
+  margin: 1.25rem 0 0.375rem 0;
+  line-height: 1.3;
+}
+
+.leaflet-renderer .leaflet-h1 { font-size: 1.875rem; }
+.leaflet-renderer .leaflet-h2 { font-size: 1.5rem; }
+.leaflet-renderer .leaflet-h3 { font-size: 1.25rem; }
+.leaflet-renderer .leaflet-h4 { font-size: 1.125rem; }
+.leaflet-renderer .leaflet-h5 { font-size: 1rem; }
+.leaflet-renderer .leaflet-h6 { font-size: 0.875rem; }
+
+.leaflet-renderer .leaflet-image-wrapper {
+  margin: 0.875rem 0;
+}
+
+.leaflet-renderer .leaflet-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  display: block;
+}
+
+.leaflet-renderer .leaflet-blockquote {
+  border-left: 3px solid var(--leaflet-color-accent);
+  padding-left: 1rem;
+  margin: 0.875rem 0;
+  color: var(--leaflet-color-muted);
+  font-style: italic;
+}
+
+.leaflet-renderer .leaflet-list {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin: 0.625rem 0;
+}
+
+.leaflet-renderer .leaflet-list li {
+  margin-bottom: 0.2rem;
+}
+
+.leaflet-renderer .leaflet-list-image {
+  max-width: 100%;
+  border-radius: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+.leaflet-renderer .leaflet-code-block {
+  background: var(--leaflet-color-heading);
+  color: oklch(0.9 0 0);
+  padding: 0.875rem 1rem;
+  border-radius: 0.375rem;
+  margin: 0.875rem 0;
+  overflow-x: auto;
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.leaflet-renderer .leaflet-code-block code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: inherit;
+}
+
+.leaflet-renderer .leaflet-hr {
+  border: none;
+  border-top: 1px solid var(--leaflet-color-border);
+  margin: 1.25rem 0;
+}
+
+.leaflet-renderer .leaflet-iframe-wrapper {
+  margin: 0.875rem 0;
+  width: 100%;
+}
+
+.leaflet-renderer .leaflet-iframe-responsive {
+  position: relative;
+  padding-bottom: 56.25%; /* 16:9 */
+}
+
+.leaflet-renderer .leaflet-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 0.5rem;
+  display: block;
+}
+
+.leaflet-renderer .leaflet-iframe-responsive .leaflet-iframe {
+  position: absolute;
+  inset: 0;
+}
+
+.leaflet-renderer .leaflet-website-card {
+  margin: 0.875rem 0;
+  border: 1px solid var(--leaflet-color-border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  transition: border-color 150ms ease;
+}
+
+.leaflet-renderer .leaflet-website-card:hover {
+  border-color: var(--leaflet-color-accent);
+}
+
+.leaflet-renderer .leaflet-website-card__link {
+  display: block;
+  padding: 0.875rem 1rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.leaflet-renderer .leaflet-website-card__title {
+  font-weight: 600;
+  color: var(--leaflet-color-heading);
+  font-size: 0.875rem;
+  margin: 0 0 0.25rem 0;
+}
+
+.leaflet-renderer .leaflet-website-card__description {
+  color: var(--leaflet-color-muted);
+  font-size: 0.875rem;
+  margin: 0 0 0.5rem 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.leaflet-renderer .leaflet-website-card__url {
+  color: var(--leaflet-color-accent);
+  font-size: 0.75rem;
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SHARED INLINE ELEMENTS (used by both renderer and editor output)
+   ───────────────────────────────────────────────────────────────────────── */
+
+.leaflet-inline-code {
+  background: var(--leaflet-color-surface);
+  border: 1px solid var(--leaflet-color-border);
+  padding: 1px 4px;
+  border-radius: 0.25rem;
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
+  font-size: 0.875em;
+  color: var(--leaflet-color-text);
+}
+
+.leaflet-highlight {
+  background: color-mix(in oklch, oklch(0.9 0.15 85) 40%, transparent);
+  border-radius: 2px;
+}
+
+.leaflet-underline {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.leaflet-link {
+  color: var(--leaflet-color-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: opacity 150ms ease;
+}
+
+.leaflet-link:hover {
+  opacity: 0.75;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   UTILITIES
+   ───────────────────────────────────────────────────────────────────────── */
+
+.leaflet-hidden {
+  display: none;
+}
+
+@keyframes leaflet-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.leaflet-spinner {
+  animation: leaflet-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
