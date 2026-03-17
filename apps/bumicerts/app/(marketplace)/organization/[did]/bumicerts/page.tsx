@@ -1,8 +1,5 @@
-import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getOrgData, transformOrgData, type GraphQLOrgInfoItem, type GraphQLHcActivityItem } from "../_data";
-import { OrgHero } from "../_components/OrgHero";
-import { OrgTabBar } from "../_components/OrgTabBar";
 import { OrgBumicertsGrid } from "./_components/OrgBumicertsGrid";
 import ErrorPage from "@/components/error-page";
 import Container from "@/components/ui/container";
@@ -57,24 +54,12 @@ export default async function OrgBumicertsPage({
     );
   }
 
-  const orgInfo = data?.org as GraphQLOrgInfoItem | undefined;
-  if (!orgInfo) notFound();
+  // Layout handles notFound — guard defensively for edge races.
+  if (!data?.org) return null;
 
-  const rawActivities = (data?.activities ?? []) as GraphQLHcActivityItem[];
-  const { organization, bumicerts } = transformOrgData(orgInfo, rawActivities);
+  const orgInfo = data.org as GraphQLOrgInfoItem;
+  const rawActivities = (data.activities ?? []) as GraphQLHcActivityItem[];
+  const { bumicerts } = transformOrgData(orgInfo, rawActivities);
 
-  return (
-    <main className="w-full">
-      <Container className="pt-4 pb-8">
-        {/* Shared hero — identical across all org sub-pages */}
-        <OrgHero organization={organization} />
-
-        {/* Tab bar */}
-        <OrgTabBar did={organization.did} />
-
-        {/* Bumicerts grid */}
-        <OrgBumicertsGrid bumicerts={bumicerts} />
-      </Container>
-    </main>
-  );
+  return <OrgBumicertsGrid bumicerts={bumicerts} />;
 }

@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDownIcon, UsersIcon, TargetIcon } from "lucide-react";
+import { motion } from "framer-motion";
+import { UsersIcon, TargetIcon } from "lucide-react";
 import { format } from "date-fns";
 import type { BumicertData } from "@/lib/types";
+import { LeafletRenderer } from "@/components/ui/leaflet-renderer";
 
 // ── Section label ──────────────────────────────────────────────────────────────
 
@@ -19,51 +19,11 @@ function SectionLabel({ icon: Icon, label }: { icon: React.ComponentType<{ class
   );
 }
 
-// ── Collapsible description ────────────────────────────────────────────────────
-
-function CollapsibleDescription({ text }: { text: string }) {
-  const [expanded, setExpanded] = useState(false);
-  const THRESHOLD = 600;
-  const isLong = text.length > THRESHOLD;
-  const displayText = isLong && !expanded ? text.slice(0, THRESHOLD) + "…" : text;
-  const paragraphs = displayText.split(/\n\n+/).filter(Boolean);
-
-  return (
-    <div>
-      <div className="space-y-4">
-        {paragraphs.map((para, i) => (
-          <p key={i} className="text-base leading-relaxed text-foreground/80">{para}</p>
-        ))}
-      </div>
-      {isLong && (
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          onClick={() => setExpanded((v) => !v)}
-          className="mt-4 flex items-center gap-1.5 text-primary text-sm font-medium hover:opacity-75 transition-opacity cursor-pointer"
-        >
-          <AnimatePresence mode="wait" initial={false}>
-            {expanded ? (
-              <motion.span key="less" initial={{ opacity: 0, y: 3 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -3 }} transition={{ duration: 0.15 }}>
-                Show less
-              </motion.span>
-            ) : (
-              <motion.span key="more" initial={{ opacity: 0, y: 3 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -3 }} transition={{ duration: 0.15 }}>
-                Read more
-              </motion.span>
-            )}
-          </AnimatePresence>
-          <motion.div animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
-            <ChevronDownIcon className="h-4 w-4" />
-          </motion.div>
-        </motion.button>
-      )}
-    </div>
-  );
-}
-
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export function DescriptionTab({ bumicert }: { bumicert: BumicertData }) {
+  const hasDescription = bumicert.description.blocks.length > 0;
+
   return (
     <motion.div
       key="description"
@@ -73,8 +33,11 @@ export function DescriptionTab({ bumicert }: { bumicert: BumicertData }) {
       className="py-1"
     >
       <SectionLabel icon={TargetIcon} label="Description" />
-      {bumicert.description ? (
-        <CollapsibleDescription text={bumicert.description} />
+      {hasDescription ? (
+        <LeafletRenderer
+          document={bumicert.description}
+          ownerDid={bumicert.organizationDid}
+        />
       ) : (
         <p className="text-base text-muted-foreground leading-relaxed">No description provided.</p>
       )}

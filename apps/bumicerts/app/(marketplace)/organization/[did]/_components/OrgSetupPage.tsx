@@ -7,8 +7,6 @@ import Image from "next/image";
 import { format, parseISO } from "date-fns";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Popover,
   PopoverContent,
@@ -24,6 +22,7 @@ import QuickTooltip from "@/components/ui/quick-tooltip";
 import { useModal } from "@/components/ui/modal/context";
 import { CountrySelectorModalId } from "@/components/modals/country-selector";
 import { ImageEditorModalId } from "@/components/modals/image-editor";
+import { LeafletEditor } from "@/components/ui/leaflet-editor";
 import dynamic from "next/dynamic";
 
 import {
@@ -44,7 +43,10 @@ import {
 import { countries } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { links } from "@/lib/links";
-import { plainTextToLinearDocument } from "@/lib/utils/linearDocument";
+import { textToLinearDocument } from "@/lib/utils/linearDocument";
+import { extractTextFromLinearDocument } from "@/lib/adapters";
+import type { LeafletLinearDocument } from "@gainforest/leaflet-react";
+import type { LinearDocument } from "@gainforest/atproto-mutations-next";
 import { trpc } from "@/lib/trpc/client";
 import { formatError } from "@/lib/utils/trpc-errors";
 import { toSerializableFile } from "@/lib/mutations-utils";
@@ -100,7 +102,7 @@ type FormState = {
   website: string;
   country: string;
   startDate: string | null;
-  longDescription: string;
+  longDescription: LeafletLinearDocument;
   logo: File | undefined;
 };
 
@@ -113,7 +115,7 @@ export function OrgSetupPage({ did }: { did: string }) {
     website: "",
     country: "",
     startDate: null,
-    longDescription: "",
+    longDescription: { $type: "pub.leaflet.pages.linearDocument", blocks: [] },
     logo: undefined,
   });
 
@@ -131,9 +133,11 @@ export function OrgSetupPage({ did }: { did: string }) {
   const domain = useMemo(() => extractDomain(form.website), [form.website]);
   const canFetchBrandInfo = !!domain && !isFetchingBrandInfo;
 
+  const longDescriptionText = extractTextFromLinearDocument(form.longDescription);
+
   const canSubmit =
     form.organizationName.trim().length > 0 &&
-    form.longDescription.trim().length >= 50 &&
+    longDescriptionText.trim().length >= 50 &&
     form.country.length === 2 &&
     form.country in countries &&
     !isSubmitting;
@@ -187,7 +191,8 @@ export function OrgSetupPage({ did }: { did: string }) {
       if (brandInfo.found) {
         const updates: Partial<FormState> = {};
         if (brandInfo.name) updates.organizationName = brandInfo.name;
-        if (brandInfo.description) updates.longDescription = brandInfo.description;
+        if (brandInfo.description)
+          updates.longDescription = textToLinearDocument(brandInfo.description);
         if (brandInfo.countryCode && brandInfo.countryCode in countries)
           updates.country = brandInfo.countryCode;
         if (brandInfo.foundedYear)
@@ -261,7 +266,7 @@ export function OrgSetupPage({ did }: { did: string }) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            longDescription: form.longDescription,
+            longDescription: longDescriptionText,
             organizationName: form.organizationName,
             country: form.country,
           }),
@@ -286,7 +291,11 @@ export function OrgSetupPage({ did }: { did: string }) {
       await upsertOrgInfo.mutateAsync({
         displayName: form.organizationName,
         shortDescription: { text: shortDescription },
-        longDescription: plainTextToLinearDocument(form.longDescription),
+        // LeafletLinearDocument is structurally compatible with the generated
+        // LinearDocument type at runtime; the cast is required because the generated
+        // type uses CID class instances for image blobs, which TypeScript sees as
+        // incompatible.
+        longDescription: form.longDescription as unknown as LinearDocument,
         objectives,
         country: form.country,
         visibility: "Public",
@@ -532,25 +541,30 @@ export function OrgSetupPage({ did }: { did: string }) {
             </div>
 
             {/* Long description */}
-            <div className="w-full relative mt-2">
-              <Textarea
-                id="long-description"
-                placeholder="Describe your organization's mission and impact..."
-                value={form.longDescription}
-                onChange={(e) => updateForm({ longDescription: e.target.value })}
-                rows={4}
-                className="resize-none text-sm"
-              />
-              <span
-                className={cn(
-                  "absolute right-0 -top-5 text-xs",
-                  form.longDescription.length < 50
-                    ? "text-destructive"
-                    : "text-muted-foreground"
-                )}
-              >
-                {form.longDescription.length}/50+
-              </span>
+            <div className="w-full mt-2">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-muted-foreground font-medium">
+                  About your organization
+                </span>
+                <span
+                  className={cn(
+                    "text-xs",
+                    longDescriptionText.trim().length < 50
+                      ? "text-destructive"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  {longDescriptionText.length}/50+ chars
+                </span>
+              </div>
+              <div className="rounded-xl border border-border overflow-hidden">
+                <LeafletEditor
+                  content={form.longDescription}
+                  onChange={(doc) => updateForm({ longDescription: doc })}
+                  ownerDid={did}
+                  placeholder="Describe your organization's mission and impact..."
+                />
+              </div>
             </div>
 
             {/* Error */}

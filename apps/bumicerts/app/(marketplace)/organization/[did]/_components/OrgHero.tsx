@@ -4,7 +4,7 @@
  * OrgHero — Contained card hero.
  *
  * SEO-critical content (h1, description, pills) → CSS animations.
- * Decorative visuals (cover image scale-in, share button feedback) → Framer Motion.
+ * Decorative visuals (cover image scale-in, share/edit button feedback) → Framer Motion.
  *
  * Bottom layout:
  *   [Logo]  Organization Name
@@ -12,17 +12,22 @@
  *   [Since Jan 2024] [🇮🇩 Indonesia] [OBJECTIVE]  🌐 website.org
  *
  * Top-right: frosted glass share button (copies current URL, shows "Copied!" briefly).
+ *            When showEditButton is true, an Edit pill link is also shown beside Share.
  */
 
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { GlobeIcon, CalendarIcon, Share2Icon, CheckIcon } from "lucide-react";
+import { GlobeIcon, CalendarIcon, Share2Icon, CheckIcon, PencilIcon } from "lucide-react";
 import type { OrganizationData } from "@/lib/types";
+import { links } from "@/lib/links";
+import { BskyRichTextDisplay } from "@/components/ui/bsky-richtext-display";
 
 interface OrgHeroProps {
   organization: OrganizationData;
+  /** When true, renders an Edit button that links to /upload?mode=edit */
+  showEditButton?: boolean;
 }
 
 function formatWebsite(url: string): string {
@@ -81,12 +86,12 @@ const COUNTRY_NAMES: Record<string, string> = {
   VE: "Venezuela", VN: "Vietnam", YE: "Yemen", ZM: "Zambia", ZW: "Zimbabwe",
 };
 
-export function OrgHero({ organization }: OrgHeroProps) {
+export function OrgHero({ organization, showEditButton = false }: OrgHeroProps) {
   const [copied, setCopied] = useState(false);
 
   const initial = organization.displayName.charAt(0).toUpperCase();
   const sinceLabel = formatSinceDate(organization.startDate);
-  const countryName = COUNTRY_NAMES[organization.country] || organization.country || null;
+  const countryName = COUNTRY_NAMES[organization.country] ?? organization.country ?? null;
   const countryFlag = organization.country ? countryCodeToFlag(organization.country) : "";
   const hasPillRow =
     sinceLabel ||
@@ -133,8 +138,10 @@ export function OrgHero({ organization }: OrgHeroProps) {
         </motion.div>
       </div>
 
-      {/* ── Share button — top-right (Framer Motion — decorative feedback) ── */}
-      <div className="absolute top-4 right-4 z-20">
+      {/* ── Top-right action buttons ── */}
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+
+        {/* Share button — Framer Motion for tap feedback */}
         <motion.button
           onClick={handleShare}
           whileTap={{ scale: 0.94 }}
@@ -170,6 +177,19 @@ export function OrgHero({ organization }: OrgHeroProps) {
             )}
           </AnimatePresence>
         </motion.button>
+
+
+        {/* Edit button — only rendered when viewer is the owner */}
+        {showEditButton && (
+          <Link
+            href={links.upload.edit}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground border border-primary/20 shadow-lg transition-colors"
+            aria-label="Edit organisation profile"
+          >
+            <PencilIcon className="h-3.5 w-3.5 shrink-0" />
+            <span className="text-xs font-medium">Edit</span>
+          </Link>
+        )}
       </div>
 
       {/* ── Bottom content — SEO-critical, CSS animations ── */}
@@ -205,9 +225,11 @@ export function OrgHero({ organization }: OrgHeroProps) {
 
           {/* Short description */}
           {organization.shortDescription && (
-            <p className="text-sm md:text-base text-foreground/75 max-w-2xl leading-relaxed org-animate org-fade-in-up org-delay-2">
-              {organization.shortDescription}
-            </p>
+            <BskyRichTextDisplay
+              text={organization.shortDescription}
+              facets={organization.shortDescriptionFacets}
+              className="text-sm md:text-base text-foreground/75 max-w-2xl leading-relaxed org-animate org-fade-in-up org-delay-2"
+            />
           )}
 
           {/* Pills row: Since · Country (with flag) · Objectives · Website */}

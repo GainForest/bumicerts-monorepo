@@ -1,14 +1,6 @@
-import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getOrgData, transformOrgData, type GraphQLOrgInfoItem } from "./_data";
-import ErrorPage from "@/components/error-page";
-import { OrgHero } from "./_components/OrgHero";
-import { OrgTabBar } from "./_components/OrgTabBar";
 import { OrgAbout } from "./_components/OrgAbout";
-import { OrgSetupPage } from "./_components/OrgSetupPage";
-import { WalletLinkSection } from "./_components/WalletLinkSection";
-import { auth } from "@/lib/auth";
-import Container from "@/components/ui/container";
 
 const BASE_URL = "https://bumicerts.com";
 
@@ -70,36 +62,12 @@ export default async function OrganizationPage({
   const { did: encodedDid } = await params;
   const did = decodeURIComponent(encodedDid);
 
-  const [{ data, error }, session] = await Promise.all([
-    getOrgData(did),
-    auth.session.getSession(),
-  ]);
+  const { data, error } = await getOrgData(did);
 
-  if (error) {
-    console.error("[OrganizationPage] Error fetching org", did, error);
-    return (
-      <Container className="pt-4">
-        <ErrorPage
-          title="Couldn't load this organization"
-          description="We had trouble fetching this organization's data. Please try again."
-          error={error}
-        />
-      </Container>
-    );
-  }
+  // Layout handles error and notFound states — guard defensively for edge races.
+  if (error || !data?.org) return null;
 
-  const orgInfo = data?.org as GraphQLOrgInfoItem | undefined;
-
-  if (!orgInfo && session.isLoggedIn && session.did === did) {
-    return (
-      <Container className="pt-4">
-        <OrgSetupPage did={did} />
-      </Container>
-    );
-  }
-
-  if (!orgInfo) notFound();
-
+  const orgInfo = data.org as GraphQLOrgInfoItem;
   const { organization } = transformOrgData(orgInfo, []);
 
   // ── JSON-LD structured data ───────────────────────────────────────────────
@@ -110,15 +78,13 @@ export default async function OrganizationPage({
     "@type": "Organization",
     "@id": orgUrl,
     name: organization.displayName,
-    description: organization.shortDescription || undefined,
-    url: organization.website || orgUrl,
+    description: organization.shortDescription ?? undefined,
+    url: organization.website ?? orgUrl,
     ...(organization.startDate ? { foundingDate: organization.startDate.slice(0, 10) } : {}),
     ...(organization.country ? { address: { "@type": "PostalAddress", addressCountry: organization.country } } : {}),
     ...(organization.website ? { sameAs: [organization.website] } : {}),
     ...(organization.logoUrl ? { logo: { "@type": "ImageObject", url: organization.logoUrl } } : {}),
   };
-
-  const isOwner = session.isLoggedIn && session.did === did;
 
   return (
     <>
@@ -126,18 +92,7 @@ export default async function OrganizationPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-      <main className="w-full">
-        <Container className="pt-4 pb-8">
-          <OrgHero organization={organization} />
-          <OrgTabBar did={organization.did} />
-          <OrgAbout organization={organization} />
-          {isOwner && (
-            <div className="mt-8">
-              <WalletLinkSection orgDid={did} />
-            </div>
-          )}
-        </Container>
-      </main>
+      <OrgAbout organization={organization} />
     </>
   );
 }

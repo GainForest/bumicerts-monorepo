@@ -72,7 +72,7 @@ export function OrgBumicertsGrid({ bumicerts }: OrgBumicertsGridProps) {
                 title={b.title}
                 organizationName={b.organizationName}
                 objectives={b.objectives}
-                description={b.description}
+                description={b.shortDescription}
               />
             </Link>
           </motion.div>

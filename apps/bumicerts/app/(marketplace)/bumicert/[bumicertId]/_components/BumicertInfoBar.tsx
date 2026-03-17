@@ -8,6 +8,7 @@ import { Share2Icon, CheckIcon, BuildingIcon } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { BumicertData } from "@/lib/types";
 import { links } from "@/lib/links";
+import { BskyRichTextDisplay } from "@/components/ui/bsky-richtext-display";
 
 function ShareButton() {
   const [copied, setCopied] = useState(false);
@@ -93,9 +94,11 @@ export function BumicertMeta({ bumicert }: { bumicert: BumicertData }) {
       </h1>
 
       {bumicert.shortDescription && (
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          {bumicert.shortDescription}
-        </p>
+        <BskyRichTextDisplay
+          text={bumicert.shortDescription}
+          facets={bumicert.shortDescriptionFacets}
+          className="text-sm text-muted-foreground leading-relaxed"
+        />
       )}
 
       {bumicert.objectives.length > 0 && (
