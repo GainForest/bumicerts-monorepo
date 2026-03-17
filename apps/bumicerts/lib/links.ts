@@ -7,6 +7,7 @@ export const links = {
   root: "/",
   home: "/home",
   onboarding: "/onboarding",
+  leaderboard: "/leaderboard",
   myOrganization: (did?: string) =>
     did ? `/organization/${encodeURIComponent(did)}` : "/organization",
   allOrganizations: "/organization/all",

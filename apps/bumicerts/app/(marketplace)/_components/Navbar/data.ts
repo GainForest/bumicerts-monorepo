@@ -4,6 +4,7 @@ import {
   BadgePlusIcon,
   UploadCloudIcon,
   UserCircleIcon,
+  TrophyIcon,
 } from "lucide-react";
 import { links } from "@/lib/links";
 
@@ -79,6 +80,14 @@ export function buildMarketplaceNavItems(did: string | undefined): NavItem[] {
           pathCheck: { startsWith: "/organization/all" },
         },
       ],
+    },
+    {
+      kind: "leaf",
+      id: "leaderboard",
+      text: "Leaderboard",
+      Icon: TrophyIcon,
+      href: links.leaderboard,
+      pathCheck: { equals: links.leaderboard },
     },
     // ── separator ──
     { kind: "separator", id: "sep-1" },

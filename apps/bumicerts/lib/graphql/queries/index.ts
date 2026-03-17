@@ -35,6 +35,7 @@ import * as locations from "./locations";
 import * as audio from "./audio";
 import * as actor from "./actor";
 import * as fundingReceipts from "./fundingReceipts";
+import * as leaderboard from "./leaderboard";
 import * as linkEvm from "./linkEvm";
 import * as cartBumicert from "./cartBumicert";
 
@@ -76,6 +77,12 @@ export const queries = {
     key: () => ["fundingReceipts"] as const,
   },
 
+  leaderboard: {
+    ...createQuery(["leaderboard"], leaderboard),
+    /** Invalidates ALL leaderboard queries. */
+    key: () => ["leaderboard"] as const,
+  },
+
   linkEvm: createQuery(["linkEvm"], linkEvm),
 
   /** Single bumicert card data for the cart modal. Keyed by bumicert ID ("{did}-{rkey}"). */
@@ -89,5 +96,6 @@ export type { CertifiedLocation } from "./locations";
 export type { AudioRecordingItem } from "./audio";
 export type { ActorProfile } from "./actor";
 export type { FundingReceiptItem } from "./fundingReceipts";
+export type { LeaderboardEntry, LeaderboardResult, Period as LeaderboardPeriod } from "./leaderboard";
 export type { EvmLink } from "./linkEvm";
 export type { CartBumicertItem } from "./cartBumicert";
