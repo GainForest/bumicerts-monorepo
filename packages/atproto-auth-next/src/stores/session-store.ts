@@ -8,7 +8,7 @@ const TABLE = "atproto_oauth_session";
 
 export function createSupabaseSessionStore(
   supabase: SupabaseClient,
-  appId: string
+  appId: string,
 ): NodeSavedSessionStore {
   const key = (did: string) => `${appId}:${did}`;
 
@@ -28,37 +28,25 @@ export function createSupabaseSessionStore(
     },
 
     async set(did: string, session: NodeSavedSession): Promise<void> {
-      const { data, error } = await supabase.from(TABLE).upsert(
-        {
-          id: key(did),
-          app_id: appId,
-          did,
-          value: session,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "id" }
-      ).select();
-      console.log("========", JSON.stringify(data));
-      const { error: e2 } = await supabase.from(TABLE).upsert(
-        {
-          id: "check" + key(did),
-          app_id: "bla",
-          did : "blablabla",
-          value: "blablabla",
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "id" }
-      );
-      console.log(e2);
+      const { error } = await supabase
+        .from(TABLE)
+        .upsert(
+          {
+            id: key(did),
+            app_id: appId,
+            did,
+            value: session,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "id" },
+        )
+        .select();
 
       if (error) throw new Error(`session store set: ${error.message}`);
     },
 
     async del(did: string): Promise<void> {
-      const { error } = await supabase
-        .from(TABLE)
-        .delete()
-        .eq("id", key(did));
+      const { error } = await supabase.from(TABLE).delete().eq("id", key(did));
 
       if (error) throw new Error(`session store del: ${error.message}`);
     },

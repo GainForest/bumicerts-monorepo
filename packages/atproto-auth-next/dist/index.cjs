@@ -10,22 +10,31 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
+  if ((from && typeof from === "object") || typeof from === "function") {
     for (let key of __getOwnPropNames(from))
       if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+        __defProp(to, key, {
+          get: () => from[key],
+          enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable,
+        });
   }
   return to;
 };
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-  // If the importer is in node compatibility mode or this is not an ESM
-  // file that has been converted to a CommonJS file using a Babel-
-  // compatible transform (i.e. "__esModule" has not been set), then set
-  // "default" to the CommonJS "module.exports" for node compatibility.
-  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-  mod
-));
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var __toESM = (mod, isNodeMode, target) => (
+  (target = mod != null ? __create(__getProtoOf(mod)) : {}),
+  __copyProps(
+    // If the importer is in node compatibility mode or this is not an ESM
+    // file that has been converted to a CommonJS file using a Babel-
+    // compatible transform (i.e. "__esModule" has not been set), then set
+    // "default" to the CommonJS "module.exports" for node compatibility.
+    isNodeMode || !mod || !mod.__esModule ?
+      __defProp(target, "default", { value: mod, enumerable: true })
+    : target,
+    mod,
+  )
+);
+var __toCommonJS = (mod) =>
+  __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // src/index.ts
 var src_exports = {};
@@ -35,7 +44,7 @@ __export(src_exports, {
   createAuthSetup: () => createAuthSetup,
   createOAuthClient: () => createOAuthClient,
   isLoopback: () => isLoopback,
-  resolvePublicUrl: () => resolvePublicUrl
+  resolvePublicUrl: () => resolvePublicUrl,
 });
 module.exports = __toCommonJS(src_exports);
 
@@ -85,13 +94,10 @@ function createOAuthClient({
   sessionStore,
   scope = DEFAULT_OAUTH_SCOPE,
   extraRedirectUris = [],
-  clientName = "Gainforest"
+  clientName = "Gainforest",
 }) {
   const url = publicUrl.replace(/\/$/, "");
-  const redirectUris = [
-    `${url}/api/oauth/callback`,
-    ...extraRedirectUris
-  ];
+  const redirectUris = [`${url}/api/oauth/callback`, ...extraRedirectUris];
   const loopback = isLoopback(url);
   const parsed = JSON.parse(privateKeyJwk);
   const rawJwk = Array.isArray(parsed?.keys) ? parsed.keys[0] : parsed;
@@ -117,11 +123,11 @@ function createOAuthClient({
         scope,
         token_endpoint_auth_method: "none",
         application_type: "native",
-        dpop_bound_access_tokens: true
+        dpop_bound_access_tokens: true,
       },
       keyset: [key],
       stateStore,
-      sessionStore
+      sessionStore,
     });
   }
   return new import_oauth_client_node.NodeOAuthClient({
@@ -137,11 +143,11 @@ function createOAuthClient({
       token_endpoint_auth_signing_alg: "ES256",
       application_type: "web",
       dpop_bound_access_tokens: true,
-      jwks_uri: `${url}/.well-known/jwks.json`
+      jwks_uri: `${url}/.well-known/jwks.json`,
     },
     keyset: [key],
     stateStore,
-    sessionStore
+    sessionStore,
   });
 }
 
@@ -151,41 +157,36 @@ function createSupabaseSessionStore(supabase, appId) {
   const key = (did) => `${appId}:${did}`;
   return {
     async get(did) {
-      const { data, error } = await supabase.from(TABLE).select("value").eq("id", key(did)).single();
+      const { data, error } = await supabase
+        .from(TABLE)
+        .select("value")
+        .eq("id", key(did))
+        .single();
       if (error?.code === "PGRST116") return void 0;
       if (error) throw new Error(`session store get: ${error.message}`);
       if (!data) return void 0;
       return data.value;
     },
     async set(did, session) {
-      const { data, error } = await supabase.from(TABLE).upsert(
-        {
-          id: key(did),
-          app_id: appId,
-          did,
-          value: session,
-          updated_at: (/* @__PURE__ */ new Date()).toISOString()
-        },
-        { onConflict: "id" }
-      ).select();
-      console.log("========", JSON.stringify(data));
-      const { error: e2 } = await supabase.from(TABLE).upsert(
-        {
-          id: "check" + key(did),
-          app_id: "bla",
-          did: "blablabla",
-          value: "blablabla",
-          updated_at: (/* @__PURE__ */ new Date()).toISOString()
-        },
-        { onConflict: "id" }
-      );
-      console.log(e2);
+      const { data, error } = await supabase
+        .from(TABLE)
+        .upsert(
+          {
+            id: key(did),
+            app_id: appId,
+            did,
+            value: session,
+            updated_at: /* @__PURE__ */ new Date().toISOString(),
+          },
+          { onConflict: "id" },
+        )
+        .select();
       if (error) throw new Error(`session store set: ${error.message}`);
     },
     async del(did) {
       const { error } = await supabase.from(TABLE).delete().eq("id", key(did));
       if (error) throw new Error(`session store del: ${error.message}`);
-    }
+    },
   };
 }
 
@@ -196,7 +197,11 @@ function createSupabaseStateStore(supabase, appId) {
   const key = (k) => `${appId}:${k}`;
   return {
     async get(k) {
-      const { data, error } = await supabase.from(TABLE2).select("value, expires_at").eq("id", key(k)).single();
+      const { data, error } = await supabase
+        .from(TABLE2)
+        .select("value, expires_at")
+        .eq("id", key(k))
+        .single();
       if (error?.code === "PGRST116") return void 0;
       if (error) throw new Error(`state store get: ${error.message}`);
       if (!data) return void 0;
@@ -212,16 +217,16 @@ function createSupabaseStateStore(supabase, appId) {
           id: key(k),
           app_id: appId,
           value: state,
-          expires_at: new Date(Date.now() + TTL_MS).toISOString()
+          expires_at: new Date(Date.now() + TTL_MS).toISOString(),
         },
-        { onConflict: "id" }
+        { onConflict: "id" },
       );
       if (error) throw new Error(`state store set: ${error.message}`);
     },
     async del(k) {
       const { error } = await supabase.from(TABLE2).delete().eq("id", key(k));
       if (error) throw new Error(`state store del: ${error.message}`);
-    }
+    },
   };
 }
 
@@ -235,7 +240,7 @@ var DEFAULT_COOKIE_NAME = "gainforest_session";
 function buildSessionOptions({
   cookieSecret,
   cookieName = DEFAULT_COOKIE_NAME,
-  secure
+  secure,
 }) {
   if (cookieSecret.length < 32) {
     throw new Error("cookieSecret must be at least 32 characters");
@@ -248,8 +253,8 @@ function buildSessionOptions({
       secure: secure ?? process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: COOKIE_MAX_AGE_SECONDS,
-      path: "/"
-    }
+      path: "/",
+    },
   };
 }
 
@@ -258,7 +263,7 @@ async function getSession(config) {
   const cookieStore = await (0, import_headers.cookies)();
   const session = await (0, import_iron_session.getIronSession)(
     cookieStore,
-    buildSessionOptions(config)
+    buildSessionOptions(config),
   );
   if (!session.isLoggedIn) {
     return { isLoggedIn: false };
@@ -266,14 +271,14 @@ async function getSession(config) {
   return {
     isLoggedIn: true,
     did: session.did,
-    handle: session.handle
+    handle: session.handle,
   };
 }
 async function saveSession(data, config) {
   const cookieStore = await (0, import_headers.cookies)();
   const session = await (0, import_iron_session.getIronSession)(
     cookieStore,
-    buildSessionOptions(config)
+    buildSessionOptions(config),
   );
   session.did = data.did;
   session.handle = data.handle;
@@ -281,7 +286,11 @@ async function saveSession(data, config) {
   await session.save();
 }
 async function saveSessionToResponse(data, config, req, res) {
-  const session = await (0, import_iron_session.getIronSession)(req, res, buildSessionOptions(config));
+  const session = await (0, import_iron_session.getIronSession)(
+    req,
+    res,
+    buildSessionOptions(config),
+  );
   session.did = data.did;
   session.handle = data.handle;
   session.isLoggedIn = true;
@@ -291,7 +300,7 @@ async function clearSession(config) {
   const cookieStore = await (0, import_headers.cookies)();
   const session = await (0, import_iron_session.getIronSession)(
     cookieStore,
-    buildSessionOptions(config)
+    buildSessionOptions(config),
   );
   session.destroy();
 }
@@ -300,7 +309,9 @@ async function clearSession(config) {
 var import_api = require("@atproto/api");
 
 // src/utils/debug.ts
-var isEnabled = typeof process !== "undefined" && (process.env.AUTH_DEBUG === "1" || process.env.AUTH_DEBUG === "true");
+var isEnabled =
+  typeof process !== "undefined" &&
+  (process.env.AUTH_DEBUG === "1" || process.env.AUTH_DEBUG === "true");
 var debug = {
   log(label, data) {
     if (!isEnabled) return;
@@ -324,7 +335,7 @@ var debug = {
     } else {
       console.error(`[atproto-auth] ${label}`);
     }
-  }
+  },
 };
 
 // src/session/restore.ts
@@ -338,7 +349,7 @@ async function restoreSession(client, did) {
     console.log("ERROR_SESSION_RESTORE========", error);
     debug.warn("[restore-session] Failed to restore session", {
       did,
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     });
     return null;
   }
@@ -356,12 +367,15 @@ var import_api2 = require("@atproto/api");
 function createAuthorizeHandler(client, options = {}) {
   return async function POST(req) {
     const { handle } = await req.json();
-    const normalizedHandle = handle.includes(".") || !options.defaultPdsDomain ? handle : `${handle}.${options.defaultPdsDomain}`;
+    const normalizedHandle =
+      handle.includes(".") || !options.defaultPdsDomain ?
+        handle
+      : `${handle}.${options.defaultPdsDomain}`;
     debug.log("[authorize] Starting OAuth flow", {
-      handle: normalizedHandle
+      handle: normalizedHandle,
     });
     const authUrl = await client.authorize(normalizedHandle, {
-      scope: options.scope ?? DEFAULT_OAUTH_SCOPE
+      scope: options.scope ?? DEFAULT_OAUTH_SCOPE,
     });
     return import_server.NextResponse.json({ url: authUrl.toString() });
   };
@@ -374,15 +388,15 @@ function createCallbackHandler(client, sessionConfig, options = {}) {
       const result = await client.callback(params);
       const agent = new import_api2.Agent(result.session);
       const { data } = await agent.com.atproto.repo.describeRepo({
-        repo: result.session.did
+        repo: result.session.did,
       });
       await saveSession(
         { did: result.session.did, handle: data.handle, isLoggedIn: true },
-        sessionConfig
+        sessionConfig,
       );
       debug.log("[callback] Session saved", {
         did: result.session.did,
-        handle: data.handle
+        handle: data.handle,
       });
       success = true;
     } catch (error) {
@@ -426,12 +440,12 @@ function createClientMetadataHandler(publicUrl, options) {
     const url = resolveRequestPublicUrl(req, publicUrl);
     const redirectUris = [
       `${url}/api/oauth/callback`,
-      ...options.extraRedirectUris?.map(
-        (u) => (
-          // extraRedirectUris may be absolute (loopback) or path-relative — keep absolute as-is
-          u.startsWith("http") ? u.replace(/^https?:\/\/[^/]+/, url) : `${url}${u}`
-        )
-      ) ?? []
+      ...(options.extraRedirectUris?.map((u) =>
+        // extraRedirectUris may be absolute (loopback) or path-relative — keep absolute as-is
+        u.startsWith("http") ?
+          u.replace(/^https?:\/\/[^/]+/, url)
+        : `${url}${u}`,
+      ) ?? []),
     ];
     const commonFields = {
       client_name: options.clientName,
@@ -441,13 +455,16 @@ function createClientMetadataHandler(publicUrl, options) {
       response_types: ["code"],
       scope,
       dpop_bound_access_tokens: true,
-      jwks_uri: `${url}/.well-known/jwks.json`
+      jwks_uri: `${url}/.well-known/jwks.json`,
     };
     if (options.logoUri) commonFields.logo_uri = options.logoUri;
     if (options.brandColor) commonFields.brand_color = options.brandColor;
-    if (options.backgroundColor) commonFields.background_color = options.backgroundColor;
-    if (options.emailTemplateUri) commonFields.email_template_uri = options.emailTemplateUri;
-    if (options.emailSubjectTemplate) commonFields.email_subject_template = options.emailSubjectTemplate;
+    if (options.backgroundColor)
+      commonFields.background_color = options.backgroundColor;
+    if (options.emailTemplateUri)
+      commonFields.email_template_uri = options.emailTemplateUri;
+    if (options.emailSubjectTemplate)
+      commonFields.email_subject_template = options.emailSubjectTemplate;
     if (options.tosUri) commonFields.tos_uri = options.tosUri;
     if (options.policyUri) commonFields.policy_uri = options.policyUri;
     if (loopback) {
@@ -461,9 +478,9 @@ function createClientMetadataHandler(publicUrl, options) {
           client_id: `http://localhost?${params.toString()}`,
           ...commonFields,
           token_endpoint_auth_method: "none",
-          application_type: "native"
+          application_type: "native",
         },
-        { headers: { "Cache-Control": "no-store" } }
+        { headers: { "Cache-Control": "no-store" } },
       );
     }
     return import_server2.NextResponse.json(
@@ -472,9 +489,9 @@ function createClientMetadataHandler(publicUrl, options) {
         ...commonFields,
         token_endpoint_auth_method: "private_key_jwt",
         token_endpoint_auth_signing_alg: "ES256",
-        application_type: "web"
+        application_type: "web",
       },
-      { headers: { "Cache-Control": "no-store" } }
+      { headers: { "Cache-Control": "no-store" } },
     );
   };
 }
@@ -488,7 +505,7 @@ function createJwksHandler(privateKeyJwk) {
   return function GET() {
     return import_server2.NextResponse.json(
       { keys: [publicKey] },
-      { headers: { "Cache-Control": "public, max-age=3600" } }
+      { headers: { "Cache-Control": "public, max-age=3600" } },
     );
   };
 }
@@ -500,21 +517,26 @@ function createEpdsLoginHandler(config) {
   return async function GET(req) {
     try {
       const email = req.nextUrl.searchParams.get("email") ?? void 0;
-      debug.log("[epds/login] Starting ePDS flow", { email: !!email, epdsUrl: config.epdsUrl });
+      debug.log("[epds/login] Starting ePDS flow", {
+        email: !!email,
+        epdsUrl: config.epdsUrl,
+      });
       const authUrl = await config.oauthClient.authorize(config.epdsUrl, {
-        scope: config.scope
+        scope: config.scope,
       });
       const url = new URL(authUrl.toString());
       if (email) {
         url.searchParams.set("login_hint", email);
       }
-      debug.log("[epds/login] Redirecting to ePDS auth", { url: url.toString() });
+      debug.log("[epds/login] Redirecting to ePDS auth", {
+        url: url.toString(),
+      });
       return import_server3.NextResponse.redirect(url.toString());
     } catch (error) {
       debug.error("[epds/login] Unexpected error", error);
       const base = new URL(req.url).origin;
       return import_server3.NextResponse.redirect(
-        new URL(config.errorRedirectTo ?? "/?error=auth_failed", base)
+        new URL(config.errorRedirectTo ?? "/?error=auth_failed", base),
       );
     }
   };
@@ -522,23 +544,33 @@ function createEpdsLoginHandler(config) {
 function createEpdsCallbackHandler(config) {
   return async function GET(req) {
     const base = new URL(req.url).origin;
-    const errorRedirect = () => import_server3.NextResponse.redirect(
-      new URL(config.errorRedirectTo ?? "/?error=auth_failed", base)
-    );
+    const errorRedirect = () =>
+      import_server3.NextResponse.redirect(
+        new URL(config.errorRedirectTo ?? "/?error=auth_failed", base),
+      );
     try {
       debug.log("[epds/callback] Processing ePDS callback");
-      const { session } = await config.oauthClient.callback(req.nextUrl.searchParams);
-      debug.log("[epds/callback] OAuth callback succeeded", { did: session.did });
+      const { session } = await config.oauthClient.callback(
+        req.nextUrl.searchParams,
+      );
+      debug.log("[epds/callback] OAuth callback succeeded", {
+        did: session.did,
+      });
       let resolvedHandle = session.did;
       try {
         const agent = new import_api3.Agent(session);
         const { data } = await agent.com.atproto.repo.describeRepo({
-          repo: session.did
+          repo: session.did,
         });
         resolvedHandle = data.handle;
-        debug.log("[epds/callback] Handle resolved", { handle: resolvedHandle });
+        debug.log("[epds/callback] Handle resolved", {
+          handle: resolvedHandle,
+        });
       } catch (handleError) {
-        debug.warn("[epds/callback] Handle resolution failed, using DID as fallback", handleError);
+        debug.warn(
+          "[epds/callback] Handle resolution failed, using DID as fallback",
+          handleError,
+        );
       }
       const successUrl = new URL(config.successRedirectTo ?? "/", base);
       const response = import_server3.NextResponse.redirect(successUrl);
@@ -546,9 +578,11 @@ function createEpdsCallbackHandler(config) {
         { did: session.did, handle: resolvedHandle, isLoggedIn: true },
         config.sessionConfig,
         req,
-        response
+        response,
       );
-      debug.log("[epds/callback] Session cookie saved, redirecting", { successUrl: successUrl.toString() });
+      debug.log("[epds/callback] Session cookie saved, redirecting", {
+        successUrl: successUrl.toString(),
+      });
       return response;
     } catch (error) {
       debug.error("[epds/callback] Unexpected error", error);
@@ -564,7 +598,7 @@ async function fetchProfile(agent, did, handle) {
       const res = await agent.com.atproto.repo.getRecord({
         repo: did,
         collection,
-        rkey: "self"
+        rkey: "self",
       });
       return res.data.value ?? null;
     } catch {
@@ -574,7 +608,7 @@ async function fetchProfile(agent, did, handle) {
   debug.log("[profile] Fetching profiles in parallel", { did });
   const [certifiedProfile, bskyProfile] = await Promise.all([
     fetchRecord("app.certified.profile"),
-    fetchRecord("app.bsky.actor.profile")
+    fetchRecord("app.bsky.actor.profile"),
   ]);
   const raw = certifiedProfile ?? bskyProfile;
   if (!raw) {
@@ -589,22 +623,32 @@ async function fetchProfile(agent, did, handle) {
     did,
     source: certifiedProfile ? "certified" : "bsky",
     hasDisplayName: !!raw.displayName,
-    hasAvatar: !!avatarUrl
+    hasAvatar: !!avatarUrl,
   });
   return {
     handle,
     displayName: raw.displayName,
     description: raw.description,
-    avatar: avatarUrl
+    avatar: avatarUrl,
   };
 }
 
 // src/actions/index.ts
 function createAuthActions(config) {
-  const { oauthClient, sessionConfig, defaultPdsDomain, scope = DEFAULT_OAUTH_SCOPE } = config;
+  const {
+    oauthClient,
+    sessionConfig,
+    defaultPdsDomain,
+    scope = DEFAULT_OAUTH_SCOPE,
+  } = config;
   async function authorize(handle) {
-    const normalizedHandle = handle.includes(".") || !defaultPdsDomain ? handle : `${handle}.${defaultPdsDomain}`;
-    debug.log("[actions/authorize] Starting OAuth flow", { handle: normalizedHandle });
+    const normalizedHandle =
+      handle.includes(".") || !defaultPdsDomain ?
+        handle
+      : `${handle}.${defaultPdsDomain}`;
+    debug.log("[actions/authorize] Starting OAuth flow", {
+      handle: normalizedHandle,
+    });
     const authUrl = await oauthClient.authorize(normalizedHandle, { scope });
     return { authorizationUrl: authUrl.toString() };
   }
@@ -630,7 +674,7 @@ function createAuthActions(config) {
     const oauthSession = await restoreSession(oauthClient, session.did);
     if (!oauthSession) {
       debug.warn("[actions/checkSession] Session gone \u2014 clearing cookie", {
-        did: session.did
+        did: session.did,
       });
       await clearSession(sessionConfig);
       return { authenticated: false };
@@ -638,7 +682,7 @@ function createAuthActions(config) {
     return {
       authenticated: true,
       did: session.did,
-      handle: session.handle
+      handle: session.handle,
     };
   }
   async function getProfileAction(did) {
@@ -665,9 +709,12 @@ function createAuthActions(config) {
     }
     const oauthSession = await restoreSession(oauthClient, session.did);
     if (!oauthSession) {
-      debug.warn("[actions/checkSessionAndGetProfile] Session gone \u2014 clearing cookie", {
-        did: session.did
-      });
+      debug.warn(
+        "[actions/checkSessionAndGetProfile] Session gone \u2014 clearing cookie",
+        {
+          did: session.did,
+        },
+      );
       await clearSession(sessionConfig);
       return { isLoggedIn: false };
     }
@@ -675,16 +722,23 @@ function createAuthActions(config) {
     try {
       const { Agent: Agent4 } = await import("@atproto/api");
       const agent = new Agent4(oauthSession);
-      const fetched = await fetchProfile(agent, session.did, session.handle ?? session.did);
+      const fetched = await fetchProfile(
+        agent,
+        session.did,
+        session.handle ?? session.did,
+      );
       profile = fetched ?? void 0;
     } catch (error) {
-      debug.warn("[actions/checkSessionAndGetProfile] Profile fetch failed", error);
+      debug.warn(
+        "[actions/checkSessionAndGetProfile] Profile fetch failed",
+        error,
+      );
     }
     return {
       isLoggedIn: true,
       did: session.did,
       handle: session.handle,
-      profile
+      profile,
     };
   }
   return {
@@ -692,7 +746,7 @@ function createAuthActions(config) {
     logout,
     checkSession,
     getProfile: getProfileAction,
-    checkSessionAndGetProfile
+    checkSessionAndGetProfile,
   };
 }
 
@@ -718,7 +772,7 @@ function createAuthSetup(config) {
     emailTemplateUri,
     emailSubjectTemplate,
     tosUri,
-    policyUri
+    policyUri,
   } = config;
   const publicUrl = resolvePublicUrl(config.publicUrl);
   const loopback = isLoopback(publicUrl);
@@ -726,11 +780,12 @@ function createAuthSetup(config) {
   const sessionConfig = {
     cookieSecret,
     cookieName,
-    secure: cookieSecure
+    secure: cookieSecure,
   };
   const sessionStore = createSupabaseSessionStore(supabase, appId);
   const stateStore = createSupabaseStateStore(supabase, appId);
-  const extraRedirectUris = isEpdsEnabled ? [`${publicUrl}/api/oauth/epds/callback`] : [];
+  const extraRedirectUris =
+    isEpdsEnabled ? [`${publicUrl}/api/oauth/epds/callback`] : [];
   const oauthClient = createOAuthClient({
     publicUrl,
     privateKeyJwk,
@@ -738,17 +793,17 @@ function createAuthSetup(config) {
     stateStore,
     scope,
     extraRedirectUris,
-    clientName
+    clientName,
   });
   const authorizeHandler = createAuthorizeHandler(oauthClient, {
     defaultPdsDomain,
-    scope
+    scope,
   });
   const callbackHandler = createCallbackHandler(oauthClient, sessionConfig, {
-    redirectTo: onCallback?.redirectTo
+    redirectTo: onCallback?.redirectTo,
   });
   const logoutHandler = createLogoutHandler(oauthClient, sessionConfig, {
-    redirectTo: onLogout?.redirectTo
+    redirectTo: onLogout?.redirectTo,
   });
   const clientMetadataHandler = createClientMetadataHandler(publicUrl, {
     clientName,
@@ -760,40 +815,52 @@ function createAuthSetup(config) {
     emailTemplateUri,
     emailSubjectTemplate,
     tosUri,
-    policyUri
+    policyUri,
   });
   const jwksHandler = createJwksHandler(privateKeyJwk);
   const noopEpdsHandler = () => {
     throw new Error(
-      "[atproto-auth] ePDS is not configured. Pass `epds: { url: '...' }` to createAuthSetup() to enable email-based auth."
+      "[atproto-auth] ePDS is not configured. Pass `epds: { url: '...' }` to createAuthSetup() to enable email-based auth.",
     );
   };
-  const epdsLoginHandlerConfig = isEpdsEnabled ? {
-    oauthClient,
-    epdsUrl: epdsConfig.url,
-    scope,
-    errorRedirectTo: "/?error=auth_failed"
-  } : null;
-  const epdsCallbackHandlerConfig = isEpdsEnabled ? {
-    oauthClient,
-    sessionConfig,
-    successRedirectTo: onCallback?.redirectTo,
-    errorRedirectTo: "/?error=auth_failed"
-  } : null;
-  const epdsLoginHandler = epdsLoginHandlerConfig ? createEpdsLoginHandler(epdsLoginHandlerConfig) : noopEpdsHandler;
-  const epdsCallbackHandler = epdsCallbackHandlerConfig ? createEpdsCallbackHandler(epdsCallbackHandlerConfig) : noopEpdsHandler;
+  const epdsLoginHandlerConfig =
+    isEpdsEnabled ?
+      {
+        oauthClient,
+        epdsUrl: epdsConfig.url,
+        scope,
+        errorRedirectTo: "/?error=auth_failed",
+      }
+    : null;
+  const epdsCallbackHandlerConfig =
+    isEpdsEnabled ?
+      {
+        oauthClient,
+        sessionConfig,
+        successRedirectTo: onCallback?.redirectTo,
+        errorRedirectTo: "/?error=auth_failed",
+      }
+    : null;
+  const epdsLoginHandler =
+    epdsLoginHandlerConfig ?
+      createEpdsLoginHandler(epdsLoginHandlerConfig)
+    : noopEpdsHandler;
+  const epdsCallbackHandler =
+    epdsCallbackHandlerConfig ?
+      createEpdsCallbackHandler(epdsCallbackHandlerConfig)
+    : noopEpdsHandler;
   const actions = createAuthActions({
     oauthClient,
     sessionConfig,
     defaultPdsDomain,
-    scope
+    scope,
   });
   const sessionUtils = {
     getSession: () => getSession(sessionConfig),
     restoreSession: (did) => restoreSession(oauthClient, did),
     getAuthenticatedAgent: (did) => getAuthenticatedAgent(oauthClient, did),
     saveSession: (data) => saveSession(data, sessionConfig),
-    clearSession: () => clearSession(sessionConfig)
+    clearSession: () => clearSession(sessionConfig),
   };
   return {
     oauthClient,
@@ -806,23 +873,24 @@ function createAuthSetup(config) {
       jwks: { GET: jwksHandler },
       epds: {
         login: { GET: epdsLoginHandler },
-        callback: { GET: epdsCallbackHandler }
-      }
+        callback: { GET: epdsCallbackHandler },
+      },
     },
     actions,
     session: sessionUtils,
     publicUrl,
     isLoopback: loopback,
-    isEpdsEnabled
+    isEpdsEnabled,
   };
 }
 // Annotate the CommonJS export names for ESM import in node:
-0 && (module.exports = {
-  DEFAULT_OAUTH_SCOPE,
-  NodeOAuthClient,
-  createAuthSetup,
-  createOAuthClient,
-  isLoopback,
-  resolvePublicUrl
-});
+0 &&
+  (module.exports = {
+    DEFAULT_OAUTH_SCOPE,
+    NodeOAuthClient,
+    createAuthSetup,
+    createOAuthClient,
+    isLoopback,
+    resolvePublicUrl,
+  });
 //# sourceMappingURL=index.cjs.map
