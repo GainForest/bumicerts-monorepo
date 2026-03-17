@@ -6,10 +6,13 @@ import {
   ArrowRightIcon,
   CircleAlertIcon,
   CircleCheckIcon,
+  ExternalLinkIcon,
   HandIcon,
   Loader2Icon,
   LucideIcon,
+  MessageSquareHeartIcon,
   PartyPopperIcon,
+  SettingsIcon,
   ShieldCheckIcon,
   ShieldXIcon,
 } from "lucide-react";
@@ -29,8 +32,12 @@ import { trackBumicertPublished, getFlowDurationSeconds } from "@/lib/analytics/
 import { trpc } from "@/lib/trpc/client";
 import { formatError } from "@/lib/utils/trpc-errors";
 import type { LinearDocument } from "@gainforest/atproto-mutations-next";
-import dynamic from "next/dynamic";
-const FeedbackModal = dynamic(() => import("./FeedbackModal"), { ssr: false });
+import { useModal } from "@/components/ui/modal/context";
+import { MODAL_IDS } from "@/components/global/modals/ids";
+import { FundingConfigModal } from "@/components/global/modals/funding/config";
+
+const FEEDBACK_FORM_URL =
+  "https://docs.google.com/forms/d/e/1FAIpQLSfCTtRzKzfwmnpJoPFYyOeGokTlRcKkvpb-Urme84gpBrCCPA/viewform";
 
 const ProgressItem = ({
   iconset,
@@ -158,7 +165,8 @@ const Step5 = () => {
     setIsBumicertCreationMutationInFlight,
   ] = useState(false);
   const [hasClickedPublish, setHasClickedPublish] = useState(false);
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+
+  const { pushModal, show } = useModal();
 
   const createBumicertStatus: "pending" | "success" | "error" | "input" =
     createBumicertError
@@ -211,8 +219,6 @@ const Step5 = () => {
         totalDurationSeconds: duration,
       });
 
-      // Show feedback modal after successful publication
-      setShowFeedbackModal(true);
       setOverallStatus("success");
     },
     onError: (error) => {
@@ -302,12 +308,32 @@ const Step5 = () => {
     }
   };
 
+  // Handler for opening the funding config modal
+  const handleOpenFundingConfig = () => {
+    if (!createdBumicertResponse || !auth.user?.did) return;
+    const { did, rkey } = parseAtUri(createdBumicertResponse.uri);
+
+    pushModal(
+      {
+        id: MODAL_IDS.FUNDING_CONFIG,
+        content: (
+          <FundingConfigModal
+            ownerDid={did}
+            bumicertRkey={rkey}
+            existingConfig={null}
+            onSaved={() => {
+              // Could show a success toast here
+            }}
+          />
+        ),
+      },
+      true
+    );
+    show();
+  };
+
   return (
     <div>
-      <FeedbackModal
-        open={showFeedbackModal}
-        onOpenChange={setShowFeedbackModal}
-      />
       <ProgressItem
         iconset={{
           Error: ShieldXIcon,
@@ -372,21 +398,49 @@ const Step5 = () => {
               y: 0,
               filter: "blur(0px)",
             }}
-            className="mt-4 flex flex-col items-center border border-border rounded-lg p-6">
+            className="mt-4 flex flex-col items-center border border-border rounded-lg p-6"
+          >
             <PartyPopperIcon className="size-10 text-primary" />
-            <span className="mt-1">
+            <span className="mt-1 text-center">
               Your bumicert was published successfully!
             </span>
-            <Button className="mt-2" asChild>
-              <Link
-                href={links.bumicert.view(
-                  `${parseAtUri(createdBumicertResponse.uri).did}-${parseAtUri(createdBumicertResponse.uri).rkey
-                  }`
-                )}
+
+            {/* Action buttons */}
+            <div className="mt-4 flex flex-col gap-2 w-full max-w-xs">
+              {/* Primary: View Bumicert */}
+              <Button className="w-full" asChild>
+                <Link
+                  href={links.bumicert.view(
+                    `${parseAtUri(createdBumicertResponse.uri).did}-${parseAtUri(createdBumicertResponse.uri).rkey}`
+                  )}
+                >
+                  View Bumicert <ArrowRightIcon />
+                </Link>
+              </Button>
+
+              {/* Secondary: Set Up Donations */}
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={handleOpenFundingConfig}
               >
-                View bumicert <ArrowRightIcon />
-              </Link>
-            </Button>
+                <SettingsIcon />
+                Set Up Donations
+              </Button>
+
+              {/* Tertiary: Share Feedback (external link) */}
+              <Button variant="ghost" className="w-full" asChild>
+                <a
+                  href={FEEDBACK_FORM_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <MessageSquareHeartIcon />
+                  Share Feedback
+                  <ExternalLinkIcon className="ml-auto" />
+                </a>
+              </Button>
+            </div>
           </motion.div>
         )}
     </div>

@@ -17,12 +17,12 @@ import { useState, useEffect } from "react";
 import useLocalStorage from "use-local-storage";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { links } from "@/lib/links";
 import { useAtprotoStore } from "@/components/stores/atproto";
 import QuickTooltip from "@/components/ui/quick-tooltip";
 import { useSidebarTransition } from "@/hooks/useSidebarTransition";
 import { SidebarTransitionOverlay } from "@/components/ui/SidebarTransitionOverlay";
 import { useMobileNav } from "@/hooks/useMobileNav";
+import { PlatformSwitcher } from "@/components/ui/PlatformSwitcher";
 import { buildMarketplaceNavItems, type NavItem } from "./data";
 
 const FOOTER_LINKS = [
@@ -320,39 +320,14 @@ export function DesktopSidebar() {
 
       {/* Top section */}
       <div className="flex flex-col gap-1">
-        {/* Logo + Wordmark */}
+        {/* Platform switcher (logo + dropdown) */}
         <motion.div
           initial={{ opacity: 0, x: -8 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+          className="mb-4"
         >
-          <Link
-            href={links.root}
-            onClick={() => closeMobileNav(false)}
-            className="group flex items-center gap-2.5 mb-4 py-1"
-          >
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.1, type: "spring", stiffness: 300, damping: 20 }}
-              className="h-8 w-8 rounded-xl border border-border shadow-sm bg-background flex items-center justify-center"
-            >
-              <Image
-                src="/assets/media/images/logo.svg"
-                alt="Bumicerts"
-                width={24}
-                height={24}
-                className="dark:invert dark:brightness-200"
-                style={{ filter: "sepia(100%) saturate(0%) brightness(0.2)" }}
-              />
-            </motion.div>
-            <motion.span
-              layoutId="sidebar-platform-name"
-              className="font-serif text-xl font-bold tracking-tight text-foreground group-hover:text-primary transition-colors duration-200 inline-block"
-            >
-              Marketplace
-            </motion.span>
-          </Link>
+          <PlatformSwitcher currentPlatform="marketplace" />
         </motion.div>
 
         {/* Nav links — fully data-driven */}

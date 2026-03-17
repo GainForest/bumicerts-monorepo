@@ -2,7 +2,6 @@ import {
   CompassIcon,
   Building2Icon,
   BadgePlusIcon,
-  UploadCloudIcon,
   UserCircleIcon,
   TrophyIcon,
 } from "lucide-react";
@@ -92,17 +91,6 @@ export function buildMarketplaceNavItems(did: string | undefined): NavItem[] {
     // ── separator ──
     { kind: "separator", id: "sep-1" },
     // ── below separator ──
-    {
-      kind: "leaf",
-      id: "upload",
-      text: "Upload Platform",
-      Icon: UploadCloudIcon,
-      href: links.upload.home,
-      pathCheck: { startsWith: links.upload.home },
-      disabledWhenUnauthed: true,
-      disabledTooltip: "Sign in to access Upload",
-      trailingArrow: true,
-    },
     {
       kind: "leaf",
       id: "create",

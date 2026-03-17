@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -8,16 +7,15 @@ import {
   GithubIcon,
   TwitterIcon,
   FileTextIcon,
-  ChevronLeftIcon,
 } from "lucide-react";
 import { motion, LayoutGroup, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { links } from "@/lib/links";
 import { UPLOAD_NAV_ITEMS } from "./data";
 import { useSidebarTransition } from "@/hooks/useSidebarTransition";
 import { SidebarTransitionOverlay } from "@/components/ui/SidebarTransitionOverlay";
 import { useMobileNav } from "@/hooks/useMobileNav";
+import { PlatformSwitcher } from "@/components/ui/PlatformSwitcher";
 
 const FOOTER_LINKS = [
   { href: "https://github.com/gainforest-earth", text: "GitHub", Icon: GithubIcon },
@@ -50,52 +48,14 @@ export function UploadDesktopSidebar() {
 
       {/* Top section */}
       <div className="flex flex-col gap-1">
-        {/* Logo + "Upload" wordmark */}
+        {/* Platform switcher (logo + dropdown) */}
         <motion.div
           initial={{ opacity: 0, x: -8 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+          className="mb-4"
         >
-          <div className="flex items-center gap-2.5 mb-1 py-1">
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.1, type: "spring", stiffness: 300, damping: 20 }}
-              className="h-8 w-8 rounded-xl border border-border shadow-sm bg-background flex items-center justify-center"
-            >
-              <Image
-                src="/assets/media/images/logo.svg"
-                alt="Bumicerts"
-                width={24}
-                height={24}
-                className="dark:invert dark:brightness-200"
-                style={{ filter: "sepia(100%) saturate(0%) brightness(0.2)" }}
-              />
-            </motion.div>
-            <motion.span
-              layoutId="sidebar-platform-name"
-              className="font-serif text-xl font-bold tracking-tight text-foreground/80 inline-block"
-            >
-              Upload
-            </motion.span>
-          </div>
-        </motion.div>
-
-        {/* Back to home — subtle, just below logo */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3, delay: 0.12 }}
-          className="my-4"
-        >
-          <Link
-            href={links.home}
-            onClick={() => closeMobileNav(false)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors duration-150 w-fit"
-          >
-            <ChevronLeftIcon className="size-5" />
-            <span className="text-sm">Go to Marketplace</span>
-          </Link>
+          <PlatformSwitcher currentPlatform="upload" />
         </motion.div>
 
         {/* Nav links */}
