@@ -35,12 +35,13 @@ import {
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { checkRateLimit, recordRateLimitAttempt, getClientIp, RATE_LIMITS } from "@/lib/rate-limit";
 import { organizationInfoSchema } from "./schema";
-import { plainTextToLinearDocument } from "@/lib/utils/linearDocument";
+import { textToLinearDocument } from "@/lib/utils/linearDocument";
 import { Effect } from "effect";
 import {
   mutations,
   makeCredentialAgentLayer,
   toSerializableFile,
+  type LinearDocument,
 } from "@gainforest/atproto-mutations-next";
 
 const VALID_OBJECTIVES = ["Conservation", "Research", "Education", "Community", "Other"] as const;
@@ -300,9 +301,11 @@ export async function POST(req: NextRequest) {
     // Step 5: Initialize organization using mutations package
     let organizationInitialized = false;
     try {
-      // Create a credential-based agent layer for the new account
+      // Create a credential-based agent layer for the new account.
+      // makeCredentialAgentLayer prepends "https://" internally — pass the
+      // bare domain only, NOT a full URL (would produce "https://https://...").
       const agentLayer = makeCredentialAgentLayer({
-        service: `https://${pdsDomain}`,
+        service: pdsDomain,
         identifier: did,
         password: password, // Use the password directly for credential auth
       });
@@ -317,7 +320,7 @@ export async function POST(req: NextRequest) {
       const program = mutations.organization.info.upsert({
         displayName: orgInfo.displayName,
         shortDescription: { text: orgInfo.shortDescription },
-        longDescription: plainTextToLinearDocument(orgInfo.longDescription),
+        longDescription: textToLinearDocument(orgInfo.longDescription) as unknown as LinearDocument,
         objectives: parsed.data.objectives,
         country: orgInfo.country,
         visibility: "Public",

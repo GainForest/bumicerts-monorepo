@@ -58,13 +58,14 @@ export function SiteCard({ site, defaultSiteUri }: SiteCardProps) {
   const previewUrl = locationUrl ? getShapefilePreviewUrl(locationUrl) : null;
   const isDefault = !!(site.metadata?.uri && site.metadata.uri === defaultSiteUri);
 
-  // Fetch GeoJSON to compute metrics
+  // Fetch GeoJSON to compute metrics.
+  // The blob may be a Feature, FeatureCollection, or bare Geometry — accept any.
   const { data: geoJson, isPending: isLoadingGeo } = useQuery({
     queryKey: ["geojson", locationUrl],
     queryFn: async () => {
       if (!locationUrl) throw new Error("No location URL");
       const res = await fetch(locationUrl);
-      return res.json() as Promise<GeoJSON.FeatureCollection>;
+      return res.json() as Promise<GeoJSON.GeoJSON>;
     },
     enabled: !!locationUrl,
     staleTime: 5 * 60 * 1000,
@@ -226,41 +227,79 @@ export function SiteCard({ site, defaultSiteUri }: SiteCardProps) {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Simplified GeoJSON metrics — area in hectares + centroid. */
+/**
+ * Simplified GeoJSON metrics — area in hectares + centroid.
+ *
+ * Accepts any GeoJSON object (Feature, FeatureCollection, or bare Geometry).
+ * The PDS stores individual blobs as plain Feature objects, not FeatureCollections,
+ * so we must handle both.
+ */
 function computeSimpleMetrics(
-  fc: GeoJSON.FeatureCollection
+  geoJson: GeoJSON.GeoJSON
 ): { area: number; lat: number; lon: number } | "Invalid" | null {
   try {
+    // Normalise to a flat array of features for uniform processing.
+    const features: GeoJSON.Feature[] = (() => {
+      if (geoJson.type === "FeatureCollection") {
+        return geoJson.features;
+      }
+      if (geoJson.type === "Feature") {
+        return [geoJson];
+      }
+      // Bare geometry — wrap in a synthetic feature
+      return [{ type: "Feature" as const, geometry: geoJson as GeoJSON.Geometry, properties: {} }];
+    })();
+
     let totalArea = 0;
     let sumLat = 0;
     let sumLon = 0;
     let count = 0;
 
-    const processCoords = (coords: number[][][]) => {
+    const processRings = (coords: number[][][]) => {
       for (const ring of coords) {
         // Shoelace formula for polygon area (in deg² — approximate)
         let area = 0;
         for (let i = 0; i < ring.length - 1; i++) {
-          area += ring[i][0] * ring[i + 1][1] - ring[i + 1][0] * ring[i][1];
+          const a = ring[i];
+          const b = ring[i + 1];
+          if (a && b) {
+            area += (a[0] ?? 0) * (b[1] ?? 0) - (b[0] ?? 0) * (a[1] ?? 0);
+          }
         }
         // Convert deg² to hectares (1 deg² ≈ 111320² m² at equator)
         totalArea += Math.abs(area / 2) * 111320 * 111320 * 0.0001;
 
         for (const pt of ring) {
-          sumLon += pt[0];
-          sumLat += pt[1];
+          sumLon += pt[0] ?? 0;
+          sumLat += pt[1] ?? 0;
           count++;
         }
       }
     };
 
-    for (const feature of fc.features) {
-      if (!feature.geometry) continue;
-      if (feature.geometry.type === "Polygon") {
-        processCoords(feature.geometry.coordinates);
-      } else if (feature.geometry.type === "MultiPolygon") {
-        for (const poly of feature.geometry.coordinates) processCoords(poly);
+    for (const feature of features) {
+      const geom = feature.geometry;
+      if (!geom) continue;
+
+      if (geom.type === "Polygon") {
+        processRings(geom.coordinates);
+      } else if (geom.type === "MultiPolygon") {
+        for (const poly of geom.coordinates) {
+          processRings(poly);
+        }
+      } else if (geom.type === "Point") {
+        // Points have no area — just accumulate centroid
+        sumLon += geom.coordinates[0] ?? 0;
+        sumLat += geom.coordinates[1] ?? 0;
+        count++;
+      } else if (geom.type === "MultiPoint") {
+        for (const pt of geom.coordinates) {
+          sumLon += pt[0] ?? 0;
+          sumLat += pt[1] ?? 0;
+          count++;
+        }
       }
+      // LineString / MultiLineString — ignore (no area, centroid not meaningful here)
     }
 
     if (count === 0) return "Invalid";

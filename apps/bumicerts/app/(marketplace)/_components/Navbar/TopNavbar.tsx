@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useId } from "react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Drawer } from "vaul";
 import { ProgressiveBlur } from "@/components/ui/progressive-blur";
@@ -18,6 +18,13 @@ const NAV_LINKS = [
 
 export function TopNavbar() {
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Radix Dialog (used by vaul Drawer) auto-generates `aria-controls` IDs from
+  // a global counter. That counter can differ between SSR and client when the
+  // component tree changes, causing a hydration mismatch. Pinning the content
+  // element to a stable ID from useId() makes the value deterministic and
+  // identical on both server and client — no mismatch.
+  const drawerId = useId();
 
   return (
     <motion.header
@@ -83,16 +90,19 @@ export function TopNavbar() {
             </Link>
           </motion.div>
 
-          {/* Menu drawer */}
+          {/* Menu drawer — drawerId pins aria-controls to a stable useId() value */}
           <Drawer.Root open={drawerOpen} onOpenChange={setDrawerOpen}>
-            <Drawer.Trigger className="flex items-center gap-2 text-sm font-medium text-foreground/70 hover:text-foreground transition-colors cursor-pointer">
+            <Drawer.Trigger
+              aria-controls={drawerId}
+              className="flex items-center gap-2 text-sm font-medium text-foreground/70 hover:text-foreground transition-colors cursor-pointer"
+            >
               Menu
               <span className="text-foreground/30">=</span>
             </Drawer.Trigger>
 
             <Drawer.Portal>
               <Drawer.Overlay className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" />
-              <Drawer.Content className="fixed top-0 right-0 bottom-0 w-full max-w-md z-50 bg-background border-l border-border flex flex-col">
+              <Drawer.Content id={drawerId} className="fixed top-0 right-0 bottom-0 w-full max-w-md z-50 bg-background border-l border-border flex flex-col">
                 {/* Close button */}
                 <div className="flex items-center justify-between p-6 border-b border-border">
                   <span className="text-sm font-medium tracking-wide uppercase text-muted-foreground">

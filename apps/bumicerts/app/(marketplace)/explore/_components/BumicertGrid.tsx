@@ -92,7 +92,7 @@ export function BumicertGrid({
                 title={bumicert.title}
                 organizationName={bumicert.organizationName}
                 objectives={bumicert.objectives}
-                description={bumicert.description}
+                description={bumicert.shortDescription}
               />
             </Link>
           </motion.div>

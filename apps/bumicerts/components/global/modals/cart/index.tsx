@@ -295,7 +295,7 @@ export function CartModal() {
   };
 
   return (
-    <ModalContent dismissible={false}>
+    <ModalContent>
       <ModalHeader
         backAction={stack.length > 1 ? handleClose : undefined}
       >
