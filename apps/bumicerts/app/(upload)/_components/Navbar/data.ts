@@ -1,4 +1,4 @@
-import { Building2Icon, MapPinIcon, MicIcon } from "lucide-react";
+import { Building2Icon, MapPinIcon, MicIcon, TreePineIcon } from "lucide-react";
 import BumicertIcon from "@/icons/BumicertIcon";
 import { links } from "@/lib/links";
 import type { LucideIcon } from "lucide-react";
@@ -41,5 +41,12 @@ export const UPLOAD_NAV_ITEMS: NavItem[] = [
     Icon: BumicertIcon,
     href: links.upload.bumicerts,
     pathCheck: { startsWith: links.upload.bumicerts },
+  },
+  {
+    id: "trees",
+    text: "Trees",
+    Icon: TreePineIcon,
+    href: links.upload.trees,
+    pathCheck: { startsWith: links.upload.trees },
   },
 ];
