@@ -270,5 +270,4 @@ export type {
   CreateDwcMeasurementInput,
   DwcMeasurementMutationResult,
   DwcMeasurementRecord,
-  FloraMeasurementFields,
 } from "./mutations/dwc.measurement/utils/types";

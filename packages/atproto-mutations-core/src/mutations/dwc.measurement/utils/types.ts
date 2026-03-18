@@ -12,35 +12,28 @@ export type DwcMeasurementMutationResult = RecordMutationResult<DwcMeasurementRe
 // Create
 // ---------------------------------------------------------------------------
 
-/**
- * Flora-specific measurement fields.
- * All numeric values are stored as strings per the DwC lexicon.
- */
-export type FloraMeasurementFields = {
-  /** Diameter at breast height in centimeters. */
-  dbh?: string;
-  /** Total height from ground to highest living point in meters. */
-  totalHeight?: string;
-  /** Diameter at ground level in centimeters. */
-  basalDiameter?: string;
-  /** Percentage of ground covered by the canopy of this individual. */
-  canopyCoverPercent?: string;
-};
-
 export type CreateDwcMeasurementInput = {
   /** AT-URI to the parent occurrence record (required). */
   occurrenceRef: string;
+  /** The nature of the measurement (e.g. 'DBH', 'tree height', 'canopy cover'). */
+  measurementType: string;
+  /** The value of the measurement (e.g. '45.2', '12.5'). */
+  measurementValue: string;
+  /** The units for the measurementValue (e.g. 'cm', 'm', '%'). */
+  measurementUnit?: string;
+  /** An identifier for the measurement. Should be unique within the dataset. */
+  measurementID?: string;
   /** The occurrenceID of the linked occurrence record (for cross-system interop). */
   occurrenceID?: string;
-  /** Flora measurement fields. */
-  flora: FloraMeasurementFields;
-  /** Person(s) who performed the measurements. */
-  measuredBy?: string;
-  /** Date the measurements were taken. ISO 8601 format. */
-  measurementDate?: string;
-  /** General protocol or method used. */
+  /** The description of the potential error associated with the measurementValue. */
+  measurementAccuracy?: string;
+  /** The description of or reference to the method used to determine the measurement. */
   measurementMethod?: string;
-  /** Comments or notes about the measurement session. */
+  /** Person(s) who determined the measurement. Pipe-delimited for multiple. */
+  measurementDeterminedBy?: string;
+  /** The date the measurement was made. ISO 8601 format. */
+  measurementDeterminedDate?: string;
+  /** Comments or notes accompanying the measurement. */
   measurementRemarks?: string;
   /** Optional caller-supplied rkey. PDS assigns a TID if omitted. */
   rkey?: string;

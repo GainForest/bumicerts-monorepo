@@ -111,17 +111,26 @@ export default function UploadStep({ validRows, onBack, onComplete }: UploadStep
         const occInput = occurrenceInputToCreateInput(row.occurrence);
         const occResult = await createOccurrence.mutateAsync(occInput);
 
-        // 2. Create measurement (only if floraMeasurement is not null)
+        // 2. Create one measurement record per non-null flora field
         if (row.floraMeasurement) {
-          await createMeasurement.mutateAsync({
-            occurrenceRef: occResult.uri,
-            flora: {
-              dbh: row.floraMeasurement.dbh,
-              totalHeight: row.floraMeasurement.totalHeight,
-              basalDiameter: row.floraMeasurement.diameter,
-              canopyCoverPercent: row.floraMeasurement.canopyCoverPercent,
-            },
-          });
+          const measurements: { type: string; value: string; unit: string }[] = [];
+          if (row.floraMeasurement.dbh)
+            measurements.push({ type: "DBH", value: row.floraMeasurement.dbh, unit: "cm" });
+          if (row.floraMeasurement.totalHeight)
+            measurements.push({ type: "tree height", value: row.floraMeasurement.totalHeight, unit: "m" });
+          if (row.floraMeasurement.diameter)
+            measurements.push({ type: "basal diameter", value: row.floraMeasurement.diameter, unit: "cm" });
+          if (row.floraMeasurement.canopyCoverPercent)
+            measurements.push({ type: "canopy cover", value: row.floraMeasurement.canopyCoverPercent, unit: "%" });
+
+          for (const m of measurements) {
+            await createMeasurement.mutateAsync({
+              occurrenceRef: occResult.uri,
+              measurementType: m.type,
+              measurementValue: m.value,
+              measurementUnit: m.unit,
+            });
+          }
         }
 
         successes += 1;

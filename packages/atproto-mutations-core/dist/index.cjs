@@ -2391,31 +2391,32 @@ var makeValidationError24 = (message, cause) => new DwcMeasurementValidationErro
 var createDwcMeasurement = (input) => import_effect48.Effect.gen(function* () {
   const {
     occurrenceRef,
+    measurementType,
+    measurementValue,
+    measurementUnit,
+    measurementID,
     occurrenceID,
-    flora,
-    measuredBy,
-    measurementDate,
+    measurementAccuracy,
     measurementMethod,
+    measurementDeterminedBy,
+    measurementDeterminedDate,
     measurementRemarks,
     rkey
   } = input;
-  const floraResult = {
-    $type: "app.gainforest.dwc.measurement#floraMeasurement"
-  };
-  if (flora.dbh !== void 0) floraResult.dbh = flora.dbh;
-  if (flora.totalHeight !== void 0) floraResult.totalHeight = flora.totalHeight;
-  if (flora.basalDiameter !== void 0) floraResult.basalDiameter = flora.basalDiameter;
-  if (flora.canopyCoverPercent !== void 0) floraResult.canopyCoverPercent = flora.canopyCoverPercent;
   const candidate = {
     $type: COLLECTION30,
     occurrenceRef,
-    result: floraResult,
+    measurementType,
+    measurementValue,
     createdAt: (/* @__PURE__ */ new Date()).toISOString()
   };
+  if (measurementUnit !== void 0) candidate.measurementUnit = measurementUnit;
+  if (measurementID !== void 0) candidate.measurementID = measurementID;
   if (occurrenceID !== void 0) candidate.occurrenceID = occurrenceID;
-  if (measuredBy !== void 0) candidate.measuredBy = measuredBy;
-  if (measurementDate !== void 0) candidate.measurementDate = measurementDate;
+  if (measurementAccuracy !== void 0) candidate.measurementAccuracy = measurementAccuracy;
   if (measurementMethod !== void 0) candidate.measurementMethod = measurementMethod;
+  if (measurementDeterminedBy !== void 0) candidate.measurementDeterminedBy = measurementDeterminedBy;
+  if (measurementDeterminedDate !== void 0) candidate.measurementDeterminedDate = measurementDeterminedDate;
   if (measurementRemarks !== void 0) candidate.measurementRemarks = measurementRemarks;
   const record = yield* import_effect48.Effect.try({
     try: () => (0, import_measurement.$parse)(candidate),
