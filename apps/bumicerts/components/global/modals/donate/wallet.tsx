@@ -103,8 +103,8 @@ export function WalletModal({ bumicert, amount, anonymous }: WalletModalProps) {
       <ModalContent dismissible={false}>
         <ModalHeader backAction={handleBack}>
           <ModalTitle>Switch to Base</ModalTitle>
-          <ModalDescription className="sr-only">
-            Switch to Base network to complete your donation.
+          <ModalDescription>
+            You need to be on Base network to donate USDC.
           </ModalDescription>
         </ModalHeader>
         <div className="flex flex-col items-center gap-4 py-6 text-center">
@@ -136,8 +136,8 @@ export function WalletModal({ bumicert, amount, anonymous }: WalletModalProps) {
       <ModalContent dismissible={false}>
         <ModalHeader backAction={handleBack}>
           <ModalTitle>Verifying Recipient</ModalTitle>
-          <ModalDescription className="sr-only">
-            Checking if this organization has a linked wallet.
+          <ModalDescription>
+            Checking if this organization can receive donations.
           </ModalDescription>
         </ModalHeader>
         <div className="flex flex-col items-center gap-3 py-8">
@@ -154,8 +154,8 @@ export function WalletModal({ bumicert, amount, anonymous }: WalletModalProps) {
       <ModalContent dismissible={false}>
         <ModalHeader backAction={handleBack}>
           <ModalTitle>Donations Not Set Up</ModalTitle>
-          <ModalDescription className="sr-only">
-            This organization has not linked a wallet yet.
+          <ModalDescription>
+            This organization hasn&apos;t set up donations yet.
           </ModalDescription>
         </ModalHeader>
         <div className="flex flex-col items-center gap-4 py-4 text-center">
@@ -194,7 +194,7 @@ export function WalletModal({ bumicert, amount, anonymous }: WalletModalProps) {
     <ModalContent dismissible={false}>
       <ModalHeader backAction={handleBack}>
         <ModalTitle>Wallet Connected</ModalTitle>
-        <ModalDescription className="sr-only">
+        <ModalDescription>
           Your wallet is connected and ready to donate.
         </ModalDescription>
       </ModalHeader>

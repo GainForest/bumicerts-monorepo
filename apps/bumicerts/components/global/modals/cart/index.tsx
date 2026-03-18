@@ -26,6 +26,7 @@ import {
   ModalContent,
   ModalHeader,
   ModalTitle,
+  ModalDescription,
   ModalFooter,
 } from "@/components/ui/modal/modal";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -240,6 +241,9 @@ export function CartModal() {
         backAction={stack.length > 1 ? handleClose : undefined}
       >
         <ModalTitle>Your Cart</ModalTitle>
+        <ModalDescription>
+          Bumicerts you&apos;ve saved to donate to later.
+        </ModalDescription>
       </ModalHeader>
 
       <div className="pt-1">
