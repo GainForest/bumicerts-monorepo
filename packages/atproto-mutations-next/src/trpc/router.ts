@@ -33,6 +33,14 @@ export const appRouter = router({
       delete: effectMutation(mutations.link.evm.delete),
     }),
   }),
+  dwc: router({
+    occurrence: router({
+      create: effectMutation(mutations.dwc.occurrence.create),
+    }),
+    measurement: router({
+      create: effectMutation(mutations.dwc.measurement.create),
+    }),
+  }),
   blob: router({
     upload: effectMutation(mutations.blob.upload),
   }),

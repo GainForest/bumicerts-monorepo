@@ -354,15 +354,15 @@ function applyPatch(existing, data, unset, requiredFields) {
 
 // src/utils/shared/pds.ts
 import { Effect as Effect2 } from "effect";
-var fetchRecord = (collection, rkey, makePdsError29) => Effect2.gen(function* () {
+var fetchRecord = (collection, rkey, makePdsError31) => Effect2.gen(function* () {
   const agent = yield* AtprotoAgent;
   const repo = agent.assertDid;
   return yield* Effect2.tryPromise({
     try: () => agent.com.atproto.repo.getRecord({ repo, collection, rkey }).then((res) => res.data.value).catch(() => null),
-    catch: (cause) => makePdsError29(`Failed to fetch ${collection} record at rkey "${rkey}"`, cause)
+    catch: (cause) => makePdsError31(`Failed to fetch ${collection} record at rkey "${rkey}"`, cause)
   });
 });
-var createRecord = (collection, record, rkey, makePdsError29) => Effect2.gen(function* () {
+var createRecord = (collection, record, rkey, makePdsError31) => Effect2.gen(function* () {
   const agent = yield* AtprotoAgent;
   const repo = agent.assertDid;
   const response = yield* Effect2.tryPromise({
@@ -372,39 +372,39 @@ var createRecord = (collection, record, rkey, makePdsError29) => Effect2.gen(fun
       ...rkey !== void 0 ? { rkey } : {},
       record
     }),
-    catch: (cause) => makePdsError29(`PDS rejected createRecord for ${collection}`, cause)
+    catch: (cause) => makePdsError31(`PDS rejected createRecord for ${collection}`, cause)
   });
   return { uri: response.data.uri, cid: response.data.cid };
 });
-var putRecord = (collection, rkey, record, makePdsError29) => Effect2.gen(function* () {
+var putRecord = (collection, rkey, record, makePdsError31) => Effect2.gen(function* () {
   const agent = yield* AtprotoAgent;
   const repo = agent.assertDid;
   const response = yield* Effect2.tryPromise({
     try: () => agent.com.atproto.repo.putRecord({ repo, collection, rkey, record }),
-    catch: (cause) => makePdsError29(`PDS rejected putRecord for ${collection} at rkey "${rkey}"`, cause)
+    catch: (cause) => makePdsError31(`PDS rejected putRecord for ${collection} at rkey "${rkey}"`, cause)
   });
   return { uri: response.data.uri, cid: response.data.cid };
 });
-var deleteRecord = (collection, rkey, makePdsError29) => Effect2.gen(function* () {
+var deleteRecord = (collection, rkey, makePdsError31) => Effect2.gen(function* () {
   const agent = yield* AtprotoAgent;
   const repo = agent.assertDid;
   yield* Effect2.tryPromise({
     try: () => agent.com.atproto.repo.deleteRecord({ repo, collection, rkey }),
-    catch: (cause) => makePdsError29(`PDS rejected deleteRecord for ${collection} at rkey "${rkey}"`, cause)
+    catch: (cause) => makePdsError31(`PDS rejected deleteRecord for ${collection} at rkey "${rkey}"`, cause)
   });
 });
 
 // src/utils/shared/validate.ts
 import { Effect as Effect3 } from "effect";
-var stubValidate = (candidate, parse, makeValidationError23) => Effect3.try({
+var stubValidate = (candidate, parse, makeValidationError25) => Effect3.try({
   try: () => {
     parse(stubBlobRefs(candidate));
   },
-  catch: (cause) => makeValidationError23(String(cause), cause)
+  catch: (cause) => makeValidationError25(String(cause), cause)
 });
-var finalValidate = (resolved, parse, makeValidationError23) => Effect3.try({
+var finalValidate = (resolved, parse, makeValidationError25) => Effect3.try({
   try: () => parse(resolved),
-  catch: (cause) => makeValidationError23(String(cause), cause)
+  catch: (cause) => makeValidationError25(String(cause), cause)
 });
 
 // src/mutations/organization.info/create.ts
@@ -2246,9 +2246,157 @@ var deleteLinkEvm = (input) => Effect32.gen(function* () {
   return { uri, rkey };
 });
 
-// src/blob/upload.ts
+// src/mutations/dwc.occurrence/create.ts
 import { Effect as Effect33 } from "effect";
-var uploadBlob = (input) => Effect33.gen(function* () {
+import { $parse as $parse23 } from "@gainforest/generated/app/gainforest/dwc/occurrence.defs";
+
+// src/mutations/dwc.occurrence/utils/errors.ts
+import { Data as Data12 } from "effect";
+var DwcOccurrenceValidationError = class extends Data12.TaggedError(
+  "DwcOccurrenceValidationError"
+) {
+};
+var DwcOccurrencePdsError = class extends Data12.TaggedError(
+  "DwcOccurrencePdsError"
+) {
+};
+
+// src/mutations/dwc.occurrence/create.ts
+var COLLECTION29 = "app.gainforest.dwc.occurrence";
+var makePdsError29 = (message, cause) => new DwcOccurrencePdsError({ message, cause });
+var makeValidationError23 = (message, cause) => new DwcOccurrenceValidationError({ message, cause });
+var createDwcOccurrence = (input) => Effect33.gen(function* () {
+  const {
+    scientificName,
+    eventDate,
+    decimalLatitude,
+    decimalLongitude,
+    basisOfRecord = "HumanObservation",
+    vernacularName,
+    recordedBy,
+    locality,
+    country,
+    countryCode,
+    occurrenceRemarks,
+    habitat,
+    samplingProtocol,
+    kingdom = "Plantae",
+    occurrenceID = crypto.randomUUID(),
+    occurrenceStatus = "present",
+    geodeticDatum = "EPSG:4326",
+    license = "CC-BY-4.0",
+    projectRef,
+    rkey
+  } = input;
+  const createdAt = (/* @__PURE__ */ new Date()).toISOString();
+  const candidate = {
+    $type: COLLECTION29,
+    scientificName,
+    eventDate,
+    decimalLatitude,
+    decimalLongitude,
+    basisOfRecord,
+    occurrenceID,
+    occurrenceStatus,
+    geodeticDatum,
+    license,
+    kingdom,
+    ...vernacularName !== void 0 ? { vernacularName } : {},
+    ...recordedBy !== void 0 ? { recordedBy } : {},
+    ...locality !== void 0 ? { locality } : {},
+    ...country !== void 0 ? { country } : {},
+    ...countryCode !== void 0 ? { countryCode } : {},
+    ...occurrenceRemarks !== void 0 ? { occurrenceRemarks } : {},
+    ...habitat !== void 0 ? { habitat } : {},
+    ...samplingProtocol !== void 0 ? { samplingProtocol } : {},
+    ...projectRef !== void 0 ? { projectRef } : {},
+    createdAt
+  };
+  const record = yield* Effect33.try({
+    try: () => $parse23(candidate),
+    catch: (cause) => makeValidationError23(
+      `dwc.occurrence record failed lexicon validation: ${String(cause)}`,
+      cause
+    )
+  });
+  const { uri, cid } = yield* createRecord(COLLECTION29, record, rkey, makePdsError29);
+  const assignedRkey = uri.split("/").pop() ?? rkey ?? "unknown";
+  return {
+    uri,
+    cid,
+    rkey: assignedRkey,
+    record
+  };
+});
+
+// src/mutations/dwc.measurement/create.ts
+import { Effect as Effect34 } from "effect";
+import { $parse as $parse24 } from "@gainforest/generated/app/gainforest/dwc/measurement.defs";
+
+// src/mutations/dwc.measurement/utils/errors.ts
+import { Data as Data13 } from "effect";
+var DwcMeasurementValidationError = class extends Data13.TaggedError(
+  "DwcMeasurementValidationError"
+) {
+};
+var DwcMeasurementPdsError = class extends Data13.TaggedError(
+  "DwcMeasurementPdsError"
+) {
+};
+
+// src/mutations/dwc.measurement/create.ts
+var COLLECTION30 = "app.gainforest.dwc.measurement";
+var makePdsError30 = (message, cause) => new DwcMeasurementPdsError({ message, cause });
+var makeValidationError24 = (message, cause) => new DwcMeasurementValidationError({ message, cause });
+var createDwcMeasurement = (input) => Effect34.gen(function* () {
+  const {
+    occurrenceRef,
+    occurrenceID,
+    flora,
+    measuredBy,
+    measurementDate,
+    measurementMethod,
+    measurementRemarks,
+    rkey
+  } = input;
+  const floraResult = {
+    $type: "app.gainforest.dwc.measurement#floraMeasurement"
+  };
+  if (flora.dbh !== void 0) floraResult.dbh = flora.dbh;
+  if (flora.totalHeight !== void 0) floraResult.totalHeight = flora.totalHeight;
+  if (flora.basalDiameter !== void 0) floraResult.basalDiameter = flora.basalDiameter;
+  if (flora.canopyCoverPercent !== void 0) floraResult.canopyCoverPercent = flora.canopyCoverPercent;
+  const candidate = {
+    $type: COLLECTION30,
+    occurrenceRef,
+    result: floraResult,
+    createdAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  if (occurrenceID !== void 0) candidate.occurrenceID = occurrenceID;
+  if (measuredBy !== void 0) candidate.measuredBy = measuredBy;
+  if (measurementDate !== void 0) candidate.measurementDate = measurementDate;
+  if (measurementMethod !== void 0) candidate.measurementMethod = measurementMethod;
+  if (measurementRemarks !== void 0) candidate.measurementRemarks = measurementRemarks;
+  const record = yield* Effect34.try({
+    try: () => $parse24(candidate),
+    catch: (cause) => makeValidationError24(
+      `dwc.measurement record failed lexicon validation: ${String(cause)}`,
+      cause
+    )
+  });
+  const { uri, cid } = yield* createRecord(COLLECTION30, record, rkey, makePdsError30);
+  const assignedRkey = uri.split("/").pop() ?? rkey ?? "unknown";
+  return {
+    uri,
+    cid,
+    rkey: assignedRkey,
+    record
+  };
+});
+
+// src/blob/upload.ts
+import { Effect as Effect35 } from "effect";
+var uploadBlob = (input) => Effect35.gen(function* () {
   const agent = yield* AtprotoAgent;
   const { file, mimeType: override } = input;
   let data;
@@ -2257,18 +2405,18 @@ var uploadBlob = (input) => Effect33.gen(function* () {
     data = fromSerializableFile(file);
     mimeType = override ?? file.type;
   } else if (isFileOrBlob(file)) {
-    const buf = yield* Effect33.tryPromise({
+    const buf = yield* Effect35.tryPromise({
       try: () => file.arrayBuffer(),
       catch: (e) => new BlobUploadError({ message: "Failed to read file data into ArrayBuffer", cause: e })
     });
     data = new Uint8Array(buf);
     mimeType = override ?? (file.type || "application/octet-stream");
   } else {
-    return yield* Effect33.die(
+    return yield* Effect35.die(
       new Error("uploadBlob: input.file must be a File, Blob, or SerializableFile")
     );
   }
-  const res = yield* Effect33.tryPromise({
+  const res = yield* Effect35.tryPromise({
     try: () => agent.uploadBlob(data, { encoding: mimeType }),
     catch: (e) => new BlobUploadError({ message: "PDS blob upload failed", cause: e })
   });
@@ -2340,6 +2488,14 @@ var mutations = {
       create: createLinkEvm,
       update: updateLinkEvm,
       delete: deleteLinkEvm
+    }
+  },
+  dwc: {
+    occurrence: {
+      create: createDwcOccurrence
+    },
+    measurement: {
+      create: createDwcMeasurement
     }
   },
   blob: {
@@ -2552,16 +2708,16 @@ var adapt = (action) => {
 };
 
 // src/layers/credential.ts
-import { Data as Data12, Effect as Effect34, Layer } from "effect";
+import { Data as Data14, Effect as Effect36, Layer } from "effect";
 import { CredentialSession, Agent } from "@atproto/api";
-var CredentialLoginError = class extends Data12.TaggedError("CredentialLoginError") {
+var CredentialLoginError = class extends Data14.TaggedError("CredentialLoginError") {
 };
 function makeCredentialAgentLayer(config) {
   return Layer.effect(
     AtprotoAgent,
-    Effect34.gen(function* () {
+    Effect36.gen(function* () {
       const session = new CredentialSession(new URL(`https://${config.service}`));
-      yield* Effect34.tryPromise({
+      yield* Effect36.tryPromise({
         try: () => session.login({
           identifier: config.identifier,
           password: config.password
@@ -2592,6 +2748,10 @@ export {
   DefaultSiteLocationNotFoundError,
   DefaultSitePdsError,
   DefaultSiteValidationError,
+  DwcMeasurementPdsError,
+  DwcMeasurementValidationError,
+  DwcOccurrencePdsError,
+  DwcOccurrenceValidationError,
   FileConstraintError,
   FundingConfigNotFoundError,
   FundingConfigPdsError,

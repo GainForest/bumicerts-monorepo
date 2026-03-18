@@ -79,6 +79,16 @@ import { updateLinkEvm } from "./mutations/link.evm/update";
 import { deleteLinkEvm } from "./mutations/link.evm/delete";
 
 // ---------------------------------------------------------------------------
+// dwc.occurrence
+// ---------------------------------------------------------------------------
+import { createDwcOccurrence } from "./mutations/dwc.occurrence/create";
+
+// ---------------------------------------------------------------------------
+// dwc.measurement
+// ---------------------------------------------------------------------------
+import { createDwcMeasurement } from "./mutations/dwc.measurement/create";
+
+// ---------------------------------------------------------------------------
 // blob
 // ---------------------------------------------------------------------------
 import { uploadBlob } from "./blob/upload";
@@ -144,6 +154,14 @@ export const mutations = {
       create: createLinkEvm,
       update: updateLinkEvm,
       delete: deleteLinkEvm,
+    },
+  },
+  dwc: {
+    occurrence: {
+      create: createDwcOccurrence,
+    },
+    measurement: {
+      create: createDwcMeasurement,
     },
   },
   blob: {

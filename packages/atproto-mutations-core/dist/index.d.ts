@@ -22,6 +22,10 @@ import { Main as Main$7 } from '@gainforest/generated/app/bumicerts/funding/conf
 export { EvmLinkRef, Main as FundingConfigRecord } from '@gainforest/generated/app/bumicerts/funding/config.defs';
 import { Main as Main$8 } from '@gainforest/generated/app/gainforest/organization/info.defs';
 export { Main as OrganizationInfoRecord } from '@gainforest/generated/app/gainforest/organization/info.defs';
+import { Main as Main$9 } from '@gainforest/generated/app/gainforest/dwc/occurrence.defs';
+export { Main as DwcOccurrenceRecord } from '@gainforest/generated/app/gainforest/dwc/occurrence.defs';
+import { Main as Main$a } from '@gainforest/generated/app/gainforest/dwc/measurement.defs';
+export { Main as DwcMeasurementRecord } from '@gainforest/generated/app/gainforest/dwc/measurement.defs';
 import { GeoJsonObject, Feature, LineString, MultiLineString, Point, MultiPoint, Polygon, MultiPolygon, FeatureCollection } from 'geojson';
 export { Main as ClaimActivityLinearDocument, Main as LinearDocument } from '@gainforest/generated/pub/leaflet/pages/linearDocument.defs';
 export { Richtext } from '@gainforest/generated/app/gainforest/common/defs.defs';
@@ -99,6 +103,14 @@ declare const mutations: {
             readonly create: (input: CreateLinkEvmInput) => effect_Effect.Effect<LinkEvmMutationResult, LinkEvmValidationError | LinkEvmPdsError | BlobUploadError, AtprotoAgent>;
             readonly update: (input: UpdateLinkEvmInput) => effect_Effect.Effect<LinkEvmMutationResult, LinkEvmValidationError | LinkEvmNotFoundError | LinkEvmPdsError | BlobUploadError, AtprotoAgent>;
             readonly delete: (input: DeleteRecordInput) => effect_Effect.Effect<DeleteRecordResult, LinkEvmNotFoundError | LinkEvmPdsError, AtprotoAgent>;
+        };
+    };
+    readonly dwc: {
+        readonly occurrence: {
+            readonly create: (input: CreateDwcOccurrenceInput) => effect_Effect.Effect<DwcOccurrenceMutationResult, DwcOccurrenceValidationError | DwcOccurrencePdsError, AtprotoAgent>;
+        };
+        readonly measurement: {
+            readonly create: (input: CreateDwcMeasurementInput) => effect_Effect.Effect<DwcMeasurementMutationResult, DwcMeasurementValidationError | DwcMeasurementPdsError, AtprotoAgent>;
         };
     };
     readonly blob: {
@@ -905,6 +917,40 @@ declare class OrganizationInfoPdsError extends OrganizationInfoPdsError_base<{
 }> {
 }
 
+declare const DwcOccurrenceValidationError_base: new <A extends Record<string, any> = {}>(args: effect_Types.Equals<A, {}> extends true ? void : { readonly [P in keyof A as P extends "_tag" ? never : P]: A[P]; }) => effect_Cause.YieldableError & {
+    readonly _tag: "DwcOccurrenceValidationError";
+} & Readonly<A>;
+declare class DwcOccurrenceValidationError extends DwcOccurrenceValidationError_base<{
+    message: string;
+    cause?: unknown;
+}> {
+}
+declare const DwcOccurrencePdsError_base: new <A extends Record<string, any> = {}>(args: effect_Types.Equals<A, {}> extends true ? void : { readonly [P in keyof A as P extends "_tag" ? never : P]: A[P]; }) => effect_Cause.YieldableError & {
+    readonly _tag: "DwcOccurrencePdsError";
+} & Readonly<A>;
+declare class DwcOccurrencePdsError extends DwcOccurrencePdsError_base<{
+    message: string;
+    cause?: unknown;
+}> {
+}
+
+declare const DwcMeasurementValidationError_base: new <A extends Record<string, any> = {}>(args: effect_Types.Equals<A, {}> extends true ? void : { readonly [P in keyof A as P extends "_tag" ? never : P]: A[P]; }) => effect_Cause.YieldableError & {
+    readonly _tag: "DwcMeasurementValidationError";
+} & Readonly<A>;
+declare class DwcMeasurementValidationError extends DwcMeasurementValidationError_base<{
+    message: string;
+    cause?: unknown;
+}> {
+}
+declare const DwcMeasurementPdsError_base: new <A extends Record<string, any> = {}>(args: effect_Types.Equals<A, {}> extends true ? void : { readonly [P in keyof A as P extends "_tag" ? never : P]: A[P]; }) => effect_Cause.YieldableError & {
+    readonly _tag: "DwcMeasurementPdsError";
+} & Readonly<A>;
+declare class DwcMeasurementPdsError extends DwcMeasurementPdsError_base<{
+    message: string;
+    cause?: unknown;
+}> {
+}
+
 /** Returned by create / update / upsert. */
 type CertifiedLocationMutationResult = RecordMutationResult<Main>;
 type CreateCertifiedLocationInput = {
@@ -1130,4 +1176,64 @@ type UpdateOrganizationInfoInput = SingletonUpdateInput<Main$8>;
 /** Returned by create, update, and upsert on success. */
 type OrganizationInfoMutationResult = SingletonMutationResult<Main$8>;
 
-export { AtprotoAgent, type AudioRecordingMutationResult, AudioRecordingNotFoundError, AudioRecordingPdsError, AudioRecordingValidationError, type AudioTechnicalMetadata, type BlobConstraint, BlobUploadError, CertifiedLocationIsDefaultError, type CertifiedLocationMutationResult, CertifiedLocationNotFoundError, CertifiedLocationPdsError, CertifiedLocationValidationError, type ClaimActivityMutationResult, ClaimActivityNotFoundError, ClaimActivityPdsError, ClaimActivityValidationError, type Coordinates, type CreateAudioRecordingInput, type CreateCertifiedLocationInput, type CreateClaimActivityInput, type CreateFundingConfigInput, type CreateFundingReceiptInput, type CreateLayerInput, type CreateLinkEvmInput, type CreateOrganizationInfoInput, type CredentialConfig, CredentialLoginError, DefaultSiteLocationNotFoundError, type DefaultSiteMutationResult, DefaultSitePdsError, DefaultSiteValidationError, type DeleteRecordInput, type DeleteRecordResult, type FieldLabels, FileConstraintError, type FileOrBlobRef, type FormattedError, type FundingConfigMutationResult, FundingConfigNotFoundError, FundingConfigPdsError, FundingConfigValidationError, type FundingReceiptMutationResult, FundingReceiptPdsError, FundingReceiptValidationError, GeoJsonProcessingError, GeoJsonValidationError, HECTARES_PER_SQUARE_METER, type LayerMutationResult, LayerNotFoundError, LayerPdsError, type LayerType, LayerValidationError, type LinkEvmMutationResult, LinkEvmNotFoundError, LinkEvmPdsError, LinkEvmValidationError, MutationError, type MutationResult, type Mutations, type Objective, OrganizationInfoAlreadyExistsError, type OrganizationInfoMutationResult, OrganizationInfoNotFoundError, OrganizationInfoPdsError, OrganizationInfoValidationError, type PolygonMetrics, type RecordCreateInput, type RecordFields, type RecordMutationResult, type RecordUpdateInput, type SerializableFile, type SetDefaultSiteInput, type SingletonCreateInput, type SingletonMutationResult, type SingletonUpdateInput, type UpdateAudioRecordingInput, type UpdateCertifiedLocationInput, type UpdateClaimActivityInput, type UpdateFundingConfigInput, type UpdateLayerInput, type UpdateLinkEvmInput, type UpdateOrganizationInfoInput, type UploadBlobInput, type UploadBlobResult, type UpsertAudioRecordingInput, type UpsertCertifiedLocationInput, type UpsertClaimActivityInput, type UpsertFundingConfigInput, type UpsertLayerInput, type ValidationIssue, type WithFileInputs, adapt, computePolygonMetrics, err, extractBlobConstraints, extractLineStringFeatures, extractPointFeatures, extractPolygonFeatures, formatMutationError, formatMutationErrorMessage, fromSerializableFile, isAnyBlobRef, makeCredentialAgentLayer, mimeMatches, mutations, normalizeBlobRef, ok, toFeatureCollection, toSerializableFile, validateGeojsonOrThrow };
+/** Returned by createDwcOccurrence. */
+type DwcOccurrenceMutationResult = RecordMutationResult<Main$9>;
+type CreateDwcOccurrenceInput = {
+    scientificName: string;
+    eventDate: string;
+    decimalLatitude: string;
+    decimalLongitude: string;
+    basisOfRecord?: string;
+    vernacularName?: string;
+    recordedBy?: string;
+    locality?: string;
+    country?: string;
+    countryCode?: string;
+    occurrenceRemarks?: string;
+    habitat?: string;
+    samplingProtocol?: string;
+    kingdom?: string;
+    occurrenceID?: string;
+    occurrenceStatus?: string;
+    geodeticDatum?: string;
+    license?: string;
+    projectRef?: string;
+    rkey?: string;
+};
+
+/** Returned by createDwcMeasurement. */
+type DwcMeasurementMutationResult = RecordMutationResult<Main$a>;
+/**
+ * Flora-specific measurement fields.
+ * All numeric values are stored as strings per the DwC lexicon.
+ */
+type FloraMeasurementFields = {
+    /** Diameter at breast height in centimeters. */
+    dbh?: string;
+    /** Total height from ground to highest living point in meters. */
+    totalHeight?: string;
+    /** Diameter at ground level in centimeters. */
+    basalDiameter?: string;
+    /** Percentage of ground covered by the canopy of this individual. */
+    canopyCoverPercent?: string;
+};
+type CreateDwcMeasurementInput = {
+    /** AT-URI to the parent occurrence record (required). */
+    occurrenceRef: string;
+    /** The occurrenceID of the linked occurrence record (for cross-system interop). */
+    occurrenceID?: string;
+    /** Flora measurement fields. */
+    flora: FloraMeasurementFields;
+    /** Person(s) who performed the measurements. */
+    measuredBy?: string;
+    /** Date the measurements were taken. ISO 8601 format. */
+    measurementDate?: string;
+    /** General protocol or method used. */
+    measurementMethod?: string;
+    /** Comments or notes about the measurement session. */
+    measurementRemarks?: string;
+    /** Optional caller-supplied rkey. PDS assigns a TID if omitted. */
+    rkey?: string;
+};
+
+export { AtprotoAgent, type AudioRecordingMutationResult, AudioRecordingNotFoundError, AudioRecordingPdsError, AudioRecordingValidationError, type AudioTechnicalMetadata, type BlobConstraint, BlobUploadError, CertifiedLocationIsDefaultError, type CertifiedLocationMutationResult, CertifiedLocationNotFoundError, CertifiedLocationPdsError, CertifiedLocationValidationError, type ClaimActivityMutationResult, ClaimActivityNotFoundError, ClaimActivityPdsError, ClaimActivityValidationError, type Coordinates, type CreateAudioRecordingInput, type CreateCertifiedLocationInput, type CreateClaimActivityInput, type CreateDwcMeasurementInput, type CreateDwcOccurrenceInput, type CreateFundingConfigInput, type CreateFundingReceiptInput, type CreateLayerInput, type CreateLinkEvmInput, type CreateOrganizationInfoInput, type CredentialConfig, CredentialLoginError, DefaultSiteLocationNotFoundError, type DefaultSiteMutationResult, DefaultSitePdsError, DefaultSiteValidationError, type DeleteRecordInput, type DeleteRecordResult, type DwcMeasurementMutationResult, DwcMeasurementPdsError, DwcMeasurementValidationError, type DwcOccurrenceMutationResult, DwcOccurrencePdsError, DwcOccurrenceValidationError, type FieldLabels, FileConstraintError, type FileOrBlobRef, type FloraMeasurementFields, type FormattedError, type FundingConfigMutationResult, FundingConfigNotFoundError, FundingConfigPdsError, FundingConfigValidationError, type FundingReceiptMutationResult, FundingReceiptPdsError, FundingReceiptValidationError, GeoJsonProcessingError, GeoJsonValidationError, HECTARES_PER_SQUARE_METER, type LayerMutationResult, LayerNotFoundError, LayerPdsError, type LayerType, LayerValidationError, type LinkEvmMutationResult, LinkEvmNotFoundError, LinkEvmPdsError, LinkEvmValidationError, MutationError, type MutationResult, type Mutations, type Objective, OrganizationInfoAlreadyExistsError, type OrganizationInfoMutationResult, OrganizationInfoNotFoundError, OrganizationInfoPdsError, OrganizationInfoValidationError, type PolygonMetrics, type RecordCreateInput, type RecordFields, type RecordMutationResult, type RecordUpdateInput, type SerializableFile, type SetDefaultSiteInput, type SingletonCreateInput, type SingletonMutationResult, type SingletonUpdateInput, type UpdateAudioRecordingInput, type UpdateCertifiedLocationInput, type UpdateClaimActivityInput, type UpdateFundingConfigInput, type UpdateLayerInput, type UpdateLinkEvmInput, type UpdateOrganizationInfoInput, type UploadBlobInput, type UploadBlobResult, type UpsertAudioRecordingInput, type UpsertCertifiedLocationInput, type UpsertClaimActivityInput, type UpsertFundingConfigInput, type UpsertLayerInput, type ValidationIssue, type WithFileInputs, adapt, computePolygonMetrics, err, extractBlobConstraints, extractLineStringFeatures, extractPointFeatures, extractPolygonFeatures, formatMutationError, formatMutationErrorMessage, fromSerializableFile, isAnyBlobRef, makeCredentialAgentLayer, mimeMatches, mutations, normalizeBlobRef, ok, toFeatureCollection, toSerializableFile, validateGeojsonOrThrow };

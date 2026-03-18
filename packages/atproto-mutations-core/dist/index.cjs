@@ -36,6 +36,10 @@ __export(index_exports, {
   DefaultSiteLocationNotFoundError: () => DefaultSiteLocationNotFoundError,
   DefaultSitePdsError: () => DefaultSitePdsError,
   DefaultSiteValidationError: () => DefaultSiteValidationError,
+  DwcMeasurementPdsError: () => DwcMeasurementPdsError,
+  DwcMeasurementValidationError: () => DwcMeasurementValidationError,
+  DwcOccurrencePdsError: () => DwcOccurrencePdsError,
+  DwcOccurrenceValidationError: () => DwcOccurrenceValidationError,
   FileConstraintError: () => FileConstraintError,
   FundingConfigNotFoundError: () => FundingConfigNotFoundError,
   FundingConfigPdsError: () => FundingConfigPdsError,
@@ -431,15 +435,15 @@ function applyPatch(existing, data, unset, requiredFields) {
 
 // src/utils/shared/pds.ts
 var import_effect5 = require("effect");
-var fetchRecord = (collection, rkey, makePdsError29) => import_effect5.Effect.gen(function* () {
+var fetchRecord = (collection, rkey, makePdsError31) => import_effect5.Effect.gen(function* () {
   const agent = yield* AtprotoAgent;
   const repo = agent.assertDid;
   return yield* import_effect5.Effect.tryPromise({
     try: () => agent.com.atproto.repo.getRecord({ repo, collection, rkey }).then((res) => res.data.value).catch(() => null),
-    catch: (cause) => makePdsError29(`Failed to fetch ${collection} record at rkey "${rkey}"`, cause)
+    catch: (cause) => makePdsError31(`Failed to fetch ${collection} record at rkey "${rkey}"`, cause)
   });
 });
-var createRecord = (collection, record, rkey, makePdsError29) => import_effect5.Effect.gen(function* () {
+var createRecord = (collection, record, rkey, makePdsError31) => import_effect5.Effect.gen(function* () {
   const agent = yield* AtprotoAgent;
   const repo = agent.assertDid;
   const response = yield* import_effect5.Effect.tryPromise({
@@ -449,39 +453,39 @@ var createRecord = (collection, record, rkey, makePdsError29) => import_effect5.
       ...rkey !== void 0 ? { rkey } : {},
       record
     }),
-    catch: (cause) => makePdsError29(`PDS rejected createRecord for ${collection}`, cause)
+    catch: (cause) => makePdsError31(`PDS rejected createRecord for ${collection}`, cause)
   });
   return { uri: response.data.uri, cid: response.data.cid };
 });
-var putRecord = (collection, rkey, record, makePdsError29) => import_effect5.Effect.gen(function* () {
+var putRecord = (collection, rkey, record, makePdsError31) => import_effect5.Effect.gen(function* () {
   const agent = yield* AtprotoAgent;
   const repo = agent.assertDid;
   const response = yield* import_effect5.Effect.tryPromise({
     try: () => agent.com.atproto.repo.putRecord({ repo, collection, rkey, record }),
-    catch: (cause) => makePdsError29(`PDS rejected putRecord for ${collection} at rkey "${rkey}"`, cause)
+    catch: (cause) => makePdsError31(`PDS rejected putRecord for ${collection} at rkey "${rkey}"`, cause)
   });
   return { uri: response.data.uri, cid: response.data.cid };
 });
-var deleteRecord = (collection, rkey, makePdsError29) => import_effect5.Effect.gen(function* () {
+var deleteRecord = (collection, rkey, makePdsError31) => import_effect5.Effect.gen(function* () {
   const agent = yield* AtprotoAgent;
   const repo = agent.assertDid;
   yield* import_effect5.Effect.tryPromise({
     try: () => agent.com.atproto.repo.deleteRecord({ repo, collection, rkey }),
-    catch: (cause) => makePdsError29(`PDS rejected deleteRecord for ${collection} at rkey "${rkey}"`, cause)
+    catch: (cause) => makePdsError31(`PDS rejected deleteRecord for ${collection} at rkey "${rkey}"`, cause)
   });
 });
 
 // src/utils/shared/validate.ts
 var import_effect6 = require("effect");
-var stubValidate = (candidate, parse, makeValidationError23) => import_effect6.Effect.try({
+var stubValidate = (candidate, parse, makeValidationError25) => import_effect6.Effect.try({
   try: () => {
     parse(stubBlobRefs(candidate));
   },
-  catch: (cause) => makeValidationError23(String(cause), cause)
+  catch: (cause) => makeValidationError25(String(cause), cause)
 });
-var finalValidate = (resolved, parse, makeValidationError23) => import_effect6.Effect.try({
+var finalValidate = (resolved, parse, makeValidationError25) => import_effect6.Effect.try({
   try: () => parse(resolved),
-  catch: (cause) => makeValidationError23(String(cause), cause)
+  catch: (cause) => makeValidationError25(String(cause), cause)
 });
 
 // src/mutations/organization.info/create.ts
@@ -2282,9 +2286,157 @@ var deleteLinkEvm = (input) => import_effect44.Effect.gen(function* () {
   return { uri, rkey };
 });
 
-// src/blob/upload.ts
+// src/mutations/dwc.occurrence/create.ts
+var import_effect46 = require("effect");
+var import_occurrence = require("@gainforest/generated/app/gainforest/dwc/occurrence.defs");
+
+// src/mutations/dwc.occurrence/utils/errors.ts
 var import_effect45 = require("effect");
-var uploadBlob = (input) => import_effect45.Effect.gen(function* () {
+var DwcOccurrenceValidationError = class extends import_effect45.Data.TaggedError(
+  "DwcOccurrenceValidationError"
+) {
+};
+var DwcOccurrencePdsError = class extends import_effect45.Data.TaggedError(
+  "DwcOccurrencePdsError"
+) {
+};
+
+// src/mutations/dwc.occurrence/create.ts
+var COLLECTION29 = "app.gainforest.dwc.occurrence";
+var makePdsError29 = (message, cause) => new DwcOccurrencePdsError({ message, cause });
+var makeValidationError23 = (message, cause) => new DwcOccurrenceValidationError({ message, cause });
+var createDwcOccurrence = (input) => import_effect46.Effect.gen(function* () {
+  const {
+    scientificName,
+    eventDate,
+    decimalLatitude,
+    decimalLongitude,
+    basisOfRecord = "HumanObservation",
+    vernacularName,
+    recordedBy,
+    locality,
+    country,
+    countryCode,
+    occurrenceRemarks,
+    habitat,
+    samplingProtocol,
+    kingdom = "Plantae",
+    occurrenceID = crypto.randomUUID(),
+    occurrenceStatus = "present",
+    geodeticDatum = "EPSG:4326",
+    license = "CC-BY-4.0",
+    projectRef,
+    rkey
+  } = input;
+  const createdAt = (/* @__PURE__ */ new Date()).toISOString();
+  const candidate = {
+    $type: COLLECTION29,
+    scientificName,
+    eventDate,
+    decimalLatitude,
+    decimalLongitude,
+    basisOfRecord,
+    occurrenceID,
+    occurrenceStatus,
+    geodeticDatum,
+    license,
+    kingdom,
+    ...vernacularName !== void 0 ? { vernacularName } : {},
+    ...recordedBy !== void 0 ? { recordedBy } : {},
+    ...locality !== void 0 ? { locality } : {},
+    ...country !== void 0 ? { country } : {},
+    ...countryCode !== void 0 ? { countryCode } : {},
+    ...occurrenceRemarks !== void 0 ? { occurrenceRemarks } : {},
+    ...habitat !== void 0 ? { habitat } : {},
+    ...samplingProtocol !== void 0 ? { samplingProtocol } : {},
+    ...projectRef !== void 0 ? { projectRef } : {},
+    createdAt
+  };
+  const record = yield* import_effect46.Effect.try({
+    try: () => (0, import_occurrence.$parse)(candidate),
+    catch: (cause) => makeValidationError23(
+      `dwc.occurrence record failed lexicon validation: ${String(cause)}`,
+      cause
+    )
+  });
+  const { uri, cid } = yield* createRecord(COLLECTION29, record, rkey, makePdsError29);
+  const assignedRkey = uri.split("/").pop() ?? rkey ?? "unknown";
+  return {
+    uri,
+    cid,
+    rkey: assignedRkey,
+    record
+  };
+});
+
+// src/mutations/dwc.measurement/create.ts
+var import_effect48 = require("effect");
+var import_measurement = require("@gainforest/generated/app/gainforest/dwc/measurement.defs");
+
+// src/mutations/dwc.measurement/utils/errors.ts
+var import_effect47 = require("effect");
+var DwcMeasurementValidationError = class extends import_effect47.Data.TaggedError(
+  "DwcMeasurementValidationError"
+) {
+};
+var DwcMeasurementPdsError = class extends import_effect47.Data.TaggedError(
+  "DwcMeasurementPdsError"
+) {
+};
+
+// src/mutations/dwc.measurement/create.ts
+var COLLECTION30 = "app.gainforest.dwc.measurement";
+var makePdsError30 = (message, cause) => new DwcMeasurementPdsError({ message, cause });
+var makeValidationError24 = (message, cause) => new DwcMeasurementValidationError({ message, cause });
+var createDwcMeasurement = (input) => import_effect48.Effect.gen(function* () {
+  const {
+    occurrenceRef,
+    occurrenceID,
+    flora,
+    measuredBy,
+    measurementDate,
+    measurementMethod,
+    measurementRemarks,
+    rkey
+  } = input;
+  const floraResult = {
+    $type: "app.gainforest.dwc.measurement#floraMeasurement"
+  };
+  if (flora.dbh !== void 0) floraResult.dbh = flora.dbh;
+  if (flora.totalHeight !== void 0) floraResult.totalHeight = flora.totalHeight;
+  if (flora.basalDiameter !== void 0) floraResult.basalDiameter = flora.basalDiameter;
+  if (flora.canopyCoverPercent !== void 0) floraResult.canopyCoverPercent = flora.canopyCoverPercent;
+  const candidate = {
+    $type: COLLECTION30,
+    occurrenceRef,
+    result: floraResult,
+    createdAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  if (occurrenceID !== void 0) candidate.occurrenceID = occurrenceID;
+  if (measuredBy !== void 0) candidate.measuredBy = measuredBy;
+  if (measurementDate !== void 0) candidate.measurementDate = measurementDate;
+  if (measurementMethod !== void 0) candidate.measurementMethod = measurementMethod;
+  if (measurementRemarks !== void 0) candidate.measurementRemarks = measurementRemarks;
+  const record = yield* import_effect48.Effect.try({
+    try: () => (0, import_measurement.$parse)(candidate),
+    catch: (cause) => makeValidationError24(
+      `dwc.measurement record failed lexicon validation: ${String(cause)}`,
+      cause
+    )
+  });
+  const { uri, cid } = yield* createRecord(COLLECTION30, record, rkey, makePdsError30);
+  const assignedRkey = uri.split("/").pop() ?? rkey ?? "unknown";
+  return {
+    uri,
+    cid,
+    rkey: assignedRkey,
+    record
+  };
+});
+
+// src/blob/upload.ts
+var import_effect49 = require("effect");
+var uploadBlob = (input) => import_effect49.Effect.gen(function* () {
   const agent = yield* AtprotoAgent;
   const { file, mimeType: override } = input;
   let data;
@@ -2293,18 +2445,18 @@ var uploadBlob = (input) => import_effect45.Effect.gen(function* () {
     data = fromSerializableFile(file);
     mimeType = override ?? file.type;
   } else if (isFileOrBlob(file)) {
-    const buf = yield* import_effect45.Effect.tryPromise({
+    const buf = yield* import_effect49.Effect.tryPromise({
       try: () => file.arrayBuffer(),
       catch: (e) => new BlobUploadError({ message: "Failed to read file data into ArrayBuffer", cause: e })
     });
     data = new Uint8Array(buf);
     mimeType = override ?? (file.type || "application/octet-stream");
   } else {
-    return yield* import_effect45.Effect.die(
+    return yield* import_effect49.Effect.die(
       new Error("uploadBlob: input.file must be a File, Blob, or SerializableFile")
     );
   }
-  const res = yield* import_effect45.Effect.tryPromise({
+  const res = yield* import_effect49.Effect.tryPromise({
     try: () => agent.uploadBlob(data, { encoding: mimeType }),
     catch: (e) => new BlobUploadError({ message: "PDS blob upload failed", cause: e })
   });
@@ -2376,6 +2528,14 @@ var mutations = {
       create: createLinkEvm,
       update: updateLinkEvm,
       delete: deleteLinkEvm
+    }
+  },
+  dwc: {
+    occurrence: {
+      create: createDwcOccurrence
+    },
+    measurement: {
+      create: createDwcMeasurement
     }
   },
   blob: {
@@ -2588,16 +2748,16 @@ var adapt = (action) => {
 };
 
 // src/layers/credential.ts
-var import_effect46 = require("effect");
+var import_effect50 = require("effect");
 var import_api = require("@atproto/api");
-var CredentialLoginError = class extends import_effect46.Data.TaggedError("CredentialLoginError") {
+var CredentialLoginError = class extends import_effect50.Data.TaggedError("CredentialLoginError") {
 };
 function makeCredentialAgentLayer(config) {
-  return import_effect46.Layer.effect(
+  return import_effect50.Layer.effect(
     AtprotoAgent,
-    import_effect46.Effect.gen(function* () {
+    import_effect50.Effect.gen(function* () {
       const session = new import_api.CredentialSession(new URL(`https://${config.service}`));
-      yield* import_effect46.Effect.tryPromise({
+      yield* import_effect50.Effect.tryPromise({
         try: () => session.login({
           identifier: config.identifier,
           password: config.password
@@ -2629,6 +2789,10 @@ function makeCredentialAgentLayer(config) {
   DefaultSiteLocationNotFoundError,
   DefaultSitePdsError,
   DefaultSiteValidationError,
+  DwcMeasurementPdsError,
+  DwcMeasurementValidationError,
+  DwcOccurrencePdsError,
+  DwcOccurrenceValidationError,
   FileConstraintError,
   FundingConfigNotFoundError,
   FundingConfigPdsError,

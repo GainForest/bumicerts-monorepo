@@ -148,6 +148,18 @@ export {
   OrganizationInfoValidationError,
 } from "./mutations/organization.info/utils/errors";
 
+// dwc.occurrence
+export {
+  DwcOccurrenceValidationError,
+  DwcOccurrencePdsError,
+} from "./mutations/dwc.occurrence/utils/errors";
+
+// dwc.measurement
+export {
+  DwcMeasurementValidationError,
+  DwcMeasurementPdsError,
+} from "./mutations/dwc.measurement/utils/errors";
+
 // ---------------------------------------------------------------------------
 // Entity types
 // ---------------------------------------------------------------------------
@@ -245,3 +257,18 @@ export type {
   SmallImage,
   UpdateOrganizationInfoInput,
 } from "./mutations/organization.info/utils/types";
+
+// dwc.occurrence
+export type {
+  CreateDwcOccurrenceInput,
+  DwcOccurrenceMutationResult,
+  DwcOccurrenceRecord,
+} from "./mutations/dwc.occurrence/utils/types";
+
+// dwc.measurement
+export type {
+  CreateDwcMeasurementInput,
+  DwcMeasurementMutationResult,
+  DwcMeasurementRecord,
+  FloraMeasurementFields,
+} from "./mutations/dwc.measurement/utils/types";
