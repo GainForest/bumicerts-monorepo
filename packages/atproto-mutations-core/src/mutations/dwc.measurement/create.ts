@@ -30,36 +30,37 @@ export const createDwcMeasurement = (
   Effect.gen(function* () {
     const {
       occurrenceRef,
-      measurementType,
-      measurementValue,
-      measurementUnit,
-      measurementID,
+      flora,
       occurrenceID,
-      measurementAccuracy,
+      measuredBy,
+      measurementDate,
       measurementMethod,
-      measurementDeterminedBy,
-      measurementDeterminedDate,
       measurementRemarks,
       rkey,
     } = input;
+
+    // Build the floraMeasurement result object.
+    const floraResult: Record<string, unknown> = {
+      $type: "app.gainforest.dwc.measurement#floraMeasurement",
+    };
+    if (flora.dbh !== undefined) floraResult.dbh = flora.dbh;
+    if (flora.totalHeight !== undefined) floraResult.totalHeight = flora.totalHeight;
+    if (flora.basalDiameter !== undefined) floraResult.basalDiameter = flora.basalDiameter;
+    if (flora.canopyCoverPercent !== undefined) floraResult.canopyCoverPercent = flora.canopyCoverPercent;
 
     // Build the candidate record with required fields.
     const candidate: Record<string, unknown> = {
       $type: COLLECTION,
       occurrenceRef,
-      measurementType,
-      measurementValue,
+      result: floraResult,
       createdAt: new Date().toISOString(),
     };
 
     // Add optional fields only if defined.
-    if (measurementUnit !== undefined) candidate.measurementUnit = measurementUnit;
-    if (measurementID !== undefined) candidate.measurementID = measurementID;
     if (occurrenceID !== undefined) candidate.occurrenceID = occurrenceID;
-    if (measurementAccuracy !== undefined) candidate.measurementAccuracy = measurementAccuracy;
+    if (measuredBy !== undefined) candidate.measuredBy = measuredBy;
+    if (measurementDate !== undefined) candidate.measurementDate = measurementDate;
     if (measurementMethod !== undefined) candidate.measurementMethod = measurementMethod;
-    if (measurementDeterminedBy !== undefined) candidate.measurementDeterminedBy = measurementDeterminedBy;
-    if (measurementDeterminedDate !== undefined) candidate.measurementDeterminedDate = measurementDeterminedDate;
     if (measurementRemarks !== undefined) candidate.measurementRemarks = measurementRemarks;
 
     // Validate with lexicon $parse.
