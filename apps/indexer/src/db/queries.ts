@@ -37,7 +37,7 @@ export async function upsertRecords(records: RecordInsert[]): Promise<void> {
 
   // 7 columns per row: uri, did, collection, rkey, record, cid, created_at
   const COLS_PER_ROW = 7;
-  const params: unknown[] = [];
+  const params: (string | number | Date | null)[] = [];
   const valueRows: string[] = [];
 
   for (let i = 0; i < sorted.length; i++) {
