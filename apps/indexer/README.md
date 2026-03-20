@@ -184,11 +184,11 @@ SEED_DIDS=did:plc:abc123,did:plc:xyz456
 | `HOST` | `0.0.0.0` | Bind address |
 | `LOG_LEVEL` | `info` | `debug` \| `info` \| `warn` \| `error` |
 
-### Hyperlabel
+### Labeller (Optional HuggingFace Classifier)
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `HYPERLABEL_URL` | `https://hyperlabel-production-fc36.up.railway.app/` | Labeller base URL |
-| `HYPERLABEL_DID` | `did:plc:edod7rboajioq3jbyxsgeicc` | Labeller DID |
+| `HF_TOKEN` | _(empty — disabled)_ | HuggingFace API token for optional AI classification |
+| `HF_MODEL` | `facebook/bart-large-mnli` | HuggingFace model for zero-shot classification |
 
 ---
 

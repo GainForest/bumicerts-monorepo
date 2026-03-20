@@ -195,10 +195,9 @@ LOG_VALIDATION_ERRORS=true
 PDS_HOST_CACHE_TTL_SECONDS=3600
 ```
 
-**Hyperlabel integration**:
+**HuggingFace classifier** (optional):
 ```
-HYPERLABEL_URL=https://hyperlabel-production-fc36.up.railway.app/
-HYPERLABEL_DID=did:plc:edod7rboajioq3jbyxsgeicc
+# HF_TOKEN=hf_xxxx
 ```
 
 #### 4.4: Add a public domain

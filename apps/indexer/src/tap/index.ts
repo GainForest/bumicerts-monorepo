@@ -17,6 +17,7 @@ import { EventHandler } from "./handler.ts";
 import { TapConsumer } from "./consumer.ts";
 import { listReposForPdsList } from "./pds.ts";
 import { discoverDidsByCollections } from "./discovery.ts";
+import { scoreAndLabelActivities } from "@/labeller/scoring-worker.ts";
 import type { HandlerStats } from "./handler.ts";
 import type { TapStatus } from "./consumer.ts";
 
@@ -100,6 +101,11 @@ export class TapSync {
       validateRecords: options.validateRecords ?? (process.env["VALIDATE_RECORDS"] !== "false"),
       logValidationErrors: options.logValidationErrors ?? (process.env["LOG_VALIDATION_ERRORS"] !== "false"),
       validationLogFilter: options.validationLogFilter ?? (process.env["LOG_VALIDATION_FILTER"]?.split(",").map((s) => s.trim()).filter(Boolean) ?? []),
+      onActivityUpserted: (records) => {
+        scoreAndLabelActivities(records).catch((err) =>
+          console.error("[labeller] Scoring failed:", err),
+        );
+      },
     });
 
     this.consumer = new TapConsumer({

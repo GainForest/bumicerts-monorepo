@@ -26,7 +26,7 @@ import {
 } from "@/db/queries.ts";
 import { resolveActorToDid } from "../../identity.ts";
 import { getPdsHostsBatch } from "@/identity/pds.ts";
-import { refreshLabelsAsync, HYPERLABEL_DID } from "@/labeller/hyperlabel.ts";
+import { LOCAL_LABELLER_SOURCE } from "@/labeller/index.ts";
 import type { RecordRow } from "@/db/types.ts";
 
 // Import the generated NS class token — Pothos merges multiple objectType()
@@ -43,19 +43,21 @@ const j = (p: Record<string, unknown>, k: string): unknown => p[k] ?? null;
 // ── Special metadata type — Hyperlabel extras beyond the standard envelope ───
 
 const HypercertsClaimActivityLabelType = builder.simpleObject("HypercertsClaimActivityLabel", {
-  description: "Quality label from the Hyperlabel labeller (einstein.climateai.org).",
+  description: "Quality label for an activity record.",
   fields: (t) => ({
     tier:      t.string({ description: "Quality tier: high-quality | standard | draft | likely-test" }),
-    labeler:   t.string({ description: "DID of the labeller that issued this label" }),
-    labeledAt: t.field({ type: "DateTime", nullable: true, description: "When the labeller applied this label" }),
-    syncedAt:  t.field({ type: "DateTime", description: "When the indexer last synced this label" }),
+    labeler:   t.string({ description: "Identifier of the labeller that issued this label" }),
+    labeledAt: t.field({ type: "DateTime", nullable: true, description: "When the label was applied" }),
+    syncedAt:  t.field({ type: "DateTime", description: "When the label was last updated" }),
+    score:     t.int({ nullable: true, description: "Quality score 0-100" }),
+    breakdown: t.field({ type: "JSON", nullable: true, description: "Score breakdown by criteria" }),
   }),
 });
 
 const HypercertsClaimActivitySpecialMetadataType = builder.simpleObject("HypercertsClaimActivitySpecialMetadata", {
   description:
-    "Hyperlabel quality metadata for an activity record. " +
-    "Only present when the author has been labelled by the Hyperlabel labeller.",
+    "Quality metadata for an activity record. " +
+    "Only present when the author's activity has been scored.",
   fields: (t) => ({
     labelTier: t.string({
       nullable: true,
@@ -102,8 +104,8 @@ const HypercertsClaimActivityItemType = builder.simpleObject("HypercertsClaimAct
       type: HypercertsClaimActivitySpecialMetadataType,
       nullable: true,
       description:
-        "Optional Hyperlabel quality metadata for this activity. " +
-        "Null when the author has not been labelled by the Hyperlabel labeller.",
+        "Optional quality metadata for this activity. " +
+        "Null when the activity has not been scored yet.",
     }),
     creatorInfo:   t.field({ type: CreatorInfoType }),
     record:        t.field({ type: HypercertsClaimActivityRecordType }),
@@ -131,6 +133,7 @@ export async function mapHypercertsClaimActivity(
   row: RecordRow,
   label: {
     tier: string; labeler: string; labeledAt: string | null; syncedAt: string;
+    score: number | null; breakdown: unknown;
   } | null = null,
   fundingConfigRecord: Awaited<ReturnType<typeof mapBumicertsFundingConfig>>["record"] | null = null,
 ) {
@@ -194,7 +197,7 @@ builder.objectFields(HypercertsClaimNS, (t) => ({
         // ── 2. Optional labelTier pre-filter ─────────────────────────────────
         let allowedDids: Set<string> | null = null;
         if (labelTier) {
-          allowedDids = await getActivityLabelDids(HYPERLABEL_DID, labelTier);
+          allowedDids = await getActivityLabelDids(LOCAL_LABELLER_SOURCE, labelTier);
           if (resolvedDid) {
             if (allowedDids.has(resolvedDid)) {
               allowedDids = new Set([resolvedDid]);
@@ -249,7 +252,7 @@ builder.objectFields(HypercertsClaimNS, (t) => ({
         // ── 4. Attach labels + batch-load funding configs ─────────────────────
         const authorDids = [...new Set(rows.map((r) => r.did))];
         await getPdsHostsBatch(authorDids);
-        const labelMap = await getLabelsByDids(authorDids, HYPERLABEL_DID);
+        const labelMap = await getLabelsByDids(authorDids, LOCAL_LABELLER_SOURCE);
 
         // Batch-load funding configs: one DB query for all (did, rkey) pairs on this page.
         const fundingConfigMap = await getRecordsByDidRkeyPairs(
@@ -264,6 +267,8 @@ builder.objectFields(HypercertsClaimNS, (t) => ({
             labeler:   lRow.source_did,
             labeledAt: lRow.labeled_at?.toISOString() ?? null,
             syncedAt:  lRow.synced_at.toISOString(),
+            score:     lRow.score ?? null,
+            breakdown: lRow.breakdown ?? null,
           } : null;
 
           // Resolve the funding config record for this activity (same did + rkey)
@@ -281,9 +286,6 @@ builder.objectFields(HypercertsClaimNS, (t) => ({
         if (where?.hasOrganizationInfoRecord === true) {
           filtered = filtered.filter((item) => item.creatorInfo.organizationName != null);
         }
-
-        // ── 6. Fire-and-forget label refresh ─────────────────────────────────
-        refreshLabelsAsync(authorDids);
 
         return { data: filtered, pageInfo: toPageInfo(pageCursor, filtered.length) };
       },

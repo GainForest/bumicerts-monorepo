@@ -57,10 +57,14 @@ export class EventHandler {
   private readonly logValidationErrors: boolean;
   /** Set of NSIDs to log validation errors for when logValidationErrors is false. Empty = log none. */
   private readonly validationLogFilter: Set<string>;
+  /** Callback fired after activity records are flushed to DB — used for scoring. */
+  private readonly onActivityUpserted?: (records: RecordInsert[]) => void;
 
   private pending: PendingOp[] = [];
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
   private flushing = false;
+  /** Accumulated validation failures since last flush — aggregated into a single log. */
+  private validationFailures: Map<string, number> = new Map();
 
   readonly stats: HandlerStats = {
     processed: 0,
@@ -76,12 +80,14 @@ export class EventHandler {
     validateRecords?: boolean;
     logValidationErrors?: boolean;
     validationLogFilter?: string[];
+    onActivityUpserted?: (records: RecordInsert[]) => void;
   } = {}) {
     this.batchSize = options.batchSize ?? 20;
     this.batchTimeoutMs = options.batchTimeoutMs ?? 200;
     this.validateRecords = options.validateRecords ?? true;
     this.logValidationErrors = options.logValidationErrors ?? true;
     this.validationLogFilter = new Set(options.validationLogFilter ?? []);
+    this.onActivityUpserted = options.onActivityUpserted;
   }
 
   // ============================================================
@@ -112,8 +118,13 @@ export class EventHandler {
       const recordForValidation = prepareBlobsForValidation(record);
       const result = this.validate(collection, recordForValidation);
       if (!result.ok) {
-        if (this.shouldLogValidationError(collection)) {
-          console.warn(
+        // Aggregate validation failures — log summary during flush
+        this.validationFailures.set(
+          collection,
+          (this.validationFailures.get(collection) ?? 0) + 1,
+        );
+        if (process.env.LOG_LEVEL === "debug" && this.shouldLogValidationError(collection)) {
+          console.debug(
             `[handler] Validation failed for ${collection} (${did}/${rkey}): ${result.error}`
           );
         }
@@ -163,8 +174,13 @@ export class EventHandler {
       const recordForValidation = prepareBlobsForValidation(record);
       const result = this.validate(collection, recordForValidation);
       if (!result.ok) {
-        if (this.shouldLogValidationError(collection)) {
-          console.warn(
+        // Aggregate validation failures — log summary during flush
+        this.validationFailures.set(
+          collection,
+          (this.validationFailures.get(collection) ?? 0) + 1,
+        );
+        if (process.env.LOG_LEVEL === "debug" && this.shouldLogValidationError(collection)) {
+          console.debug(
             `[handler] Validation failed for ${collection} (${did}/${rkey}): ${result.error}`
           );
         }
@@ -257,6 +273,15 @@ export class EventHandler {
 
     this.flushing = true;
 
+    // Log aggregated validation failures from this cycle
+    if (this.validationFailures.size > 0) {
+      const summary = Array.from(this.validationFailures.entries())
+        .map(([col, count]) => `${col}: ${count}`)
+        .join(", ");
+      console.warn(`[handler] Validation failures since last flush (${summary})`);
+      this.validationFailures.clear();
+    }
+
     // Drain the buffer atomically
     const batch = this.pending.splice(0, this.pending.length);
 
@@ -280,6 +305,16 @@ export class EventHandler {
         console.debug(
           `[handler] Flushed: ${upserts.length} upserts, ${deletes.length} deletes`
         );
+      }
+
+      // Fire scoring callback for activity records (async, fire-and-forget)
+      if (this.onActivityUpserted) {
+        const activities = upserts.filter(
+          (r) => r.collection === "org.hypercerts.claim.activity"
+        );
+        if (activities.length > 0) {
+          this.onActivityUpserted(activities);
+        }
       }
     } catch (err) {
       console.error(`[handler] Batch flush failed:`, err);

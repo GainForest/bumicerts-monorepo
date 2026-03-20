@@ -95,15 +95,38 @@ export interface LabelRow {
   id: number;
   /** DID of the activity record author being labelled */
   subject_did: string;
-  /** DID of the labeller that issued this label */
+  /** AT-URI of the specific activity record (e.g. at://did/collection/rkey) */
+  subject_uri: string | null;
+  /** DID or identifier of the labeller that issued this label */
   source_did: string;
   /** Label tier value: "high-quality" | "standard" | "draft" | "likely-test" */
   label_value: string;
+  /** Quality score 0-100 */
+  score: number | null;
+  /** Score breakdown by criteria (ScoreBreakdown as JSONB) */
+  breakdown: unknown;
+  /** Test signals detected (string[] as JSONB) */
+  test_signals: unknown;
+  /** HuggingFace classification label */
+  hf_label: string | null;
+  /** HuggingFace classification confidence */
+  hf_score: number | null;
   /** When the labeller applied this label */
   labeled_at: Date | null;
-  /** When we last synced this label from the labeller API */
+  /** When we last synced/updated this label */
   synced_at: Date;
 }
 
 /** Input shape for inserting or upserting a label. */
 export type LabelInsert = Omit<LabelRow, "id" | "synced_at">;
+
+/** Input shape for upserting a locally-scored activity label. */
+export interface ActivityLabelInsert {
+  subject_did: string;
+  subject_uri: string;
+  source_did: string;
+  label_value: string;
+  score: number;
+  breakdown: unknown;
+  test_signals: string[];
+}

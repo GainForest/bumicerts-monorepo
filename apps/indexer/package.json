@@ -23,6 +23,7 @@
     "@atproto/lex": "^0.0.19",
     "@atproto/tap": "^0.2.7",
     "@atproto/ws-client": "0.0.4",
+    "@huggingface/inference": "^3.6.1",
     "@pothos/core": "^4.12.0",
     "@pothos/plugin-simple-objects": "^4.1.3",
     "graphql": "^16.9.0",

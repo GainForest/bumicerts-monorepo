@@ -13,6 +13,7 @@ import { startHealthServer } from "@/health/index.ts";
 import { startGraphQLServer } from "@/graphql/server.ts";
 import { setTapContext } from "@/graphql/tap-context.ts";
 import { runMigration } from "@/db/migrate.ts";
+import { backfillActivityLabels } from "@/labeller/backfill.ts";
 
 // ============================================================
 // BOOT
@@ -21,6 +22,11 @@ import { runMigration } from "@/db/migrate.ts";
 // Run DB migration on every startup — all statements are IF NOT EXISTS
 // so this is idempotent and safe to run repeatedly.
 await runMigration();
+
+// Backfill labels for existing activity records (fire-and-forget, throttled)
+backfillActivityLabels().catch((err) =>
+  console.error("[labeller] Backfill failed:", err),
+);
 
 const tap = new TapSync();
 

@@ -8,6 +8,7 @@ import type {
   SortOrder,
   LabelRow,
   LabelInsert,
+  ActivityLabelInsert,
 } from "./types.ts";
 
 // ============================================================
@@ -315,15 +316,48 @@ export async function upsertLabels(labels: LabelInsert[]): Promise<void> {
     const q = tx as unknown as typeof sql;
     for (const l of labels) {
       await q`
-        INSERT INTO labels (subject_did, source_did, label_value, labeled_at)
-        VALUES (${l.subject_did}, ${l.source_did}, ${l.label_value}, ${l.labeled_at ?? null})
+        INSERT INTO labels (subject_did, subject_uri, source_did, label_value, score, breakdown, test_signals, hf_label, hf_score, labeled_at)
+        VALUES (
+          ${l.subject_did}, ${l.subject_uri ?? null}, ${l.source_did}, ${l.label_value},
+          ${l.score ?? null}, ${l.breakdown ? sql.json(l.breakdown as { readonly [key: string]: undefined | number }) : null},
+          ${l.test_signals ? sql.json(l.test_signals as readonly string[]) : null},
+          ${l.hf_label ?? null}, ${l.hf_score ?? null}, ${l.labeled_at ?? null}
+        )
         ON CONFLICT (subject_did, source_did) DO UPDATE SET
-          label_value = EXCLUDED.label_value,
-          labeled_at  = EXCLUDED.labeled_at,
-          synced_at   = NOW()
+          subject_uri  = EXCLUDED.subject_uri,
+          label_value  = EXCLUDED.label_value,
+          score        = EXCLUDED.score,
+          breakdown    = EXCLUDED.breakdown,
+          test_signals = EXCLUDED.test_signals,
+          hf_label     = COALESCE(EXCLUDED.hf_label, labels.hf_label),
+          hf_score     = COALESCE(EXCLUDED.hf_score, labels.hf_score),
+          labeled_at   = EXCLUDED.labeled_at,
+          synced_at    = NOW()
       `;
     }
   });
+}
+
+/**
+ * Upsert a single locally-scored activity label.
+ * Used by the scoring worker when processing TAP events.
+ */
+export async function upsertActivityLabel(label: ActivityLabelInsert): Promise<void> {
+  await sql`
+    INSERT INTO labels (subject_did, subject_uri, source_did, label_value, score, breakdown, test_signals, labeled_at)
+    VALUES (
+      ${label.subject_did}, ${label.subject_uri}, ${label.source_did}, ${label.label_value},
+      ${label.score}, ${sql.json(label.breakdown as { readonly [key: string]: undefined | number })}, ${sql.json(label.test_signals as readonly string[])}, NOW()
+    )
+    ON CONFLICT (subject_did, source_did) DO UPDATE SET
+      subject_uri  = EXCLUDED.subject_uri,
+      label_value  = EXCLUDED.label_value,
+      score        = EXCLUDED.score,
+      breakdown    = EXCLUDED.breakdown,
+      test_signals = EXCLUDED.test_signals,
+      labeled_at   = EXCLUDED.labeled_at,
+      synced_at    = NOW()
+  `;
 }
 
 /**
@@ -361,6 +395,98 @@ export async function getActivityLabelDids(
       AND label_value = ${tier}
   `;
   return new Set(rows.map((r) => r.subject_did));
+}
+
+/**
+ * Fetch a single label row by subject DID and source.
+ * Used by the HF classifier to read existing score/signals before reclassification.
+ */
+export async function getLabelByDidSource(
+  did: string,
+  sourceDid: string,
+): Promise<LabelRow | null> {
+  const rows = await sql<LabelRow[]>`
+    SELECT * FROM labels
+    WHERE subject_did = ${did}
+      AND source_did  = ${sourceDid}
+    LIMIT 1
+  `;
+  return rows[0] ?? null;
+}
+
+/**
+ * Update HuggingFace classification results on an existing label row.
+ * Also updates tier and test signals if HF flagged the content.
+ */
+export async function updateHfClassification(
+  did: string,
+  sourceDid: string,
+  hfLabel: string,
+  hfScore: number,
+  newTier: string,
+  testSignals: string[],
+): Promise<void> {
+  await sql`
+    UPDATE labels SET
+      hf_label     = ${hfLabel},
+      hf_score     = ${hfScore},
+      label_value  = ${newTier},
+      test_signals = ${sql.json(testSignals)},
+      synced_at    = NOW()
+    WHERE subject_did = ${did}
+      AND source_did  = ${sourceDid}
+  `;
+}
+
+/**
+ * Fetch labels that have a score but no HF classification yet.
+ * Used by the backfill to seed the HF classification queue.
+ */
+export async function getUnclassifiedActivities(
+  sourceDid: string,
+  limit: number,
+): Promise<LabelRow[]> {
+  return sql<LabelRow[]>`
+    SELECT * FROM labels
+    WHERE source_did = ${sourceDid}
+      AND score IS NOT NULL
+      AND score > 19
+      AND hf_label IS NULL
+    ORDER BY synced_at ASC
+    LIMIT ${limit}
+  `;
+}
+
+/**
+ * Fetch unlabelled activity records for backfill scoring.
+ * Returns records that don't yet have a label from the given source.
+ */
+export async function getUnlabelledActivities(
+  sourceDid: string,
+  limit: number,
+  offset: number,
+): Promise<RecordRow[]> {
+  return sql<RecordRow[]>`
+    SELECT r.*
+    FROM records r
+    LEFT JOIN labels l ON l.subject_did = r.did AND l.source_did = ${sourceDid}
+    WHERE r.collection = 'org.hypercerts.claim.activity'
+      AND l.id IS NULL
+    ORDER BY r.indexed_at ASC
+    LIMIT ${limit}
+    OFFSET ${offset}
+  `;
+}
+
+/**
+ * Count total activity records for backfill progress logging.
+ */
+export async function countActivityRecords(): Promise<number> {
+  const rows = await sql<{ count: string }[]>`
+    SELECT COUNT(*) as count FROM records
+    WHERE collection = 'org.hypercerts.claim.activity'
+  `;
+  return parseInt(rows[0]?.count ?? "0", 10);
 }
 
 // ============================================================
