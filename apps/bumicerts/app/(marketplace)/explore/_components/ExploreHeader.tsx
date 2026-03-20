@@ -50,21 +50,38 @@ const SORT_OPTIONS = [
 
 function buildFilterCategories(bumicerts: BumicertData[]) {
   const organizations = Array.from(
-    new Map(bumicerts.map((b) => [b.organizationDid, b.organizationName])).entries()
+    new Map(
+      bumicerts.map((b) => [b.organizationDid, b.organizationName]),
+    ).entries(),
   ).map(([did, name]) => ({ value: did, label: name }));
 
   const countries = Array.from(
-    new Set(bumicerts.map((b) => b.country).filter(Boolean))
+    new Set(bumicerts.map((b) => b.country).filter(Boolean)),
   ).map((c) => ({ value: c, label: c }));
 
   const objectives = Array.from(
-    new Set(bumicerts.flatMap((b) => b.objectives))
+    new Set(bumicerts.flatMap((b) => b.objectives)),
   ).map((o) => ({ value: o, label: o }));
 
   return [
-    { key: "organizations" as const, label: "Organization", icon: BuildingIcon, options: organizations },
-    { key: "countries" as const, label: "Country", icon: MapPinIcon, options: countries },
-    { key: "objectives" as const, label: "Impact Area", icon: TagIcon, options: objectives },
+    {
+      key: "organizations" as const,
+      label: "Organization",
+      icon: BuildingIcon,
+      options: organizations,
+    },
+    {
+      key: "countries" as const,
+      label: "Country",
+      icon: MapPinIcon,
+      options: countries,
+    },
+    {
+      key: "objectives" as const,
+      label: "Impact Area",
+      icon: TagIcon,
+      options: objectives,
+    },
   ];
 }
 
@@ -123,7 +140,9 @@ function AllFiltersModalContent({
     <ModalContent>
       <ModalHeader>
         <ModalTitle>All Filters</ModalTitle>
-        <ModalDescription>Filter projects by organization, country, or impact area</ModalDescription>
+        <ModalDescription>
+          Filter projects by organization, country, or impact area
+        </ModalDescription>
       </ModalHeader>
 
       <div className="max-h-[50vh] overflow-y-auto -mx-2 px-2">
@@ -136,11 +155,17 @@ function AllFiltersModalContent({
             const Icon = category.icon;
             const count = pendingFilters[category.key].length;
             return (
-              <AccordionItem key={category.key} value={category.key} className="border-border">
+              <AccordionItem
+                key={category.key}
+                value={category.key}
+                className="border-border"
+              >
                 <AccordionTrigger className="hover:no-underline py-3">
                   <div className="flex items-center gap-2">
                     <Icon className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{category.label}</span>
+                    <span className="text-sm font-medium">
+                      {category.label}
+                    </span>
                     {count > 0 && (
                       <span className="h-5 min-w-[20px] px-1.5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
                         {count}
@@ -151,16 +176,20 @@ function AllFiltersModalContent({
                 <AccordionContent>
                   <div className="flex flex-wrap gap-2 pb-2">
                     {category.options.map((option) => {
-                      const isSelected = pendingFilters[category.key].includes(option.value);
+                      const isSelected = pendingFilters[category.key].includes(
+                        option.value,
+                      );
                       return (
                         <button
                           key={option.value}
-                          onClick={() => togglePendingFilter(category.key, option.value)}
+                          onClick={() =>
+                            togglePendingFilter(category.key, option.value)
+                          }
                           className={cn(
                             "text-xs font-medium rounded-full px-3 py-1.5 border transition-all",
                             isSelected
                               ? "bg-foreground text-background border-foreground"
-                              : "text-muted-foreground border-border hover:border-foreground/50"
+                              : "text-muted-foreground border-border hover:border-foreground/50",
                           )}
                         >
                           {option.label}
@@ -248,15 +277,15 @@ export function ExploreHeaderSlots({
             "inline-flex items-center gap-1.5 rounded-full text-sm font-medium px-3.5 py-1.5 transition-colors border",
             isUnauthenticated
               ? "border-border text-foreground hover:bg-muted"
-              : "bg-primary text-primary-foreground border-transparent hover:bg-primary/90"
+              : "bg-primary text-primary-foreground border-transparent hover:bg-primary/90",
           )}
         >
           <PlusIcon className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Create Project</span>
+          <span className="hidden sm:inline">Create Bumicert</span>
         </motion.span>
       </Link>
     ),
-    [isUnauthenticated]
+    [isUnauthenticated],
   );
 
   const openFiltersModal = async () => {
@@ -277,7 +306,7 @@ export function ExploreHeaderSlots({
           />
         ),
       },
-      true
+      true,
     );
     await modal.show();
   };
@@ -306,7 +335,9 @@ export function ExploreHeaderSlots({
 
           <div className="relative shrink-0">
             <button
-              onClick={() => setOpenDropdown((prev) => (prev === "sort" ? null : "sort"))}
+              onClick={() =>
+                setOpenDropdown((prev) => (prev === "sort" ? null : "sort"))
+              }
               className="flex items-center gap-2 h-10 px-3 text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg transition-colors"
             >
               <ArrowUpDownIcon className="h-4 w-4" />
@@ -316,7 +347,7 @@ export function ExploreHeaderSlots({
               <ChevronDownIcon
                 className={cn(
                   "h-4 w-4 transition-transform",
-                  openDropdown === "sort" && "rotate-180"
+                  openDropdown === "sort" && "rotate-180",
                 )}
               />
             </button>
@@ -340,7 +371,7 @@ export function ExploreHeaderSlots({
                         "w-full text-left px-3 py-2 text-sm transition-colors",
                         sort === option.value
                           ? "text-primary bg-primary/5"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
                       )}
                     >
                       {option.label}
@@ -363,7 +394,7 @@ export function ExploreHeaderSlots({
                     value: option.value,
                     label: option.label,
                     isSelected: filters[category.key].includes(option.value),
-                  }))
+                  })),
                 );
                 const sortedChips = [
                   ...allChips.filter((chip) => chip.isSelected),
@@ -377,7 +408,7 @@ export function ExploreHeaderSlots({
                       "shrink-0 text-xs font-medium rounded-full px-3 py-1.5 border transition-all whitespace-nowrap",
                       chip.isSelected
                         ? "bg-foreground text-background border-foreground"
-                        : "text-muted-foreground border-border hover:border-foreground/50 hover:text-foreground"
+                        : "text-muted-foreground border-border hover:border-foreground/50 hover:text-foreground",
                     )}
                   >
                     {chip.label}
@@ -394,7 +425,7 @@ export function ExploreHeaderSlots({
               "shrink-0 flex items-center gap-2 h-8 px-3 text-xs font-medium rounded-full border transition-all",
               activeFilterCount > 0
                 ? "border-primary/50 bg-primary/5 text-foreground"
-                : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/50"
+                : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/50",
             )}
           >
             <SlidersHorizontalIcon className="h-3.5 w-3.5" />

@@ -168,7 +168,7 @@ const Step3 = () => {
             )}
           </div>
 
-          <div className="h-40 w-full border border-dashed border-border rounded-lg bg-background/50">
+          <div className="max-h-60 w-full border border-dashed border-border rounded-lg bg-background/50 overflow-y-auto">
             {isSitesLoading && (
               <div className="w-full h-full flex flex-col items-center justify-center">
                 <Loader2Icon className="animate-spin text-muted-foreground size-4" />
@@ -311,17 +311,28 @@ const SiteItem = ({
   onSelectChange: (value: boolean) => void;
 }) => {
   const locationRef = site.record?.location;
-  const uri = site.metadata?.uri ?? "";
+  const locationType = site.record?.locationType;
+
   // Try to get URL from location data.
   // The indexer resolves every blob reference to a URI before serving it via
   // GraphQL, so we can always read `uri` from whichever variant is present.
   let urlToFetch: string | null = null;
+  let inlineCoordinate: { lat: number; lon: number } | null = null;
 
   if (locationRef && typeof locationRef === "object") {
     const loc = locationRef as Record<string, unknown>;
     const $type = loc["$type"] as string | undefined;
 
-    if ($type?.includes("uri")) {
+    if ($type === "app.certified.location#string" || locationType === "coordinate-decimal") {
+      // String variant — inline coordinate like "-15,30"
+      const raw = loc["string"] as string | undefined;
+      if (raw) {
+        const parts = raw.split(",").map((s) => parseFloat(s.trim()));
+        if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+          inlineCoordinate = { lat: parts[0], lon: parts[1] };
+        }
+      }
+    } else if ($type?.includes("uri")) {
       // URI variant — the value is already a fetchable URL
       urlToFetch = (loc["uri"] as string | undefined) ?? null;
     } else if ($type?.includes("Blob") || $type?.includes("blob")) {
@@ -331,12 +342,14 @@ const SiteItem = ({
     }
   }
 
+  const shouldFetch = !inlineCoordinate && !!urlToFetch;
+
   const { data: locationData } = useSuspenseQuery({
-    queryKey: queryKeys.locationPreview(urlToFetch),
+    queryKey: queryKeys.locationPreview(shouldFetch ? urlToFetch : "__skip__"),
     queryFn: async () => {
-      if (!urlToFetch) {
-        console.error("Invalid urlToFetch while fetching Location. Location for debugging:", locationRef);
-        throw new Error("A valid location could not be found.");
+      if (!shouldFetch || !urlToFetch) {
+        // Return null for inline coordinates — we don't need to fetch anything
+        return null;
       }
       const response = await fetch(urlToFetch);
       if (!response.ok) {
@@ -347,18 +360,30 @@ const SiteItem = ({
     },
   });
 
-  const metrics = computePolygonMetrics(locationData);
-  const locationValidity =
-    metrics.areaHectares && metrics.centroid
-      ? {
-        valid: true as const,
-        area: metrics.areaHectares,
-        lat: metrics.centroid.lat,
-        lon: metrics.centroid.lon,
-      }
-      : {
-        valid: false as const,
-      };
+  // Build location validity from either GeoJSON metrics or inline coordinate
+  let locationValidity: { valid: true; area: number | null; lat: number; lon: number } | { valid: false };
+
+  if (inlineCoordinate) {
+    locationValidity = {
+      valid: true,
+      area: null,
+      lat: inlineCoordinate.lat,
+      lon: inlineCoordinate.lon,
+    };
+  } else if (locationData) {
+    const metrics = computePolygonMetrics(locationData);
+    locationValidity =
+      metrics.areaHectares && metrics.centroid
+        ? {
+          valid: true,
+          area: metrics.areaHectares,
+          lat: metrics.centroid.lat,
+          lon: metrics.centroid.lon,
+        }
+        : { valid: false };
+  } else {
+    locationValidity = { valid: false };
+  }
 
   return (
     <Button
@@ -383,9 +408,11 @@ const SiteItem = ({
         <div className="flex items-center gap-1">
           {locationValidity.valid ? (
             <>
-              <span className="text-sm text-muted-foreground mr-1">
-                {locationValidity.area.toFixed(2)} ha
-              </span>
+              {locationValidity.area !== null && (
+                <span className="text-sm text-muted-foreground mr-1">
+                  {locationValidity.area.toFixed(2)} ha
+                </span>
+              )}
               <span className="text-sm text-muted-foreground">
                 {"("}
                 {formatCoordinate(locationValidity.lat.toString())}°,{" "}

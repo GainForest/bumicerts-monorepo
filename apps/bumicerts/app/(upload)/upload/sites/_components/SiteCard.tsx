@@ -35,12 +35,33 @@ import { Button } from "@/components/ui/button";
 function extractLocationUrl(location: unknown): string | null {
   if (!location || typeof location !== "object") return null;
   const loc = location as Record<string, unknown>;
+  const $type = loc["$type"] as string | undefined;
+  // String variant (coordinate-decimal) — no URL to fetch
+  if ($type === "app.certified.location#string") return null;
   // URI variant
   if (typeof loc["uri"] === "string") return loc["uri"];
   // Blob variant — indexer injects uri into blob objects
   if (loc["blob"] && typeof loc["blob"] === "object") {
     const blob = loc["blob"] as Record<string, unknown>;
     if (typeof blob["uri"] === "string") return blob["uri"];
+  }
+  return null;
+}
+
+/** Extract inline coordinate from a string-variant location (e.g. "-15,30"). */
+function extractInlineCoordinate(
+  location: unknown,
+  locationType: string | undefined
+): { lat: number; lon: number } | null {
+  if (!location || typeof location !== "object") return null;
+  const loc = location as Record<string, unknown>;
+  const $type = loc["$type"] as string | undefined;
+  if ($type !== "app.certified.location#string" && locationType !== "coordinate-decimal") return null;
+  const raw = loc["string"] as string | undefined;
+  if (!raw) return null;
+  const parts = raw.split(",").map((s) => parseFloat(s.trim()));
+  if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+    return { lat: parts[0], lon: parts[1] };
   }
   return null;
 }
@@ -58,6 +79,7 @@ export function SiteCard({ site, defaultSiteUri }: SiteCardProps) {
   const [mutationError, setMutationError] = useState<string | null>(null);
 
   const locationUrl = extractLocationUrl(site.record?.location);
+  const inlineCoord = extractInlineCoordinate(site.record?.location, site.record?.locationType ?? undefined);
   const previewUrl = locationUrl ? getShapefilePreviewUrl(locationUrl) : null;
   const isDefault = !!(site.metadata?.uri && site.metadata.uri === defaultSiteUri);
 
@@ -70,12 +92,14 @@ export function SiteCard({ site, defaultSiteUri }: SiteCardProps) {
       const res = await fetch(locationUrl);
       return res.json() as Promise<GeoJSON.GeoJSON>;
     },
-    enabled: !!locationUrl,
+    enabled: !!locationUrl && !inlineCoord,
     staleTime: 5 * 60 * 1000,
   });
 
-  // Simple area + centroid from GeoJSON (client-side, no SDK dependency)
-  const metrics = geoJson ? computeSimpleMetrics(geoJson) : null;
+  // Simple area + centroid from GeoJSON or inline coordinate
+  const metrics = inlineCoord
+    ? { area: 0, lat: inlineCoord.lat, lon: inlineCoord.lon }
+    : geoJson ? computeSimpleMetrics(geoJson) : null;
 
   // Mutations
   const { mutate: setDefault, isPending: isSettingDefault } =
@@ -214,7 +238,7 @@ export function SiteCard({ site, defaultSiteUri }: SiteCardProps) {
           {site.record?.name ?? "Unnamed site"}
         </h3>
 
-        {isLoadingGeo ? (
+        {isLoadingGeo && !inlineCoord ? (
           <Loader2Icon className="h-3.5 w-3.5 animate-spin text-muted-foreground mt-1" />
         ) : metrics ? (
           typeof metrics === "string" ? (
@@ -225,9 +249,11 @@ export function SiteCard({ site, defaultSiteUri }: SiteCardProps) {
                 <CrosshairIcon className="h-3 w-3 shrink-0" />
                 {metrics.lat.toFixed(2)}°, {metrics.lon.toFixed(2)}°
               </span>
-              <span className="text-xs text-muted-foreground">
-                {metrics.area.toFixed(1)} ha
-              </span>
+              {metrics.area > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  {metrics.area.toFixed(1)} ha
+                </span>
+              )}
             </div>
           )
         ) : null}
