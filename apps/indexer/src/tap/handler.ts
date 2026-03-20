@@ -174,6 +174,11 @@ export class EventHandler {
       const recordForValidation = prepareBlobsForValidation(record);
       const result = this.validate(collection, recordForValidation);
       if (!result.ok) {
+        // Record update is invalid — remove the stale valid version from DB
+        // so we don't serve data that no longer matches the PDS.
+        const uri = `at://${did}/${collection}/${rkey}`;
+        this.pending.push({ kind: "delete", uri });
+
         // Aggregate validation failures — log summary during flush
         this.validationFailures.set(
           collection,
@@ -181,10 +186,11 @@ export class EventHandler {
         );
         if (process.env.LOG_LEVEL === "debug" && this.shouldLogValidationError(collection)) {
           console.debug(
-            `[handler] Validation failed for ${collection} (${did}/${rkey}): ${result.error}`
+            `[handler] Update validation failed — deleting stale record ${collection} (${did}/${rkey}): ${result.error}`
           );
         }
         this.stats.errors++;
+        this.maybeFlush();
         return;
       }
     }

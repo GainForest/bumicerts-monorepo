@@ -16,10 +16,20 @@ export const metadata = {
 
 const ExploreActivitiesQuery = graphql(
   `
-    query ExploreActivities($limit: Int, $cursor: String, $where: ActivityWhereInput) {
+    query ExploreActivities(
+      $limit: Int
+      $cursor: String
+      $where: ActivityWhereInput
+    ) {
       hypercerts {
         claim {
-          activity(limit: $limit, cursor: $cursor, where: $where, order: DESC, sortBy: CREATED_AT) {
+          activity(
+            limit: $limit
+            cursor: $cursor
+            where: $where
+            order: DESC
+            sortBy: CREATED_AT
+          ) {
             data {
               ...HcActivityFields
             }
@@ -33,7 +43,7 @@ const ExploreActivitiesQuery = graphql(
       }
     }
   `,
-  [HcActivityFragment]
+  [HcActivityFragment],
 );
 
 export default async function ExplorePage() {
@@ -42,9 +52,14 @@ export default async function ExplorePage() {
   try {
     const response = await graphqlClient.request(ExploreActivitiesQuery, {
       limit: 1000,
-      where: { hasImage: true, hasOrganizationInfoRecord: true },
+      where: {
+        hasImage: true,
+        hasOrganizationInfoRecord: true,
+        labelTier: "standard",
+      },
     });
-    const activities = (response.hypercerts?.claim?.activity?.data ?? []) as GraphQLHcActivityItem[];
+    const activities = (response.hypercerts?.claim?.activity?.data ??
+      []) as GraphQLHcActivityItem[];
     bumicerts = activitiesToBumicertDataArray(activities);
   } catch (error) {
     console.error("Failed to fetch bumicerts:", error);
@@ -54,7 +69,8 @@ export default async function ExplorePage() {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     name: "Explore Bumicerts",
-    description: "Verified environmental impact certificates from nature stewards around the world.",
+    description:
+      "Verified environmental impact certificates from nature stewards around the world.",
     numberOfItems: bumicerts.length,
     url: "https://bumicerts.com/explore",
   };

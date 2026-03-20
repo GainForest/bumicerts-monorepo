@@ -15,7 +15,7 @@
  * ```
  */
 
-import "@gainforest/leaflet-react/editor.css";
+// import "@gainforest/leaflet-react/editor.css";
 import { LeafletRenderer as LeafletRendererBase } from "@gainforest/leaflet-react/renderer";
 import type { LeafletRendererProps } from "@gainforest/leaflet-react/renderer";
 import { buildBlobUrl } from "@gainforest/leaflet-react/utils";
@@ -25,8 +25,10 @@ import type { LeafletLinearDocument } from "@gainforest/leaflet-react";
 // For blobs that weren't pre-resolved by the indexer, we fall back to this.
 const DEFAULT_PDS_HOST = "https://bsky.network";
 
-interface BumicertsLeafletRendererProps
-  extends Omit<LeafletRendererProps, "resolveImageUrl"> {
+interface BumicertsLeafletRendererProps extends Omit<
+  LeafletRendererProps,
+  "resolveImageUrl"
+> {
   document: LeafletLinearDocument;
   /**
    * DID of the repo that owns this document.
