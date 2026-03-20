@@ -11,12 +11,16 @@ import superjson from "superjson";
 var t = initTRPC.context().create({
   transformer: superjson,
   errorFormatter({ shape, error }) {
+    const effectError = error.cause;
+    const rawCause = effectError && typeof effectError === "object" && "cause" in effectError ? effectError.cause : void 0;
     return {
       ...shape,
       data: {
         ...shape.data,
         // Include the original Effect error tag if available for debugging
-        effectTag: error.cause && typeof error.cause === "object" && "_tag" in error.cause ? error.cause._tag : void 0
+        effectTag: effectError && typeof effectError === "object" && "_tag" in effectError ? String(effectError._tag) : void 0,
+        // Include the raw PDS / upstream error message for debugging
+        causeMessage: rawCause instanceof Error ? rawCause.message : void 0
       }
     };
   }

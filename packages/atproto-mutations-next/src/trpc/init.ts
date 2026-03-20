@@ -5,15 +5,26 @@ import type { TRPCContext } from "./context";
 export const t = initTRPC.context<TRPCContext>().create({
   transformer: superjson,
   errorFormatter({ shape, error }) {
+    // error.cause is the Effect tagged error (e.g. OrganizationInfoPdsError).
+    // error.cause.cause is the raw underlying error (e.g. XRPCError from @atproto/api).
+    const effectError = error.cause as Record<string, unknown> | undefined;
+    const rawCause =
+      effectError && typeof effectError === "object" && "cause" in effectError
+        ? effectError.cause
+        : undefined;
+
     return {
       ...shape,
       data: {
         ...shape.data,
         // Include the original Effect error tag if available for debugging
         effectTag:
-          error.cause && typeof error.cause === "object" && "_tag" in error.cause
-            ? (error.cause as { _tag: string })._tag
+          effectError && typeof effectError === "object" && "_tag" in effectError
+            ? String(effectError._tag)
             : undefined,
+        // Include the raw PDS / upstream error message for debugging
+        causeMessage:
+          rawCause instanceof Error ? rawCause.message : undefined,
       },
     };
   },

@@ -26,6 +26,7 @@ declare const appRouter: _trpc_server.TRPCBuiltRouter<{
     errorShape: {
         data: {
             effectTag: string | undefined;
+            causeMessage: string | undefined;
             code: _trpc_server.TRPC_ERROR_CODE_KEY;
             httpStatus: number;
             path?: string;
@@ -42,6 +43,7 @@ declare const appRouter: _trpc_server.TRPCBuiltRouter<{
         errorShape: {
             data: {
                 effectTag: string | undefined;
+                causeMessage: string | undefined;
                 code: _trpc_server.TRPC_ERROR_CODE_KEY;
                 httpStatus: number;
                 path?: string;
@@ -58,6 +60,7 @@ declare const appRouter: _trpc_server.TRPCBuiltRouter<{
             errorShape: {
                 data: {
                     effectTag: string | undefined;
+                    causeMessage: string | undefined;
                     code: _trpc_server.TRPC_ERROR_CODE_KEY;
                     httpStatus: number;
                     path?: string;
@@ -92,6 +95,7 @@ declare const appRouter: _trpc_server.TRPCBuiltRouter<{
             errorShape: {
                 data: {
                     effectTag: string | undefined;
+                    causeMessage: string | undefined;
                     code: _trpc_server.TRPC_ERROR_CODE_KEY;
                     httpStatus: number;
                     path?: string;
@@ -114,6 +118,7 @@ declare const appRouter: _trpc_server.TRPCBuiltRouter<{
             errorShape: {
                 data: {
                     effectTag: string | undefined;
+                    causeMessage: string | undefined;
                     code: _trpc_server.TRPC_ERROR_CODE_KEY;
                     httpStatus: number;
                     path?: string;
@@ -153,6 +158,7 @@ declare const appRouter: _trpc_server.TRPCBuiltRouter<{
             errorShape: {
                 data: {
                     effectTag: string | undefined;
+                    causeMessage: string | undefined;
                     code: _trpc_server.TRPC_ERROR_CODE_KEY;
                     httpStatus: number;
                     path?: string;
@@ -169,6 +175,7 @@ declare const appRouter: _trpc_server.TRPCBuiltRouter<{
                 errorShape: {
                     data: {
                         effectTag: string | undefined;
+                        causeMessage: string | undefined;
                         code: _trpc_server.TRPC_ERROR_CODE_KEY;
                         httpStatus: number;
                         path?: string;
@@ -210,6 +217,7 @@ declare const appRouter: _trpc_server.TRPCBuiltRouter<{
         errorShape: {
             data: {
                 effectTag: string | undefined;
+                causeMessage: string | undefined;
                 code: _trpc_server.TRPC_ERROR_CODE_KEY;
                 httpStatus: number;
                 path?: string;
@@ -226,6 +234,7 @@ declare const appRouter: _trpc_server.TRPCBuiltRouter<{
             errorShape: {
                 data: {
                     effectTag: string | undefined;
+                    causeMessage: string | undefined;
                     code: _trpc_server.TRPC_ERROR_CODE_KEY;
                     httpStatus: number;
                     path?: string;
@@ -266,6 +275,7 @@ declare const appRouter: _trpc_server.TRPCBuiltRouter<{
         errorShape: {
             data: {
                 effectTag: string | undefined;
+                causeMessage: string | undefined;
                 code: _trpc_server.TRPC_ERROR_CODE_KEY;
                 httpStatus: number;
                 path?: string;
@@ -282,6 +292,7 @@ declare const appRouter: _trpc_server.TRPCBuiltRouter<{
             errorShape: {
                 data: {
                     effectTag: string | undefined;
+                    causeMessage: string | undefined;
                     code: _trpc_server.TRPC_ERROR_CODE_KEY;
                     httpStatus: number;
                     path?: string;
@@ -322,6 +333,7 @@ declare const appRouter: _trpc_server.TRPCBuiltRouter<{
         errorShape: {
             data: {
                 effectTag: string | undefined;
+                causeMessage: string | undefined;
                 code: _trpc_server.TRPC_ERROR_CODE_KEY;
                 httpStatus: number;
                 path?: string;
@@ -338,6 +350,7 @@ declare const appRouter: _trpc_server.TRPCBuiltRouter<{
             errorShape: {
                 data: {
                     effectTag: string | undefined;
+                    causeMessage: string | undefined;
                     code: _trpc_server.TRPC_ERROR_CODE_KEY;
                     httpStatus: number;
                     path?: string;
@@ -377,6 +390,7 @@ declare const appRouter: _trpc_server.TRPCBuiltRouter<{
             errorShape: {
                 data: {
                     effectTag: string | undefined;
+                    causeMessage: string | undefined;
                     code: _trpc_server.TRPC_ERROR_CODE_KEY;
                     httpStatus: number;
                     path?: string;
@@ -400,6 +414,7 @@ declare const appRouter: _trpc_server.TRPCBuiltRouter<{
         errorShape: {
             data: {
                 effectTag: string | undefined;
+                causeMessage: string | undefined;
                 code: _trpc_server.TRPC_ERROR_CODE_KEY;
                 httpStatus: number;
                 path?: string;
@@ -416,6 +431,7 @@ declare const appRouter: _trpc_server.TRPCBuiltRouter<{
             errorShape: {
                 data: {
                     effectTag: string | undefined;
+                    causeMessage: string | undefined;
                     code: _trpc_server.TRPC_ERROR_CODE_KEY;
                     httpStatus: number;
                     path?: string;
@@ -449,6 +465,7 @@ declare const appRouter: _trpc_server.TRPCBuiltRouter<{
         errorShape: {
             data: {
                 effectTag: string | undefined;
+                causeMessage: string | undefined;
                 code: _trpc_server.TRPC_ERROR_CODE_KEY;
                 httpStatus: number;
                 path?: string;
@@ -465,6 +482,7 @@ declare const appRouter: _trpc_server.TRPCBuiltRouter<{
             errorShape: {
                 data: {
                     effectTag: string | undefined;
+                    causeMessage: string | undefined;
                     code: _trpc_server.TRPC_ERROR_CODE_KEY;
                     httpStatus: number;
                     path?: string;
@@ -487,6 +505,7 @@ declare const appRouter: _trpc_server.TRPCBuiltRouter<{
             errorShape: {
                 data: {
                     effectTag: string | undefined;
+                    causeMessage: string | undefined;
                     code: _trpc_server.TRPC_ERROR_CODE_KEY;
                     httpStatus: number;
                     path?: string;
@@ -510,6 +529,7 @@ declare const appRouter: _trpc_server.TRPCBuiltRouter<{
         errorShape: {
             data: {
                 effectTag: string | undefined;
+                causeMessage: string | undefined;
                 code: _trpc_server.TRPC_ERROR_CODE_KEY;
                 httpStatus: number;
                 path?: string;
@@ -585,6 +605,7 @@ declare const t: _trpc_server.TRPCRootObject<TRPCContext, object, {
     }): {
         data: {
             effectTag: string | undefined;
+            causeMessage: string | undefined;
             code: _trpc_server.TRPC_ERROR_CODE_KEY;
             httpStatus: number;
             path?: string;
@@ -599,6 +620,7 @@ declare const t: _trpc_server.TRPCRootObject<TRPCContext, object, {
     errorShape: {
         data: {
             effectTag: string | undefined;
+            causeMessage: string | undefined;
             code: _trpc_server.TRPC_ERROR_CODE_KEY;
             httpStatus: number;
             path?: string;
@@ -615,6 +637,7 @@ declare const router: _trpc_server.TRPCRouterBuilder<{
     errorShape: {
         data: {
             effectTag: string | undefined;
+            causeMessage: string | undefined;
             code: _trpc_server.TRPC_ERROR_CODE_KEY;
             httpStatus: number;
             path?: string;
