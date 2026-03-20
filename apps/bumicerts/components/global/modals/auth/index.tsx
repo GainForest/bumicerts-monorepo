@@ -17,7 +17,7 @@ export function AuthModal() {
   };
 
   return (
-    <ModalContent dismissible={false} className="py-2">
+    <ModalContent className="py-2">
       <ModalTitle className="sr-only">Sign in to Bumicerts</ModalTitle>
       <ModalDescription className="sr-only">
         Sign in with your ATProto handle to access Bumicerts.

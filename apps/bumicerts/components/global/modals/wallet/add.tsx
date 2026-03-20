@@ -91,7 +91,7 @@ export function AddWalletModal({
 
   return (
     <ModalContent dismissible={false}>
-      <ModalHeader backAction={handleBack}>
+      <ModalHeader backAction={status === "signing" || status === "writing" ? undefined : handleBack}>
         <ModalTitle>{title}</ModalTitle>
         {phase === "ready" && (
           <ModalDescription>

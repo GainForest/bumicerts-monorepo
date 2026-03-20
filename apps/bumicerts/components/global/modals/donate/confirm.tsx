@@ -177,6 +177,11 @@ export function ConfirmModal({ bumicert, amount, anonymous, recipientWallet }: C
           </p>
           <p className="text-xs text-muted-foreground">No gas required from you</p>
         </div>
+        <ModalFooter>
+          <Button variant="ghost" onClick={handleBack} className="w-full" disabled>
+            Cancel
+          </Button>
+        </ModalFooter>
       </ModalContent>
     );
   }
@@ -193,6 +198,11 @@ export function ConfirmModal({ bumicert, amount, anonymous, recipientWallet }: C
           <p className="font-medium">Your donation is being confirmed on the Base network</p>
           <p className="text-sm text-muted-foreground">This usually takes a few seconds</p>
         </div>
+        <ModalFooter>
+          <Button variant="ghost" onClick={handleBack} className="w-full" disabled>
+            Cancel
+          </Button>
+        </ModalFooter>
       </ModalContent>
     );
   }

@@ -101,7 +101,7 @@ export function WalletModal({ bumicert, amount, anonymous }: WalletModalProps) {
   if (!isCorrectNetwork) {
     return (
       <ModalContent dismissible={false}>
-        <ModalHeader backAction={handleBack}>
+        <ModalHeader backAction={isSwitching ? undefined : handleBack}>
           <ModalTitle>Switch to Base</ModalTitle>
           <ModalDescription>
             You need to be on Base network to donate USDC.
@@ -122,7 +122,7 @@ export function WalletModal({ bumicert, amount, anonymous }: WalletModalProps) {
           >
             {isSwitching ? "Switching…" : "Switch to Base"}
           </Button>
-          <Button variant="ghost" onClick={handleBack} className="w-full">
+          <Button variant="ghost" onClick={handleBack} className="w-full" disabled={isSwitching}>
             Cancel
           </Button>
         </ModalFooter>
