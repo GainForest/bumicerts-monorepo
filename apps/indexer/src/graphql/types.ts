@@ -207,7 +207,13 @@ export function rowToMeta(row: RecordRow) {
 
 /** Cast the JSONB record payload to a plain object for field access. */
 export function payload(row: RecordRow): Record<string, unknown> {
-  return (row.record ?? {}) as Record<string, unknown>;
+  const r = row.record;
+  if (r == null) return {};
+  // Handle double-encoded JSONB (stored as a JSON string instead of object)
+  if (typeof r === "string") {
+    try { return JSON.parse(r); } catch { return {}; }
+  }
+  return r as Record<string, unknown>;
 }
 
 /**

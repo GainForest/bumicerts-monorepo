@@ -228,6 +228,12 @@ CREATE INDEX IF NOT EXISTS idx_labels_value
 CREATE INDEX IF NOT EXISTS idx_labels_subject_uri
   ON labels (subject_uri);
 
+-- Fix double-encoded JSONB records (stored as JSON strings instead of objects).
+-- Unwraps one level: '"{ ... }"' → '{ ... }'
+UPDATE records
+  SET record = (record #>> '{}')::jsonb
+  WHERE jsonb_typeof(record) = 'string';
+
 -- ============================================================
 -- PDS HOST CACHE
 -- Maps DID → PDS service endpoint, used for blob URI generation.

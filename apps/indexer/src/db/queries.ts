@@ -52,7 +52,7 @@ export async function upsertRecords(records: RecordInsert[]): Promise<void> {
       r.did,
       r.collection,
       r.rkey,
-      JSON.stringify(r.record),
+      typeof r.record === "string" ? r.record : JSON.stringify(r.record),
       r.cid,
       r.created_at ?? null,
     );
