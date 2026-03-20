@@ -114,7 +114,7 @@ export function PublicDonateArea({ bumicert, fundingConfig }: PublicDonateAreaPr
   // ── 4. Open — donate button + cart button ────────────────────────────────────
   return (
     <div className="flex flex-col gap-1 w-full">
-      <DonateButton bumicert={bumicert} />
+      <DonateButton bumicert={bumicert} fundingConfig={fundingConfig} />
       <Button
         variant="outline"
         className="w-full"
