@@ -312,6 +312,7 @@ export function OrgSetupPage({ did }: { did: string }) {
     } catch (caughtError) {
       console.error("Failed to save org info:", caughtError);
       setSubmitError(formatError(caughtError));
+    } finally {
       setIsSubmitting(false);
     }
   };
