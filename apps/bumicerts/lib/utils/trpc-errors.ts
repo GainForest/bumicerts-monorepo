@@ -180,8 +180,14 @@ export function formatError(error: unknown): string {
       return "Please sign in to continue";
     case "PRECONDITION_FAILED":
       return error.message || "Cannot complete this action";
-    case "INTERNAL_SERVER_ERROR":
+    case "INTERNAL_SERVER_ERROR": {
+      const causeMessage = (error.data as Record<string, unknown> | undefined)
+        ?.causeMessage;
+      if (causeMessage && typeof causeMessage === "string") {
+        return `Something went wrong: ${causeMessage}`;
+      }
       return "Something went wrong. Please try again.";
+    }
     default:
       return error.message || "An error occurred";
   }

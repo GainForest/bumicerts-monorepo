@@ -174,6 +174,11 @@ export function LinkWalletModal({
           <p className="font-medium">Please sign the message in your wallet</p>
           <p className="text-xs text-muted-foreground">This does not cost any gas</p>
         </div>
+        <ModalFooter>
+          <Button variant="ghost" onClick={handleBack} className="w-full" disabled>
+            Cancel
+          </Button>
+        </ModalFooter>
       </ModalContent>
     );
   }

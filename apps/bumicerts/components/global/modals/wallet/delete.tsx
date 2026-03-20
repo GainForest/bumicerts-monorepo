@@ -67,7 +67,7 @@ export function DeleteWalletModal({
 
   return (
     <ModalContent dismissible={false}>
-      <ModalHeader backAction={handleBack}>
+      <ModalHeader backAction={isDeleting ? undefined : handleBack}>
         <ModalTitle>Remove Wallet</ModalTitle>
         <ModalDescription>
           Remove <span className="font-medium text-foreground">{label}</span> from
@@ -85,7 +85,7 @@ export function DeleteWalletModal({
         >
           {isDeleting ? "Removing…" : "Remove Wallet"}
         </Button>
-        <Button variant="ghost" className="w-full" onClick={handleBack}>
+        <Button variant="ghost" className="w-full" onClick={handleBack} disabled={isDeleting}>
           Cancel
         </Button>
       </div>

@@ -4,13 +4,14 @@ import { useAtprotoStore } from "@/components/stores/atproto";
 import { useModal } from "@/components/ui/modal/context";
 import { Button } from "@/components/ui/button";
 import { HeartIcon } from "lucide-react";
-import type { BumicertData } from "@/lib/types";
+import type { BumicertData, FundingConfigData } from "@/lib/types";
 import { MODAL_IDS } from "@/components/global/modals/ids";
 import { AmountModal } from "@/components/global/modals/donate/amount";
 import { AuthModal } from "@/components/global/modals/auth/index";
 
 interface DonateButtonProps {
   bumicert: BumicertData;
+  fundingConfig: FundingConfigData | null;
 }
 
 /**
@@ -23,7 +24,7 @@ interface DonateButtonProps {
  * - If the user is not authenticated, the button says "Donate Anonymously" and
  *   a "Sign in to donate under your name" link is shown above.
  */
-export function DonateButton({ bumicert }: DonateButtonProps) {
+export function DonateButton({ bumicert, fundingConfig }: DonateButtonProps) {
   const auth = useAtprotoStore((state) => state.auth);
   const { show, pushModal } = useModal();
 
@@ -33,7 +34,7 @@ export function DonateButton({ bumicert }: DonateButtonProps) {
     pushModal(
       {
         id:      MODAL_IDS.DONATE_AMOUNT,
-        content: <AmountModal bumicert={bumicert} />,
+        content: <AmountModal bumicert={bumicert} fundingConfig={fundingConfig} />,
       },
       true // replaceAll — start fresh
     );
