@@ -9,8 +9,17 @@
  * accessible.
  */
 
+/** Sentinel value used during `next build` when no publicUrl is provided. */
+export const PLACEHOLDER_URL = "https://placeholder.invalid";
+
 /**
  * Normalize the public URL provided at setup time.
+ *
+ * Returns the PLACEHOLDER_URL sentinel when no URL is provided. This is
+ * intentional: `next build` runs setup code at module-evaluation time before
+ * any real URL is known. The sentinel is recognised by createAuthSetup() and
+ * turned into a clear runtime error if the app is actually served without a
+ * valid publicUrl.
  *
  * @param explicitUrl - The URL resolved by the consuming app (e.g. from VERCEL_URL).
  */
@@ -18,10 +27,7 @@ export function resolvePublicUrl(explicitUrl?: string): string {
   if (explicitUrl) {
     return explicitUrl.replace(/\/$/, "");
   }
-
-  // Build-time fallback — used when no URL is provided (e.g. during next build).
-  // Using .invalid TLD (RFC 2606) ensures loud failure if accidentally used at runtime.
-  return "https://placeholder.invalid";
+  return PLACEHOLDER_URL;
 }
 
 /**

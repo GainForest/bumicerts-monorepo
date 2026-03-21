@@ -36,17 +36,13 @@ type OAuthClientConfig = {
 declare function createOAuthClient({ publicUrl, privateKeyJwk, stateStore, sessionStore, scope, extraRedirectUris, clientName, }: OAuthClientConfig): NodeOAuthClient;
 
 /**
- * Public URL resolution utilities.
- *
- * The public URL must be provided explicitly at initialization time by the
- * consuming app — this package does not read process.env directly.
- *
- * Note: Loopback detection is URL-based. This correctly handles ngrok/tunnel
- * URLs in development where NODE_ENV is 'development' but the URL is publicly
- * accessible.
- */
-/**
  * Normalize the public URL provided at setup time.
+ *
+ * Returns the PLACEHOLDER_URL sentinel when no URL is provided. This is
+ * intentional: `next build` runs setup code at module-evaluation time before
+ * any real URL is known. The sentinel is recognised by createAuthSetup() and
+ * turned into a clear runtime error if the app is actually served without a
+ * valid publicUrl.
  *
  * @param explicitUrl - The URL resolved by the consuming app (e.g. from VERCEL_URL).
  */

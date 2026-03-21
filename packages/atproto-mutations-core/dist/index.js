@@ -354,15 +354,15 @@ function applyPatch(existing, data, unset, requiredFields) {
 
 // src/utils/shared/pds.ts
 import { Effect as Effect2 } from "effect";
-var fetchRecord = (collection, rkey, makePdsError31) => Effect2.gen(function* () {
+var fetchRecord = (collection, rkey, makePdsError35) => Effect2.gen(function* () {
   const agent = yield* AtprotoAgent;
   const repo = agent.assertDid;
   return yield* Effect2.tryPromise({
     try: () => agent.com.atproto.repo.getRecord({ repo, collection, rkey }).then((res) => res.data.value).catch(() => null),
-    catch: (cause) => makePdsError31(`Failed to fetch ${collection} record at rkey "${rkey}"`, cause)
+    catch: (cause) => makePdsError35(`Failed to fetch ${collection} record at rkey "${rkey}"`, cause)
   });
 });
-var createRecord = (collection, record, rkey, makePdsError31) => Effect2.gen(function* () {
+var createRecord = (collection, record, rkey, makePdsError35) => Effect2.gen(function* () {
   const agent = yield* AtprotoAgent;
   const repo = agent.assertDid;
   const response = yield* Effect2.tryPromise({
@@ -372,39 +372,39 @@ var createRecord = (collection, record, rkey, makePdsError31) => Effect2.gen(fun
       ...rkey !== void 0 ? { rkey } : {},
       record
     }),
-    catch: (cause) => makePdsError31(`PDS rejected createRecord for ${collection}`, cause)
+    catch: (cause) => makePdsError35(`PDS rejected createRecord for ${collection}`, cause)
   });
   return { uri: response.data.uri, cid: response.data.cid };
 });
-var putRecord = (collection, rkey, record, makePdsError31) => Effect2.gen(function* () {
+var putRecord = (collection, rkey, record, makePdsError35) => Effect2.gen(function* () {
   const agent = yield* AtprotoAgent;
   const repo = agent.assertDid;
   const response = yield* Effect2.tryPromise({
     try: () => agent.com.atproto.repo.putRecord({ repo, collection, rkey, record }),
-    catch: (cause) => makePdsError31(`PDS rejected putRecord for ${collection} at rkey "${rkey}"`, cause)
+    catch: (cause) => makePdsError35(`PDS rejected putRecord for ${collection} at rkey "${rkey}"`, cause)
   });
   return { uri: response.data.uri, cid: response.data.cid };
 });
-var deleteRecord = (collection, rkey, makePdsError31) => Effect2.gen(function* () {
+var deleteRecord = (collection, rkey, makePdsError35) => Effect2.gen(function* () {
   const agent = yield* AtprotoAgent;
   const repo = agent.assertDid;
   yield* Effect2.tryPromise({
     try: () => agent.com.atproto.repo.deleteRecord({ repo, collection, rkey }),
-    catch: (cause) => makePdsError31(`PDS rejected deleteRecord for ${collection} at rkey "${rkey}"`, cause)
+    catch: (cause) => makePdsError35(`PDS rejected deleteRecord for ${collection} at rkey "${rkey}"`, cause)
   });
 });
 
 // src/utils/shared/validate.ts
 import { Effect as Effect3 } from "effect";
-var stubValidate = (candidate, parse, makeValidationError25) => Effect3.try({
+var stubValidate = (candidate, parse, makeValidationError28) => Effect3.try({
   try: () => {
     parse(stubBlobRefs(candidate));
   },
-  catch: (cause) => makeValidationError25(String(cause), cause)
+  catch: (cause) => makeValidationError28(String(cause), cause)
 });
-var finalValidate = (resolved, parse, makeValidationError25) => Effect3.try({
+var finalValidate = (resolved, parse, makeValidationError28) => Effect3.try({
   try: () => parse(resolved),
-  catch: (cause) => makeValidationError25(String(cause), cause)
+  catch: (cause) => makeValidationError28(String(cause), cause)
 });
 
 // src/mutations/organization.info/create.ts
@@ -1229,14 +1229,152 @@ var deleteClaimActivity = (input) => Effect19.gen(function* () {
   return { uri, rkey };
 });
 
-// src/mutations/certified.location/create.ts
+// src/mutations/claim.rights/create.ts
+import { Effect as Effect20 } from "effect";
+import {
+  $parse as $parse14,
+  main as claimRightsSchema
+} from "@gainforest/generated/org/hypercerts/claim/rights.defs";
+
+// src/mutations/claim.rights/utils/errors.ts
+import { Data as Data7 } from "effect";
+var ClaimRightsValidationError = class extends Data7.TaggedError(
+  "ClaimRightsValidationError"
+) {
+};
+var ClaimRightsNotFoundError = class extends Data7.TaggedError(
+  "ClaimRightsNotFoundError"
+) {
+};
+var ClaimRightsPdsError = class extends Data7.TaggedError(
+  "ClaimRightsPdsError"
+) {
+};
+
+// src/mutations/claim.rights/create.ts
+var COLLECTION17 = "org.hypercerts.claim.rights";
+var BLOB_CONSTRAINTS7 = extractBlobConstraints(claimRightsSchema);
+var makePdsError17 = (message, cause) => new ClaimRightsPdsError({ message, cause });
+var makeValidationError14 = (message, cause) => new ClaimRightsValidationError({ message, cause });
+var createClaimRights = (input) => Effect20.gen(function* () {
+  yield* validateFileConstraints(input, BLOB_CONSTRAINTS7);
+  const { rkey: inputRkey, ...inputData } = input;
+  const candidate = { $type: COLLECTION17, ...inputData, createdAt: (/* @__PURE__ */ new Date()).toISOString() };
+  yield* stubValidate(candidate, $parse14, makeValidationError14);
+  const resolved = yield* resolveFileInputs(candidate);
+  const record = yield* finalValidate(resolved, $parse14, makeValidationError14);
+  const { uri, cid } = yield* createRecord(COLLECTION17, record, inputRkey, makePdsError17);
+  const rkey = uri.split("/").pop();
+  return { uri, cid, rkey, record };
+});
+
+// src/mutations/claim.rights/update.ts
 import { Effect as Effect21 } from "effect";
 import {
-  $parse as $parse14
+  $parse as $parse15,
+  main as claimRightsSchema2
+} from "@gainforest/generated/org/hypercerts/claim/rights.defs";
+
+// src/mutations/claim.rights/utils/merge.ts
+var REQUIRED_FIELDS4 = /* @__PURE__ */ new Set([
+  "rightsName",
+  "rightsType",
+  "rightsDescription"
+]);
+var applyPatch4 = (existing, data, unset) => applyPatch(existing, data, unset, REQUIRED_FIELDS4);
+
+// src/mutations/claim.rights/update.ts
+var COLLECTION18 = "org.hypercerts.claim.rights";
+var BLOB_CONSTRAINTS8 = extractBlobConstraints(claimRightsSchema2);
+var makePdsError18 = (message, cause) => new ClaimRightsPdsError({ message, cause });
+var makeValidationError15 = (message, cause) => new ClaimRightsValidationError({ message, cause });
+var updateClaimRights = (input) => Effect21.gen(function* () {
+  const { rkey } = input;
+  yield* validateFileConstraints(input.data, BLOB_CONSTRAINTS8);
+  const existing = yield* fetchRecord(
+    COLLECTION18,
+    rkey,
+    makePdsError18
+  );
+  if (existing === null) {
+    return yield* Effect21.fail(new ClaimRightsNotFoundError({ rkey }));
+  }
+  const patched = applyPatch4(existing, input.data, input.unset);
+  patched.$type = COLLECTION18;
+  patched.createdAt = existing.createdAt;
+  yield* stubValidate(patched, $parse15, makeValidationError15);
+  const resolved = yield* resolveFileInputs(patched);
+  const record = yield* finalValidate(resolved, $parse15, makeValidationError15);
+  const { uri, cid } = yield* putRecord(COLLECTION18, rkey, record, makePdsError18);
+  return { uri, cid, rkey, record };
+});
+
+// src/mutations/claim.rights/upsert.ts
+import { Effect as Effect22 } from "effect";
+import {
+  $parse as $parse16
+} from "@gainforest/generated/org/hypercerts/claim/rights.defs";
+import { main as claimRightsSchema3 } from "@gainforest/generated/org/hypercerts/claim/rights.defs";
+var COLLECTION19 = "org.hypercerts.claim.rights";
+var BLOB_CONSTRAINTS9 = extractBlobConstraints(claimRightsSchema3);
+var makePdsError19 = (message, cause) => new ClaimRightsPdsError({ message, cause });
+var makeValidationError16 = (message, cause) => new ClaimRightsValidationError({ message, cause });
+var upsertClaimRights = (input) => Effect22.gen(function* () {
+  yield* validateFileConstraints(input, BLOB_CONSTRAINTS9);
+  const { rkey: inputRkey, ...inputData } = input;
+  if (inputRkey === void 0) {
+    const candidate2 = { $type: COLLECTION19, ...inputData, createdAt: (/* @__PURE__ */ new Date()).toISOString() };
+    yield* stubValidate(candidate2, $parse16, makeValidationError16);
+    const resolved2 = yield* resolveFileInputs(candidate2);
+    const record2 = yield* finalValidate(resolved2, $parse16, makeValidationError16);
+    const { uri: uri2, cid: cid2 } = yield* createRecord(COLLECTION19, record2, void 0, makePdsError19);
+    const rkey = uri2.split("/").pop();
+    return { uri: uri2, cid: cid2, rkey, record: record2, created: true };
+  }
+  const existing = yield* fetchRecord(
+    COLLECTION19,
+    inputRkey,
+    makePdsError19
+  );
+  const createdAt = existing !== null ? existing.createdAt : (/* @__PURE__ */ new Date()).toISOString();
+  const candidate = { $type: COLLECTION19, ...inputData, createdAt };
+  yield* stubValidate(candidate, $parse16, makeValidationError16);
+  const resolved = yield* resolveFileInputs(candidate);
+  const record = yield* finalValidate(resolved, $parse16, makeValidationError16);
+  const { uri, cid } = yield* putRecord(COLLECTION19, inputRkey, record, makePdsError19);
+  return {
+    uri,
+    cid,
+    rkey: inputRkey,
+    record,
+    created: existing === null
+  };
+});
+
+// src/mutations/claim.rights/delete.ts
+import { Effect as Effect23 } from "effect";
+var COLLECTION20 = "org.hypercerts.claim.rights";
+var makePdsError20 = (message, cause) => new ClaimRightsPdsError({ message, cause });
+var deleteClaimRights = (input) => Effect23.gen(function* () {
+  const { rkey } = input;
+  const repo = (yield* AtprotoAgent).assertDid;
+  const uri = `at://${repo}/${COLLECTION20}/${rkey}`;
+  const existing = yield* fetchRecord(COLLECTION20, rkey, makePdsError20);
+  if (existing === null) {
+    return yield* Effect23.fail(new ClaimRightsNotFoundError({ rkey }));
+  }
+  yield* deleteRecord(COLLECTION20, rkey, makePdsError20);
+  return { uri, rkey };
+});
+
+// src/mutations/certified.location/create.ts
+import { Effect as Effect25 } from "effect";
+import {
+  $parse as $parse17
 } from "@gainforest/generated/app/certified/location.defs";
 
 // src/mutations/certified.location/utils/process-geojson.ts
-import { Effect as Effect20 } from "effect";
+import { Effect as Effect24 } from "effect";
 
 // src/geojson/validate.ts
 function validateGeojsonOrThrow(value) {
@@ -1679,20 +1817,20 @@ var toFeatureCollection = (geoJson) => {
 };
 
 // src/geojson/errors.ts
-import { Data as Data7 } from "effect";
-var GeoJsonValidationError = class extends Data7.TaggedError(
+import { Data as Data8 } from "effect";
+var GeoJsonValidationError = class extends Data8.TaggedError(
   "GeoJsonValidationError"
 ) {
 };
-var GeoJsonProcessingError = class extends Data7.TaggedError(
+var GeoJsonProcessingError = class extends Data8.TaggedError(
   "GeoJsonProcessingError"
 ) {
 };
 
 // src/mutations/certified.location/utils/process-geojson.ts
-var processGeoJsonFile = (file) => Effect20.gen(function* () {
+var processGeoJsonFile = (file) => Effect24.gen(function* () {
   if (file.type !== "application/geo+json") {
-    return yield* Effect20.fail(
+    return yield* Effect24.fail(
       new GeoJsonValidationError({
         message: `Expected MIME type "application/geo+json", got "${file.type}"`
       })
@@ -1700,11 +1838,11 @@ var processGeoJsonFile = (file) => Effect20.gen(function* () {
   }
   const bytes = fromSerializableFile(file);
   const text = new TextDecoder().decode(bytes);
-  const parsed = yield* Effect20.try({
+  const parsed = yield* Effect24.try({
     try: () => JSON.parse(text),
     catch: (cause) => new GeoJsonValidationError({ message: `Invalid JSON in GeoJSON file: ${String(cause)}`, cause })
   });
-  const geoJson = yield* Effect20.try({
+  const geoJson = yield* Effect24.try({
     try: () => validateGeojsonOrThrow(parsed),
     catch: (cause) => new GeoJsonValidationError({ message: `Invalid GeoJSON: ${String(cause)}`, cause })
   });
@@ -1713,7 +1851,7 @@ var processGeoJsonFile = (file) => Effect20.gen(function* () {
   const lon = metrics.centroid?.lon;
   const area = metrics.areaHectares;
   if (lat === void 0 || lat === null || lon === void 0 || lon === null || !area) {
-    return yield* Effect20.fail(
+    return yield* Effect24.fail(
       new GeoJsonProcessingError({
         message: `GeoJSON does not contain polygon geometry with computable area. ${metrics.message}`
       })
@@ -1727,33 +1865,33 @@ var processGeoJsonFile = (file) => Effect20.gen(function* () {
 });
 
 // src/mutations/certified.location/utils/errors.ts
-import { Data as Data8 } from "effect";
-var CertifiedLocationValidationError = class extends Data8.TaggedError(
+import { Data as Data9 } from "effect";
+var CertifiedLocationValidationError = class extends Data9.TaggedError(
   "CertifiedLocationValidationError"
 ) {
 };
-var CertifiedLocationNotFoundError = class extends Data8.TaggedError(
+var CertifiedLocationNotFoundError = class extends Data9.TaggedError(
   "CertifiedLocationNotFoundError"
 ) {
 };
-var CertifiedLocationPdsError = class extends Data8.TaggedError(
+var CertifiedLocationPdsError = class extends Data9.TaggedError(
   "CertifiedLocationPdsError"
 ) {
 };
-var CertifiedLocationIsDefaultError = class extends Data8.TaggedError(
+var CertifiedLocationIsDefaultError = class extends Data9.TaggedError(
   "CertifiedLocationIsDefaultError"
 ) {
 };
 
 // src/mutations/certified.location/create.ts
-var COLLECTION17 = "app.certified.location";
+var COLLECTION21 = "app.certified.location";
 var MAX_SHAPEFILE_BYTES = 10 * 1024 * 1024;
-var makePdsError17 = (message, cause) => new CertifiedLocationPdsError({ message, cause });
-var makeValidationError14 = (message, cause) => new CertifiedLocationValidationError({ message, cause });
-var createCertifiedLocation = (input) => Effect21.gen(function* () {
+var makePdsError21 = (message, cause) => new CertifiedLocationPdsError({ message, cause });
+var makeValidationError17 = (message, cause) => new CertifiedLocationValidationError({ message, cause });
+var createCertifiedLocation = (input) => Effect25.gen(function* () {
   const { shapefile, name, description, rkey } = input;
   if (shapefile.size > MAX_SHAPEFILE_BYTES) {
-    return yield* Effect21.fail(
+    return yield* Effect25.fail(
       new GeoJsonValidationError({
         message: `GeoJSON file size ${shapefile.size} B exceeds maximum ${MAX_SHAPEFILE_BYTES} B (10 MB)`
       })
@@ -1762,7 +1900,7 @@ var createCertifiedLocation = (input) => Effect21.gen(function* () {
   yield* processGeoJsonFile(shapefile);
   const agent = yield* AtprotoAgent;
   const fileBytes = fromSerializableFile(shapefile);
-  const uploadResult = yield* Effect21.tryPromise({
+  const uploadResult = yield* Effect25.tryPromise({
     try: () => agent.uploadBlob(fileBytes, { encoding: shapefile.type }),
     catch: (cause) => new BlobUploadError({ message: "Failed to upload GeoJSON blob", cause })
   });
@@ -1775,7 +1913,7 @@ var createCertifiedLocation = (input) => Effect21.gen(function* () {
   };
   const createdAt = (/* @__PURE__ */ new Date()).toISOString();
   const candidate = {
-    $type: COLLECTION17,
+    $type: COLLECTION21,
     lpVersion: "1.0.0",
     srs: "https://epsg.io/3857",
     locationType: "geojson-point",
@@ -1787,11 +1925,11 @@ var createCertifiedLocation = (input) => Effect21.gen(function* () {
     description,
     createdAt
   };
-  const record = yield* Effect21.try({
-    try: () => $parse14(candidate),
-    catch: (cause) => makeValidationError14(`certified.location record failed lexicon validation: ${String(cause)}`, cause)
+  const record = yield* Effect25.try({
+    try: () => $parse17(candidate),
+    catch: (cause) => makeValidationError17(`certified.location record failed lexicon validation: ${String(cause)}`, cause)
   });
-  const { uri, cid } = yield* createRecord(COLLECTION17, record, rkey, makePdsError17);
+  const { uri, cid } = yield* createRecord(COLLECTION21, record, rkey, makePdsError21);
   const assignedRkey = uri.split("/").pop() ?? rkey ?? "unknown";
   return {
     uri,
@@ -1802,19 +1940,19 @@ var createCertifiedLocation = (input) => Effect21.gen(function* () {
 });
 
 // src/mutations/certified.location/update.ts
-import { Effect as Effect22 } from "effect";
+import { Effect as Effect26 } from "effect";
 import {
-  $parse as $parse15
+  $parse as $parse18
 } from "@gainforest/generated/app/certified/location.defs";
-var COLLECTION18 = "app.certified.location";
+var COLLECTION22 = "app.certified.location";
 var MAX_SHAPEFILE_BYTES2 = 10 * 1024 * 1024;
-var makePdsError18 = (message, cause) => new CertifiedLocationPdsError({ message, cause });
-var makeValidationError15 = (message, cause) => new CertifiedLocationValidationError({ message, cause });
-var updateCertifiedLocation = (input) => Effect22.gen(function* () {
+var makePdsError22 = (message, cause) => new CertifiedLocationPdsError({ message, cause });
+var makeValidationError18 = (message, cause) => new CertifiedLocationValidationError({ message, cause });
+var updateCertifiedLocation = (input) => Effect26.gen(function* () {
   const { rkey, data, newShapefile } = input;
   if (newShapefile) {
     if (newShapefile.size > MAX_SHAPEFILE_BYTES2) {
-      return yield* Effect22.fail(
+      return yield* Effect26.fail(
         new GeoJsonValidationError({
           message: `GeoJSON file size ${newShapefile.size} B exceeds maximum ${MAX_SHAPEFILE_BYTES2} B (10 MB)`
         })
@@ -1823,18 +1961,18 @@ var updateCertifiedLocation = (input) => Effect22.gen(function* () {
     yield* processGeoJsonFile(newShapefile);
   }
   const existing = yield* fetchRecord(
-    COLLECTION18,
+    COLLECTION22,
     rkey,
-    makePdsError18
+    makePdsError22
   );
   if (existing === null) {
-    return yield* Effect22.fail(new CertifiedLocationNotFoundError({ rkey }));
+    return yield* Effect26.fail(new CertifiedLocationNotFoundError({ rkey }));
   }
   let locationBlob;
   if (newShapefile) {
     const agent = yield* AtprotoAgent;
     const fileBytes = fromSerializableFile(newShapefile);
-    const uploadResult = yield* Effect22.tryPromise({
+    const uploadResult = yield* Effect26.tryPromise({
       try: () => agent.uploadBlob(fileBytes, { encoding: newShapefile.type }),
       catch: (cause) => new BlobUploadError({ message: "Failed to upload GeoJSON blob", cause })
     });
@@ -1852,7 +1990,7 @@ var updateCertifiedLocation = (input) => Effect22.gen(function* () {
     };
   }
   const merged = {
-    $type: COLLECTION18,
+    $type: COLLECTION22,
     lpVersion: existing.lpVersion,
     srs: existing.srs,
     locationType: existing.locationType,
@@ -1861,11 +1999,11 @@ var updateCertifiedLocation = (input) => Effect22.gen(function* () {
     description: data.description !== void 0 ? data.description : existing.description,
     createdAt: existing.createdAt
   };
-  const record = yield* Effect22.try({
-    try: () => $parse15(merged),
-    catch: (cause) => makeValidationError15(`certified.location record failed lexicon validation: ${String(cause)}`, cause)
+  const record = yield* Effect26.try({
+    try: () => $parse18(merged),
+    catch: (cause) => makeValidationError18(`certified.location record failed lexicon validation: ${String(cause)}`, cause)
   });
-  const { uri, cid } = yield* putRecord(COLLECTION18, rkey, record, makePdsError18);
+  const { uri, cid } = yield* putRecord(COLLECTION22, rkey, record, makePdsError22);
   return {
     uri,
     cid,
@@ -1875,18 +2013,18 @@ var updateCertifiedLocation = (input) => Effect22.gen(function* () {
 });
 
 // src/mutations/certified.location/upsert.ts
-import { Effect as Effect23 } from "effect";
+import { Effect as Effect27 } from "effect";
 import {
-  $parse as $parse16
+  $parse as $parse19
 } from "@gainforest/generated/app/certified/location.defs";
-var COLLECTION19 = "app.certified.location";
+var COLLECTION23 = "app.certified.location";
 var MAX_SHAPEFILE_BYTES3 = 10 * 1024 * 1024;
-var makePdsError19 = (message, cause) => new CertifiedLocationPdsError({ message, cause });
-var makeValidationError16 = (message, cause) => new CertifiedLocationValidationError({ message, cause });
-var upsertCertifiedLocation = (input) => Effect23.gen(function* () {
+var makePdsError23 = (message, cause) => new CertifiedLocationPdsError({ message, cause });
+var makeValidationError19 = (message, cause) => new CertifiedLocationValidationError({ message, cause });
+var upsertCertifiedLocation = (input) => Effect27.gen(function* () {
   const { shapefile, name, description, rkey } = input;
   if (shapefile.size > MAX_SHAPEFILE_BYTES3) {
-    return yield* Effect23.fail(
+    return yield* Effect27.fail(
       new GeoJsonValidationError({
         message: `GeoJSON file size ${shapefile.size} B exceeds maximum ${MAX_SHAPEFILE_BYTES3} B (10 MB)`
       })
@@ -1896,14 +2034,14 @@ var upsertCertifiedLocation = (input) => Effect23.gen(function* () {
   let existing = null;
   if (rkey) {
     existing = yield* fetchRecord(
-      COLLECTION19,
+      COLLECTION23,
       rkey,
-      makePdsError19
+      makePdsError23
     );
   }
   const agent = yield* AtprotoAgent;
   const fileBytes = fromSerializableFile(shapefile);
-  const uploadResult = yield* Effect23.tryPromise({
+  const uploadResult = yield* Effect27.tryPromise({
     try: () => agent.uploadBlob(fileBytes, { encoding: shapefile.type }),
     catch: (cause) => new BlobUploadError({ message: "Failed to upload GeoJSON blob", cause })
   });
@@ -1911,7 +2049,7 @@ var upsertCertifiedLocation = (input) => Effect23.gen(function* () {
   const blobRef = { $type: "blob", ref: raw.ref, mimeType: raw.mimeType, size: raw.size };
   const createdAt = existing !== null ? existing.createdAt : (/* @__PURE__ */ new Date()).toISOString();
   const candidate = {
-    $type: COLLECTION19,
+    $type: COLLECTION23,
     lpVersion: "1.0.0",
     srs: "https://epsg.io/3857",
     locationType: "geojson-point",
@@ -1920,21 +2058,21 @@ var upsertCertifiedLocation = (input) => Effect23.gen(function* () {
     description,
     createdAt
   };
-  const record = yield* Effect23.try({
-    try: () => $parse16(candidate),
-    catch: (cause) => makeValidationError16(`certified.location record failed lexicon validation: ${String(cause)}`, cause)
+  const record = yield* Effect27.try({
+    try: () => $parse19(candidate),
+    catch: (cause) => makeValidationError19(`certified.location record failed lexicon validation: ${String(cause)}`, cause)
   });
   const isCreate = !rkey || existing === null;
   let uri;
   let cid;
   let assignedRkey;
   if (isCreate) {
-    const result = yield* createRecord(COLLECTION19, record, rkey, makePdsError19);
+    const result = yield* createRecord(COLLECTION23, record, rkey, makePdsError23);
     uri = result.uri;
     cid = result.cid;
     assignedRkey = uri.split("/").pop() ?? rkey ?? "unknown";
   } else {
-    const result = yield* putRecord(COLLECTION19, rkey, record, makePdsError19);
+    const result = yield* putRecord(COLLECTION23, rkey, record, makePdsError23);
     uri = result.uri;
     cid = result.cid;
     assignedRkey = rkey;
@@ -1949,61 +2087,61 @@ var upsertCertifiedLocation = (input) => Effect23.gen(function* () {
 });
 
 // src/mutations/certified.location/delete.ts
-import { Effect as Effect24 } from "effect";
-var COLLECTION20 = "app.certified.location";
+import { Effect as Effect28 } from "effect";
+var COLLECTION24 = "app.certified.location";
 var DEFAULT_SITE_COLLECTION = "app.gainforest.organization.defaultSite";
-var makePdsError20 = (message, cause) => new CertifiedLocationPdsError({ message, cause });
-var deleteCertifiedLocation = (input) => Effect24.gen(function* () {
+var makePdsError24 = (message, cause) => new CertifiedLocationPdsError({ message, cause });
+var deleteCertifiedLocation = (input) => Effect28.gen(function* () {
   const { rkey } = input;
   const agent = yield* AtprotoAgent;
   const repo = agent.assertDid;
-  const locationUri = `at://${repo}/${COLLECTION20}/${rkey}`;
+  const locationUri = `at://${repo}/${COLLECTION24}/${rkey}`;
   const defaultSite = yield* fetchRecord(
     DEFAULT_SITE_COLLECTION,
     "self",
-    makePdsError20
+    makePdsError24
   );
   if (defaultSite?.site === locationUri) {
-    return yield* Effect24.fail(
+    return yield* Effect28.fail(
       new CertifiedLocationIsDefaultError({ uri: locationUri })
     );
   }
-  yield* deleteRecord(COLLECTION20, rkey, makePdsError20);
+  yield* deleteRecord(COLLECTION24, rkey, makePdsError24);
   return { uri: locationUri, rkey };
 });
 
 // src/mutations/funding.receipt/create.ts
-import { Effect as Effect25 } from "effect";
+import { Effect as Effect29 } from "effect";
 import {
-  $parse as $parse17
+  $parse as $parse20
 } from "@gainforest/generated/org/hypercerts/funding/receipt.defs";
 
 // src/mutations/funding.receipt/utils/errors.ts
-import { Data as Data9 } from "effect";
-var FundingReceiptValidationError = class extends Data9.TaggedError(
+import { Data as Data10 } from "effect";
+var FundingReceiptValidationError = class extends Data10.TaggedError(
   "FundingReceiptValidationError"
 ) {
 };
-var FundingReceiptPdsError = class extends Data9.TaggedError(
+var FundingReceiptPdsError = class extends Data10.TaggedError(
   "FundingReceiptPdsError"
 ) {
 };
 
 // src/mutations/funding.receipt/create.ts
-var COLLECTION21 = "org.hypercerts.funding.receipt";
-var makePdsError21 = (message, cause) => new FundingReceiptPdsError({ message, cause });
-var makeValidationError17 = (message, cause) => new FundingReceiptValidationError({ message, cause });
-var createFundingReceipt = (input) => Effect25.gen(function* () {
+var COLLECTION25 = "org.hypercerts.funding.receipt";
+var makePdsError25 = (message, cause) => new FundingReceiptPdsError({ message, cause });
+var makeValidationError20 = (message, cause) => new FundingReceiptValidationError({ message, cause });
+var createFundingReceipt = (input) => Effect29.gen(function* () {
   const { rkey: inputRkey, ...inputData } = input;
   const candidate = {
-    $type: COLLECTION21,
+    $type: COLLECTION25,
     ...inputData,
     createdAt: (/* @__PURE__ */ new Date()).toISOString()
   };
-  yield* stubValidate(candidate, $parse17, makeValidationError17);
+  yield* stubValidate(candidate, $parse20, makeValidationError20);
   const resolved = yield* resolveFileInputs(candidate);
-  const record = yield* finalValidate(resolved, $parse17, makeValidationError17);
-  const { uri, cid } = yield* createRecord(COLLECTION21, record, inputRkey, makePdsError21);
+  const record = yield* finalValidate(resolved, $parse20, makeValidationError20);
+  const { uri, cid } = yield* createRecord(COLLECTION25, record, inputRkey, makePdsError25);
   const rkey = uri.split("/").pop();
   return {
     uri,
@@ -2014,176 +2152,38 @@ var createFundingReceipt = (input) => Effect25.gen(function* () {
 });
 
 // src/mutations/funding.config/create.ts
-import { Effect as Effect26 } from "effect";
+import { Effect as Effect30 } from "effect";
 import {
-  $parse as $parse18
+  $parse as $parse21
 } from "@gainforest/generated/app/bumicerts/funding/config.defs";
 
 // src/mutations/funding.config/utils/errors.ts
-import { Data as Data10 } from "effect";
-var FundingConfigValidationError = class extends Data10.TaggedError(
+import { Data as Data11 } from "effect";
+var FundingConfigValidationError = class extends Data11.TaggedError(
   "FundingConfigValidationError"
 ) {
 };
-var FundingConfigNotFoundError = class extends Data10.TaggedError(
+var FundingConfigNotFoundError = class extends Data11.TaggedError(
   "FundingConfigNotFoundError"
 ) {
 };
-var FundingConfigPdsError = class extends Data10.TaggedError(
+var FundingConfigPdsError = class extends Data11.TaggedError(
   "FundingConfigPdsError"
 ) {
 };
 
 // src/mutations/funding.config/create.ts
-var COLLECTION22 = "app.bumicerts.funding.config";
-var makePdsError22 = (message, cause) => new FundingConfigPdsError({ message, cause });
-var makeValidationError18 = (message, cause) => new FundingConfigValidationError({ message, cause });
-var createFundingConfig = (input) => Effect26.gen(function* () {
+var COLLECTION26 = "app.bumicerts.funding.config";
+var makePdsError26 = (message, cause) => new FundingConfigPdsError({ message, cause });
+var makeValidationError21 = (message, cause) => new FundingConfigValidationError({ message, cause });
+var createFundingConfig = (input) => Effect30.gen(function* () {
   const { rkey: inputRkey, ...inputData } = input;
   const now = (/* @__PURE__ */ new Date()).toISOString();
-  const candidate = {
-    $type: COLLECTION22,
-    ...inputData,
-    createdAt: now,
-    updatedAt: now
-  };
-  yield* stubValidate(candidate, $parse18, makeValidationError18);
-  const resolved = yield* resolveFileInputs(candidate);
-  const record = yield* finalValidate(resolved, $parse18, makeValidationError18);
-  const { uri, cid } = yield* createRecord(COLLECTION22, record, inputRkey, makePdsError22);
-  const rkey = uri.split("/").pop();
-  return {
-    uri,
-    cid,
-    rkey,
-    record
-  };
-});
-
-// src/mutations/funding.config/update.ts
-import { Effect as Effect27 } from "effect";
-import {
-  $parse as $parse19
-} from "@gainforest/generated/app/bumicerts/funding/config.defs";
-
-// src/mutations/funding.config/utils/merge.ts
-var REQUIRED_FIELDS4 = /* @__PURE__ */ new Set([
-  "receivingWallet"
-]);
-var applyPatch4 = (existing, data, unset) => applyPatch(existing, data, unset, REQUIRED_FIELDS4);
-
-// src/mutations/funding.config/update.ts
-var COLLECTION23 = "app.bumicerts.funding.config";
-var makePdsError23 = (message, cause) => new FundingConfigPdsError({ message, cause });
-var makeValidationError19 = (message, cause) => new FundingConfigValidationError({ message, cause });
-var updateFundingConfig = (input) => Effect27.gen(function* () {
-  const { rkey } = input;
-  const existing = yield* fetchRecord(
-    COLLECTION23,
-    rkey,
-    makePdsError23
-  );
-  if (existing === null) {
-    return yield* Effect27.fail(new FundingConfigNotFoundError({ rkey }));
-  }
-  const patched = applyPatch4(existing, input.data, input.unset);
-  patched.$type = COLLECTION23;
-  patched.createdAt = existing.createdAt;
-  patched.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
-  yield* stubValidate(patched, $parse19, makeValidationError19);
-  const resolved = yield* resolveFileInputs(patched);
-  const record = yield* finalValidate(resolved, $parse19, makeValidationError19);
-  const { uri, cid } = yield* putRecord(COLLECTION23, rkey, record, makePdsError23);
-  return { uri, cid, rkey, record };
-});
-
-// src/mutations/funding.config/upsert.ts
-import { Effect as Effect28 } from "effect";
-import {
-  $parse as $parse20
-} from "@gainforest/generated/app/bumicerts/funding/config.defs";
-var COLLECTION24 = "app.bumicerts.funding.config";
-var makePdsError24 = (message, cause) => new FundingConfigPdsError({ message, cause });
-var makeValidationError20 = (message, cause) => new FundingConfigValidationError({ message, cause });
-var upsertFundingConfig = (input) => Effect28.gen(function* () {
-  const { rkey: inputRkey, ...inputData } = input;
-  const now = (/* @__PURE__ */ new Date()).toISOString();
-  if (inputRkey === void 0) {
-    const candidate2 = { $type: COLLECTION24, ...inputData, createdAt: now, updatedAt: now };
-    yield* stubValidate(candidate2, $parse20, makeValidationError20);
-    const resolved2 = yield* resolveFileInputs(candidate2);
-    const record2 = yield* finalValidate(resolved2, $parse20, makeValidationError20);
-    const { uri: uri2, cid: cid2 } = yield* createRecord(COLLECTION24, record2, void 0, makePdsError24);
-    const rkey = uri2.split("/").pop();
-    return { uri: uri2, cid: cid2, rkey, record: record2, created: true };
-  }
-  const existing = yield* fetchRecord(
-    COLLECTION24,
-    inputRkey,
-    makePdsError24
-  );
-  const createdAt = existing !== null ? existing.createdAt : now;
-  const candidate = { $type: COLLECTION24, ...inputData, createdAt, updatedAt: now };
-  yield* stubValidate(candidate, $parse20, makeValidationError20);
-  const resolved = yield* resolveFileInputs(candidate);
-  const record = yield* finalValidate(resolved, $parse20, makeValidationError20);
-  const { uri, cid } = yield* putRecord(COLLECTION24, inputRkey, record, makePdsError24);
-  return {
-    uri,
-    cid,
-    rkey: inputRkey,
-    record,
-    created: existing === null
-  };
-});
-
-// src/mutations/funding.config/delete.ts
-import { Effect as Effect29 } from "effect";
-var COLLECTION25 = "app.bumicerts.funding.config";
-var makePdsError25 = (message, cause) => new FundingConfigPdsError({ message, cause });
-var deleteFundingConfig = (input) => Effect29.gen(function* () {
-  const { rkey } = input;
-  const repo = (yield* AtprotoAgent).assertDid;
-  const uri = `at://${repo}/${COLLECTION25}/${rkey}`;
-  const existing = yield* fetchRecord(COLLECTION25, rkey, makePdsError25);
-  if (existing === null) {
-    return yield* Effect29.fail(new FundingConfigNotFoundError({ rkey }));
-  }
-  yield* deleteRecord(COLLECTION25, rkey, makePdsError25);
-  return { uri, rkey };
-});
-
-// src/mutations/link.evm/create.ts
-import { Effect as Effect30 } from "effect";
-import {
-  $parse as $parse21
-} from "@gainforest/generated/app/bumicerts/link/evm.defs";
-
-// src/mutations/link.evm/utils/errors.ts
-import { Data as Data11 } from "effect";
-var LinkEvmValidationError = class extends Data11.TaggedError(
-  "LinkEvmValidationError"
-) {
-};
-var LinkEvmPdsError = class extends Data11.TaggedError(
-  "LinkEvmPdsError"
-) {
-};
-var LinkEvmNotFoundError = class extends Data11.TaggedError(
-  "LinkEvmNotFoundError"
-) {
-};
-
-// src/mutations/link.evm/create.ts
-var COLLECTION26 = "app.bumicerts.link.evm";
-var makePdsError26 = (message, cause) => new LinkEvmPdsError({ message, cause });
-var makeValidationError21 = (message, cause) => new LinkEvmValidationError({ message, cause });
-var createLinkEvm = (input) => Effect30.gen(function* () {
-  const { rkey: inputRkey, ...inputData } = input;
   const candidate = {
     $type: COLLECTION26,
     ...inputData,
-    createdAt: (/* @__PURE__ */ new Date()).toISOString()
+    createdAt: now,
+    updatedAt: now
   };
   yield* stubValidate(candidate, $parse21, makeValidationError21);
   const resolved = yield* resolveFileInputs(candidate);
@@ -2198,15 +2198,23 @@ var createLinkEvm = (input) => Effect30.gen(function* () {
   };
 });
 
-// src/mutations/link.evm/update.ts
+// src/mutations/funding.config/update.ts
 import { Effect as Effect31 } from "effect";
 import {
   $parse as $parse22
-} from "@gainforest/generated/app/bumicerts/link/evm.defs";
-var COLLECTION27 = "app.bumicerts.link.evm";
-var makePdsError27 = (message, cause) => new LinkEvmPdsError({ message, cause });
-var makeValidationError22 = (message, cause) => new LinkEvmValidationError({ message, cause });
-var updateLinkEvm = (input) => Effect31.gen(function* () {
+} from "@gainforest/generated/app/bumicerts/funding/config.defs";
+
+// src/mutations/funding.config/utils/merge.ts
+var REQUIRED_FIELDS5 = /* @__PURE__ */ new Set([
+  "receivingWallet"
+]);
+var applyPatch5 = (existing, data, unset) => applyPatch(existing, data, unset, REQUIRED_FIELDS5);
+
+// src/mutations/funding.config/update.ts
+var COLLECTION27 = "app.bumicerts.funding.config";
+var makePdsError27 = (message, cause) => new FundingConfigPdsError({ message, cause });
+var makeValidationError22 = (message, cause) => new FundingConfigValidationError({ message, cause });
+var updateFundingConfig = (input) => Effect31.gen(function* () {
   const { rkey } = input;
   const existing = yield* fetchRecord(
     COLLECTION27,
@@ -2214,15 +2222,12 @@ var updateLinkEvm = (input) => Effect31.gen(function* () {
     makePdsError27
   );
   if (existing === null) {
-    return yield* Effect31.fail(new LinkEvmNotFoundError({ rkey }));
+    return yield* Effect31.fail(new FundingConfigNotFoundError({ rkey }));
   }
-  const patched = {
-    ...existing,
-    $type: COLLECTION27,
-    // Allow setting name to undefined (unset) or a new string
-    ...Object.prototype.hasOwnProperty.call(input.data, "name") ? { name: input.data.name } : {},
-    ...input.unset?.includes("name") ? { name: void 0 } : {}
-  };
+  const patched = applyPatch5(existing, input.data, input.unset);
+  patched.$type = COLLECTION27;
+  patched.createdAt = existing.createdAt;
+  patched.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
   yield* stubValidate(patched, $parse22, makeValidationError22);
   const resolved = yield* resolveFileInputs(patched);
   const record = yield* finalValidate(resolved, $parse22, makeValidationError22);
@@ -2230,42 +2235,175 @@ var updateLinkEvm = (input) => Effect31.gen(function* () {
   return { uri, cid, rkey, record };
 });
 
-// src/mutations/link.evm/delete.ts
+// src/mutations/funding.config/upsert.ts
 import { Effect as Effect32 } from "effect";
-var COLLECTION28 = "app.bumicerts.link.evm";
-var makePdsError28 = (message, cause) => new LinkEvmPdsError({ message, cause });
-var deleteLinkEvm = (input) => Effect32.gen(function* () {
+import {
+  $parse as $parse23
+} from "@gainforest/generated/app/bumicerts/funding/config.defs";
+var COLLECTION28 = "app.bumicerts.funding.config";
+var makePdsError28 = (message, cause) => new FundingConfigPdsError({ message, cause });
+var makeValidationError23 = (message, cause) => new FundingConfigValidationError({ message, cause });
+var upsertFundingConfig = (input) => Effect32.gen(function* () {
+  const { rkey: inputRkey, ...inputData } = input;
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  if (inputRkey === void 0) {
+    const candidate2 = { $type: COLLECTION28, ...inputData, createdAt: now, updatedAt: now };
+    yield* stubValidate(candidate2, $parse23, makeValidationError23);
+    const resolved2 = yield* resolveFileInputs(candidate2);
+    const record2 = yield* finalValidate(resolved2, $parse23, makeValidationError23);
+    const { uri: uri2, cid: cid2 } = yield* createRecord(COLLECTION28, record2, void 0, makePdsError28);
+    const rkey = uri2.split("/").pop();
+    return { uri: uri2, cid: cid2, rkey, record: record2, created: true };
+  }
+  const existing = yield* fetchRecord(
+    COLLECTION28,
+    inputRkey,
+    makePdsError28
+  );
+  const createdAt = existing !== null ? existing.createdAt : now;
+  const candidate = { $type: COLLECTION28, ...inputData, createdAt, updatedAt: now };
+  yield* stubValidate(candidate, $parse23, makeValidationError23);
+  const resolved = yield* resolveFileInputs(candidate);
+  const record = yield* finalValidate(resolved, $parse23, makeValidationError23);
+  const { uri, cid } = yield* putRecord(COLLECTION28, inputRkey, record, makePdsError28);
+  return {
+    uri,
+    cid,
+    rkey: inputRkey,
+    record,
+    created: existing === null
+  };
+});
+
+// src/mutations/funding.config/delete.ts
+import { Effect as Effect33 } from "effect";
+var COLLECTION29 = "app.bumicerts.funding.config";
+var makePdsError29 = (message, cause) => new FundingConfigPdsError({ message, cause });
+var deleteFundingConfig = (input) => Effect33.gen(function* () {
   const { rkey } = input;
   const repo = (yield* AtprotoAgent).assertDid;
-  const uri = `at://${repo}/${COLLECTION28}/${rkey}`;
-  const existing = yield* fetchRecord(COLLECTION28, rkey, makePdsError28);
+  const uri = `at://${repo}/${COLLECTION29}/${rkey}`;
+  const existing = yield* fetchRecord(COLLECTION29, rkey, makePdsError29);
   if (existing === null) {
-    return yield* Effect32.fail(new LinkEvmNotFoundError({ rkey }));
+    return yield* Effect33.fail(new FundingConfigNotFoundError({ rkey }));
   }
-  yield* deleteRecord(COLLECTION28, rkey, makePdsError28);
+  yield* deleteRecord(COLLECTION29, rkey, makePdsError29);
+  return { uri, rkey };
+});
+
+// src/mutations/link.evm/create.ts
+import { Effect as Effect34 } from "effect";
+import {
+  $parse as $parse24
+} from "@gainforest/generated/app/bumicerts/link/evm.defs";
+
+// src/mutations/link.evm/utils/errors.ts
+import { Data as Data12 } from "effect";
+var LinkEvmValidationError = class extends Data12.TaggedError(
+  "LinkEvmValidationError"
+) {
+};
+var LinkEvmPdsError = class extends Data12.TaggedError(
+  "LinkEvmPdsError"
+) {
+};
+var LinkEvmNotFoundError = class extends Data12.TaggedError(
+  "LinkEvmNotFoundError"
+) {
+};
+
+// src/mutations/link.evm/create.ts
+var COLLECTION30 = "app.bumicerts.link.evm";
+var makePdsError30 = (message, cause) => new LinkEvmPdsError({ message, cause });
+var makeValidationError24 = (message, cause) => new LinkEvmValidationError({ message, cause });
+var createLinkEvm = (input) => Effect34.gen(function* () {
+  const { rkey: inputRkey, ...inputData } = input;
+  const candidate = {
+    $type: COLLECTION30,
+    ...inputData,
+    createdAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  yield* stubValidate(candidate, $parse24, makeValidationError24);
+  const resolved = yield* resolveFileInputs(candidate);
+  const record = yield* finalValidate(resolved, $parse24, makeValidationError24);
+  const { uri, cid } = yield* createRecord(COLLECTION30, record, inputRkey, makePdsError30);
+  const rkey = uri.split("/").pop();
+  return {
+    uri,
+    cid,
+    rkey,
+    record
+  };
+});
+
+// src/mutations/link.evm/update.ts
+import { Effect as Effect35 } from "effect";
+import {
+  $parse as $parse25
+} from "@gainforest/generated/app/bumicerts/link/evm.defs";
+var COLLECTION31 = "app.bumicerts.link.evm";
+var makePdsError31 = (message, cause) => new LinkEvmPdsError({ message, cause });
+var makeValidationError25 = (message, cause) => new LinkEvmValidationError({ message, cause });
+var updateLinkEvm = (input) => Effect35.gen(function* () {
+  const { rkey } = input;
+  const existing = yield* fetchRecord(
+    COLLECTION31,
+    rkey,
+    makePdsError31
+  );
+  if (existing === null) {
+    return yield* Effect35.fail(new LinkEvmNotFoundError({ rkey }));
+  }
+  const patched = {
+    ...existing,
+    $type: COLLECTION31,
+    // Allow setting name to undefined (unset) or a new string
+    ...Object.prototype.hasOwnProperty.call(input.data, "name") ? { name: input.data.name } : {},
+    ...input.unset?.includes("name") ? { name: void 0 } : {}
+  };
+  yield* stubValidate(patched, $parse25, makeValidationError25);
+  const resolved = yield* resolveFileInputs(patched);
+  const record = yield* finalValidate(resolved, $parse25, makeValidationError25);
+  const { uri, cid } = yield* putRecord(COLLECTION31, rkey, record, makePdsError31);
+  return { uri, cid, rkey, record };
+});
+
+// src/mutations/link.evm/delete.ts
+import { Effect as Effect36 } from "effect";
+var COLLECTION32 = "app.bumicerts.link.evm";
+var makePdsError32 = (message, cause) => new LinkEvmPdsError({ message, cause });
+var deleteLinkEvm = (input) => Effect36.gen(function* () {
+  const { rkey } = input;
+  const repo = (yield* AtprotoAgent).assertDid;
+  const uri = `at://${repo}/${COLLECTION32}/${rkey}`;
+  const existing = yield* fetchRecord(COLLECTION32, rkey, makePdsError32);
+  if (existing === null) {
+    return yield* Effect36.fail(new LinkEvmNotFoundError({ rkey }));
+  }
+  yield* deleteRecord(COLLECTION32, rkey, makePdsError32);
   return { uri, rkey };
 });
 
 // src/mutations/dwc.occurrence/create.ts
-import { Effect as Effect33 } from "effect";
-import { $parse as $parse23 } from "@gainforest/generated/app/gainforest/dwc/occurrence.defs";
+import { Effect as Effect37 } from "effect";
+import { $parse as $parse26 } from "@gainforest/generated/app/gainforest/dwc/occurrence.defs";
 
 // src/mutations/dwc.occurrence/utils/errors.ts
-import { Data as Data12 } from "effect";
-var DwcOccurrenceValidationError = class extends Data12.TaggedError(
+import { Data as Data13 } from "effect";
+var DwcOccurrenceValidationError = class extends Data13.TaggedError(
   "DwcOccurrenceValidationError"
 ) {
 };
-var DwcOccurrencePdsError = class extends Data12.TaggedError(
+var DwcOccurrencePdsError = class extends Data13.TaggedError(
   "DwcOccurrencePdsError"
 ) {
 };
 
 // src/mutations/dwc.occurrence/create.ts
-var COLLECTION29 = "app.gainforest.dwc.occurrence";
-var makePdsError29 = (message, cause) => new DwcOccurrencePdsError({ message, cause });
-var makeValidationError23 = (message, cause) => new DwcOccurrenceValidationError({ message, cause });
-var createDwcOccurrence = (input) => Effect33.gen(function* () {
+var COLLECTION33 = "app.gainforest.dwc.occurrence";
+var makePdsError33 = (message, cause) => new DwcOccurrencePdsError({ message, cause });
+var makeValidationError26 = (message, cause) => new DwcOccurrenceValidationError({ message, cause });
+var createDwcOccurrence = (input) => Effect37.gen(function* () {
   const {
     scientificName,
     eventDate,
@@ -2290,7 +2428,7 @@ var createDwcOccurrence = (input) => Effect33.gen(function* () {
   } = input;
   const createdAt = (/* @__PURE__ */ new Date()).toISOString();
   const candidate = {
-    $type: COLLECTION29,
+    $type: COLLECTION33,
     scientificName,
     eventDate,
     decimalLatitude,
@@ -2312,14 +2450,14 @@ var createDwcOccurrence = (input) => Effect33.gen(function* () {
     ...projectRef !== void 0 ? { projectRef } : {},
     createdAt
   };
-  const record = yield* Effect33.try({
-    try: () => $parse23(candidate),
-    catch: (cause) => makeValidationError23(
+  const record = yield* Effect37.try({
+    try: () => $parse26(candidate),
+    catch: (cause) => makeValidationError26(
       `dwc.occurrence record failed lexicon validation: ${String(cause)}`,
       cause
     )
   });
-  const { uri, cid } = yield* createRecord(COLLECTION29, record, rkey, makePdsError29);
+  const { uri, cid } = yield* createRecord(COLLECTION33, record, rkey, makePdsError33);
   const assignedRkey = uri.split("/").pop() ?? rkey ?? "unknown";
   return {
     uri,
@@ -2330,25 +2468,25 @@ var createDwcOccurrence = (input) => Effect33.gen(function* () {
 });
 
 // src/mutations/dwc.measurement/create.ts
-import { Effect as Effect34 } from "effect";
-import { $parse as $parse24 } from "@gainforest/generated/app/gainforest/dwc/measurement.defs";
+import { Effect as Effect38 } from "effect";
+import { $parse as $parse27 } from "@gainforest/generated/app/gainforest/dwc/measurement.defs";
 
 // src/mutations/dwc.measurement/utils/errors.ts
-import { Data as Data13 } from "effect";
-var DwcMeasurementValidationError = class extends Data13.TaggedError(
+import { Data as Data14 } from "effect";
+var DwcMeasurementValidationError = class extends Data14.TaggedError(
   "DwcMeasurementValidationError"
 ) {
 };
-var DwcMeasurementPdsError = class extends Data13.TaggedError(
+var DwcMeasurementPdsError = class extends Data14.TaggedError(
   "DwcMeasurementPdsError"
 ) {
 };
 
 // src/mutations/dwc.measurement/create.ts
-var COLLECTION30 = "app.gainforest.dwc.measurement";
-var makePdsError30 = (message, cause) => new DwcMeasurementPdsError({ message, cause });
-var makeValidationError24 = (message, cause) => new DwcMeasurementValidationError({ message, cause });
-var createDwcMeasurement = (input) => Effect34.gen(function* () {
+var COLLECTION34 = "app.gainforest.dwc.measurement";
+var makePdsError34 = (message, cause) => new DwcMeasurementPdsError({ message, cause });
+var makeValidationError27 = (message, cause) => new DwcMeasurementValidationError({ message, cause });
+var createDwcMeasurement = (input) => Effect38.gen(function* () {
   const {
     occurrenceRef,
     flora,
@@ -2367,7 +2505,7 @@ var createDwcMeasurement = (input) => Effect34.gen(function* () {
   if (flora.basalDiameter !== void 0) floraResult.basalDiameter = flora.basalDiameter;
   if (flora.canopyCoverPercent !== void 0) floraResult.canopyCoverPercent = flora.canopyCoverPercent;
   const candidate = {
-    $type: COLLECTION30,
+    $type: COLLECTION34,
     occurrenceRef,
     result: floraResult,
     createdAt: (/* @__PURE__ */ new Date()).toISOString()
@@ -2377,14 +2515,14 @@ var createDwcMeasurement = (input) => Effect34.gen(function* () {
   if (measurementDate !== void 0) candidate.measurementDate = measurementDate;
   if (measurementMethod !== void 0) candidate.measurementMethod = measurementMethod;
   if (measurementRemarks !== void 0) candidate.measurementRemarks = measurementRemarks;
-  const record = yield* Effect34.try({
-    try: () => $parse24(candidate),
-    catch: (cause) => makeValidationError24(
+  const record = yield* Effect38.try({
+    try: () => $parse27(candidate),
+    catch: (cause) => makeValidationError27(
       `dwc.measurement record failed lexicon validation: ${String(cause)}`,
       cause
     )
   });
-  const { uri, cid } = yield* createRecord(COLLECTION30, record, rkey, makePdsError30);
+  const { uri, cid } = yield* createRecord(COLLECTION34, record, rkey, makePdsError34);
   const assignedRkey = uri.split("/").pop() ?? rkey ?? "unknown";
   return {
     uri,
@@ -2395,8 +2533,8 @@ var createDwcMeasurement = (input) => Effect34.gen(function* () {
 });
 
 // src/blob/upload.ts
-import { Effect as Effect35 } from "effect";
-var uploadBlob = (input) => Effect35.gen(function* () {
+import { Effect as Effect39 } from "effect";
+var uploadBlob = (input) => Effect39.gen(function* () {
   const agent = yield* AtprotoAgent;
   const { file, mimeType: override } = input;
   let data;
@@ -2405,18 +2543,18 @@ var uploadBlob = (input) => Effect35.gen(function* () {
     data = fromSerializableFile(file);
     mimeType = override ?? file.type;
   } else if (isFileOrBlob(file)) {
-    const buf = yield* Effect35.tryPromise({
+    const buf = yield* Effect39.tryPromise({
       try: () => file.arrayBuffer(),
       catch: (e) => new BlobUploadError({ message: "Failed to read file data into ArrayBuffer", cause: e })
     });
     data = new Uint8Array(buf);
     mimeType = override ?? (file.type || "application/octet-stream");
   } else {
-    return yield* Effect35.die(
+    return yield* Effect39.die(
       new Error("uploadBlob: input.file must be a File, Blob, or SerializableFile")
     );
   }
-  const res = yield* Effect35.tryPromise({
+  const res = yield* Effect39.tryPromise({
     try: () => agent.uploadBlob(data, { encoding: mimeType }),
     catch: (e) => new BlobUploadError({ message: "PDS blob upload failed", cause: e })
   });
@@ -2462,6 +2600,12 @@ var mutations = {
       update: updateClaimActivity,
       upsert: upsertClaimActivity,
       delete: deleteClaimActivity
+    },
+    rights: {
+      create: createClaimRights,
+      update: updateClaimRights,
+      upsert: upsertClaimRights,
+      delete: deleteClaimRights
     }
   },
   certified: {
@@ -2708,16 +2852,16 @@ var adapt = (action) => {
 };
 
 // src/layers/credential.ts
-import { Data as Data14, Effect as Effect36, Layer } from "effect";
+import { Data as Data15, Effect as Effect40, Layer } from "effect";
 import { CredentialSession, Agent } from "@atproto/api";
-var CredentialLoginError = class extends Data14.TaggedError("CredentialLoginError") {
+var CredentialLoginError = class extends Data15.TaggedError("CredentialLoginError") {
 };
 function makeCredentialAgentLayer(config) {
   return Layer.effect(
     AtprotoAgent,
-    Effect36.gen(function* () {
+    Effect40.gen(function* () {
       const session = new CredentialSession(new URL(`https://${config.service}`));
-      yield* Effect36.tryPromise({
+      yield* Effect40.tryPromise({
         try: () => session.login({
           identifier: config.identifier,
           password: config.password
@@ -2744,6 +2888,9 @@ export {
   ClaimActivityNotFoundError,
   ClaimActivityPdsError,
   ClaimActivityValidationError,
+  ClaimRightsNotFoundError,
+  ClaimRightsPdsError,
+  ClaimRightsValidationError,
   CredentialLoginError,
   DefaultSiteLocationNotFoundError,
   DefaultSitePdsError,

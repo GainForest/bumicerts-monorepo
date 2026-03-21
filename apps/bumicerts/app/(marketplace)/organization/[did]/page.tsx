@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { getOrgData, transformOrgData, type GraphQLOrgInfoItem } from "./_data";
 import { OrgAbout } from "./_components/OrgAbout";
-
-const BASE_URL = "https://bumicerts.com";
+import { requirePublicUrl } from "@/lib/url";
 
 // ── Metadata ─────────────────────────────────────────────────────────────────
 
@@ -30,7 +29,7 @@ export async function generateMetadata({
         : `${displayName} on Bumicerts — verified regenerative impact organization.`;
 
   const coverImageUrl = record?.coverImage?.uri ?? null;
-  const orgUrl = `${BASE_URL}/organization/${encodedDid}`;
+  const orgUrl = `${requirePublicUrl()}/organization/${encodedDid}`;
 
   return {
     title: `${displayName} — Bumicerts`,
@@ -72,7 +71,7 @@ export default async function OrganizationPage({
 
   // ── JSON-LD structured data ───────────────────────────────────────────────
 
-  const orgUrl = `${BASE_URL}/organization/${encodedDid}`;
+  const orgUrl = `${requirePublicUrl()}/organization/${encodedDid}`;
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "Organization",

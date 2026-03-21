@@ -30,7 +30,6 @@ export async function restoreSession(
   try {
     const session = await client.restore(did);
     debug.log("[restore-session] Restored", { did, found: !!session });
-    console.log("SESSION========", JSON.stringify(session));
     return session;
   } catch (error) {
     console.log("ERROR_SESSION_RESTORE========", error);

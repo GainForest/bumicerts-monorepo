@@ -7,6 +7,7 @@ import {
 } from "@/lib/adapters";
 import type { BumicertData } from "@/lib/types";
 import { ExploreShell } from "./_components/ExploreShell";
+import { requirePublicUrl } from "@/lib/url";
 
 export const metadata = {
   title: "Explore Bumicerts — Verified Regenerative Impact Projects",
@@ -55,7 +56,7 @@ export default async function ExplorePage() {
       where: {
         hasImage: true,
         hasOrganizationInfoRecord: true,
-        labelTier: "standard",
+        labelTier: "high-quality",
       },
     });
     const activities = (response.hypercerts?.claim?.activity?.data ??
@@ -72,7 +73,7 @@ export default async function ExplorePage() {
     description:
       "Verified environmental impact certificates from nature stewards around the world.",
     numberOfItems: bumicerts.length,
-    url: "https://bumicerts.com/explore",
+    url: `${requirePublicUrl()}/explore`,
   };
 
   return (

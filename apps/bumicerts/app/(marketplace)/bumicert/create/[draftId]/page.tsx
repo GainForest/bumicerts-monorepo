@@ -6,7 +6,7 @@ import HeaderContent from "./_components/HeaderContent";
 import StoreHydrator from "./_components/StoreHydrator";
 import StepBody from "./_components/StepBody";
 import { links } from "@/lib/links";
-import { BASE_URL } from "@/lib/config/endpoint";
+import { requirePublicUrl } from "@/lib/url";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 const trackDraftResumed = (draftId: number, updatedAt: string) => {
@@ -44,7 +44,7 @@ const getDataByDraftId = async (draftId: string) => {
   const cookieHeader = headersList.get("cookie") || "";
 
   const response = await fetch(
-    `${BASE_URL}${links.api.drafts.bumicert.get({ draftIds: [draftIdNum] })}`,
+    `${requirePublicUrl()}${links.api.drafts.bumicert.get({ draftIds: [draftIdNum] })}`,
     {
       method: "GET",
       headers: { Cookie: cookieHeader },

@@ -3,8 +3,7 @@ import { getOrgData, transformOrgData, type GraphQLOrgInfoItem, type GraphQLHcAc
 import { OrgBumicertsGrid } from "./_components/OrgBumicertsGrid";
 import ErrorPage from "@/components/error-page";
 import Container from "@/components/ui/container";
-
-const BASE_URL = "https://bumicerts.com";
+import { requirePublicUrl } from "@/lib/url";
 
 // ── Metadata ─────────────────────────────────────────────────────────────────
 
@@ -25,7 +24,7 @@ export async function generateMetadata({
   return {
     title: `${displayName} Bumicerts — Bumicerts`,
     description: `Browse all Bumicerts created by ${displayName}.`,
-    alternates: { canonical: `${BASE_URL}/organization/${encodedDid}/bumicerts` },
+    alternates: { canonical: `${requirePublicUrl()}/organization/${encodedDid}/bumicerts` },
   };
 }
 

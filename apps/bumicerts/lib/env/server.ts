@@ -18,7 +18,13 @@ export const serverEnv = createEnv({
     VERCEL_ENV: z
       .enum(["development", "preview", "production"])
       .optional(),
+    // Raw deployment alias — e.g. bumicerts-r3f59v16y-gainforest.vercel.app
+    // Never the custom domain. Use getPublicUrl() from lib/url.ts instead of
+    // reading this directly.
     VERCEL_URL: z.string().optional(),
+    // Always the shortest production custom domain — e.g. alpha.fund.gainforest.app.
+    // Set even on preview deployments. Use getPublicUrl() instead of reading this directly.
+    VERCEL_PROJECT_PRODUCTION_URL: z.string().optional(),
 
     // ATProto OAuth
     ATPROTO_JWK_PRIVATE: z.string().min(1),
@@ -73,6 +79,7 @@ export const serverEnv = createEnv({
     NODE_ENV: process.env.NODE_ENV,
     VERCEL_ENV: process.env.VERCEL_ENV,
     VERCEL_URL: process.env.VERCEL_URL,
+    VERCEL_PROJECT_PRODUCTION_URL: process.env.VERCEL_PROJECT_PRODUCTION_URL,
     ATPROTO_JWK_PRIVATE: process.env.ATPROTO_JWK_PRIVATE,
     COOKIE_SECRET: process.env.COOKIE_SECRET,
     PDS_ADMIN_IDENTIFIER: process.env.PDS_ADMIN_IDENTIFIER,

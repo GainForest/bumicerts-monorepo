@@ -14,17 +14,19 @@ import { Main as Main$3 } from '@gainforest/generated/app/gainforest/organizatio
 export { Metadata as AudioMetadata, Main as AudioRecordingRecord } from '@gainforest/generated/app/gainforest/organization/recordings/audio.defs';
 import { Main as Main$4 } from '@gainforest/generated/org/hypercerts/claim/activity.defs';
 export { Main as ClaimActivityRecord, Contributor, ContributorIdentity, ContributorRole, WorkScopeString } from '@gainforest/generated/org/hypercerts/claim/activity.defs';
-import { Main as Main$5 } from '@gainforest/generated/org/hypercerts/funding/receipt.defs';
+import { Main as Main$5 } from '@gainforest/generated/org/hypercerts/claim/rights.defs';
+export { Main as ClaimRightsRecord } from '@gainforest/generated/org/hypercerts/claim/rights.defs';
+import { Main as Main$6 } from '@gainforest/generated/org/hypercerts/funding/receipt.defs';
 export { Main as FundingReceiptRecord } from '@gainforest/generated/org/hypercerts/funding/receipt.defs';
-import { Main as Main$6 } from '@gainforest/generated/app/bumicerts/link/evm.defs';
+import { Main as Main$7 } from '@gainforest/generated/app/bumicerts/link/evm.defs';
 export { Eip712PlatformAttestation, Eip712Proof, Eip712Message as LinkEvmEip712Message, Main as LinkEvmRecord } from '@gainforest/generated/app/bumicerts/link/evm.defs';
-import { Main as Main$7 } from '@gainforest/generated/app/bumicerts/funding/config.defs';
+import { Main as Main$8 } from '@gainforest/generated/app/bumicerts/funding/config.defs';
 export { EvmLinkRef, Main as FundingConfigRecord } from '@gainforest/generated/app/bumicerts/funding/config.defs';
-import { Main as Main$8 } from '@gainforest/generated/app/gainforest/organization/info.defs';
+import { Main as Main$9 } from '@gainforest/generated/app/gainforest/organization/info.defs';
 export { Main as OrganizationInfoRecord } from '@gainforest/generated/app/gainforest/organization/info.defs';
-import { Main as Main$9 } from '@gainforest/generated/app/gainforest/dwc/occurrence.defs';
+import { Main as Main$a } from '@gainforest/generated/app/gainforest/dwc/occurrence.defs';
 export { Main as DwcOccurrenceRecord } from '@gainforest/generated/app/gainforest/dwc/occurrence.defs';
-import { Main as Main$a } from '@gainforest/generated/app/gainforest/dwc/measurement.defs';
+import { Main as Main$b } from '@gainforest/generated/app/gainforest/dwc/measurement.defs';
 export { Main as DwcMeasurementRecord } from '@gainforest/generated/app/gainforest/dwc/measurement.defs';
 import { GeoJsonObject, Feature, LineString, MultiLineString, Point, MultiPoint, Polygon, MultiPolygon, FeatureCollection } from 'geojson';
 export { Main as ClaimActivityLinearDocument, Main as LinearDocument } from '@gainforest/generated/pub/leaflet/pages/linearDocument.defs';
@@ -73,6 +75,14 @@ declare const mutations: {
                 created: boolean;
             }, ClaimActivityValidationError | ClaimActivityPdsError | FileConstraintError | BlobUploadError, AtprotoAgent>;
             readonly delete: (input: DeleteRecordInput) => effect_Effect.Effect<DeleteRecordResult, ClaimActivityNotFoundError | ClaimActivityPdsError, AtprotoAgent>;
+        };
+        readonly rights: {
+            readonly create: (input: CreateClaimRightsInput) => effect_Effect.Effect<ClaimRightsMutationResult, ClaimRightsValidationError | ClaimRightsPdsError | FileConstraintError | BlobUploadError, AtprotoAgent>;
+            readonly update: (input: UpdateClaimRightsInput) => effect_Effect.Effect<ClaimRightsMutationResult, ClaimRightsValidationError | ClaimRightsNotFoundError | ClaimRightsPdsError | FileConstraintError | BlobUploadError, AtprotoAgent>;
+            readonly upsert: (input: UpsertClaimRightsInput) => effect_Effect.Effect<ClaimRightsMutationResult & {
+                created: boolean;
+            }, ClaimRightsValidationError | ClaimRightsPdsError | FileConstraintError | BlobUploadError, AtprotoAgent>;
+            readonly delete: (input: DeleteRecordInput) => effect_Effect.Effect<DeleteRecordResult, ClaimRightsNotFoundError | ClaimRightsPdsError, AtprotoAgent>;
         };
     };
     readonly certified: {
@@ -769,6 +779,43 @@ declare class ClaimActivityPdsError extends ClaimActivityPdsError_base<{
 }> {
 }
 
+declare const ClaimRightsValidationError_base: new <A extends Record<string, any> = {}>(args: effect_Types.Equals<A, {}> extends true ? void : { readonly [P in keyof A as P extends "_tag" ? never : P]: A[P]; }) => effect_Cause.YieldableError & {
+    readonly _tag: "ClaimRightsValidationError";
+} & Readonly<A>;
+/**
+ * Input failed validation against the org.hypercerts.claim.rights lexicon.
+ * Raised by all operations (create, update, upsert) before any PDS call.
+ */
+declare class ClaimRightsValidationError extends ClaimRightsValidationError_base<{
+    message: string;
+    cause?: unknown;
+}> {
+}
+declare const ClaimRightsNotFoundError_base: new <A extends Record<string, any> = {}>(args: effect_Types.Equals<A, {}> extends true ? void : { readonly [P in keyof A as P extends "_tag" ? never : P]: A[P]; }) => effect_Cause.YieldableError & {
+    readonly _tag: "ClaimRightsNotFoundError";
+} & Readonly<A>;
+/**
+ * An update, upsert (with rkey), or delete was attempted but no record with
+ * that rkey exists in the repo.
+ */
+declare class ClaimRightsNotFoundError extends ClaimRightsNotFoundError_base<{
+    /** The rkey that was looked up */
+    rkey: string;
+}> {
+}
+declare const ClaimRightsPdsError_base: new <A extends Record<string, any> = {}>(args: effect_Types.Equals<A, {}> extends true ? void : { readonly [P in keyof A as P extends "_tag" ? never : P]: A[P]; }) => effect_Cause.YieldableError & {
+    readonly _tag: "ClaimRightsPdsError";
+} & Readonly<A>;
+/**
+ * The PDS rejected or failed to process the record operation.
+ * Wraps the raw error from agent.com.atproto.repo.* calls.
+ */
+declare class ClaimRightsPdsError extends ClaimRightsPdsError_base<{
+    message: string;
+    cause?: unknown;
+}> {
+}
+
 declare const FundingReceiptValidationError_base: new <A extends Record<string, any> = {}>(args: effect_Types.Equals<A, {}> extends true ? void : { readonly [P in keyof A as P extends "_tag" ? never : P]: A[P]; }) => effect_Cause.YieldableError & {
     readonly _tag: "FundingReceiptValidationError";
 } & Readonly<A>;
@@ -1127,6 +1174,15 @@ type UpsertClaimActivityInput = CreateClaimActivityInput;
 /** Returned by create, update, and upsert on success. */
 type ClaimActivityMutationResult = RecordMutationResult<Main$4>;
 
+/** Input for createClaimRights. rkey is optional — PDS assigns a TID when absent. */
+type CreateClaimRightsInput = RecordCreateInput<Main$5>;
+/** Input for updateClaimRights. */
+type UpdateClaimRightsInput = RecordUpdateInput<Main$5>;
+/** Input for upsertClaimRights — same full-replacement semantics as create. */
+type UpsertClaimRightsInput = CreateClaimRightsInput;
+/** Returned by create, update, and upsert on success. */
+type ClaimRightsMutationResult = RecordMutationResult<Main$5>;
+
 /**
  * Input for createFundingReceipt.
  *
@@ -1137,47 +1193,47 @@ type ClaimActivityMutationResult = RecordMutationResult<Main$4>;
  *
  * `rkey` is optional — PDS assigns a TID when absent.
  */
-type CreateFundingReceiptInput = RecordCreateInput<Main$5>;
+type CreateFundingReceiptInput = RecordCreateInput<Main$6>;
 /** Returned by createFundingReceipt on success. */
-type FundingReceiptMutationResult = RecordMutationResult<Main$5>;
+type FundingReceiptMutationResult = RecordMutationResult<Main$6>;
 
 /**
  * Input for createLinkEvm.
  * rkey is optional — PDS assigns a TID when absent.
  */
-type CreateLinkEvmInput = RecordCreateInput<Main$6>;
+type CreateLinkEvmInput = RecordCreateInput<Main$7>;
 /**
  * Input for updateLinkEvm.
  * Only `name` is updatable — crypto proof fields are immutable.
  */
-type UpdateLinkEvmInput = RecordUpdateInput<Pick<Main$6, "name">>;
+type UpdateLinkEvmInput = RecordUpdateInput<Pick<Main$7, "name">>;
 /** Returned by create/update on success. */
-type LinkEvmMutationResult = RecordMutationResult<Main$6>;
+type LinkEvmMutationResult = RecordMutationResult<Main$7>;
 
 /**
  * Input for createFundingConfig.
  * rkey should match the rkey of the associated org.hypercerts.claim.activity record
  * to enable the shared-rkey join lookup in the indexer.
  */
-type CreateFundingConfigInput = RecordCreateInput<Main$7>;
+type CreateFundingConfigInput = RecordCreateInput<Main$8>;
 /** Input for updateFundingConfig. */
-type UpdateFundingConfigInput = RecordUpdateInput<Main$7>;
+type UpdateFundingConfigInput = RecordUpdateInput<Main$8>;
 /** Input for upsertFundingConfig — same full-replacement semantics as create. */
 type UpsertFundingConfigInput = CreateFundingConfigInput;
 /** Returned by create, update, and upsert on success. */
-type FundingConfigMutationResult = RecordMutationResult<Main$7>;
+type FundingConfigMutationResult = RecordMutationResult<Main$8>;
 
 /** Valid objective values — extracted from the record so they stay in sync with the lexicon. */
-type Objective = Main$8["objectives"][number];
+type Objective = Main$9["objectives"][number];
 /** Input for createOrganizationInfo. */
-type CreateOrganizationInfoInput = SingletonCreateInput<Main$8>;
+type CreateOrganizationInfoInput = SingletonCreateInput<Main$9>;
 /** Input for updateOrganizationInfo. */
-type UpdateOrganizationInfoInput = SingletonUpdateInput<Main$8>;
+type UpdateOrganizationInfoInput = SingletonUpdateInput<Main$9>;
 /** Returned by create, update, and upsert on success. */
-type OrganizationInfoMutationResult = SingletonMutationResult<Main$8>;
+type OrganizationInfoMutationResult = SingletonMutationResult<Main$9>;
 
 /** Returned by createDwcOccurrence. */
-type DwcOccurrenceMutationResult = RecordMutationResult<Main$9>;
+type DwcOccurrenceMutationResult = RecordMutationResult<Main$a>;
 type CreateDwcOccurrenceInput = {
     scientificName: string;
     eventDate: string;
@@ -1202,7 +1258,7 @@ type CreateDwcOccurrenceInput = {
 };
 
 /** Returned by createDwcMeasurement. */
-type DwcMeasurementMutationResult = RecordMutationResult<Main$a>;
+type DwcMeasurementMutationResult = RecordMutationResult<Main$b>;
 type FloraMeasurementFields = {
     dbh?: string;
     totalHeight?: string;
@@ -1228,4 +1284,4 @@ type CreateDwcMeasurementInput = {
     rkey?: string;
 };
 
-export { AtprotoAgent, type AudioRecordingMutationResult, AudioRecordingNotFoundError, AudioRecordingPdsError, AudioRecordingValidationError, type AudioTechnicalMetadata, type BlobConstraint, BlobUploadError, CertifiedLocationIsDefaultError, type CertifiedLocationMutationResult, CertifiedLocationNotFoundError, CertifiedLocationPdsError, CertifiedLocationValidationError, type ClaimActivityMutationResult, ClaimActivityNotFoundError, ClaimActivityPdsError, ClaimActivityValidationError, type Coordinates, type CreateAudioRecordingInput, type CreateCertifiedLocationInput, type CreateClaimActivityInput, type CreateDwcMeasurementInput, type CreateDwcOccurrenceInput, type CreateFundingConfigInput, type CreateFundingReceiptInput, type CreateLayerInput, type CreateLinkEvmInput, type CreateOrganizationInfoInput, type CredentialConfig, CredentialLoginError, DefaultSiteLocationNotFoundError, type DefaultSiteMutationResult, DefaultSitePdsError, DefaultSiteValidationError, type DeleteRecordInput, type DeleteRecordResult, type DwcMeasurementMutationResult, DwcMeasurementPdsError, DwcMeasurementValidationError, type DwcOccurrenceMutationResult, DwcOccurrencePdsError, DwcOccurrenceValidationError, type FieldLabels, FileConstraintError, type FileOrBlobRef, type FloraMeasurementFields, type FormattedError, type FundingConfigMutationResult, FundingConfigNotFoundError, FundingConfigPdsError, FundingConfigValidationError, type FundingReceiptMutationResult, FundingReceiptPdsError, FundingReceiptValidationError, GeoJsonProcessingError, GeoJsonValidationError, HECTARES_PER_SQUARE_METER, type LayerMutationResult, LayerNotFoundError, LayerPdsError, type LayerType, LayerValidationError, type LinkEvmMutationResult, LinkEvmNotFoundError, LinkEvmPdsError, LinkEvmValidationError, MutationError, type MutationResult, type Mutations, type Objective, OrganizationInfoAlreadyExistsError, type OrganizationInfoMutationResult, OrganizationInfoNotFoundError, OrganizationInfoPdsError, OrganizationInfoValidationError, type PolygonMetrics, type RecordCreateInput, type RecordFields, type RecordMutationResult, type RecordUpdateInput, type SerializableFile, type SetDefaultSiteInput, type SingletonCreateInput, type SingletonMutationResult, type SingletonUpdateInput, type UpdateAudioRecordingInput, type UpdateCertifiedLocationInput, type UpdateClaimActivityInput, type UpdateFundingConfigInput, type UpdateLayerInput, type UpdateLinkEvmInput, type UpdateOrganizationInfoInput, type UploadBlobInput, type UploadBlobResult, type UpsertAudioRecordingInput, type UpsertCertifiedLocationInput, type UpsertClaimActivityInput, type UpsertFundingConfigInput, type UpsertLayerInput, type ValidationIssue, type WithFileInputs, adapt, computePolygonMetrics, err, extractBlobConstraints, extractLineStringFeatures, extractPointFeatures, extractPolygonFeatures, formatMutationError, formatMutationErrorMessage, fromSerializableFile, isAnyBlobRef, makeCredentialAgentLayer, mimeMatches, mutations, normalizeBlobRef, ok, toFeatureCollection, toSerializableFile, validateGeojsonOrThrow };
+export { AtprotoAgent, type AudioRecordingMutationResult, AudioRecordingNotFoundError, AudioRecordingPdsError, AudioRecordingValidationError, type AudioTechnicalMetadata, type BlobConstraint, BlobUploadError, CertifiedLocationIsDefaultError, type CertifiedLocationMutationResult, CertifiedLocationNotFoundError, CertifiedLocationPdsError, CertifiedLocationValidationError, type ClaimActivityMutationResult, ClaimActivityNotFoundError, ClaimActivityPdsError, ClaimActivityValidationError, type ClaimRightsMutationResult, ClaimRightsNotFoundError, ClaimRightsPdsError, ClaimRightsValidationError, type Coordinates, type CreateAudioRecordingInput, type CreateCertifiedLocationInput, type CreateClaimActivityInput, type CreateClaimRightsInput, type CreateDwcMeasurementInput, type CreateDwcOccurrenceInput, type CreateFundingConfigInput, type CreateFundingReceiptInput, type CreateLayerInput, type CreateLinkEvmInput, type CreateOrganizationInfoInput, type CredentialConfig, CredentialLoginError, DefaultSiteLocationNotFoundError, type DefaultSiteMutationResult, DefaultSitePdsError, DefaultSiteValidationError, type DeleteRecordInput, type DeleteRecordResult, type DwcMeasurementMutationResult, DwcMeasurementPdsError, DwcMeasurementValidationError, type DwcOccurrenceMutationResult, DwcOccurrencePdsError, DwcOccurrenceValidationError, type FieldLabels, FileConstraintError, type FileOrBlobRef, type FloraMeasurementFields, type FormattedError, type FundingConfigMutationResult, FundingConfigNotFoundError, FundingConfigPdsError, FundingConfigValidationError, type FundingReceiptMutationResult, FundingReceiptPdsError, FundingReceiptValidationError, GeoJsonProcessingError, GeoJsonValidationError, HECTARES_PER_SQUARE_METER, type LayerMutationResult, LayerNotFoundError, LayerPdsError, type LayerType, LayerValidationError, type LinkEvmMutationResult, LinkEvmNotFoundError, LinkEvmPdsError, LinkEvmValidationError, MutationError, type MutationResult, type Mutations, type Objective, OrganizationInfoAlreadyExistsError, type OrganizationInfoMutationResult, OrganizationInfoNotFoundError, OrganizationInfoPdsError, OrganizationInfoValidationError, type PolygonMetrics, type RecordCreateInput, type RecordFields, type RecordMutationResult, type RecordUpdateInput, type SerializableFile, type SetDefaultSiteInput, type SingletonCreateInput, type SingletonMutationResult, type SingletonUpdateInput, type UpdateAudioRecordingInput, type UpdateCertifiedLocationInput, type UpdateClaimActivityInput, type UpdateClaimRightsInput, type UpdateFundingConfigInput, type UpdateLayerInput, type UpdateLinkEvmInput, type UpdateOrganizationInfoInput, type UploadBlobInput, type UploadBlobResult, type UpsertAudioRecordingInput, type UpsertCertifiedLocationInput, type UpsertClaimActivityInput, type UpsertClaimRightsInput, type UpsertFundingConfigInput, type UpsertLayerInput, type ValidationIssue, type WithFileInputs, adapt, computePolygonMetrics, err, extractBlobConstraints, extractLineStringFeatures, extractPointFeatures, extractPolygonFeatures, formatMutationError, formatMutationErrorMessage, fromSerializableFile, isAnyBlobRef, makeCredentialAgentLayer, mimeMatches, mutations, normalizeBlobRef, ok, toFeatureCollection, toSerializableFile, validateGeojsonOrThrow };

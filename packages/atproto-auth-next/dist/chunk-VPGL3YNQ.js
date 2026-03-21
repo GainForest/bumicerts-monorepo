@@ -4,11 +4,12 @@ import {
 } from "./chunk-KQLTEQV7.js";
 
 // src/utils/url.ts
+var PLACEHOLDER_URL = "https://placeholder.invalid";
 function resolvePublicUrl(explicitUrl) {
   if (explicitUrl) {
     return explicitUrl.replace(/\/$/, "");
   }
-  return "https://placeholder.invalid";
+  return PLACEHOLDER_URL;
 }
 function isLoopback(url) {
   return url.includes("127.0.0.1") || url.includes("localhost");
@@ -595,6 +596,11 @@ function createAuthSetup(config) {
   } = config;
   configureDebug(debug2 ?? false);
   const publicUrl = resolvePublicUrl(config.publicUrl);
+  if (publicUrl === PLACEHOLDER_URL) {
+    throw new Error(
+      "[atproto-auth] createAuthSetup() was called without a valid publicUrl.\nPass the app's public URL via the `publicUrl` option:\n  \u2022 Production / Vercel:  publicUrl: `https://${VERCEL_URL}`\n  \u2022 Local dev (loopback): publicUrl: 'http://127.0.0.1:3000'\n  \u2022 Local dev (ngrok):    publicUrl: process.env.NEXT_PUBLIC_BASE_URL\nThe package never reads environment variables directly \u2014 the consuming app is responsible for resolving and passing this value."
+    );
+  }
   const loopback = isLoopback(publicUrl);
   const isEpdsEnabled = !!epdsConfig;
   const sessionConfig = {
@@ -736,4 +742,4 @@ export {
   createAuthSetup,
   createOAuthSetup
 };
-//# sourceMappingURL=chunk-LYJHKPYZ.js.map
+//# sourceMappingURL=chunk-VPGL3YNQ.js.map

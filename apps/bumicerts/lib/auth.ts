@@ -28,6 +28,7 @@ import { createAuthSetup } from "@gainforest/atproto-auth-next";
 import { serverEnv as env } from "@/lib/env/server";
 import { clientEnv } from "@/lib/env/client";
 import { defaultSignupPdsDomain } from "@/lib/config/pds";
+import { getPublicUrl } from "@/lib/url";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Supabase client (server-side with service role)
@@ -46,9 +47,9 @@ let _auth: ReturnType<typeof createAuthSetup> | null = null;
 
 function getAuth() {
   if (_auth) return _auth;
-  // Resolve publicUrl in app code using VERCEL_URL (server-side, safe from
-  // static replacement during next build since it's read here not in the package).
-  const publicUrl = env.VERCEL_URL ? `https://${env.VERCEL_URL}` : undefined;
+  // All URL resolution logic lives in lib/url.ts — never read Vercel env vars
+  // or NEXT_PUBLIC_BASE_URL directly here.
+  const publicUrl = getPublicUrl();
 
   _auth = createAuthSetup({
     privateKeyJwk: env.ATPROTO_JWK_PRIVATE,

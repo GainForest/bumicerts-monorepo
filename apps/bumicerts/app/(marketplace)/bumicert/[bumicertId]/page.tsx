@@ -8,8 +8,7 @@ import { BumicertDetail } from "./_components/BumicertDetail";
 import ErrorPage from "@/components/error-page";
 import Container from "@/components/ui/container";
 import { auth } from "@/lib/auth";
-
-const BASE_URL = "https://bumicerts.com";
+import { requirePublicUrl } from "@/lib/url";
 
 const getActivityData = cache(async (did: string) => {
   try {
@@ -40,7 +39,7 @@ export async function generateMetadata({
   if (!activity) return { title: "Bumicert Not Found" };
 
   const bumicert = activityToBumicertData(activity);
-  const pageUrl = `${BASE_URL}/bumicert/${encodeURIComponent(id)}`;
+  const pageUrl = `${requirePublicUrl()}/bumicert/${encodeURIComponent(id)}`;
   const description = bumicert.shortDescription || extractTextFromLinearDocument(bumicert.description).slice(0, 160);
 
   return {
@@ -103,7 +102,7 @@ export default async function BumicertDetailPage({
   if (!activity) notFound();
 
   const bumicert = activityToBumicertData(activity);
-  const pageUrl = `${BASE_URL}/bumicert/${encodeURIComponent(id)}`;
+  const pageUrl = `${requirePublicUrl()}/bumicert/${encodeURIComponent(id)}`;
 
   // ── Ownership check ─────────────────────────────────────────────────────────
   const isOwner = session.isLoggedIn && session.did === bumicert.organizationDid;
@@ -145,7 +144,7 @@ export default async function BumicertDetailPage({
     author: {
       "@type": "Organization",
       name: bumicert.organizationName,
-      url: `${BASE_URL}/organization/${encodeURIComponent(bumicert.organizationDid)}`,
+      url: `${requirePublicUrl()}/organization/${encodeURIComponent(bumicert.organizationDid)}`,
     },
     ...(bumicert.coverImageUrl
       ? { image: { "@type": "ImageObject", url: bumicert.coverImageUrl } }

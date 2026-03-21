@@ -120,6 +120,13 @@ export {
   ClaimActivityPdsError,
 } from "./mutations/claim.activity/utils/errors";
 
+// claim.rights
+export {
+  ClaimRightsValidationError,
+  ClaimRightsNotFoundError,
+  ClaimRightsPdsError,
+} from "./mutations/claim.rights/utils/errors";
+
 // funding.receipt
 export {
   FundingReceiptValidationError,
@@ -217,6 +224,15 @@ export type {
   RichtextFacet,
   LinearDocument as ClaimActivityLinearDocument,
 } from "./mutations/claim.activity/utils/types";
+
+// claim.rights
+export type {
+  CreateClaimRightsInput,
+  UpdateClaimRightsInput,
+  UpsertClaimRightsInput,
+  ClaimRightsMutationResult,
+  ClaimRightsRecord,
+} from "./mutations/claim.rights/utils/types";
 
 // funding.receipt
 export type {

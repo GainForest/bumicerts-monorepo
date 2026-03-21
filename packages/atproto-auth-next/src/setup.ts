@@ -40,7 +40,7 @@ import type { NextRequest } from "next/server";
 import { createOAuthClient, DEFAULT_OAUTH_SCOPE } from "./oauth-client";
 import { createSupabaseSessionStore } from "./stores/session-store";
 import { createSupabaseStateStore } from "./stores/state-store";
-import { resolvePublicUrl, isLoopback } from "./utils/url";
+import { resolvePublicUrl, isLoopback, PLACEHOLDER_URL } from "./utils/url";
 import { configureDebug } from "./utils/debug";
 import { buildSessionOptions, type SessionConfig } from "./session/config";
 import { getSession, saveSession, clearSession } from "./session/cookie";
@@ -308,6 +308,23 @@ export function createAuthSetup(config: AuthSetupConfig): AuthSetup {
 
   // ─── URL resolution ─────────────────────────────────────────────────────────
   const publicUrl = resolvePublicUrl(config.publicUrl);
+
+  // Guard: the placeholder is only valid during `next build`. If the server is
+  // actually handling requests without a real publicUrl, the OAuth client_id and
+  // redirect_uris would point to an unresolvable domain and every PDS would
+  // reject them. Fail fast with a clear message so the developer knows exactly
+  // what to fix — without the package ever reading env vars itself.
+  if (publicUrl === PLACEHOLDER_URL) {
+    throw new Error(
+      "[atproto-auth] createAuthSetup() was called without a valid publicUrl.\n" +
+      "Pass the app's public URL via the `publicUrl` option:\n" +
+      "  • Production / Vercel:  publicUrl: `https://${VERCEL_URL}`\n" +
+      "  • Local dev (loopback): publicUrl: 'http://127.0.0.1:3000'\n" +
+      "  • Local dev (ngrok):    publicUrl: process.env.NEXT_PUBLIC_BASE_URL\n" +
+      "The package never reads environment variables directly — the consuming app is responsible for resolving and passing this value.",
+    );
+  }
+
   const loopback = isLoopback(publicUrl);
   const isEpdsEnabled = !!epdsConfig;
 

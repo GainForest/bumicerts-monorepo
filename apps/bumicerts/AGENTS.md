@@ -42,6 +42,30 @@ follow the references at the bottom.
 
 ---
 
+## Base URL
+
+- **All public base URL resolution lives in `lib/url.ts`.** The two exported
+  functions are the only permitted way to get the app's own base URL in server-side
+  code:
+  - `getPublicUrl()` — returns `string | undefined`; use where `undefined` is
+    acceptable (e.g. the auth setup, where `undefined` triggers a build-time
+    placeholder in the package).
+  - `requirePublicUrl()` — returns `string` and throws a descriptive error if no URL
+    can be resolved; use everywhere a URL is required at runtime (metadata, structured
+    data, absolute asset URIs, internal server-to-self fetches).
+- **Never read `VERCEL_URL`, `VERCEL_PROJECT_PRODUCTION_URL`, or
+  `NEXT_PUBLIC_BASE_URL` directly anywhere else in the codebase.** `lib/url.ts` is
+  the single place that knows about these variables and their priority order.
+- **Never hardcode `https://bumicerts.com` or any other domain string.** Always call
+  `requirePublicUrl()` so the correct domain is used in every environment.
+- For local development, set `NEXT_PUBLIC_BASE_URL=http://127.0.0.1:3001` in
+  `.env.local`. For production on Vercel, set
+  `NEXT_PUBLIC_BASE_URL=https://alpha.fund.gainforest.app` in the project's
+  **Production** environment variables. `VERCEL_PROJECT_PRODUCTION_URL` and
+  `VERCEL_URL` are automatic fallbacks — never set them manually.
+
+---
+
 ## Links & Routes
 
 - **Never hardcode URLs or paths inline.** Add the path to `lib/links.ts` and import

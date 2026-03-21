@@ -51,6 +51,14 @@ import { upsertClaimActivity } from "./mutations/claim.activity/upsert";
 import { deleteClaimActivity } from "./mutations/claim.activity/delete";
 
 // ---------------------------------------------------------------------------
+// claim.rights
+// ---------------------------------------------------------------------------
+import { createClaimRights } from "./mutations/claim.rights/create";
+import { updateClaimRights } from "./mutations/claim.rights/update";
+import { upsertClaimRights } from "./mutations/claim.rights/upsert";
+import { deleteClaimRights } from "./mutations/claim.rights/delete";
+
+// ---------------------------------------------------------------------------
 // certified.location
 // ---------------------------------------------------------------------------
 import { createCertifiedLocation } from "./mutations/certified.location/create";
@@ -128,6 +136,12 @@ export const mutations = {
       update: updateClaimActivity,
       upsert: upsertClaimActivity,
       delete: deleteClaimActivity,
+    },
+    rights: {
+      create: createClaimRights,
+      update: updateClaimRights,
+      upsert: upsertClaimRights,
+      delete: deleteClaimRights,
     },
   },
   certified: {
