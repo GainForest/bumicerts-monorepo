@@ -28,7 +28,45 @@ export async function runMigration(): Promise<void> {
   console.log("Applying schema...");
   await sql.unsafe(schema);
 
+  // ── Data migrations (idempotent) ─────────────────────────────────────────
+  await fixDoubleEncodedRecords();
+
   console.log("\nMigration complete — all tables and indexes are up to date.\n");
+}
+
+/**
+ * Fix double-encoded JSONB records.
+ *
+ * Some records were accidentally stored with their `record` column as a JSON
+ * string (e.g., '"{\"title\":...}"') instead of a proper JSONB object.
+ * This migration finds and fixes those records.
+ *
+ * Idempotent: safe to run on every startup.
+ */
+async function fixDoubleEncodedRecords(): Promise<void> {
+  // Find count of affected records first
+  const countResult = await sql<{ count: string }[]>`
+    SELECT COUNT(*) as count
+    FROM records
+    WHERE jsonb_typeof(record) = 'string'
+  `;
+  const count = parseInt(countResult[0]?.count ?? "0", 10);
+
+  if (count === 0) {
+    return; // Nothing to fix
+  }
+
+  console.log(`Fixing ${count} double-encoded record(s)...`);
+
+  // Fix the records by parsing the string value back to JSONB
+  // The #>> '{}' operator extracts the root value as text, then ::jsonb parses it
+  await sql`
+    UPDATE records
+    SET record = (record #>> '{}')::jsonb
+    WHERE jsonb_typeof(record) = 'string'
+  `;
+
+  console.log(`Fixed ${count} double-encoded record(s).`);
 }
 
 // When run directly (bun run db:migrate), execute and close the pool.

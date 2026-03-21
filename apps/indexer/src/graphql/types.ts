@@ -173,7 +173,7 @@ export async function resolveCreatorInfo(did: string): Promise<{
     });
     const row = page.records[0];
     if (row !== undefined) {
-      const p = (row.record ?? {}) as Record<string, unknown>;
+      const p = payload(row);
       const displayName = p["displayName"];
       if (typeof displayName === "string") organizationName = displayName;
       organizationLogo = await extractBlobRef(p["logo"] ?? null, did);

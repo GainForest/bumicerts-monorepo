@@ -16,6 +16,17 @@ import {
   upsertActivityLabel,
 } from "@/db/queries.ts";
 import type { ActivityRecord } from "./types.ts";
+import type { RecordRow } from "@/db/types.ts";
+
+/** Handle double-encoded JSONB stored as a JSON string instead of object. */
+function payload(row: RecordRow): Record<string, unknown> {
+  const r = row.record;
+  if (r == null) return {};
+  if (typeof r === "string") {
+    try { return JSON.parse(r); } catch { return {}; }
+  }
+  return r as Record<string, unknown>;
+}
 
 const BATCH_SIZE = 50;
 const BATCH_DELAY_MS = 100;
@@ -47,7 +58,8 @@ export async function backfillActivityLabels(): Promise<void> {
 
     for (const row of batch) {
       try {
-        const result = scoreActivity(row.record as unknown as ActivityRecord);
+        const rec = payload(row);
+        const result = scoreActivity(rec as unknown as ActivityRecord);
 
         await upsertActivityLabel({
           subject_did: row.did,
@@ -64,7 +76,6 @@ export async function backfillActivityLabels(): Promise<void> {
 
         // Enqueue for HF classification if not obviously test data
         if (result.totalScore > 19) {
-          const rec = row.record as Record<string, unknown>;
           const parts: string[] = [];
           const title = rec.title;
           if (typeof title === "string" && title.trim()) parts.push(title.trim());

@@ -14,6 +14,16 @@ import { upsertActivityLabel } from "@/db/queries.ts";
 import type { RecordInsert } from "@/db/types.ts";
 import type { ActivityRecord } from "./types.ts";
 
+/** Handle double-encoded JSONB stored as a JSON string instead of object. */
+function parseRecord(rec: RecordInsert): Record<string, unknown> {
+  const r = rec.record;
+  if (r == null) return {};
+  if (typeof r === "string") {
+    try { return JSON.parse(r); } catch { return {}; }
+  }
+  return r as Record<string, unknown>;
+}
+
 export async function scoreAndLabelActivities(
   records: RecordInsert[],
 ): Promise<void> {
@@ -23,7 +33,8 @@ export async function scoreAndLabelActivities(
 
   for (const rec of records) {
     try {
-      const result = scoreActivity(rec.record as unknown as ActivityRecord);
+      const parsedRecord = parseRecord(rec);
+      const result = scoreActivity(parsedRecord as unknown as ActivityRecord);
 
       await upsertActivityLabel({
         subject_did: rec.did,
@@ -40,7 +51,7 @@ export async function scoreAndLabelActivities(
 
       // Enqueue for HF classification if not obviously test data
       if (result.totalScore > 19) {
-        const text = buildClassificationText(rec.record);
+        const text = buildClassificationText(parsedRecord);
         if (text) {
           enqueueClassification(text, rec.did, rec.rkey);
         }
