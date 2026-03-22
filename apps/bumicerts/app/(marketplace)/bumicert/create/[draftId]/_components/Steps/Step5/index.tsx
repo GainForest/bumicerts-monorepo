@@ -33,6 +33,7 @@ import { trpc } from "@/lib/trpc/client";
 import { formatError } from "@/lib/utils/trpc-errors";
 import type { LinearDocument } from "@gainforest/atproto-mutations-next";
 import { useModal } from "@/components/ui/modal/context";
+import useNewBumicertStore from "../../../store";
 import { MODAL_IDS } from "@/components/global/modals/ids";
 import { FundingConfigModal } from "@/components/global/modals/funding/config";
 
@@ -154,6 +155,8 @@ const Step5 = () => {
   const step3FormValues = formValues[2];
 
   const setOverallStatus = useStep5Store((state) => state.setOverallStatus);
+  const resetFormStore = useFormStore((state) => state.reset);
+  const { setCurrentStepIndex } = useNewBumicertStore();
 
   const [createdBumicertResponse, setCreatedBumicertResponse] =
     useState<CreateBumicertResponse | null>(null);
@@ -209,8 +212,10 @@ const Step5 = () => {
         }
       }
 
-      // Clear localStorage backup after successful publish
+      // Clear localStorage and reset in-memory store so a future visit to
+      // /bumicert/create starts fresh rather than replaying the old form state.
       clearPersistedFormState();
+      resetFormStore();
 
       // Track successful bumicert publication
       const duration = getFlowDurationSeconds() ?? 0;
@@ -225,6 +230,8 @@ const Step5 = () => {
       console.error("Failed to publish bumicert:", error);
       setCreateBumicertError(formatError(error));
       setHasClickedPublish(false);
+      // Reset to idle so step navigation (back/edit) is re-enabled after a failure
+      setOverallStatus("idle");
     },
     onMutate: () => {
       setIsBumicertCreationMutationInFlight(true);
@@ -374,12 +381,22 @@ const Step5 = () => {
           isLastStep={true}
         >
           {createBumicertStatus !== "success" && (
-            <Button
-              onClick={handlePublishClick}
-              disabled={isBumicertCreationMutationInFlight}
-            >
-              Publish Bumicert <ArrowRightIcon className="ml-2" />
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                onClick={handlePublishClick}
+                disabled={isBumicertCreationMutationInFlight}
+              >
+                {createBumicertError ? "Retry" : "Publish Bumicert"} <ArrowRightIcon />
+              </Button>
+              {createBumicertError && (
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentStepIndex(3)}
+                >
+                  Edit details
+                </Button>
+              )}
+            </div>
           )}
         </ProgressItem>
       )}

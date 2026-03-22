@@ -59,7 +59,12 @@ const Step3 = () => {
     formValues;
 
   const addContributor = (name: string) => {
-    setFormValue("contributors", [...contributors, { id: crypto.randomUUID(), name }]);
+    const trimmed = name.trim();
+    const alreadyExists = contributors.some(
+      (c) => c.name.trim().toLowerCase() === trimmed.toLowerCase()
+    );
+    if (alreadyExists) return;
+    setFormValue("contributors", [...contributors, { id: crypto.randomUUID(), name: trimmed }]);
   };
   const updateContributor = (id: string, name: string) => {
     setFormValue(
@@ -122,10 +127,15 @@ const Step3 = () => {
               onClear={() => setNewContributor("")}
               onNext={(val) => {
                 const trimmed = (val || newContributor).trim();
-                if (trimmed) {
+                if (!trimmed) return;
+                const alreadyExists = contributors.some(
+                  (c) => c.name.trim().toLowerCase() === trimmed.toLowerCase()
+                );
+                if (!alreadyExists) {
                   addContributor(trimmed);
                   setNewContributor("");
                 }
+                // If it's a duplicate, leave the input as-is so the user can see it wasn't added
               }}
             />
 
