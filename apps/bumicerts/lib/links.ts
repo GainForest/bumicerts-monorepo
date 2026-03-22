@@ -36,6 +36,14 @@ export const links = {
       generateShortDescription: "/bumicert/create/api/generate-short-description",
     },
   },
+  external: {
+    /**
+     * Legacy Gainforest map viewer with a GeoJSON shapefile loaded.
+     * Pass the resolved blob URL as `shapefileUrl`.
+     */
+    gainforestMapViewer: (shapefileUrl: string) =>
+      `https://legacy.gainforest.app/?shapefile=${encodeURIComponent(shapefileUrl)}&showUI=false`,
+  },
   api: {
     onboarding: {
       sendInviteEmail: "/onboarding/api/send-invite-email",

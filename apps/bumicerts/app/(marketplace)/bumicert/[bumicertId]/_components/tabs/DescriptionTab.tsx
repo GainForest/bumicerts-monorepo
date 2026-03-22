@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import { UsersIcon, TargetIcon } from "lucide-react";
-import { format } from "date-fns";
 import type { BumicertData } from "@/lib/types";
 import { LeafletRenderer } from "@/components/ui/leaflet-renderer";
 
@@ -32,6 +31,14 @@ export function DescriptionTab({ bumicert }: { bumicert: BumicertData }) {
       transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
       className="py-1"
     >
+      {/* Title — shown here in main content; not rendered in sidebar */}
+      <h1
+        className="text-2xl font-semibold text-foreground leading-snug mb-4"
+        style={{ fontFamily: "var(--font-garamond-var)" }}
+      >
+        {bumicert.title}
+      </h1>
+
       <SectionLabel icon={TargetIcon} label="Description" />
       {hasDescription ? (
         <LeafletRenderer
@@ -66,13 +73,6 @@ export function DescriptionTab({ bumicert }: { bumicert: BumicertData }) {
             ))}
           </div>
         </div>
-      )}
-
-      {/* Date posted */}
-      {bumicert.createdAt && (
-        <p className="mt-6 text-xs text-muted-foreground">
-          Posted {format(new Date(bumicert.createdAt), "MMMM d, yyyy")}
-        </p>
       )}
     </motion.div>
   );

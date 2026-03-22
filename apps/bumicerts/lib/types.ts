@@ -62,6 +62,13 @@ export type BumicertData = {
   startDate: string | null;
   endDate: string | null;
   createdAt: string;
+
+  /**
+   * Strong refs to `app.certified.location` records linked to this bumicert.
+   * Each entry is `{ uri: "at://...", cid: "..." }`.
+   * Use the rkey extracted from `uri` to fetch the resolved location records.
+   */
+  locationRefs: Array<{ uri: string; cid: string | null }>;
 };
 
 // ── Funding Config ────────────────────────────────────────────────────────────

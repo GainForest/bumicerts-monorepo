@@ -91,6 +91,13 @@ export function BumicertDetail({ bumicert, isOwner, fundingConfig }: BumicertDet
                 </div>
               )}
               <div className="sm:w-1/2 sm:flex-1 flex flex-col gap-4">
+                {/* Title — visible on mobile in the meta area */}
+                <h1
+                  className="text-xl font-semibold text-foreground leading-snug"
+                  style={{ fontFamily: "var(--font-garamond-var)" }}
+                >
+                  {bumicert.title}
+                </h1>
                 <BumicertMeta bumicert={bumicert} />
                 {/* Donate / funding status — right below meta */}
                 <MobileDonateSlot

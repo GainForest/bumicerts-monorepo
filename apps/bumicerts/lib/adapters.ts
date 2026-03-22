@@ -315,6 +315,11 @@ export function activityToBumicertData(item: GraphQLHcActivityItem): BumicertDat
   // Get logo from creatorInfo (resolved inline by indexer)
   const logoUrl = creatorInfo?.organizationLogo?.uri ?? null;
 
+  // Extract location strong refs — keep only entries that have a non-null uri
+  const locationRefs = (record?.locations ?? [])
+    .filter((ref): ref is { uri: string; cid: string | null } => typeof ref?.uri === "string")
+    .map((ref) => ({ uri: ref.uri, cid: ref.cid ?? null }));
+
   return {
     id: `${did}-${rkey}`,
     organizationDid: did,
@@ -332,6 +337,7 @@ export function activityToBumicertData(item: GraphQLHcActivityItem): BumicertDat
     startDate: record?.startDate ?? null,
     endDate: record?.endDate ?? null,
     createdAt: record?.createdAt ?? metadata?.createdAt ?? "",
+    locationRefs,
   };
 }
 

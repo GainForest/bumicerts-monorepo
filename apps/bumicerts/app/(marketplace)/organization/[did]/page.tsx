@@ -76,8 +76,6 @@ export default async function OrganizationPage({
   const { did: encodedDid } = await params;
   const did = decodeURIComponent(encodedDid);
 
-  return <OrgSetupPage did="" />;
-
   const { data, error } = await getOrgData(did);
 
   // Layout handles error and notFound states — guard defensively for edge races.

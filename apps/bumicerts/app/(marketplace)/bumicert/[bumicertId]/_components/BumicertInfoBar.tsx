@@ -8,7 +8,6 @@ import { Share2Icon, CheckIcon, BuildingIcon } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { BumicertData } from "@/lib/types";
 import { links } from "@/lib/links";
-import { BskyRichTextDisplay } from "@/components/ui/bsky-richtext-display";
 
 function ShareButton() {
   const [copied, setCopied] = useState(false);
@@ -82,34 +81,16 @@ export function BumicertCreationMeta({ bumicert }: { bumicert: BumicertData }) {
   );
 }
 
-/** Title, short description (full, no truncation), objective chips */
+/** Objective chips only — title lives in the main content (DescriptionTab) above the description */
 export function BumicertMeta({ bumicert }: { bumicert: BumicertData }) {
+  if (bumicert.objectives.length === 0) return null;
   return (
-    <div className="flex flex-col gap-2">
-      <h1
-        className="text-xl font-semibold text-foreground leading-snug"
-        style={{ fontFamily: "var(--font-garamond-var)" }}
-      >
-        {bumicert.title}
-      </h1>
-
-      {bumicert.shortDescription && (
-        <BskyRichTextDisplay
-          text={bumicert.shortDescription}
-          facets={bumicert.shortDescriptionFacets}
-          className="text-sm text-muted-foreground leading-relaxed"
-        />
-      )}
-
-      {bumicert.objectives.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mt-1">
-          {bumicert.objectives.map((obj) => (
-            <span key={obj} className="text-[10px] uppercase tracking-[0.08em] text-foreground/60 bg-muted/60 border border-border/50 rounded-full px-2.5 py-0.5 font-medium">
-              {obj}
-            </span>
-          ))}
-        </div>
-      )}
+    <div className="flex flex-wrap gap-1.5">
+      {bumicert.objectives.map((obj) => (
+        <span key={obj} className="text-[10px] uppercase tracking-[0.08em] text-foreground/60 bg-muted/60 border border-border/50 rounded-full px-2.5 py-0.5 font-medium">
+          {obj}
+        </span>
+      ))}
     </div>
   );
 }
