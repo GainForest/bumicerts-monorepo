@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getOrgData, transformOrgData, type GraphQLOrgInfoItem } from "./_data";
 import { OrgAbout } from "./_components/OrgAbout";
 import { requirePublicUrl } from "@/lib/url";
+import { OrgSetupPage } from "./_components/OrgSetupPage";
 
 // ── Metadata ─────────────────────────────────────────────────────────────────
 
@@ -24,8 +25,11 @@ export async function generateMetadata({
   const description: string =
     typeof shortDescRaw === "string"
       ? shortDescRaw
-      : typeof shortDescRaw === "object" && shortDescRaw !== null && "text" in shortDescRaw && typeof (shortDescRaw as Record<string, unknown>)["text"] === "string"
-        ? (shortDescRaw as Record<string, unknown>)["text"] as string
+      : typeof shortDescRaw === "object" &&
+          shortDescRaw !== null &&
+          "text" in shortDescRaw &&
+          typeof (shortDescRaw as Record<string, unknown>)["text"] === "string"
+        ? ((shortDescRaw as Record<string, unknown>)["text"] as string)
         : `${displayName} on Bumicerts — verified regenerative impact organization.`;
 
   const coverImageUrl = record?.coverImage?.uri ?? null;
@@ -41,7 +45,18 @@ export async function generateMetadata({
       url: orgUrl,
       siteName: "Bumicerts",
       type: "profile",
-      ...(coverImageUrl ? { images: [{ url: coverImageUrl, width: 1200, height: 630, alt: displayName }] } : {}),
+      ...(coverImageUrl
+        ? {
+            images: [
+              {
+                url: coverImageUrl,
+                width: 1200,
+                height: 630,
+                alt: displayName,
+              },
+            ],
+          }
+        : {}),
     },
     twitter: {
       card: coverImageUrl ? "summary_large_image" : "summary",
@@ -61,12 +76,15 @@ export default async function OrganizationPage({
   const { did: encodedDid } = await params;
   const did = decodeURIComponent(encodedDid);
 
+  return <OrgSetupPage did="" />;
+
   const { data, error } = await getOrgData(did);
 
   // Layout handles error and notFound states — guard defensively for edge races.
   if (error || !data?.org) return null;
-
-  const orgInfo = data.org as GraphQLOrgInfoItem;
+  // data.org is non-null here — TypeScript needs the explicit variable to narrow
+  const orgData = data as NonNullable<typeof data>;
+  const orgInfo = orgData.org as GraphQLOrgInfoItem;
   const { organization } = transformOrgData(orgInfo, []);
 
   // ── JSON-LD structured data ───────────────────────────────────────────────
@@ -79,10 +97,21 @@ export default async function OrganizationPage({
     name: organization.displayName,
     description: organization.shortDescription ?? undefined,
     url: organization.website ?? orgUrl,
-    ...(organization.startDate ? { foundingDate: organization.startDate.slice(0, 10) } : {}),
-    ...(organization.country ? { address: { "@type": "PostalAddress", addressCountry: organization.country } } : {}),
+    ...(organization.startDate
+      ? { foundingDate: organization.startDate?.slice(0, 10) }
+      : {}),
+    ...(organization.country
+      ? {
+          address: {
+            "@type": "PostalAddress",
+            addressCountry: organization.country,
+          },
+        }
+      : {}),
     ...(organization.website ? { sameAs: [organization.website] } : {}),
-    ...(organization.logoUrl ? { logo: { "@type": "ImageObject", url: organization.logoUrl } } : {}),
+    ...(organization.logoUrl
+      ? { logo: { "@type": "ImageObject", url: organization.logoUrl } }
+      : {}),
   };
 
   return (

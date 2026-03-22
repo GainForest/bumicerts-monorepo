@@ -68,7 +68,7 @@ const CountrySelectorModal = ({
         onChange={(e) => setSearchText(e.target.value)}
       />
       <div className="relative mt-2">
-        <div className="w-full max-h-[max(45vh,500px)] overflow-y-auto rounded-xl">
+        <div className="w-full max-h-[max(45vh,500px)] overflow-y-auto overflow-x-hidden rounded-xl">
           <div className="grid grid-cols-2 gap-2 my-4">
             {filteredCountries.map((c) => {
               const isSelected = c[0] === countryCode;
