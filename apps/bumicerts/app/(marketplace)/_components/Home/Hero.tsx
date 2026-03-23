@@ -19,7 +19,7 @@ export function Hero() {
           className="absolute inset-0"
         >
           <Image
-            src="/assets/hero/background.png"
+            src="/assets/media/images/pine-watt-2Hzmz15wGik-unsplash-cropped.jpg"
             alt="Misty forest landscape"
             fill
             priority
@@ -28,12 +28,13 @@ export function Hero() {
           {/* Soft color wash over the image for that misty/muted look */}
           <div className="absolute inset-0 bg-gradient-to-b from-[#e8ebe6]/60 via-[#d4dcd0]/40 to-transparent mix-blend-overlay" />
         </motion.div>
-        
+
         {/* Gradient fade to background at the bottom */}
-        <div 
+        <div
           className="absolute inset-x-0 bottom-0 h-[40%] pointer-events-none"
           style={{
-            background: "linear-gradient(to top, var(--background) 0%, var(--background) 20%, transparent 100%)"
+            background:
+              "linear-gradient(to top, var(--background) 0%, var(--background) 20%, transparent 100%)",
           }}
         />
       </div>
@@ -47,7 +48,7 @@ export function Hero() {
           transition={{ duration: 0.8, delay: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
           className="text-center max-w-4xl"
         >
-          <h1 
+          <h1
             className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light tracking-[-0.02em] leading-[1.1] text-foreground"
             style={{ fontFamily: "var(--font-garamond-var)" }}
           >
@@ -56,7 +57,13 @@ export function Hero() {
               <motion.span
                 initial={{ scale: 0, rotate: -180 }}
                 animate={{ scale: 1, rotate: 0 }}
-                transition={{ duration: 0.6, delay: 0.8, type: "spring", stiffness: 200, damping: 15 }}
+                transition={{
+                  duration: 0.6,
+                  delay: 0.8,
+                  type: "spring",
+                  stiffness: 200,
+                  damping: 15,
+                }}
                 className="inline-block"
               >
                 <Image
@@ -70,9 +77,12 @@ export function Hero() {
             </span>{" "}
             Starts
             <br />
-            <span 
+            <span
               className="text-foreground/80"
-              style={{ fontFamily: "var(--font-instrument-serif-var)", fontStyle: "italic" }}
+              style={{
+                fontFamily: "var(--font-instrument-serif-var)",
+                fontStyle: "italic",
+              }}
             >
               With Real Communities
             </span>
@@ -86,8 +96,9 @@ export function Hero() {
           transition={{ duration: 0.7, delay: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
           className="mt-6 md:mt-8 text-center text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl leading-relaxed"
         >
-          Fund regenerative projects directly. Every Bumicert is a verified record 
-          of real environmental work — backed by photos, locations, and community stewards.
+          Fund regenerative projects directly. Every Bumicert is a verified
+          record of real environmental work — backed by photos, locations, and
+          community stewards.
         </motion.p>
 
         {/* CTA Button - with accent */}
@@ -107,7 +118,11 @@ export function Hero() {
               <motion.span
                 className="inline-block"
                 animate={{ x: [0, 3, 0] }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                transition={{
+                  duration: 1.5,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
               >
                 →
               </motion.span>
