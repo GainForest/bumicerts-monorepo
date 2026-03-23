@@ -8,6 +8,7 @@ import BiokoHoldingMagnifierImage from "@/app/(marketplace)/bumicert/create/[dra
 import BiokoHoldingConfettiImage from "@/app/(marketplace)/bumicert/create/[draftId]/_assets/bioko-holding-confetti.png";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDownIcon, EyeIcon, LightbulbIcon } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import useNewBumicertStore from "../store";
 import BumicertPreviewCard from "./Steps/Step4/BumicertPreviewCard";
 import { BumicertCardVisual } from "@/app/(marketplace)/explore/_components/BumicertCard";
@@ -80,11 +81,21 @@ const SecondaryContent = () => {
     stepImages[currentStep].previewBumicertByDefault
   );
 
-  const { data: orgLogoData, isPlaceholderData: isOlderData } = queries.organization.logo.useQuery(
-    { did: auth.user?.did ?? "" }
-  );
+  const did = auth.user?.did ?? "";
 
-  const logoUrl = isOlderData ? null : (orgLogoData ?? null);
+  // Fetch the full single-org record — this shares the cache with UploadDashboardClient
+  // (same queryFn + key) so no extra network request when coming from the org upload page.
+  const { data: orgSingleData, isPlaceholderData: isOlderData } = useQuery({
+    queryKey: ["org-dashboard", did],
+    queryFn: () => queries.organization.fetch({ did }),
+    enabled: !!did,
+    staleTime: 60 * 1_000,
+  });
+
+  // Narrow to the single-org variant (vs list variant) before accessing .org
+  const org = orgSingleData && "org" in orgSingleData ? orgSingleData.org : null;
+  const logoUrl = isOlderData ? null : (org?.record?.logo?.uri ?? null);
+  const organizationName = org?.record?.displayName ?? "";
 
   return (
     <div className="w-full min-h-full flex flex-col bg-muted/50 rounded-xl">
@@ -134,7 +145,7 @@ const SecondaryContent = () => {
                       EMPTY_COVER_IMAGE
                     }
                     title={step1FormValues.projectName}
-                    organizationName=""
+                    organizationName={organizationName}
                     objectives={step1FormValues.workType}
                     className="max-w-2xs"
                   />
