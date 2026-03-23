@@ -7,16 +7,9 @@ import type { OrganizationData } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { OrganizationCard } from "./OrganizationCard";
+import { countries } from "@/lib/countries";
 
 // ── Country chips (secondary dynamic) ─────────────────────────────────────────
-
-const COUNTRY_MAP: Record<string, { emoji: string; name: string }> = {
-  ID: { emoji: "🇮🇩", name: "Indonesia" },
-  KE: { emoji: "🇰🇪", name: "Kenya" },
-  CO: { emoji: "🇨🇴", name: "Colombia" },
-  BR: { emoji: "🇧🇷", name: "Brazil" },
-  PH: { emoji: "🇵🇭", name: "Philippines" },
-};
 
 function CountryChips({
   organizations,
@@ -30,7 +23,12 @@ function CountryChips({
   const chips = useMemo(() => {
     const codes = Array.from(new Set(organizations.map((o) => o.country).filter(Boolean)));
     return codes
-      .map((code) => ({ code, data: COUNTRY_MAP[code], isSelected: countryFilter === code }))
+      .map((code) => ({
+        code,
+        emoji: countries[code]?.emoji ?? "",
+        name: countries[code]?.name ?? code,
+        isSelected: countryFilter === code,
+      }))
       .sort((a, b) => Number(b.isSelected) - Number(a.isSelected));
   }, [organizations, countryFilter]);
 
@@ -49,7 +47,7 @@ function CountryChips({
               : "text-muted-foreground border-border hover:border-foreground/50 hover:text-foreground"
           )}
         >
-          {c.data?.emoji} {c.data?.name ?? c.code}
+          {c.emoji} {c.name}
         </button>
       ))}
     </div>

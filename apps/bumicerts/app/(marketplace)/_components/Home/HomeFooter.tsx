@@ -1,12 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
-import { GithubIcon, TwitterIcon, FileTextIcon, ExternalLinkIcon } from "lucide-react";
+import { GithubIcon, TwitterIcon, ExternalLinkIcon, LeafIcon } from "lucide-react";
+import { links } from "@/lib/links";
 
 const FOOTER_LINKS = [
-  { href: "https://github.com/gainforest-earth", label: "GitHub", Icon: GithubIcon, external: true },
-  { href: "https://twitter.com/gainforest", label: "Twitter", Icon: TwitterIcon, external: true },
-  { href: "https://www.canva.com", label: "Impact Report", Icon: FileTextIcon, external: true },
-  { href: "/changelog", label: "Changelog", Icon: FileTextIcon, external: false },
+  { href: links.external.github,     label: "GitHub",      Icon: GithubIcon,  external: true },
+  { href: links.external.twitter,    label: "Twitter",      Icon: TwitterIcon, external: true },
+  { href: links.external.gainforest, label: "GainForest",   Icon: LeafIcon,    external: true },
+  // { href: "/changelog", label: "Changelog", Icon: FileTextIcon, external: false },
 ];
 
 export function HomeFooter() {

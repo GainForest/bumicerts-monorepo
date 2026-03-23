@@ -15,6 +15,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { links } from "@/lib/links";
+import { countries } from "@/lib/countries";
 import { useHeaderContext } from "../../_components/Header/context";
 import { HeaderContent } from "../../_components/Header/HeaderContent";
 import type { BumicertData } from "@/lib/types";
@@ -55,9 +56,12 @@ function buildFilterCategories(bumicerts: BumicertData[]) {
     ).entries(),
   ).map(([did, name]) => ({ value: did, label: name }));
 
-  const countries = Array.from(
+  const countryOptions = Array.from(
     new Set(bumicerts.map((b) => b.country).filter(Boolean)),
-  ).map((c) => ({ value: c, label: c }));
+  ).map((code) => ({
+    value: code,
+    label: countries[code]?.name ?? code,
+  }));
 
   const objectives = Array.from(
     new Set(bumicerts.flatMap((b) => b.objectives)),
@@ -74,7 +78,7 @@ function buildFilterCategories(bumicerts: BumicertData[]) {
       key: "countries" as const,
       label: "Country",
       icon: MapPinIcon,
-      options: countries,
+      options: countryOptions,
     },
     {
       key: "objectives" as const,

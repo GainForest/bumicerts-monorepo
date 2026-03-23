@@ -43,6 +43,9 @@ export const links = {
      */
     gainforestMapViewer: (shapefileUrl: string) =>
       `https://legacy.gainforest.app/?shapefile=${encodeURIComponent(shapefileUrl)}&showUI=false`,
+    github: "https://www.github.com/GainForest/atproto-packages",
+    twitter: "https://www.x.com/GainForestNow",
+    gainforest: "https://www.gainforest.earth",
   },
   api: {
     onboarding: {

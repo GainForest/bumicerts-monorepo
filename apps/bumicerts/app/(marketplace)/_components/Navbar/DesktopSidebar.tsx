@@ -24,11 +24,13 @@ import { SidebarTransitionOverlay } from "@/components/ui/SidebarTransitionOverl
 import { useMobileNav } from "@/hooks/useMobileNav";
 import { PlatformSwitcher } from "@/components/ui/PlatformSwitcher";
 import { buildMarketplaceNavItems, type NavItem } from "./data";
+import { links } from "@/lib/links";
 
 const FOOTER_LINKS = [
-  { href: "https://github.com/gainforest-earth", text: "GitHub", Icon: GithubIcon },
-  { href: "https://twitter.com/gainforest", text: "Twitter", Icon: TwitterIcon },
-  { href: "/changelog", text: "Changelog", Icon: FileTextIcon },
+  { href: links.external.github, text: "GitHub", Icon: GithubIcon },
+  { href: links.external.twitter, text: "Twitter", Icon: TwitterIcon },
+  { href: links.external.gainforest, text: "GainForest", Icon: FileTextIcon },
+  // { href: "/changelog", text: "Changelog", Icon: FileTextIcon },
 ];
 
 function isLeafActive(
