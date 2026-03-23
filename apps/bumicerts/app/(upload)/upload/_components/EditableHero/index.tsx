@@ -25,6 +25,7 @@
  */
 
 import Image from "next/image";
+import { useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CalendarIcon,
@@ -182,13 +183,35 @@ export function EditableHero({ organization }: EditableHeroProps) {
   const startDate = edits.startDate ?? organization.startDate;
   const visibility = edits.visibility ?? organization.visibility;
 
-  // Image sources — use object URL for newly selected files
-  const coverImageUrl = edits.coverImage
-    ? URL.createObjectURL(edits.coverImage)
-    : organization.coverImageUrl;
-  const logoUrl = edits.logo
-    ? URL.createObjectURL(edits.logo)
-    : organization.logoUrl;
+  // Image sources — use object URL for newly selected files.
+  // Memoized so the blob: URL is only (re-)created when the File reference changes,
+  // not on every re-render (e.g. from typing in the name input). Without this,
+  // URL.createObjectURL() returns a new string each call, which makes <Image>
+  // treat it as a new src and unmount/remount the img — causing visible flicker.
+  const coverObjectUrl = useMemo(
+    () => (edits.coverImage ? URL.createObjectURL(edits.coverImage) : null),
+    [edits.coverImage]
+  );
+  const logoObjectUrl = useMemo(
+    () => (edits.logo ? URL.createObjectURL(edits.logo) : null),
+    [edits.logo]
+  );
+
+  // Revoke blob URLs when the File changes or the component unmounts to avoid
+  // memory leaks (each createObjectURL allocates a browser-side resource).
+  useEffect(() => {
+    return () => {
+      if (coverObjectUrl) URL.revokeObjectURL(coverObjectUrl);
+    };
+  }, [coverObjectUrl]);
+  useEffect(() => {
+    return () => {
+      if (logoObjectUrl) URL.revokeObjectURL(logoObjectUrl);
+    };
+  }, [logoObjectUrl]);
+
+  const coverImageUrl = coverObjectUrl ?? organization.coverImageUrl;
+  const logoUrl = logoObjectUrl ?? organization.logoUrl;
 
   const initial = displayName.charAt(0).toUpperCase();
   const sinceLabel = formatSinceDate(startDate);
