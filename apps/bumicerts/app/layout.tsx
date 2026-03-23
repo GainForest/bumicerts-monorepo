@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import {
   Geist,
   Geist_Mono,
@@ -7,6 +7,7 @@ import {
 } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import { requirePublicUrl } from "@/lib/url";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,17 +33,69 @@ const instrumentSerif = Instrument_Serif({
   style: ["normal", "italic"],
 });
 
-export const metadata: Metadata = {
-  title: "Bumicerts — Fund Regenerative Impact",
-  description:
-    "Bumicerts connects funders with nature stewards doing on-ground regenerative work. Fund verified environmental impact directly.",
-  robots: "noindex, nofollow",
-  openGraph: {
-    title: "Bumicerts — Fund Regenerative Impact",
-    description:
-      "A marketplace for verified environmental impact certificates. Fund real communities doing real restoration work.",
-    type: "website",
-  },
+const TITLE = "Bumicerts — Fund Regenerative Impact";
+const DESCRIPTION =
+  "Bumicerts connects funders with nature stewards doing on-ground regenerative work. Fund verified environmental impact directly.";
+
+export function generateMetadata(): Metadata {
+  const baseUrl = requirePublicUrl();
+  return {
+    metadataBase: new URL(baseUrl),
+    title: TITLE,
+    description: DESCRIPTION,
+    applicationName: "Bumicerts",
+    authors: [{ name: "GainForest", url: "https://gainforest.earth" }],
+    keywords: [
+      "bumicerts",
+      "fund",
+      "regenerative",
+      "impact",
+      "conservation",
+      "nature",
+      "forest",
+      "carbon",
+      "gainforest",
+      "earth",
+    ],
+    creator: "GainForest",
+    publisher: "GainForest",
+    referrer: "origin",
+    formatDetection: {
+      email: false,
+      address: false,
+      telephone: false,
+    },
+    icons: [
+      { rel: "icon", url: "/favicon.ico" },
+      {
+        rel: "icon",
+        url: "/favicon-dark.ico",
+        media: "(prefers-color-scheme: dark)",
+      },
+    ],
+    robots: "noindex, nofollow",
+    openGraph: {
+      title: TITLE,
+      siteName: "Bumicerts",
+      description: DESCRIPTION,
+      type: "website",
+      url: baseUrl,
+      images: [{ url: "/opengraph-image.png", alt: TITLE }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      site: "@GainForestNow",
+      title: TITLE,
+      description: DESCRIPTION,
+      images: [{ url: "/opengraph-image.png", alt: TITLE }],
+    },
+  };
+}
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({
