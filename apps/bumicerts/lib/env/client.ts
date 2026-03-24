@@ -39,6 +39,10 @@ export const clientEnv = createEnv({
     // Facilitator EVM wallet address — used to verify that link.evm platformAddress
     // matches our trusted facilitator (the party that counter-signed the link).
     NEXT_PUBLIC_FACILITATOR_WALLET_ADDRESS: z.string().optional(),
+
+    // WalletConnect Cloud project ID — required for mobile wallet connections.
+    // Create/find yours at https://cloud.walletconnect.com
+    NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: z.string().min(1),
   },
 
   runtimeEnv: {
@@ -51,6 +55,7 @@ export const clientEnv = createEnv({
     NEXT_PUBLIC_VERCEL_URL: process.env.NEXT_PUBLIC_VERCEL_URL,
     NEXT_PUBLIC_FACILITATOR_DID: process.env.NEXT_PUBLIC_FACILITATOR_DID,
     NEXT_PUBLIC_FACILITATOR_WALLET_ADDRESS: process.env.NEXT_PUBLIC_FACILITATOR_WALLET_ADDRESS,
+    NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID,
   },
 
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
