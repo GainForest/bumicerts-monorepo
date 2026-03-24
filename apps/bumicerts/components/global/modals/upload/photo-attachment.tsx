@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { Camera, ImagePlus, Loader2, Upload } from "lucide-react";
+import { ImagePlus, Loader2, Upload } from "lucide-react";
 import {
   ModalContent,
   ModalTitle,
@@ -64,7 +64,7 @@ const SUBJECT_PARTS: { value: SubjectPart; label: string }[] = [
 
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic"];
 const ACCEPTED_EXTENSIONS = ".jpg,.jpeg,.png,.webp,.heic";
-const MAX_IMAGE_BYTES = 20 * 1024 * 1024; // 20 MB practical UX limit
+const MAX_IMAGE_BYTES = 4.5 * 1024 * 1024; // 4.5 MB — Next.js server action body limit
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -118,7 +118,7 @@ export default function PhotoAttachModal({
       return;
     }
     if (file.size > MAX_IMAGE_BYTES) {
-      setFileError(`File is too large. Maximum size is 20 MB (got ${formatBytes(file.size)}).`);
+      setFileError(`File is too large. Maximum size is 4.5 MB (got ${formatBytes(file.size)}).`);
       return;
     }
 
@@ -183,12 +183,10 @@ export default function PhotoAttachModal({
 
   return (
     <ModalContent>
-      <ModalTitle className="flex items-center gap-2">
-        <Camera className="h-4 w-4 shrink-0" />
-        Add Photo to {speciesName}
+      <ModalTitle>Add Photo to {speciesName}</ModalTitle>
       </ModalTitle>
-      <ModalDescription className="sr-only">
-        Attach a photo to this tree occurrence record
+      <ModalDescription>
+        Select the part of the tree shown in your photo and upload an image to attach it to this occurrence record.
       </ModalDescription>
 
       <div className="space-y-4 mt-4">
@@ -250,7 +248,7 @@ export default function PhotoAttachModal({
                 <span className="text-sm font-medium">
                   Drag &amp; drop or click to select
                 </span>
-                <span className="text-xs">JPEG, PNG, WebP, HEIC — max 20 MB</span>
+                <span className="text-xs">JPEG, PNG, WebP, HEIC — max 4.5 MB</span>
               </div>
             )}
           </div>
@@ -288,15 +286,9 @@ export default function PhotoAttachModal({
         )}
       </div>
 
-      <ModalFooter className="mt-4">
+      <ModalFooter className="mt-4 flex-col gap-2">
         <Button
-          variant="outline"
-          onClick={handleClose}
-          disabled={isUploading}
-        >
-          Cancel
-        </Button>
-        <Button
+          className="w-full"
           onClick={handleUpload}
           disabled={!imageFile || isUploading}
         >
@@ -311,6 +303,14 @@ export default function PhotoAttachModal({
               Upload Photo
             </>
           )}
+        </Button>
+        <Button
+          className="w-full"
+          variant="outline"
+          onClick={handleClose}
+          disabled={isUploading}
+        >
+          Cancel
         </Button>
       </ModalFooter>
     </ModalContent>
