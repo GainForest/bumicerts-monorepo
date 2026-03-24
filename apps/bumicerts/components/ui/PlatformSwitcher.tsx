@@ -144,7 +144,7 @@ export function PlatformSwitcher({ currentPlatform }: PlatformSwitcherProps) {
 
             if (isDisabled) {
               return (
-                <QuickTooltip key={platform.id} content="Sign in to access Upload" asChild={false}>
+                <QuickTooltip key={platform.id} content="Sign in to access the Upload platform" asChild={false}>
                   {item}
                 </QuickTooltip>
               );
