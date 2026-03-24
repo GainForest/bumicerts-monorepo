@@ -33,6 +33,11 @@ export const appRouter = router({
       delete: effectMutation(mutations.link.evm.delete),
     }),
   }),
+  ac: router({
+    multimedia: router({
+      create: effectMutation(mutations.ac.multimedia.create),
+    }),
+  }),
   dwc: router({
     occurrence: router({
       create: effectMutation(mutations.dwc.occurrence.create),

@@ -459,6 +459,47 @@ declare const appRouter: _trpc_server.TRPCBuiltRouter<{
             }>;
         }>>;
     }>>;
+    ac: _trpc_server.TRPCBuiltRouter<{
+        ctx: TRPCContext;
+        meta: object;
+        errorShape: {
+            data: {
+                effectTag: string | undefined;
+                causeMessage: string | undefined;
+                code: _trpc_server.TRPC_ERROR_CODE_KEY;
+                httpStatus: number;
+                path?: string;
+                stack?: string;
+            };
+            message: string;
+            code: _trpc_server.TRPC_ERROR_CODE_NUMBER;
+        };
+        transformer: true;
+    }, _trpc_server.TRPCDecorateCreateRouterOptions<{
+        multimedia: _trpc_server.TRPCBuiltRouter<{
+            ctx: TRPCContext;
+            meta: object;
+            errorShape: {
+                data: {
+                    effectTag: string | undefined;
+                    causeMessage: string | undefined;
+                    code: _trpc_server.TRPC_ERROR_CODE_KEY;
+                    httpStatus: number;
+                    path?: string;
+                    stack?: string;
+                };
+                message: string;
+                code: _trpc_server.TRPC_ERROR_CODE_NUMBER;
+            };
+            transformer: true;
+        }, _trpc_server.TRPCDecorateCreateRouterOptions<{
+            create: _trpc_server.TRPCMutationProcedure<{
+                input: any;
+                output: _gainforest_atproto_mutations_core.AcMultimediaMutationResult;
+                meta: object;
+            }>;
+        }>>;
+    }>>;
     dwc: _trpc_server.TRPCBuiltRouter<{
         ctx: TRPCContext;
         meta: object;

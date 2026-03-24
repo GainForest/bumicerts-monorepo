@@ -87,6 +87,11 @@ import { updateLinkEvm } from "./mutations/link.evm/update";
 import { deleteLinkEvm } from "./mutations/link.evm/delete";
 
 // ---------------------------------------------------------------------------
+// ac.multimedia
+// ---------------------------------------------------------------------------
+import { createAcMultimedia } from "./mutations/ac.multimedia/create";
+
+// ---------------------------------------------------------------------------
 // dwc.occurrence
 // ---------------------------------------------------------------------------
 import { createDwcOccurrence } from "./mutations/dwc.occurrence/create";
@@ -168,6 +173,11 @@ export const mutations = {
       create: createLinkEvm,
       update: updateLinkEvm,
       delete: deleteLinkEvm,
+    },
+  },
+  ac: {
+    multimedia: {
+      create: createAcMultimedia,
     },
   },
   dwc: {

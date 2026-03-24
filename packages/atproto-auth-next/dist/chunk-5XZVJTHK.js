@@ -205,7 +205,6 @@ async function restoreSession(client, did) {
   try {
     const session = await client.restore(did);
     debug.log("[restore-session] Restored", { did, found: !!session });
-    console.log("SESSION========", JSON.stringify(session));
     return session;
   } catch (error) {
     console.log("ERROR_SESSION_RESTORE========", error);
@@ -742,4 +741,4 @@ export {
   createAuthSetup,
   createOAuthSetup
 };
-//# sourceMappingURL=chunk-VPGL3YNQ.js.map
+//# sourceMappingURL=chunk-5XZVJTHK.js.map

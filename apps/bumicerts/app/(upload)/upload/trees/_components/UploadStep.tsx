@@ -1,11 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CheckCircle2, XCircle, AlertTriangle, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, AlertTriangle, ChevronDown, ChevronRight, Loader2, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc/client";
 import type { ValidatedRow } from "@/lib/upload/types";
 import { occurrenceInputToCreateInput } from "@/lib/upload/occurrence-adapter";
+import { useModal } from "@/components/ui/modal/context";
+import { MODAL_IDS } from "@/components/global/modals/ids";
+import PhotoAttachModal from "@/components/global/modals/upload/photo-attachment";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -14,7 +17,7 @@ import { occurrenceInputToCreateInput } from "@/lib/upload/occurrence-adapter";
 type RowStatus =
   | { state: "pending" }
   | { state: "uploading" }
-  | { state: "success"; occurrenceUri: string }
+  | { state: "success"; occurrenceUri: string; photoCount: number }
   | { state: "error"; error: string };
 
 type UploadProgress = {
@@ -49,6 +52,7 @@ type UploadStepProps = {
 export default function UploadStep({ validRows, onBack, onComplete }: UploadStepProps) {
   const createOccurrence = trpc.dwc.occurrence.create.useMutation();
   const createMeasurement = trpc.dwc.measurement.create.useMutation();
+  const { pushModal, show } = useModal();
 
   const [uploadStarted, setUploadStarted] = useState(false);
   const [uploadDone, setUploadDone] = useState(false);
@@ -64,8 +68,44 @@ export default function UploadStep({ validRows, onBack, onComplete }: UploadStep
   );
   const [failedRowsOpen, setFailedRowsOpen] = useState(false);
 
+  // Photo attachment state
+  const [photoUris, setPhotoUris] = useState<Map<number, string[]>>(new Map());
+
   // Prevent double-run in StrictMode
   const uploadRef = useRef(false);
+
+  // ── Photo attachment ──────────────────────────────────────────────────────
+  const handleAddPhoto = (rowIndex: number, occurrenceUri: string, speciesName: string) => {
+    pushModal(
+      {
+        id: MODAL_IDS.UPLOAD_PHOTO_ATTACH,
+        content: (
+          <PhotoAttachModal
+            occurrenceUri={occurrenceUri}
+            speciesName={speciesName}
+            onPhotoUploaded={(uri) => {
+              setPhotoUris((prev) => {
+                const next = new Map(prev);
+                const existing = next.get(rowIndex) ?? [];
+                next.set(rowIndex, [...existing, uri]);
+                return next;
+              });
+              setRowStatuses((prev) => {
+                const next = [...prev];
+                const s = next[rowIndex];
+                if (s?.state === "success") {
+                  next[rowIndex] = { ...s, photoCount: s.photoCount + 1 };
+                }
+                return next;
+              });
+            }}
+          />
+        ),
+      },
+      true
+    );
+    show();
+  };
 
   // ── sessionStorage: save pending state before OAuth redirect ──────────────
   useEffect(() => {
@@ -127,7 +167,7 @@ export default function UploadStep({ validRows, onBack, onComplete }: UploadStep
         successes += 1;
         setRowStatuses((prev) => {
           const next = [...prev];
-          next[i] = { state: "success", occurrenceUri: occResult.uri };
+          next[i] = { state: "success", occurrenceUri: occResult.uri, photoCount: 0 };
           return next;
         });
       } catch (err) {
@@ -226,6 +266,15 @@ export default function UploadStep({ validRows, onBack, onComplete }: UploadStep
           {validRows.map((row, i) => {
             const status = rowStatuses[i];
             const species = row.occurrence.scientificName || `Row ${i + 1}`;
+            const rowPhotos = photoUris.get(i) ?? [];
+            const isSuccess = status?.state === "success";
+            const occUri = isSuccess ? status.occurrenceUri : null;
+            // Truncate URI for display: show last 20 chars
+            const truncatedUri = occUri
+              ? occUri.length > 32
+                ? `…${occUri.slice(-28)}`
+                : occUri
+              : null;
             return (
               <div
                 key={i}
@@ -234,21 +283,50 @@ export default function UploadStep({ validRows, onBack, onComplete }: UploadStep
                 <span className="font-mono text-xs text-muted-foreground w-6 shrink-0">
                   {i + 1}
                 </span>
-                <span className="flex-1 truncate">{species}</span>
-                <span className="shrink-0">
-                  {status?.state === "pending" && (
-                    <span className="text-xs text-muted-foreground">Pending</span>
+                <div className="flex-1 min-w-0">
+                  <span className="block truncate">{species}</span>
+                  {truncatedUri && (
+                    <span className="block text-xs text-muted-foreground font-mono truncate">
+                      {truncatedUri}
+                    </span>
                   )}
-                  {status?.state === "uploading" && (
-                    <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {/* Photo thumbnails / count badge */}
+                  {rowPhotos.length > 0 && (
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Camera className="h-3 w-3" />
+                      {rowPhotos.length}
+                    </span>
                   )}
-                  {status?.state === "success" && (
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  {/* Status icon */}
+                  <span>
+                    {status?.state === "pending" && (
+                      <span className="text-xs text-muted-foreground">Pending</span>
+                    )}
+                    {status?.state === "uploading" && (
+                      <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
+                    )}
+                    {isSuccess && (
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    )}
+                    {status?.state === "error" && (
+                      <XCircle className="h-4 w-4 text-destructive" />
+                    )}
+                  </span>
+                  {/* Add Photo button — only shown after upload completes */}
+                  {isSuccess && uploadDone && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs gap-1"
+                      onClick={() => handleAddPhoto(i, status.occurrenceUri, species)}
+                    >
+                      <Camera className="h-3 w-3" />
+                      Add Photo
+                    </Button>
                   )}
-                  {status?.state === "error" && (
-                    <XCircle className="h-4 w-4 text-destructive" />
-                  )}
-                </span>
+                </div>
               </div>
             );
           })}

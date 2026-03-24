@@ -28,6 +28,8 @@ import { Main as Main$a } from '@gainforest/generated/app/gainforest/dwc/occurre
 export { Main as DwcOccurrenceRecord } from '@gainforest/generated/app/gainforest/dwc/occurrence.defs';
 import { Main as Main$b } from '@gainforest/generated/app/gainforest/dwc/measurement.defs';
 export { Main as DwcMeasurementRecord } from '@gainforest/generated/app/gainforest/dwc/measurement.defs';
+import { Main as Main$c } from '@gainforest/generated/app/gainforest/ac/multimedia.defs';
+export { Main as AcMultimediaRecord } from '@gainforest/generated/app/gainforest/ac/multimedia.defs';
 import { GeoJsonObject, Feature, LineString, MultiLineString, Point, MultiPoint, Polygon, MultiPolygon, FeatureCollection } from 'geojson';
 export { Main as ClaimActivityLinearDocument, Main as LinearDocument } from '@gainforest/generated/pub/leaflet/pages/linearDocument.defs';
 export { Richtext } from '@gainforest/generated/app/gainforest/common/defs.defs';
@@ -113,6 +115,11 @@ declare const mutations: {
             readonly create: (input: CreateLinkEvmInput) => effect_Effect.Effect<LinkEvmMutationResult, LinkEvmValidationError | LinkEvmPdsError | BlobUploadError, AtprotoAgent>;
             readonly update: (input: UpdateLinkEvmInput) => effect_Effect.Effect<LinkEvmMutationResult, LinkEvmValidationError | LinkEvmNotFoundError | LinkEvmPdsError | BlobUploadError, AtprotoAgent>;
             readonly delete: (input: DeleteRecordInput) => effect_Effect.Effect<DeleteRecordResult, LinkEvmNotFoundError | LinkEvmPdsError, AtprotoAgent>;
+        };
+    };
+    readonly ac: {
+        readonly multimedia: {
+            readonly create: (input: CreateAcMultimediaInput) => effect_Effect.Effect<AcMultimediaMutationResult, AcMultimediaValidationError | AcMultimediaPdsError | FileConstraintError | BlobUploadError, AtprotoAgent>;
         };
     };
     readonly dwc: {
@@ -998,6 +1005,23 @@ declare class DwcMeasurementPdsError extends DwcMeasurementPdsError_base<{
 }> {
 }
 
+declare const AcMultimediaValidationError_base: new <A extends Record<string, any> = {}>(args: effect_Types.Equals<A, {}> extends true ? void : { readonly [P in keyof A as P extends "_tag" ? never : P]: A[P]; }) => effect_Cause.YieldableError & {
+    readonly _tag: "AcMultimediaValidationError";
+} & Readonly<A>;
+declare class AcMultimediaValidationError extends AcMultimediaValidationError_base<{
+    message: string;
+    cause?: unknown;
+}> {
+}
+declare const AcMultimediaPdsError_base: new <A extends Record<string, any> = {}>(args: effect_Types.Equals<A, {}> extends true ? void : { readonly [P in keyof A as P extends "_tag" ? never : P]: A[P]; }) => effect_Cause.YieldableError & {
+    readonly _tag: "AcMultimediaPdsError";
+} & Readonly<A>;
+declare class AcMultimediaPdsError extends AcMultimediaPdsError_base<{
+    message: string;
+    cause?: unknown;
+}> {
+}
+
 /** Returned by create / update / upsert. */
 type CertifiedLocationMutationResult = RecordMutationResult<Main>;
 type CreateCertifiedLocationInput = {
@@ -1284,4 +1308,38 @@ type CreateDwcMeasurementInput = {
     rkey?: string;
 };
 
-export { AtprotoAgent, type AudioRecordingMutationResult, AudioRecordingNotFoundError, AudioRecordingPdsError, AudioRecordingValidationError, type AudioTechnicalMetadata, type BlobConstraint, BlobUploadError, CertifiedLocationIsDefaultError, type CertifiedLocationMutationResult, CertifiedLocationNotFoundError, CertifiedLocationPdsError, CertifiedLocationValidationError, type ClaimActivityMutationResult, ClaimActivityNotFoundError, ClaimActivityPdsError, ClaimActivityValidationError, type ClaimRightsMutationResult, ClaimRightsNotFoundError, ClaimRightsPdsError, ClaimRightsValidationError, type Coordinates, type CreateAudioRecordingInput, type CreateCertifiedLocationInput, type CreateClaimActivityInput, type CreateClaimRightsInput, type CreateDwcMeasurementInput, type CreateDwcOccurrenceInput, type CreateFundingConfigInput, type CreateFundingReceiptInput, type CreateLayerInput, type CreateLinkEvmInput, type CreateOrganizationInfoInput, type CredentialConfig, CredentialLoginError, DefaultSiteLocationNotFoundError, type DefaultSiteMutationResult, DefaultSitePdsError, DefaultSiteValidationError, type DeleteRecordInput, type DeleteRecordResult, type DwcMeasurementMutationResult, DwcMeasurementPdsError, DwcMeasurementValidationError, type DwcOccurrenceMutationResult, DwcOccurrencePdsError, DwcOccurrenceValidationError, type FieldLabels, FileConstraintError, type FileOrBlobRef, type FloraMeasurementFields, type FormattedError, type FundingConfigMutationResult, FundingConfigNotFoundError, FundingConfigPdsError, FundingConfigValidationError, type FundingReceiptMutationResult, FundingReceiptPdsError, FundingReceiptValidationError, GeoJsonProcessingError, GeoJsonValidationError, HECTARES_PER_SQUARE_METER, type LayerMutationResult, LayerNotFoundError, LayerPdsError, type LayerType, LayerValidationError, type LinkEvmMutationResult, LinkEvmNotFoundError, LinkEvmPdsError, LinkEvmValidationError, MutationError, type MutationResult, type Mutations, type Objective, OrganizationInfoAlreadyExistsError, type OrganizationInfoMutationResult, OrganizationInfoNotFoundError, OrganizationInfoPdsError, OrganizationInfoValidationError, type PolygonMetrics, type RecordCreateInput, type RecordFields, type RecordMutationResult, type RecordUpdateInput, type SerializableFile, type SetDefaultSiteInput, type SingletonCreateInput, type SingletonMutationResult, type SingletonUpdateInput, type UpdateAudioRecordingInput, type UpdateCertifiedLocationInput, type UpdateClaimActivityInput, type UpdateClaimRightsInput, type UpdateFundingConfigInput, type UpdateLayerInput, type UpdateLinkEvmInput, type UpdateOrganizationInfoInput, type UploadBlobInput, type UploadBlobResult, type UpsertAudioRecordingInput, type UpsertCertifiedLocationInput, type UpsertClaimActivityInput, type UpsertClaimRightsInput, type UpsertFundingConfigInput, type UpsertLayerInput, type ValidationIssue, type WithFileInputs, adapt, computePolygonMetrics, err, extractBlobConstraints, extractLineStringFeatures, extractPointFeatures, extractPolygonFeatures, formatMutationError, formatMutationErrorMessage, fromSerializableFile, isAnyBlobRef, makeCredentialAgentLayer, mimeMatches, mutations, normalizeBlobRef, ok, toFeatureCollection, toSerializableFile, validateGeojsonOrThrow };
+/** Returned by create. */
+type AcMultimediaMutationResult = RecordMutationResult<Main$c>;
+type CreateAcMultimediaInput = {
+    /** The image file (base64-encoded via SerializableFile). Maximum 100 MB. */
+    imageFile: SerializableFile;
+    /** AT-URI to parent occurrence record. */
+    occurrenceRef?: string;
+    /** AT-URI to site record. */
+    siteRef?: string;
+    /**
+     * The part of the organism depicted, using TDWG Audubon Core subjectPart
+     * controlled values. Examples: entireOrganism, leaf, bark, flower, etc.
+     */
+    subjectPart: string;
+    /** Full IRI of the subjectPart term from the TDWG controlled vocabulary. */
+    subjectPartUri?: string;
+    /** Viewing orientation relative to the subject (dorsal, ventral, lateral, etc.). */
+    subjectOrientation?: string;
+    /** Human-readable description of the media content. */
+    caption?: string;
+    /** Name of the person or agent who created the media resource. */
+    creator?: string;
+    /** ISO 8601 datetime when the media resource was originally created. */
+    createDate?: string;
+    /** MIME type override (defaults to imageFile.type). */
+    format?: string;
+    /** URI to the original full-resolution media resource. */
+    accessUri?: string;
+    /** AC variant describing the quality/size of this service access point. */
+    variantLiteral?: string;
+    /** Optional caller-supplied rkey. PDS assigns a TID if omitted. */
+    rkey?: string;
+};
+
+export { type AcMultimediaMutationResult, AcMultimediaPdsError, AcMultimediaValidationError, AtprotoAgent, type AudioRecordingMutationResult, AudioRecordingNotFoundError, AudioRecordingPdsError, AudioRecordingValidationError, type AudioTechnicalMetadata, type BlobConstraint, BlobUploadError, CertifiedLocationIsDefaultError, type CertifiedLocationMutationResult, CertifiedLocationNotFoundError, CertifiedLocationPdsError, CertifiedLocationValidationError, type ClaimActivityMutationResult, ClaimActivityNotFoundError, ClaimActivityPdsError, ClaimActivityValidationError, type ClaimRightsMutationResult, ClaimRightsNotFoundError, ClaimRightsPdsError, ClaimRightsValidationError, type Coordinates, type CreateAcMultimediaInput, type CreateAudioRecordingInput, type CreateCertifiedLocationInput, type CreateClaimActivityInput, type CreateClaimRightsInput, type CreateDwcMeasurementInput, type CreateDwcOccurrenceInput, type CreateFundingConfigInput, type CreateFundingReceiptInput, type CreateLayerInput, type CreateLinkEvmInput, type CreateOrganizationInfoInput, type CredentialConfig, CredentialLoginError, DefaultSiteLocationNotFoundError, type DefaultSiteMutationResult, DefaultSitePdsError, DefaultSiteValidationError, type DeleteRecordInput, type DeleteRecordResult, type DwcMeasurementMutationResult, DwcMeasurementPdsError, DwcMeasurementValidationError, type DwcOccurrenceMutationResult, DwcOccurrencePdsError, DwcOccurrenceValidationError, type FieldLabels, FileConstraintError, type FileOrBlobRef, type FloraMeasurementFields, type FormattedError, type FundingConfigMutationResult, FundingConfigNotFoundError, FundingConfigPdsError, FundingConfigValidationError, type FundingReceiptMutationResult, FundingReceiptPdsError, FundingReceiptValidationError, GeoJsonProcessingError, GeoJsonValidationError, HECTARES_PER_SQUARE_METER, type LayerMutationResult, LayerNotFoundError, LayerPdsError, type LayerType, LayerValidationError, type LinkEvmMutationResult, LinkEvmNotFoundError, LinkEvmPdsError, LinkEvmValidationError, MutationError, type MutationResult, type Mutations, type Objective, OrganizationInfoAlreadyExistsError, type OrganizationInfoMutationResult, OrganizationInfoNotFoundError, OrganizationInfoPdsError, OrganizationInfoValidationError, type PolygonMetrics, type RecordCreateInput, type RecordFields, type RecordMutationResult, type RecordUpdateInput, type SerializableFile, type SetDefaultSiteInput, type SingletonCreateInput, type SingletonMutationResult, type SingletonUpdateInput, type UpdateAudioRecordingInput, type UpdateCertifiedLocationInput, type UpdateClaimActivityInput, type UpdateClaimRightsInput, type UpdateFundingConfigInput, type UpdateLayerInput, type UpdateLinkEvmInput, type UpdateOrganizationInfoInput, type UploadBlobInput, type UploadBlobResult, type UpsertAudioRecordingInput, type UpsertCertifiedLocationInput, type UpsertClaimActivityInput, type UpsertClaimRightsInput, type UpsertFundingConfigInput, type UpsertLayerInput, type ValidationIssue, type WithFileInputs, adapt, computePolygonMetrics, err, extractBlobConstraints, extractLineStringFeatures, extractPointFeatures, extractPolygonFeatures, formatMutationError, formatMutationErrorMessage, fromSerializableFile, isAnyBlobRef, makeCredentialAgentLayer, mimeMatches, mutations, normalizeBlobRef, ok, toFeatureCollection, toSerializableFile, validateGeojsonOrThrow };

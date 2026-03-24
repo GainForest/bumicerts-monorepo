@@ -20,6 +20,8 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/index.ts
 var index_exports = {};
 __export(index_exports, {
+  AcMultimediaPdsError: () => AcMultimediaPdsError,
+  AcMultimediaValidationError: () => AcMultimediaValidationError,
   AtprotoAgent: () => AtprotoAgent,
   AudioRecordingNotFoundError: () => AudioRecordingNotFoundError,
   AudioRecordingPdsError: () => AudioRecordingPdsError,
@@ -438,15 +440,15 @@ function applyPatch(existing, data, unset, requiredFields) {
 
 // src/utils/shared/pds.ts
 var import_effect5 = require("effect");
-var fetchRecord = (collection, rkey, makePdsError35) => import_effect5.Effect.gen(function* () {
+var fetchRecord = (collection, rkey, makePdsError36) => import_effect5.Effect.gen(function* () {
   const agent = yield* AtprotoAgent;
   const repo = agent.assertDid;
   return yield* import_effect5.Effect.tryPromise({
     try: () => agent.com.atproto.repo.getRecord({ repo, collection, rkey }).then((res) => res.data.value).catch(() => null),
-    catch: (cause) => makePdsError35(`Failed to fetch ${collection} record at rkey "${rkey}"`, cause)
+    catch: (cause) => makePdsError36(`Failed to fetch ${collection} record at rkey "${rkey}"`, cause)
   });
 });
-var createRecord = (collection, record, rkey, makePdsError35) => import_effect5.Effect.gen(function* () {
+var createRecord = (collection, record, rkey, makePdsError36) => import_effect5.Effect.gen(function* () {
   const agent = yield* AtprotoAgent;
   const repo = agent.assertDid;
   const response = yield* import_effect5.Effect.tryPromise({
@@ -456,39 +458,39 @@ var createRecord = (collection, record, rkey, makePdsError35) => import_effect5.
       ...rkey !== void 0 ? { rkey } : {},
       record
     }),
-    catch: (cause) => makePdsError35(`PDS rejected createRecord for ${collection}`, cause)
+    catch: (cause) => makePdsError36(`PDS rejected createRecord for ${collection}`, cause)
   });
   return { uri: response.data.uri, cid: response.data.cid };
 });
-var putRecord = (collection, rkey, record, makePdsError35) => import_effect5.Effect.gen(function* () {
+var putRecord = (collection, rkey, record, makePdsError36) => import_effect5.Effect.gen(function* () {
   const agent = yield* AtprotoAgent;
   const repo = agent.assertDid;
   const response = yield* import_effect5.Effect.tryPromise({
     try: () => agent.com.atproto.repo.putRecord({ repo, collection, rkey, record }),
-    catch: (cause) => makePdsError35(`PDS rejected putRecord for ${collection} at rkey "${rkey}"`, cause)
+    catch: (cause) => makePdsError36(`PDS rejected putRecord for ${collection} at rkey "${rkey}"`, cause)
   });
   return { uri: response.data.uri, cid: response.data.cid };
 });
-var deleteRecord = (collection, rkey, makePdsError35) => import_effect5.Effect.gen(function* () {
+var deleteRecord = (collection, rkey, makePdsError36) => import_effect5.Effect.gen(function* () {
   const agent = yield* AtprotoAgent;
   const repo = agent.assertDid;
   yield* import_effect5.Effect.tryPromise({
     try: () => agent.com.atproto.repo.deleteRecord({ repo, collection, rkey }),
-    catch: (cause) => makePdsError35(`PDS rejected deleteRecord for ${collection} at rkey "${rkey}"`, cause)
+    catch: (cause) => makePdsError36(`PDS rejected deleteRecord for ${collection} at rkey "${rkey}"`, cause)
   });
 });
 
 // src/utils/shared/validate.ts
 var import_effect6 = require("effect");
-var stubValidate = (candidate, parse, makeValidationError28) => import_effect6.Effect.try({
+var stubValidate = (candidate, parse, makeValidationError29) => import_effect6.Effect.try({
   try: () => {
     parse(stubBlobRefs(candidate));
   },
-  catch: (cause) => makeValidationError28(String(cause), cause)
+  catch: (cause) => makeValidationError29(String(cause), cause)
 });
-var finalValidate = (resolved, parse, makeValidationError28) => import_effect6.Effect.try({
+var finalValidate = (resolved, parse, makeValidationError29) => import_effect6.Effect.try({
   try: () => parse(resolved),
-  catch: (cause) => makeValidationError28(String(cause), cause)
+  catch: (cause) => makeValidationError29(String(cause), cause)
 });
 
 // src/mutations/organization.info/create.ts
@@ -2419,26 +2421,130 @@ var deleteLinkEvm = (input) => import_effect49.Effect.gen(function* () {
   return { uri, rkey };
 });
 
-// src/mutations/dwc.occurrence/create.ts
+// src/mutations/ac.multimedia/create.ts
 var import_effect51 = require("effect");
+var import_multimedia = require("@gainforest/generated/app/gainforest/ac/multimedia.defs");
+
+// src/mutations/ac.multimedia/utils/errors.ts
+var import_effect50 = require("effect");
+var AcMultimediaValidationError = class extends import_effect50.Data.TaggedError(
+  "AcMultimediaValidationError"
+) {
+};
+var AcMultimediaPdsError = class extends import_effect50.Data.TaggedError(
+  "AcMultimediaPdsError"
+) {
+};
+
+// src/mutations/ac.multimedia/create.ts
+var COLLECTION33 = "app.gainforest.ac.multimedia";
+var MAX_IMAGE_BYTES = 100 * 1024 * 1024;
+var ACCEPTED_IMAGE_MIMES = /* @__PURE__ */ new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+  "image/tiff",
+  "image/tif",
+  "image/gif",
+  "image/bmp",
+  "image/svg+xml"
+]);
+var makePdsError33 = (message, cause) => new AcMultimediaPdsError({ message, cause });
+var makeValidationError26 = (message, cause) => new AcMultimediaValidationError({ message, cause });
+var createAcMultimedia = (input) => import_effect51.Effect.gen(function* () {
+  const {
+    imageFile,
+    occurrenceRef,
+    siteRef,
+    subjectPart,
+    subjectPartUri,
+    subjectOrientation,
+    caption,
+    creator,
+    createDate,
+    format,
+    accessUri,
+    variantLiteral,
+    rkey
+  } = input;
+  if (imageFile.size > MAX_IMAGE_BYTES) {
+    return yield* import_effect51.Effect.fail(
+      new FileConstraintError({
+        path: ["imageFile"],
+        reason: `Image file size ${imageFile.size} B exceeds maximum ${MAX_IMAGE_BYTES} B (100 MB)`
+      })
+    );
+  }
+  if (!ACCEPTED_IMAGE_MIMES.has(imageFile.type)) {
+    return yield* import_effect51.Effect.fail(
+      new FileConstraintError({
+        path: ["imageFile"],
+        reason: `MIME type "${imageFile.type}" is not accepted for ac.multimedia; allowed: ${[...ACCEPTED_IMAGE_MIMES].join(", ")}`
+      })
+    );
+  }
+  const agent = yield* AtprotoAgent;
+  const fileBytes = fromSerializableFile(imageFile);
+  const uploadResult = yield* import_effect51.Effect.tryPromise({
+    try: () => agent.uploadBlob(fileBytes, { encoding: imageFile.type }),
+    catch: (cause) => new BlobUploadError({ message: "Failed to upload image blob", cause })
+  });
+  const raw = uploadResult.data.blob;
+  const blobRef = { $type: "blob", ref: raw.ref, mimeType: raw.mimeType, size: raw.size };
+  const createdAt = (/* @__PURE__ */ new Date()).toISOString();
+  const candidate = {
+    $type: COLLECTION33,
+    file: blobRef,
+    subjectPart,
+    format: format ?? imageFile.type,
+    createdAt,
+    ...occurrenceRef !== void 0 && { occurrenceRef },
+    ...siteRef !== void 0 && { siteRef },
+    ...subjectPartUri !== void 0 && { subjectPartUri },
+    ...subjectOrientation !== void 0 && { subjectOrientation },
+    ...caption !== void 0 && { caption },
+    ...creator !== void 0 && { creator },
+    ...createDate !== void 0 && { createDate },
+    ...accessUri !== void 0 && { accessUri },
+    ...variantLiteral !== void 0 && { variantLiteral }
+  };
+  const record = yield* import_effect51.Effect.try({
+    try: () => (0, import_multimedia.$parse)(candidate),
+    catch: (cause) => makeValidationError26(`ac.multimedia record failed lexicon validation: ${String(cause)}`, cause)
+  });
+  const { uri, cid } = yield* createRecord(COLLECTION33, record, rkey, makePdsError33);
+  const assignedRkey = uri.split("/").pop() ?? rkey ?? "unknown";
+  return {
+    uri,
+    cid,
+    rkey: assignedRkey,
+    record
+  };
+});
+
+// src/mutations/dwc.occurrence/create.ts
+var import_effect53 = require("effect");
 var import_occurrence = require("@gainforest/generated/app/gainforest/dwc/occurrence.defs");
 
 // src/mutations/dwc.occurrence/utils/errors.ts
-var import_effect50 = require("effect");
-var DwcOccurrenceValidationError = class extends import_effect50.Data.TaggedError(
+var import_effect52 = require("effect");
+var DwcOccurrenceValidationError = class extends import_effect52.Data.TaggedError(
   "DwcOccurrenceValidationError"
 ) {
 };
-var DwcOccurrencePdsError = class extends import_effect50.Data.TaggedError(
+var DwcOccurrencePdsError = class extends import_effect52.Data.TaggedError(
   "DwcOccurrencePdsError"
 ) {
 };
 
 // src/mutations/dwc.occurrence/create.ts
-var COLLECTION33 = "app.gainforest.dwc.occurrence";
-var makePdsError33 = (message, cause) => new DwcOccurrencePdsError({ message, cause });
-var makeValidationError26 = (message, cause) => new DwcOccurrenceValidationError({ message, cause });
-var createDwcOccurrence = (input) => import_effect51.Effect.gen(function* () {
+var COLLECTION34 = "app.gainforest.dwc.occurrence";
+var makePdsError34 = (message, cause) => new DwcOccurrencePdsError({ message, cause });
+var makeValidationError27 = (message, cause) => new DwcOccurrenceValidationError({ message, cause });
+var createDwcOccurrence = (input) => import_effect53.Effect.gen(function* () {
   const {
     scientificName,
     eventDate,
@@ -2463,7 +2569,7 @@ var createDwcOccurrence = (input) => import_effect51.Effect.gen(function* () {
   } = input;
   const createdAt = (/* @__PURE__ */ new Date()).toISOString();
   const candidate = {
-    $type: COLLECTION33,
+    $type: COLLECTION34,
     scientificName,
     eventDate,
     decimalLatitude,
@@ -2485,14 +2591,14 @@ var createDwcOccurrence = (input) => import_effect51.Effect.gen(function* () {
     ...projectRef !== void 0 ? { projectRef } : {},
     createdAt
   };
-  const record = yield* import_effect51.Effect.try({
+  const record = yield* import_effect53.Effect.try({
     try: () => (0, import_occurrence.$parse)(candidate),
-    catch: (cause) => makeValidationError26(
+    catch: (cause) => makeValidationError27(
       `dwc.occurrence record failed lexicon validation: ${String(cause)}`,
       cause
     )
   });
-  const { uri, cid } = yield* createRecord(COLLECTION33, record, rkey, makePdsError33);
+  const { uri, cid } = yield* createRecord(COLLECTION34, record, rkey, makePdsError34);
   const assignedRkey = uri.split("/").pop() ?? rkey ?? "unknown";
   return {
     uri,
@@ -2503,25 +2609,25 @@ var createDwcOccurrence = (input) => import_effect51.Effect.gen(function* () {
 });
 
 // src/mutations/dwc.measurement/create.ts
-var import_effect53 = require("effect");
+var import_effect55 = require("effect");
 var import_measurement = require("@gainforest/generated/app/gainforest/dwc/measurement.defs");
 
 // src/mutations/dwc.measurement/utils/errors.ts
-var import_effect52 = require("effect");
-var DwcMeasurementValidationError = class extends import_effect52.Data.TaggedError(
+var import_effect54 = require("effect");
+var DwcMeasurementValidationError = class extends import_effect54.Data.TaggedError(
   "DwcMeasurementValidationError"
 ) {
 };
-var DwcMeasurementPdsError = class extends import_effect52.Data.TaggedError(
+var DwcMeasurementPdsError = class extends import_effect54.Data.TaggedError(
   "DwcMeasurementPdsError"
 ) {
 };
 
 // src/mutations/dwc.measurement/create.ts
-var COLLECTION34 = "app.gainforest.dwc.measurement";
-var makePdsError34 = (message, cause) => new DwcMeasurementPdsError({ message, cause });
-var makeValidationError27 = (message, cause) => new DwcMeasurementValidationError({ message, cause });
-var createDwcMeasurement = (input) => import_effect53.Effect.gen(function* () {
+var COLLECTION35 = "app.gainforest.dwc.measurement";
+var makePdsError35 = (message, cause) => new DwcMeasurementPdsError({ message, cause });
+var makeValidationError28 = (message, cause) => new DwcMeasurementValidationError({ message, cause });
+var createDwcMeasurement = (input) => import_effect55.Effect.gen(function* () {
   const {
     occurrenceRef,
     flora,
@@ -2540,7 +2646,7 @@ var createDwcMeasurement = (input) => import_effect53.Effect.gen(function* () {
   if (flora.basalDiameter !== void 0) floraResult.basalDiameter = flora.basalDiameter;
   if (flora.canopyCoverPercent !== void 0) floraResult.canopyCoverPercent = flora.canopyCoverPercent;
   const candidate = {
-    $type: COLLECTION34,
+    $type: COLLECTION35,
     occurrenceRef,
     result: floraResult,
     createdAt: (/* @__PURE__ */ new Date()).toISOString()
@@ -2550,14 +2656,14 @@ var createDwcMeasurement = (input) => import_effect53.Effect.gen(function* () {
   if (measurementDate !== void 0) candidate.measurementDate = measurementDate;
   if (measurementMethod !== void 0) candidate.measurementMethod = measurementMethod;
   if (measurementRemarks !== void 0) candidate.measurementRemarks = measurementRemarks;
-  const record = yield* import_effect53.Effect.try({
+  const record = yield* import_effect55.Effect.try({
     try: () => (0, import_measurement.$parse)(candidate),
-    catch: (cause) => makeValidationError27(
+    catch: (cause) => makeValidationError28(
       `dwc.measurement record failed lexicon validation: ${String(cause)}`,
       cause
     )
   });
-  const { uri, cid } = yield* createRecord(COLLECTION34, record, rkey, makePdsError34);
+  const { uri, cid } = yield* createRecord(COLLECTION35, record, rkey, makePdsError35);
   const assignedRkey = uri.split("/").pop() ?? rkey ?? "unknown";
   return {
     uri,
@@ -2568,8 +2674,8 @@ var createDwcMeasurement = (input) => import_effect53.Effect.gen(function* () {
 });
 
 // src/blob/upload.ts
-var import_effect54 = require("effect");
-var uploadBlob = (input) => import_effect54.Effect.gen(function* () {
+var import_effect56 = require("effect");
+var uploadBlob = (input) => import_effect56.Effect.gen(function* () {
   const agent = yield* AtprotoAgent;
   const { file, mimeType: override } = input;
   let data;
@@ -2578,18 +2684,18 @@ var uploadBlob = (input) => import_effect54.Effect.gen(function* () {
     data = fromSerializableFile(file);
     mimeType = override ?? file.type;
   } else if (isFileOrBlob(file)) {
-    const buf = yield* import_effect54.Effect.tryPromise({
+    const buf = yield* import_effect56.Effect.tryPromise({
       try: () => file.arrayBuffer(),
       catch: (e) => new BlobUploadError({ message: "Failed to read file data into ArrayBuffer", cause: e })
     });
     data = new Uint8Array(buf);
     mimeType = override ?? (file.type || "application/octet-stream");
   } else {
-    return yield* import_effect54.Effect.die(
+    return yield* import_effect56.Effect.die(
       new Error("uploadBlob: input.file must be a File, Blob, or SerializableFile")
     );
   }
-  const res = yield* import_effect54.Effect.tryPromise({
+  const res = yield* import_effect56.Effect.tryPromise({
     try: () => agent.uploadBlob(data, { encoding: mimeType }),
     catch: (e) => new BlobUploadError({ message: "PDS blob upload failed", cause: e })
   });
@@ -2667,6 +2773,11 @@ var mutations = {
       create: createLinkEvm,
       update: updateLinkEvm,
       delete: deleteLinkEvm
+    }
+  },
+  ac: {
+    multimedia: {
+      create: createAcMultimedia
     }
   },
   dwc: {
@@ -2887,16 +2998,16 @@ var adapt = (action) => {
 };
 
 // src/layers/credential.ts
-var import_effect55 = require("effect");
+var import_effect57 = require("effect");
 var import_api = require("@atproto/api");
-var CredentialLoginError = class extends import_effect55.Data.TaggedError("CredentialLoginError") {
+var CredentialLoginError = class extends import_effect57.Data.TaggedError("CredentialLoginError") {
 };
 function makeCredentialAgentLayer(config) {
-  return import_effect55.Layer.effect(
+  return import_effect57.Layer.effect(
     AtprotoAgent,
-    import_effect55.Effect.gen(function* () {
+    import_effect57.Effect.gen(function* () {
       const session = new import_api.CredentialSession(new URL(`https://${config.service}`));
-      yield* import_effect55.Effect.tryPromise({
+      yield* import_effect57.Effect.tryPromise({
         try: () => session.login({
           identifier: config.identifier,
           password: config.password
@@ -2912,6 +3023,8 @@ function makeCredentialAgentLayer(config) {
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  AcMultimediaPdsError,
+  AcMultimediaValidationError,
   AtprotoAgent,
   AudioRecordingNotFoundError,
   AudioRecordingPdsError,

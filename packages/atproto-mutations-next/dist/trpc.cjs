@@ -175,6 +175,11 @@ var appRouter = router({
       delete: effectMutation(import_atproto_mutations_core.mutations.link.evm.delete)
     })
   }),
+  ac: router({
+    multimedia: router({
+      create: effectMutation(import_atproto_mutations_core.mutations.ac.multimedia.create)
+    })
+  }),
   dwc: router({
     occurrence: router({
       create: effectMutation(import_atproto_mutations_core.mutations.dwc.occurrence.create)

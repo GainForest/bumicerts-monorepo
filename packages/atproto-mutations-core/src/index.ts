@@ -167,6 +167,12 @@ export {
   DwcMeasurementPdsError,
 } from "./mutations/dwc.measurement/utils/errors";
 
+// ac.multimedia
+export {
+  AcMultimediaValidationError,
+  AcMultimediaPdsError,
+} from "./mutations/ac.multimedia/utils/errors";
+
 // ---------------------------------------------------------------------------
 // Entity types
 // ---------------------------------------------------------------------------
@@ -288,3 +294,10 @@ export type {
   DwcMeasurementRecord,
   FloraMeasurementFields,
 } from "./mutations/dwc.measurement/utils/types";
+
+// ac.multimedia
+export type {
+  CreateAcMultimediaInput,
+  AcMultimediaMutationResult,
+  AcMultimediaRecord,
+} from "./mutations/ac.multimedia/utils/types";
