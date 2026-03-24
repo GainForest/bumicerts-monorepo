@@ -8,7 +8,7 @@ import type { ValidatedRow } from "@/lib/upload/types";
 import { occurrenceInputToCreateInput } from "@/lib/upload/occurrence-adapter";
 import { useModal } from "@/components/ui/modal/context";
 import { MODAL_IDS } from "@/components/global/modals/ids";
-import PhotoAttachModal from "./PhotoAttachDialog";
+import PhotoAttachModal from "@/components/global/modals/upload/photo-attachment";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
