@@ -162,8 +162,8 @@ jobs:
           name: packages-dist
           path: packages
 
-      - name: Generate types
-        run: bun run gen:types
+      # GENERATED/types/ is committed to git, so checkout already has them.
+      # No need to regenerate here.
 
       - name: Typecheck bumicerts
         run: bun run typecheck
