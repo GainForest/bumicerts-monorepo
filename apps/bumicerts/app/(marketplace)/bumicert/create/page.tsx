@@ -22,7 +22,6 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import CircularProgressBar from "@/components/circular-progressbar";
-import TimeText from "@/components/time-text";
 import MyBumicerts from "./_components/MyBumicerts";
 import DraftBumicerts from "./_components/DraftBumicerts";
 
