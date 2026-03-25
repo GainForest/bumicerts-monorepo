@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { SiteEditorModalId } from "@/components/global/modals/upload/site/editor";
 import dynamic from "next/dynamic";
-import { computePolygonMetrics, parseAtUri } from "@gainforest/atproto-mutations-next";
+import { computePolygonMetrics } from "@gainforest/atproto-mutations-next";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { links } from "@/lib/links";
 import { ContributorRow } from "./ContributorRow";

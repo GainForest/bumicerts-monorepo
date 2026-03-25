@@ -14,7 +14,7 @@ import { useFormStore } from "../form-store";
 import useNewBumicertStore from "../store";
 import { usePathname, useRouter } from "next/navigation";
 import { links } from "@/lib/links";
-import { ArrowRightIcon, CircleCheckIcon, Loader2Icon, SaveIcon } from "lucide-react";
+import { ArrowRightIcon, CircleCheckIcon, Loader2Icon } from "lucide-react";
 import CircularProgressBar from "@/components/circular-progressbar";
 import { cheapHash } from "@/lib/cheapHash";
 import { DraftBumicertResponse } from "@/app/api/supabase/drafts/bumicert/type";

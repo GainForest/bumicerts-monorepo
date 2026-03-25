@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { BumicertCardVisual, BumicertCardSkeleton, cardVariants } from "./BumicertCard";
 import type { BumicertData } from "@/lib/types";
-import { LeafIcon, SearchIcon } from "lucide-react";
+import { SearchIcon } from "lucide-react";
 import { links } from "@/lib/links";
 
 // Container variants with design system stagger timing

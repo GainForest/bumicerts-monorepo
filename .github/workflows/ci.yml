@@ -74,14 +74,11 @@ jobs:
         if: steps.dist-cache.outputs.cache-hit != 'true'
         run: bun run gen:types
 
-      - name: Build packages
+      - name: Build packages (parallel where possible)
         if: steps.dist-cache.outputs.cache-hit != 'true'
         run: |
-          bun run --filter '@gainforest/internal-utils' build
-          bun run --filter '@gainforest/atproto-mutations-core' build
-          bun run --filter '@gainforest/atproto-auth-next' build
+          bun run --filter '@gainforest/internal-utils' --filter '@gainforest/atproto-mutations-core' --filter '@gainforest/atproto-auth-next' --filter '@gainforest/leaflet-react' build
           bun run --filter '@gainforest/atproto-mutations-next' build
-          bun run --filter '@gainforest/leaflet-react' build
 
       - name: Generate collection filters
         id: filters
@@ -165,8 +162,8 @@ jobs:
           name: packages-dist
           path: packages
 
-      - name: Generate types
-        run: bun run gen:types
+      # GENERATED/types/ is committed to git, so checkout already has them.
+      # No need to regenerate here.
 
       - name: Typecheck bumicerts
         run: bun run typecheck

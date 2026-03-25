@@ -7,13 +7,8 @@ import { STEPS as steps } from "../_data/steps";
 import { useFormStore } from "../form-store";
 import CircularProgressBar from "@/components/circular-progressbar";
 import {
-  BookImageIcon,
   CheckIcon,
   ChevronRightIcon,
-  EarthLockIcon,
-  FlagTriangleRightIcon,
-  PenLineIcon,
-  ScanSearchIcon,
 } from "lucide-react";
 import { useStep5Store } from "./Steps/Step5/store";
 

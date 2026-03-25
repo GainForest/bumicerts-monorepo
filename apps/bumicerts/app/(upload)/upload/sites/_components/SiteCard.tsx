@@ -18,7 +18,6 @@ import { useModal } from "@/components/ui/modal/context";
 import { SiteEditorModal, SiteEditorModalId } from "@/components/global/modals/upload/site/editor";
 import { getShapefilePreviewUrl } from "@/lib/shapefile";
 import { queries, type CertifiedLocation } from "@/lib/graphql/queries/index";
-import { cn } from "@/lib/utils";
 import { formatError } from "@/lib/utils/trpc-errors";
 import {
   DropdownMenu,

@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Trash2Icon, PencilIcon, CheckIcon, XIcon } from "lucide-react";
 import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
-import { queries, type ActorProfile } from "@/lib/graphql/queries/index";
+import { queries } from "@/lib/graphql/queries/index";
 
 interface ContributorRowProps {
     value: string;

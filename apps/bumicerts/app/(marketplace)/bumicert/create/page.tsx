@@ -1,18 +1,10 @@
 import React from "react";
 import AuthWrapper from "./[draftId]/_components/AuthWrapper";
 import {
-  ArrowRightIcon,
   ChartPieIcon,
-  CircleCheckIcon,
-  ClockIcon,
   HelpCircleIcon,
-  InboxIcon,
   LeafIcon,
-  PartyPopperIcon,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { links } from "@/lib/links";
 import GetStartedButton from "./_components/GetStartedButton";
 import Image from "next/image";
 import {
@@ -21,18 +13,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import CircularProgressBar from "@/components/circular-progressbar";
-import TimeText from "@/components/time-text";
 import MyBumicerts from "./_components/MyBumicerts";
 import DraftBumicerts from "./_components/DraftBumicerts";
-
-// Mock drafts data - replace with actual data fetching
-const mockDrafts: {
-  id: string;
-  title: string;
-  updatedAt: string;
-  progress: number;
-}[] = [];
 
 const CreateBumicertPage = () => {
   return (

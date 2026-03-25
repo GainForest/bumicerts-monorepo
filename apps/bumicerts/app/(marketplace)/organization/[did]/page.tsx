@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { getOrgData, transformOrgData, type GraphQLOrgInfoItem } from "./_data";
 import { OrgAbout } from "./_components/OrgAbout";
 import { requirePublicUrl } from "@/lib/url";
-import { OrgSetupPage } from "./_components/OrgSetupPage";
 
 // ── Metadata ─────────────────────────────────────────────────────────────────
 

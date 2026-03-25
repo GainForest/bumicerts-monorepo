@@ -1,7 +1,6 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
 import Image from "next/image";
 
 /** Resolves a coverImage that is either a URL string or a File (create flow). */

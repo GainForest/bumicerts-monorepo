@@ -8,7 +8,6 @@
 
 import { graphqlClient } from "@/lib/graphql/client";
 import { graphql } from "@/lib/graphql/tada";
-import type { ResultOf } from "@/lib/graphql/tada";
 import type { QueryModule } from "@/lib/graphql/create-query";
 
 // ── Document ──────────────────────────────────────────────────────────────────

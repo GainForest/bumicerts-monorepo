@@ -2,23 +2,17 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDownIcon, EyeIcon, LightbulbIcon } from "lucide-react";
+import { ChevronDownIcon, LightbulbIcon } from "lucide-react";
 
 import useNewBumicertStore from "../store";
-import { BumicertCardVisual } from "@/app/(marketplace)/explore/_components/BumicertCard";
 import { useFormStore } from "../form-store";
-import { useAtprotoStore } from "@/components/stores/atproto";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useNavbarContext } from "@/app/(marketplace)/_components/Navbar/context";
 import { STEPS } from "../_data/steps";
 import { trackStepViewed, trackStepCompleted, getStepName } from "@/lib/analytics/hotjar";
 import { useParams } from "next/navigation";
 import { useUnsavedChangesWarning } from "@/hooks/use-unsaved-changes-warning";
-import { queries } from "@/lib/graphql/queries/index";
 import SecondaryContent from "./SecondaryContent";
-
-const EMPTY_COVER_IMAGE = new File([], "cover-image.png");
 
 const StepBody = () => {
   const { viewport, openState } = useNavbarContext();

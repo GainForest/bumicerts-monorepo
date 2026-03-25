@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useOnboardingStore, generateHandle, type Objective } from "../store";
 import {
@@ -10,15 +9,11 @@ import {
   CalendarIcon,
   GlobeIcon,
   Loader2Icon,
-  MapPinIcon,
   ImageIcon,
-  XIcon,
-  Wand2Icon,
   SparkleIcon,
   SparklesIcon,
   Trash2Icon,
   UploadIcon,
-  Building2Icon,
   BuildingIcon,
   MapPinHouseIcon,
   MapPinPlusIcon,
