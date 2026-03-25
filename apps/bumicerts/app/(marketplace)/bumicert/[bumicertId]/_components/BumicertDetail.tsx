@@ -12,6 +12,10 @@ import { FundingStatus, computeWalletFlags } from "./FundingStatus";
 import { useEvmLinks } from "@/hooks/useEvmLinks";
 import { useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
+import { Trash2Icon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useModal } from "@/components/ui/modal/context";
+import DeleteBumicertModal, { DeleteBumicertModalId } from "./DeleteBumicertModal";
 
 interface BumicertDetailProps {
   bumicert: BumicertData;
@@ -57,6 +61,20 @@ function MobileDonateSlot({ bumicert, isOwner, fundingConfig }: BumicertDetailPr
 export function BumicertDetail({ bumicert, isOwner, fundingConfig }: BumicertDetailProps) {
   const [tab] = useTabParam();
   const showSidebar = tab !== "timeline";
+  const { pushModal, show } = useModal();
+
+  const handleDeleteClick = () => {
+    pushModal(
+      {
+        id: DeleteBumicertModalId,
+        content: (
+          <DeleteBumicertModal rkey={bumicert.rkey} title={bumicert.title} />
+        ),
+      },
+      true
+    );
+    show();
+  };
 
   return (
     <>
@@ -105,6 +123,18 @@ export function BumicertDetail({ bumicert, isOwner, fundingConfig }: BumicertDet
                   isOwner={isOwner}
                   fundingConfig={fundingConfig}
                 />
+                {/* Owner: delete bumicert */}
+                {isOwner && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    onClick={handleDeleteClick}
+                  >
+                    <Trash2Icon className="h-4 w-4" />
+                    Delete Bumicert
+                  </Button>
+                )}
               </div>
             </div>
           </div>

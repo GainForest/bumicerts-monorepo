@@ -7,6 +7,10 @@ import { PublicDonateArea } from "./donate/PublicDonateArea";
 import { FundingStatus, computeWalletFlags } from "./FundingStatus";
 import { useEvmLinks } from "@/hooks/useEvmLinks";
 import { useQueryClient } from "@tanstack/react-query";
+import { Trash2Icon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useModal } from "@/components/ui/modal/context";
+import DeleteBumicertModal, { DeleteBumicertModalId } from "./DeleteBumicertModal";
 
 interface BumicertSidebarProps {
   bumicert: BumicertData;
@@ -18,6 +22,20 @@ interface BumicertSidebarProps {
 
 export function BumicertSidebar({ bumicert, isOwner, fundingConfig }: BumicertSidebarProps) {
   const queryClient = useQueryClient();
+  const { pushModal, show } = useModal();
+
+  const handleDeleteClick = () => {
+    pushModal(
+      {
+        id: DeleteBumicertModalId,
+        content: (
+          <DeleteBumicertModal rkey={bumicert.rkey} title={bumicert.title} />
+        ),
+      },
+      true
+    );
+    show();
+  };
 
   // Owner only: fetch their linked wallets to derive wallet validity flags
   const { data: evmLinks = [] } = useEvmLinks(
@@ -62,6 +80,19 @@ export function BumicertSidebar({ bumicert, isOwner, fundingConfig }: BumicertSi
       ) : (
         /* ── Visitor view ─────────────────────────────────────────────────── */
         <PublicDonateArea bumicert={bumicert} fundingConfig={fundingConfig} />
+      )}
+
+      {/* ── Owner: Delete bumicert ──────────────────────────────────────── */}
+      {isOwner && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          onClick={handleDeleteClick}
+        >
+          <Trash2Icon className="h-4 w-4" />
+          Delete Bumicert
+        </Button>
       )}
     </div>
   );
