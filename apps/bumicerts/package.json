@@ -35,7 +35,6 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
-    "dayjs": "^1.11.19",
     "extract-colors": "^4.2.1",
     "framer-motion": "^12.34.3",
     "gql.tada": "^1.9.0",

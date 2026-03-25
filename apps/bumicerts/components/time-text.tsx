@@ -1,11 +1,7 @@
 "use client";
 
 import React from "react";
-import dayjs from "dayjs";
-import relativeTime from "dayjs/plugin/relativeTime";
-
-// Extend dayjs with relative time plugin
-dayjs.extend(relativeTime);
+import { format as formatFn, formatDistanceToNow } from "date-fns";
 
 const TimeText = ({
   date,
@@ -19,19 +15,17 @@ const TimeText = ({
     | "absolute-date-time";
 }) => {
   const formatDate = () => {
-    const dayjsDate = dayjs(date);
-
     switch (format) {
       case "relative":
-        return dayjsDate.fromNow();
+        return formatDistanceToNow(date, { addSuffix: true });
       case "absolute-date":
-        return dayjsDate.format("D MMM, YYYY");
+        return formatFn(date, "d MMM, yyyy");
       case "absolute-time":
-        return dayjsDate.format("h:mm A");
+        return formatFn(date, "h:mm a");
       case "absolute-date-time":
-        return dayjsDate.format("MMM D, YYYY h:mm A");
+        return formatFn(date, "MMM d, yyyy h:mm a");
       default:
-        return dayjsDate.fromNow();
+        return formatDistanceToNow(date, { addSuffix: true });
     }
   };
 
