@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useAtprotoStore } from "@/components/stores/atproto";
 import { checkSessionAndGetProfile } from "@/components/actions/oauth";
 
@@ -25,6 +26,7 @@ import { checkSessionAndGetProfile } from "@/components/actions/oauth";
 export function AtprotoProvider({ children }: { children: React.ReactNode }) {
   const initialized = useRef(false);
   const setAuth = useAtprotoStore((state) => state.setAuth);
+  const router = useRouter();
 
   useEffect(() => {
     // Prevent double initialization in React Strict Mode
@@ -54,6 +56,13 @@ export function AtprotoProvider({ children }: { children: React.ReactNode }) {
             displayName: profile?.displayName,
             avatar: profile?.avatar,
           });
+
+          // Redirect back to the page the user was on before login
+          const authRedirect = localStorage.getItem("auth_redirect");
+          if (authRedirect) {
+            localStorage.removeItem("auth_redirect");
+            router.replace(authRedirect);
+          }
         } else {
           setAuth(null);
         }

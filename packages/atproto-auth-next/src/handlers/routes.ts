@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { Agent } from "@atproto/api";
 import type { NodeOAuthClient } from "@atproto/oauth-client-node";
@@ -105,14 +104,7 @@ export function createCallbackHandler(
 
     // Redirects outside try/catch — Next.js redirect() throws internally
     if (success) {
-      // Check for auth_redirect cookie (set by LoginModal to return user to their previous page)
-      const cookieStore = await cookies();
-      const authRedirect = cookieStore.get("auth_redirect")?.value;
-      if (authRedirect) {
-        cookieStore.delete("auth_redirect");
-      }
-      const redirectTo = authRedirect ? decodeURIComponent(authRedirect) : (options.redirectTo ?? "/");
-      redirect(redirectTo);
+      redirect(options.redirectTo ?? "/");
     } else {
       redirect("/?error=auth_failed");
     }
