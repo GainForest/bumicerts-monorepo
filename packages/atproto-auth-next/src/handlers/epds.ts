@@ -133,10 +133,16 @@ export function createEpdsCallbackHandler(config: EpdsCallbackHandlerConfig) {
         debug.warn("[epds/callback] Handle resolution failed, using DID as fallback", handleError);
       }
 
+      // Check for auth_redirect cookie (set by LoginModal to return user to their previous page)
+      const authRedirectCookie = req.cookies.get("auth_redirect")?.value;
+      const redirectTarget = authRedirectCookie
+        ? decodeURIComponent(authRedirectCookie)
+        : (config.successRedirectTo ?? "/");
+
       // Build the success redirect response first, then attach the cookie.
       // We MUST NOT use next/navigation redirect() here — it throws a
       // control-flow exception before the Set-Cookie header can be written.
-      const successUrl = new URL(config.successRedirectTo ?? "/", base);
+      const successUrl = new URL(redirectTarget, base);
       const response = NextResponse.redirect(successUrl);
 
       await saveSessionToResponse(
@@ -145,6 +151,11 @@ export function createEpdsCallbackHandler(config: EpdsCallbackHandlerConfig) {
         req,
         response,
       );
+
+      // Clear the auth_redirect cookie
+      if (authRedirectCookie) {
+        response.cookies.delete("auth_redirect");
+      }
 
       debug.log("[epds/callback] Session cookie saved, redirecting", { successUrl: successUrl.toString() });
 

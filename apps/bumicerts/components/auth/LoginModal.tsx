@@ -132,6 +132,8 @@ function EmailForm() {
     e.preventDefault();
     setIsRedirecting(true);
     setTimeout(() => setIsRedirecting(false), 10_000);
+    // Save the current page so we can redirect back after login
+    document.cookie = `auth_redirect=${encodeURIComponent(window.location.pathname)};path=/;max-age=600;samesite=lax`;
     const url = email
       ? `/api/oauth/epds/login?email=${encodeURIComponent(email)}`
       : "/api/oauth/epds/login";
@@ -218,6 +220,8 @@ function HandleForm() {
     e.preventDefault();
     if (!canSubmit) return;
     setError(null);
+    // Save the current page so we can redirect back after login
+    document.cookie = `auth_redirect=${encodeURIComponent(window.location.pathname)};path=/;max-age=600;samesite=lax`;
     startTransition(async () => {
       try {
         const { authorizationUrl } = await authorize(fullHandle || handle.trim());
