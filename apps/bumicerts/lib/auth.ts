@@ -65,7 +65,7 @@ function getAuth() {
     epds: clientEnv.NEXT_PUBLIC_EPDS_URL
       ? { url: clientEnv.NEXT_PUBLIC_EPDS_URL }
       : undefined,
-    onCallback: { redirectTo: "/explore" },
+    onCallback: { redirectTo: "/" },
     logoUri: publicUrl ? `${publicUrl}/assets/media/images/logo.png` : undefined,
     brandColor: "#2FCE8A",
     backgroundColor: "#FFFFFF",
