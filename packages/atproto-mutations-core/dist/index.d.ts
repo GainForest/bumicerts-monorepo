@@ -30,6 +30,8 @@ import { Main as Main$b } from '@gainforest/generated/app/gainforest/dwc/measure
 export { Main as DwcMeasurementRecord } from '@gainforest/generated/app/gainforest/dwc/measurement.defs';
 import { Main as Main$c } from '@gainforest/generated/app/gainforest/ac/multimedia.defs';
 export { Main as AcMultimediaRecord } from '@gainforest/generated/app/gainforest/ac/multimedia.defs';
+import { Main as Main$d } from '@gainforest/generated/org/hypercerts/context/attachment.defs';
+export { Main as ContextAttachmentRecord } from '@gainforest/generated/org/hypercerts/context/attachment.defs';
 import { GeoJsonObject, Feature, LineString, MultiLineString, Point, MultiPoint, Polygon, MultiPolygon, FeatureCollection } from 'geojson';
 export { Main as ClaimActivityLinearDocument, Main as LinearDocument } from '@gainforest/generated/pub/leaflet/pages/linearDocument.defs';
 export { Richtext } from '@gainforest/generated/app/gainforest/common/defs.defs';
@@ -120,6 +122,16 @@ declare const mutations: {
     readonly ac: {
         readonly multimedia: {
             readonly create: (input: CreateAcMultimediaInput) => effect_Effect.Effect<AcMultimediaMutationResult, AcMultimediaValidationError | AcMultimediaPdsError | FileConstraintError | BlobUploadError, AtprotoAgent>;
+        };
+    };
+    readonly context: {
+        readonly attachment: {
+            readonly create: (input: CreateContextAttachmentInput) => effect_Effect.Effect<ContextAttachmentMutationResult, ContextAttachmentValidationError | ContextAttachmentPdsError | FileConstraintError | BlobUploadError, AtprotoAgent>;
+            readonly update: (input: UpdateContextAttachmentInput) => effect_Effect.Effect<ContextAttachmentMutationResult, ContextAttachmentValidationError | ContextAttachmentNotFoundError | ContextAttachmentPdsError | FileConstraintError | BlobUploadError, AtprotoAgent>;
+            readonly upsert: (input: UpsertContextAttachmentInput) => effect_Effect.Effect<ContextAttachmentMutationResult & {
+                created: boolean;
+            }, ContextAttachmentValidationError | ContextAttachmentPdsError | FileConstraintError | BlobUploadError, AtprotoAgent>;
+            readonly delete: (input: DeleteRecordInput) => effect_Effect.Effect<DeleteRecordResult, ContextAttachmentNotFoundError | ContextAttachmentPdsError, AtprotoAgent>;
         };
     };
     readonly dwc: {
@@ -1022,6 +1034,43 @@ declare class AcMultimediaPdsError extends AcMultimediaPdsError_base<{
 }> {
 }
 
+declare const ContextAttachmentValidationError_base: new <A extends Record<string, any> = {}>(args: effect_Types.Equals<A, {}> extends true ? void : { readonly [P in keyof A as P extends "_tag" ? never : P]: A[P]; }) => effect_Cause.YieldableError & {
+    readonly _tag: "ContextAttachmentValidationError";
+} & Readonly<A>;
+/**
+ * Input failed validation against the org.hypercerts.context.attachment lexicon.
+ * Raised by all operations (create, update, upsert) before any PDS call.
+ */
+declare class ContextAttachmentValidationError extends ContextAttachmentValidationError_base<{
+    message: string;
+    cause?: unknown;
+}> {
+}
+declare const ContextAttachmentNotFoundError_base: new <A extends Record<string, any> = {}>(args: effect_Types.Equals<A, {}> extends true ? void : { readonly [P in keyof A as P extends "_tag" ? never : P]: A[P]; }) => effect_Cause.YieldableError & {
+    readonly _tag: "ContextAttachmentNotFoundError";
+} & Readonly<A>;
+/**
+ * An update, upsert (with rkey), or delete was attempted but no record with
+ * that rkey exists in the repo.
+ */
+declare class ContextAttachmentNotFoundError extends ContextAttachmentNotFoundError_base<{
+    /** The rkey that was looked up */
+    rkey: string;
+}> {
+}
+declare const ContextAttachmentPdsError_base: new <A extends Record<string, any> = {}>(args: effect_Types.Equals<A, {}> extends true ? void : { readonly [P in keyof A as P extends "_tag" ? never : P]: A[P]; }) => effect_Cause.YieldableError & {
+    readonly _tag: "ContextAttachmentPdsError";
+} & Readonly<A>;
+/**
+ * The PDS rejected or failed to process the record operation.
+ * Wraps the raw error from agent.com.atproto.repo.* calls.
+ */
+declare class ContextAttachmentPdsError extends ContextAttachmentPdsError_base<{
+    message: string;
+    cause?: unknown;
+}> {
+}
+
 /** Returned by create / update / upsert. */
 type CertifiedLocationMutationResult = RecordMutationResult<Main>;
 type CreateCertifiedLocationInput = {
@@ -1342,4 +1391,13 @@ type CreateAcMultimediaInput = {
     rkey?: string;
 };
 
-export { type AcMultimediaMutationResult, AcMultimediaPdsError, AcMultimediaValidationError, AtprotoAgent, type AudioRecordingMutationResult, AudioRecordingNotFoundError, AudioRecordingPdsError, AudioRecordingValidationError, type AudioTechnicalMetadata, type BlobConstraint, BlobUploadError, CertifiedLocationIsDefaultError, type CertifiedLocationMutationResult, CertifiedLocationNotFoundError, CertifiedLocationPdsError, CertifiedLocationValidationError, type ClaimActivityMutationResult, ClaimActivityNotFoundError, ClaimActivityPdsError, ClaimActivityValidationError, type ClaimRightsMutationResult, ClaimRightsNotFoundError, ClaimRightsPdsError, ClaimRightsValidationError, type Coordinates, type CreateAcMultimediaInput, type CreateAudioRecordingInput, type CreateCertifiedLocationInput, type CreateClaimActivityInput, type CreateClaimRightsInput, type CreateDwcMeasurementInput, type CreateDwcOccurrenceInput, type CreateFundingConfigInput, type CreateFundingReceiptInput, type CreateLayerInput, type CreateLinkEvmInput, type CreateOrganizationInfoInput, type CredentialConfig, CredentialLoginError, DefaultSiteLocationNotFoundError, type DefaultSiteMutationResult, DefaultSitePdsError, DefaultSiteValidationError, type DeleteRecordInput, type DeleteRecordResult, type DwcMeasurementMutationResult, DwcMeasurementPdsError, DwcMeasurementValidationError, type DwcOccurrenceMutationResult, DwcOccurrencePdsError, DwcOccurrenceValidationError, type FieldLabels, FileConstraintError, type FileOrBlobRef, type FloraMeasurementFields, type FormattedError, type FundingConfigMutationResult, FundingConfigNotFoundError, FundingConfigPdsError, FundingConfigValidationError, type FundingReceiptMutationResult, FundingReceiptPdsError, FundingReceiptValidationError, GeoJsonProcessingError, GeoJsonValidationError, HECTARES_PER_SQUARE_METER, type LayerMutationResult, LayerNotFoundError, LayerPdsError, type LayerType, LayerValidationError, type LinkEvmMutationResult, LinkEvmNotFoundError, LinkEvmPdsError, LinkEvmValidationError, MutationError, type MutationResult, type Mutations, type Objective, OrganizationInfoAlreadyExistsError, type OrganizationInfoMutationResult, OrganizationInfoNotFoundError, OrganizationInfoPdsError, OrganizationInfoValidationError, type PolygonMetrics, type RecordCreateInput, type RecordFields, type RecordMutationResult, type RecordUpdateInput, type SerializableFile, type SetDefaultSiteInput, type SingletonCreateInput, type SingletonMutationResult, type SingletonUpdateInput, type UpdateAudioRecordingInput, type UpdateCertifiedLocationInput, type UpdateClaimActivityInput, type UpdateClaimRightsInput, type UpdateFundingConfigInput, type UpdateLayerInput, type UpdateLinkEvmInput, type UpdateOrganizationInfoInput, type UploadBlobInput, type UploadBlobResult, type UpsertAudioRecordingInput, type UpsertCertifiedLocationInput, type UpsertClaimActivityInput, type UpsertClaimRightsInput, type UpsertFundingConfigInput, type UpsertLayerInput, type ValidationIssue, type WithFileInputs, adapt, computePolygonMetrics, err, extractBlobConstraints, extractLineStringFeatures, extractPointFeatures, extractPolygonFeatures, formatMutationError, formatMutationErrorMessage, fromSerializableFile, isAnyBlobRef, makeCredentialAgentLayer, mimeMatches, mutations, normalizeBlobRef, ok, toFeatureCollection, toSerializableFile, validateGeojsonOrThrow };
+/** Input for createContextAttachment. rkey is optional — PDS assigns a TID when absent. */
+type CreateContextAttachmentInput = RecordCreateInput<Main$d>;
+/** Input for updateContextAttachment. */
+type UpdateContextAttachmentInput = RecordUpdateInput<Main$d>;
+/** Input for upsertContextAttachment — same full-replacement semantics as create. */
+type UpsertContextAttachmentInput = CreateContextAttachmentInput;
+/** Returned by create, update, and upsert on success. */
+type ContextAttachmentMutationResult = RecordMutationResult<Main$d>;
+
+export { type AcMultimediaMutationResult, AcMultimediaPdsError, AcMultimediaValidationError, AtprotoAgent, type AudioRecordingMutationResult, AudioRecordingNotFoundError, AudioRecordingPdsError, AudioRecordingValidationError, type AudioTechnicalMetadata, type BlobConstraint, BlobUploadError, CertifiedLocationIsDefaultError, type CertifiedLocationMutationResult, CertifiedLocationNotFoundError, CertifiedLocationPdsError, CertifiedLocationValidationError, type ClaimActivityMutationResult, ClaimActivityNotFoundError, ClaimActivityPdsError, ClaimActivityValidationError, type ClaimRightsMutationResult, ClaimRightsNotFoundError, ClaimRightsPdsError, ClaimRightsValidationError, type ContextAttachmentMutationResult, ContextAttachmentNotFoundError, ContextAttachmentPdsError, ContextAttachmentValidationError, type Coordinates, type CreateAcMultimediaInput, type CreateAudioRecordingInput, type CreateCertifiedLocationInput, type CreateClaimActivityInput, type CreateClaimRightsInput, type CreateContextAttachmentInput, type CreateDwcMeasurementInput, type CreateDwcOccurrenceInput, type CreateFundingConfigInput, type CreateFundingReceiptInput, type CreateLayerInput, type CreateLinkEvmInput, type CreateOrganizationInfoInput, type CredentialConfig, CredentialLoginError, DefaultSiteLocationNotFoundError, type DefaultSiteMutationResult, DefaultSitePdsError, DefaultSiteValidationError, type DeleteRecordInput, type DeleteRecordResult, type DwcMeasurementMutationResult, DwcMeasurementPdsError, DwcMeasurementValidationError, type DwcOccurrenceMutationResult, DwcOccurrencePdsError, DwcOccurrenceValidationError, type FieldLabels, FileConstraintError, type FileOrBlobRef, type FloraMeasurementFields, type FormattedError, type FundingConfigMutationResult, FundingConfigNotFoundError, FundingConfigPdsError, FundingConfigValidationError, type FundingReceiptMutationResult, FundingReceiptPdsError, FundingReceiptValidationError, GeoJsonProcessingError, GeoJsonValidationError, HECTARES_PER_SQUARE_METER, type LayerMutationResult, LayerNotFoundError, LayerPdsError, type LayerType, LayerValidationError, type LinkEvmMutationResult, LinkEvmNotFoundError, LinkEvmPdsError, LinkEvmValidationError, MutationError, type MutationResult, type Mutations, type Objective, OrganizationInfoAlreadyExistsError, type OrganizationInfoMutationResult, OrganizationInfoNotFoundError, OrganizationInfoPdsError, OrganizationInfoValidationError, type PolygonMetrics, type RecordCreateInput, type RecordFields, type RecordMutationResult, type RecordUpdateInput, type SerializableFile, type SetDefaultSiteInput, type SingletonCreateInput, type SingletonMutationResult, type SingletonUpdateInput, type UpdateAudioRecordingInput, type UpdateCertifiedLocationInput, type UpdateClaimActivityInput, type UpdateClaimRightsInput, type UpdateContextAttachmentInput, type UpdateFundingConfigInput, type UpdateLayerInput, type UpdateLinkEvmInput, type UpdateOrganizationInfoInput, type UploadBlobInput, type UploadBlobResult, type UpsertAudioRecordingInput, type UpsertCertifiedLocationInput, type UpsertClaimActivityInput, type UpsertClaimRightsInput, type UpsertContextAttachmentInput, type UpsertFundingConfigInput, type UpsertLayerInput, type ValidationIssue, type WithFileInputs, adapt, computePolygonMetrics, err, extractBlobConstraints, extractLineStringFeatures, extractPointFeatures, extractPolygonFeatures, formatMutationError, formatMutationErrorMessage, fromSerializableFile, isAnyBlobRef, makeCredentialAgentLayer, mimeMatches, mutations, normalizeBlobRef, ok, toFeatureCollection, toSerializableFile, validateGeojsonOrThrow };

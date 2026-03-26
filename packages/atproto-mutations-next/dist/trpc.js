@@ -118,6 +118,9 @@ var appRouter = router({
   claim: router({
     activity: entityRouter(mutations.claim.activity)
   }),
+  context: router({
+    attachment: entityRouter(mutations.context.attachment)
+  }),
   certified: router({
     location: entityRouter(mutations.certified.location)
   }),

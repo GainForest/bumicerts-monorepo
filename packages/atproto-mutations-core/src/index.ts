@@ -173,6 +173,13 @@ export {
   AcMultimediaPdsError,
 } from "./mutations/ac.multimedia/utils/errors";
 
+// context.attachment
+export {
+  ContextAttachmentValidationError,
+  ContextAttachmentNotFoundError,
+  ContextAttachmentPdsError,
+} from "./mutations/context.attachment/utils/errors";
+
 // ---------------------------------------------------------------------------
 // Entity types
 // ---------------------------------------------------------------------------
@@ -301,3 +308,12 @@ export type {
   AcMultimediaMutationResult,
   AcMultimediaRecord,
 } from "./mutations/ac.multimedia/utils/types";
+
+// context.attachment
+export type {
+  CreateContextAttachmentInput,
+  UpdateContextAttachmentInput,
+  UpsertContextAttachmentInput,
+  ContextAttachmentMutationResult,
+  ContextAttachmentRecord,
+} from "./mutations/context.attachment/utils/types";

@@ -354,15 +354,15 @@ function applyPatch(existing, data, unset, requiredFields) {
 
 // src/utils/shared/pds.ts
 import { Effect as Effect2 } from "effect";
-var fetchRecord = (collection, rkey, makePdsError36) => Effect2.gen(function* () {
+var fetchRecord = (collection, rkey, makePdsError40) => Effect2.gen(function* () {
   const agent = yield* AtprotoAgent;
   const repo = agent.assertDid;
   return yield* Effect2.tryPromise({
     try: () => agent.com.atproto.repo.getRecord({ repo, collection, rkey }).then((res) => res.data.value).catch(() => null),
-    catch: (cause) => makePdsError36(`Failed to fetch ${collection} record at rkey "${rkey}"`, cause)
+    catch: (cause) => makePdsError40(`Failed to fetch ${collection} record at rkey "${rkey}"`, cause)
   });
 });
-var createRecord = (collection, record, rkey, makePdsError36) => Effect2.gen(function* () {
+var createRecord = (collection, record, rkey, makePdsError40) => Effect2.gen(function* () {
   const agent = yield* AtprotoAgent;
   const repo = agent.assertDid;
   const response = yield* Effect2.tryPromise({
@@ -372,39 +372,39 @@ var createRecord = (collection, record, rkey, makePdsError36) => Effect2.gen(fun
       ...rkey !== void 0 ? { rkey } : {},
       record
     }),
-    catch: (cause) => makePdsError36(`PDS rejected createRecord for ${collection}`, cause)
+    catch: (cause) => makePdsError40(`PDS rejected createRecord for ${collection}`, cause)
   });
   return { uri: response.data.uri, cid: response.data.cid };
 });
-var putRecord = (collection, rkey, record, makePdsError36) => Effect2.gen(function* () {
+var putRecord = (collection, rkey, record, makePdsError40) => Effect2.gen(function* () {
   const agent = yield* AtprotoAgent;
   const repo = agent.assertDid;
   const response = yield* Effect2.tryPromise({
     try: () => agent.com.atproto.repo.putRecord({ repo, collection, rkey, record }),
-    catch: (cause) => makePdsError36(`PDS rejected putRecord for ${collection} at rkey "${rkey}"`, cause)
+    catch: (cause) => makePdsError40(`PDS rejected putRecord for ${collection} at rkey "${rkey}"`, cause)
   });
   return { uri: response.data.uri, cid: response.data.cid };
 });
-var deleteRecord = (collection, rkey, makePdsError36) => Effect2.gen(function* () {
+var deleteRecord = (collection, rkey, makePdsError40) => Effect2.gen(function* () {
   const agent = yield* AtprotoAgent;
   const repo = agent.assertDid;
   yield* Effect2.tryPromise({
     try: () => agent.com.atproto.repo.deleteRecord({ repo, collection, rkey }),
-    catch: (cause) => makePdsError36(`PDS rejected deleteRecord for ${collection} at rkey "${rkey}"`, cause)
+    catch: (cause) => makePdsError40(`PDS rejected deleteRecord for ${collection} at rkey "${rkey}"`, cause)
   });
 });
 
 // src/utils/shared/validate.ts
 import { Effect as Effect3 } from "effect";
-var stubValidate = (candidate, parse, makeValidationError29) => Effect3.try({
+var stubValidate = (candidate, parse, makeValidationError32) => Effect3.try({
   try: () => {
     parse(stubBlobRefs(candidate));
   },
-  catch: (cause) => makeValidationError29(String(cause), cause)
+  catch: (cause) => makeValidationError32(String(cause), cause)
 });
-var finalValidate = (resolved, parse, makeValidationError29) => Effect3.try({
+var finalValidate = (resolved, parse, makeValidationError32) => Effect3.try({
   try: () => parse(resolved),
-  catch: (cause) => makeValidationError29(String(cause), cause)
+  catch: (cause) => makeValidationError32(String(cause), cause)
 });
 
 // src/mutations/organization.info/create.ts
@@ -2571,26 +2571,162 @@ var createDwcOccurrence = (input) => Effect38.gen(function* () {
   };
 });
 
-// src/mutations/dwc.measurement/create.ts
+// src/mutations/context.attachment/create.ts
 import { Effect as Effect39 } from "effect";
-import { $parse as $parse28 } from "@gainforest/generated/app/gainforest/dwc/measurement.defs";
+import {
+  $parse as $parse28,
+  main as contextAttachmentSchema
+} from "@gainforest/generated/org/hypercerts/context/attachment.defs";
+
+// src/mutations/context.attachment/utils/errors.ts
+import { Data as Data15 } from "effect";
+var ContextAttachmentValidationError = class extends Data15.TaggedError(
+  "ContextAttachmentValidationError"
+) {
+};
+var ContextAttachmentNotFoundError = class extends Data15.TaggedError(
+  "ContextAttachmentNotFoundError"
+) {
+};
+var ContextAttachmentPdsError = class extends Data15.TaggedError(
+  "ContextAttachmentPdsError"
+) {
+};
+
+// src/mutations/context.attachment/create.ts
+var COLLECTION35 = "org.hypercerts.context.attachment";
+var BLOB_CONSTRAINTS10 = extractBlobConstraints(contextAttachmentSchema);
+var makePdsError35 = (message, cause) => new ContextAttachmentPdsError({ message, cause });
+var makeValidationError28 = (message, cause) => new ContextAttachmentValidationError({ message, cause });
+var createContextAttachment = (input) => Effect39.gen(function* () {
+  yield* validateFileConstraints(input, BLOB_CONSTRAINTS10);
+  const { rkey: inputRkey, ...inputData } = input;
+  const candidate = { $type: COLLECTION35, ...inputData, createdAt: (/* @__PURE__ */ new Date()).toISOString() };
+  yield* stubValidate(candidate, $parse28, makeValidationError28);
+  const resolved = yield* resolveFileInputs(candidate);
+  const record = yield* finalValidate(resolved, $parse28, makeValidationError28);
+  const { uri, cid } = yield* createRecord(COLLECTION35, record, inputRkey, makePdsError35);
+  const rkey = uri.split("/").pop() ?? "";
+  return { uri, cid, rkey, record };
+});
+
+// src/mutations/context.attachment/update.ts
+import { Effect as Effect40 } from "effect";
+import {
+  $parse as $parse29,
+  main as contextAttachmentSchema2
+} from "@gainforest/generated/org/hypercerts/context/attachment.defs";
+
+// src/mutations/context.attachment/utils/merge.ts
+var REQUIRED_FIELDS6 = /* @__PURE__ */ new Set([
+  "title"
+]);
+var applyPatch6 = (existing, data, unset) => applyPatch(existing, data, unset, REQUIRED_FIELDS6);
+
+// src/mutations/context.attachment/update.ts
+var COLLECTION36 = "org.hypercerts.context.attachment";
+var BLOB_CONSTRAINTS11 = extractBlobConstraints(contextAttachmentSchema2);
+var makePdsError36 = (message, cause) => new ContextAttachmentPdsError({ message, cause });
+var makeValidationError29 = (message, cause) => new ContextAttachmentValidationError({ message, cause });
+var updateContextAttachment = (input) => Effect40.gen(function* () {
+  const { rkey } = input;
+  yield* validateFileConstraints(input.data, BLOB_CONSTRAINTS11);
+  const existing = yield* fetchRecord(
+    COLLECTION36,
+    rkey,
+    makePdsError36
+  );
+  if (existing === null) {
+    return yield* Effect40.fail(new ContextAttachmentNotFoundError({ rkey }));
+  }
+  const patched = applyPatch6(existing, input.data, input.unset);
+  patched.$type = COLLECTION36;
+  patched.createdAt = existing.createdAt;
+  yield* stubValidate(patched, $parse29, makeValidationError29);
+  const resolved = yield* resolveFileInputs(patched);
+  const record = yield* finalValidate(resolved, $parse29, makeValidationError29);
+  const { uri, cid } = yield* putRecord(COLLECTION36, rkey, record, makePdsError36);
+  return { uri, cid, rkey, record };
+});
+
+// src/mutations/context.attachment/upsert.ts
+import { Effect as Effect41 } from "effect";
+import {
+  $parse as $parse30,
+  main as contextAttachmentSchema3
+} from "@gainforest/generated/org/hypercerts/context/attachment.defs";
+var COLLECTION37 = "org.hypercerts.context.attachment";
+var BLOB_CONSTRAINTS12 = extractBlobConstraints(contextAttachmentSchema3);
+var makePdsError37 = (message, cause) => new ContextAttachmentPdsError({ message, cause });
+var makeValidationError30 = (message, cause) => new ContextAttachmentValidationError({ message, cause });
+var upsertContextAttachment = (input) => Effect41.gen(function* () {
+  yield* validateFileConstraints(input, BLOB_CONSTRAINTS12);
+  const { rkey: inputRkey, ...inputData } = input;
+  if (inputRkey === void 0) {
+    const candidate2 = { $type: COLLECTION37, ...inputData, createdAt: (/* @__PURE__ */ new Date()).toISOString() };
+    yield* stubValidate(candidate2, $parse30, makeValidationError30);
+    const resolved2 = yield* resolveFileInputs(candidate2);
+    const record2 = yield* finalValidate(resolved2, $parse30, makeValidationError30);
+    const { uri: uri2, cid: cid2 } = yield* createRecord(COLLECTION37, record2, void 0, makePdsError37);
+    const rkey = uri2.split("/").pop() ?? "";
+    return { uri: uri2, cid: cid2, rkey, record: record2, created: true };
+  }
+  const existing = yield* fetchRecord(
+    COLLECTION37,
+    inputRkey,
+    makePdsError37
+  );
+  const createdAt = existing !== null ? existing.createdAt : (/* @__PURE__ */ new Date()).toISOString();
+  const candidate = { $type: COLLECTION37, ...inputData, createdAt };
+  yield* stubValidate(candidate, $parse30, makeValidationError30);
+  const resolved = yield* resolveFileInputs(candidate);
+  const record = yield* finalValidate(resolved, $parse30, makeValidationError30);
+  const { uri, cid } = yield* putRecord(COLLECTION37, inputRkey, record, makePdsError37);
+  return {
+    uri,
+    cid,
+    rkey: inputRkey,
+    record,
+    created: existing === null
+  };
+});
+
+// src/mutations/context.attachment/delete.ts
+import { Effect as Effect42 } from "effect";
+var COLLECTION38 = "org.hypercerts.context.attachment";
+var makePdsError38 = (message, cause) => new ContextAttachmentPdsError({ message, cause });
+var deleteContextAttachment = (input) => Effect42.gen(function* () {
+  const { rkey } = input;
+  const repo = (yield* AtprotoAgent).assertDid;
+  const uri = `at://${repo}/${COLLECTION38}/${rkey}`;
+  const existing = yield* fetchRecord(COLLECTION38, rkey, makePdsError38);
+  if (existing === null) {
+    return yield* Effect42.fail(new ContextAttachmentNotFoundError({ rkey }));
+  }
+  yield* deleteRecord(COLLECTION38, rkey, makePdsError38);
+  return { uri, rkey };
+});
+
+// src/mutations/dwc.measurement/create.ts
+import { Effect as Effect43 } from "effect";
+import { $parse as $parse31 } from "@gainforest/generated/app/gainforest/dwc/measurement.defs";
 
 // src/mutations/dwc.measurement/utils/errors.ts
-import { Data as Data15 } from "effect";
-var DwcMeasurementValidationError = class extends Data15.TaggedError(
+import { Data as Data16 } from "effect";
+var DwcMeasurementValidationError = class extends Data16.TaggedError(
   "DwcMeasurementValidationError"
 ) {
 };
-var DwcMeasurementPdsError = class extends Data15.TaggedError(
+var DwcMeasurementPdsError = class extends Data16.TaggedError(
   "DwcMeasurementPdsError"
 ) {
 };
 
 // src/mutations/dwc.measurement/create.ts
-var COLLECTION35 = "app.gainforest.dwc.measurement";
-var makePdsError35 = (message, cause) => new DwcMeasurementPdsError({ message, cause });
-var makeValidationError28 = (message, cause) => new DwcMeasurementValidationError({ message, cause });
-var createDwcMeasurement = (input) => Effect39.gen(function* () {
+var COLLECTION39 = "app.gainforest.dwc.measurement";
+var makePdsError39 = (message, cause) => new DwcMeasurementPdsError({ message, cause });
+var makeValidationError31 = (message, cause) => new DwcMeasurementValidationError({ message, cause });
+var createDwcMeasurement = (input) => Effect43.gen(function* () {
   const {
     occurrenceRef,
     flora,
@@ -2609,7 +2745,7 @@ var createDwcMeasurement = (input) => Effect39.gen(function* () {
   if (flora.basalDiameter !== void 0) floraResult.basalDiameter = flora.basalDiameter;
   if (flora.canopyCoverPercent !== void 0) floraResult.canopyCoverPercent = flora.canopyCoverPercent;
   const candidate = {
-    $type: COLLECTION35,
+    $type: COLLECTION39,
     occurrenceRef,
     result: floraResult,
     createdAt: (/* @__PURE__ */ new Date()).toISOString()
@@ -2619,14 +2755,14 @@ var createDwcMeasurement = (input) => Effect39.gen(function* () {
   if (measurementDate !== void 0) candidate.measurementDate = measurementDate;
   if (measurementMethod !== void 0) candidate.measurementMethod = measurementMethod;
   if (measurementRemarks !== void 0) candidate.measurementRemarks = measurementRemarks;
-  const record = yield* Effect39.try({
-    try: () => $parse28(candidate),
-    catch: (cause) => makeValidationError28(
+  const record = yield* Effect43.try({
+    try: () => $parse31(candidate),
+    catch: (cause) => makeValidationError31(
       `dwc.measurement record failed lexicon validation: ${String(cause)}`,
       cause
     )
   });
-  const { uri, cid } = yield* createRecord(COLLECTION35, record, rkey, makePdsError35);
+  const { uri, cid } = yield* createRecord(COLLECTION39, record, rkey, makePdsError39);
   const assignedRkey = uri.split("/").pop() ?? rkey ?? "unknown";
   return {
     uri,
@@ -2637,8 +2773,8 @@ var createDwcMeasurement = (input) => Effect39.gen(function* () {
 });
 
 // src/blob/upload.ts
-import { Effect as Effect40 } from "effect";
-var uploadBlob = (input) => Effect40.gen(function* () {
+import { Effect as Effect44 } from "effect";
+var uploadBlob = (input) => Effect44.gen(function* () {
   const agent = yield* AtprotoAgent;
   const { file, mimeType: override } = input;
   let data;
@@ -2647,18 +2783,18 @@ var uploadBlob = (input) => Effect40.gen(function* () {
     data = fromSerializableFile(file);
     mimeType = override ?? file.type;
   } else if (isFileOrBlob(file)) {
-    const buf = yield* Effect40.tryPromise({
+    const buf = yield* Effect44.tryPromise({
       try: () => file.arrayBuffer(),
       catch: (e) => new BlobUploadError({ message: "Failed to read file data into ArrayBuffer", cause: e })
     });
     data = new Uint8Array(buf);
     mimeType = override ?? (file.type || "application/octet-stream");
   } else {
-    return yield* Effect40.die(
+    return yield* Effect44.die(
       new Error("uploadBlob: input.file must be a File, Blob, or SerializableFile")
     );
   }
-  const res = yield* Effect40.tryPromise({
+  const res = yield* Effect44.tryPromise({
     try: () => agent.uploadBlob(data, { encoding: mimeType }),
     catch: (e) => new BlobUploadError({ message: "PDS blob upload failed", cause: e })
   });
@@ -2741,6 +2877,14 @@ var mutations = {
   ac: {
     multimedia: {
       create: createAcMultimedia
+    }
+  },
+  context: {
+    attachment: {
+      create: createContextAttachment,
+      update: updateContextAttachment,
+      upsert: upsertContextAttachment,
+      delete: deleteContextAttachment
     }
   },
   dwc: {
@@ -2961,16 +3105,16 @@ var adapt = (action) => {
 };
 
 // src/layers/credential.ts
-import { Data as Data16, Effect as Effect41, Layer } from "effect";
+import { Data as Data17, Effect as Effect45, Layer } from "effect";
 import { CredentialSession, Agent } from "@atproto/api";
-var CredentialLoginError = class extends Data16.TaggedError("CredentialLoginError") {
+var CredentialLoginError = class extends Data17.TaggedError("CredentialLoginError") {
 };
 function makeCredentialAgentLayer(config) {
   return Layer.effect(
     AtprotoAgent,
-    Effect41.gen(function* () {
+    Effect45.gen(function* () {
       const session = new CredentialSession(new URL(`https://${config.service}`));
-      yield* Effect41.tryPromise({
+      yield* Effect45.tryPromise({
         try: () => session.login({
           identifier: config.identifier,
           password: config.password
@@ -3002,6 +3146,9 @@ export {
   ClaimRightsNotFoundError,
   ClaimRightsPdsError,
   ClaimRightsValidationError,
+  ContextAttachmentNotFoundError,
+  ContextAttachmentPdsError,
+  ContextAttachmentValidationError,
   CredentialLoginError,
   DefaultSiteLocationNotFoundError,
   DefaultSitePdsError,

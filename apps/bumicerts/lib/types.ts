@@ -23,6 +23,8 @@ export type BumicertData = {
   organizationDid: string;
   /** ATProto record key */
   rkey: string;
+  /** ATProto record CID — used to form a StrongRef when creating attachments */
+  cid: string | null;
 
   title: string;
   /**

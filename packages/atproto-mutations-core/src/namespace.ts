@@ -97,6 +97,14 @@ import { createAcMultimedia } from "./mutations/ac.multimedia/create";
 import { createDwcOccurrence } from "./mutations/dwc.occurrence/create";
 
 // ---------------------------------------------------------------------------
+// context.attachment
+// ---------------------------------------------------------------------------
+import { createContextAttachment } from "./mutations/context.attachment/create";
+import { updateContextAttachment } from "./mutations/context.attachment/update";
+import { upsertContextAttachment } from "./mutations/context.attachment/upsert";
+import { deleteContextAttachment } from "./mutations/context.attachment/delete";
+
+// ---------------------------------------------------------------------------
 // dwc.measurement
 // ---------------------------------------------------------------------------
 import { createDwcMeasurement } from "./mutations/dwc.measurement/create";
@@ -178,6 +186,14 @@ export const mutations = {
   ac: {
     multimedia: {
       create: createAcMultimedia,
+    },
+  },
+  context: {
+    attachment: {
+      create: createContextAttachment,
+      update: updateContextAttachment,
+      upsert: upsertContextAttachment,
+      delete: deleteContextAttachment,
     },
   },
   dwc: {

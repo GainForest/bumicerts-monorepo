@@ -140,7 +140,7 @@ export function BumicertDetail({ bumicert, isOwner, fundingConfig }: BumicertDet
           </div>
 
           {/* Tab content */}
-          <TabContent bumicert={bumicert} />
+          <TabContent bumicert={bumicert} isOwner={isOwner} />
         </div>
       </div>
     </>

@@ -159,6 +159,9 @@ var appRouter = router({
   claim: router({
     activity: entityRouter(import_atproto_mutations_core.mutations.claim.activity)
   }),
+  context: router({
+    attachment: entityRouter(import_atproto_mutations_core.mutations.context.attachment)
+  }),
   certified: router({
     location: entityRouter(import_atproto_mutations_core.mutations.certified.location)
   }),

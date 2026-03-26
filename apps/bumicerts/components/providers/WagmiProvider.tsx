@@ -23,18 +23,25 @@ import {
   lightTheme,
 } from "@rainbow-me/rainbowkit";
 import "@rainbow-me/rainbowkit/styles.css";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { clientEnv } from "@/lib/env/client";
-
-export const wagmiConfig = getDefaultConfig({
-  appName: "Bumicerts",
-  projectId: clientEnv.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID,
-  chains: [base],
-  ssr: true,
-});
 
 export function WagmiProvider({ children }: { children: React.ReactNode }) {
   const [wagmiQueryClient] = useState(() => new QueryClient());
+
+  // Build wagmiConfig inside the component so it is only evaluated on the
+  // client, after the env has been validated. Memoised so it is stable across
+  // re-renders without being a module-level singleton.
+  const wagmiConfig = useMemo(
+    () =>
+      getDefaultConfig({
+        appName: "Bumicerts",
+        projectId: clientEnv.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID,
+        chains: [base],
+        ssr: true,
+      }),
+    []
+  );
 
   return (
     <WagmiProviderBase config={wagmiConfig}>

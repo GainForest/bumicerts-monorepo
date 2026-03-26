@@ -324,6 +324,7 @@ export function activityToBumicertData(item: GraphQLHcActivityItem): BumicertDat
     id: `${did}-${rkey}`,
     organizationDid: did,
     rkey,
+    cid: metadata?.cid ?? null,
     title: record?.title ?? "",
     shortDescription: record?.shortDescription ?? "",
     shortDescriptionFacets: parseFacets(record?.shortDescriptionFacets),

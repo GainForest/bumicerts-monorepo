@@ -269,6 +269,64 @@ declare const appRouter: _trpc_server.TRPCBuiltRouter<{
             }>;
         }>>;
     }>>;
+    context: _trpc_server.TRPCBuiltRouter<{
+        ctx: TRPCContext;
+        meta: object;
+        errorShape: {
+            data: {
+                effectTag: string | undefined;
+                causeMessage: string | undefined;
+                code: _trpc_server.TRPC_ERROR_CODE_KEY;
+                httpStatus: number;
+                path?: string;
+                stack?: string;
+            };
+            message: string;
+            code: _trpc_server.TRPC_ERROR_CODE_NUMBER;
+        };
+        transformer: true;
+    }, _trpc_server.TRPCDecorateCreateRouterOptions<{
+        attachment: _trpc_server.TRPCBuiltRouter<{
+            ctx: TRPCContext;
+            meta: object;
+            errorShape: {
+                data: {
+                    effectTag: string | undefined;
+                    causeMessage: string | undefined;
+                    code: _trpc_server.TRPC_ERROR_CODE_KEY;
+                    httpStatus: number;
+                    path?: string;
+                    stack?: string;
+                };
+                message: string;
+                code: _trpc_server.TRPC_ERROR_CODE_NUMBER;
+            };
+            transformer: true;
+        }, _trpc_server.TRPCDecorateCreateRouterOptions<{
+            create: _trpc_server.TRPCMutationProcedure<{
+                input: any;
+                output: _gainforest_atproto_mutations_core.ContextAttachmentMutationResult;
+                meta: object;
+            }>;
+            update: _trpc_server.TRPCMutationProcedure<{
+                input: any;
+                output: _gainforest_atproto_mutations_core.ContextAttachmentMutationResult;
+                meta: object;
+            }>;
+            upsert: _trpc_server.TRPCMutationProcedure<{
+                input: any;
+                output: _gainforest_atproto_mutations_core.ContextAttachmentMutationResult & {
+                    created: boolean;
+                };
+                meta: object;
+            }>;
+            delete: _trpc_server.TRPCMutationProcedure<{
+                input: any;
+                output: _gainforest_atproto_mutations_core.DeleteRecordResult;
+                meta: object;
+            }>;
+        }>>;
+    }>>;
     certified: _trpc_server.TRPCBuiltRouter<{
         ctx: TRPCContext;
         meta: object;
