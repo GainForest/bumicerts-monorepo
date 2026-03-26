@@ -32,8 +32,8 @@ export default function MarketplaceLayout({
   return (
     <NavbarContextProvider>
       <HeaderProvider>
-        <ModalProvider>
-          <WagmiProvider>
+        <WagmiProvider>
+          <ModalProvider>
             {/* Desktop: sidebar + content */}
             <div className="hidden md:flex h-screen overflow-hidden">
               <DesktopSidebar />
@@ -54,8 +54,8 @@ export default function MarketplaceLayout({
                 {children}
               </div>
             </div>
-          </WagmiProvider>
-        </ModalProvider>
+          </ModalProvider>
+        </WagmiProvider>
       </HeaderProvider>
     </NavbarContextProvider>
   );
