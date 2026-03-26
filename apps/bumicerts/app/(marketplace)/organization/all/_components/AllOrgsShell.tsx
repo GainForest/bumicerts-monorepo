@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { OrganizationCard } from "./OrganizationCard";
 import { countries } from "@/lib/countries";
+import { realms, countryToRealm } from "@/lib/bioregions";
 
 // ── Country chips (secondary dynamic) ─────────────────────────────────────────
 
@@ -64,6 +65,56 @@ function CountryChipsSkeleton() {
   );
 }
 
+// ── Bioregion chips (derived from country → realm mapping) ──────────────────
+
+function BioregionChips({
+  organizations,
+  bioregionFilter,
+  setBioregionFilter,
+}: {
+  organizations: OrganizationData[];
+  bioregionFilter: string | null;
+  setBioregionFilter: (r: string | null) => void;
+}) {
+  const chips = useMemo(() => {
+    // Collect unique realm IDs present in the org data
+    const realmIds = new Set<string>();
+    for (const org of organizations) {
+      const realmId = countryToRealm[org.country];
+      if (realmId) realmIds.add(realmId);
+    }
+    return Array.from(realmIds)
+      .map((id) => ({
+        id,
+        emoji: realms[id]?.emoji ?? "",
+        name: realms[id]?.name ?? id,
+        isSelected: bioregionFilter === id,
+      }))
+      .sort((a, b) => Number(b.isSelected) - Number(a.isSelected) || a.name.localeCompare(b.name));
+  }, [organizations, bioregionFilter]);
+
+  if (chips.length === 0) return null;
+
+  return (
+    <div className="flex items-center gap-2 pb-1">
+      {chips.map((r) => (
+        <button
+          key={r.id}
+          onClick={() => setBioregionFilter(bioregionFilter === r.id ? null : r.id)}
+          className={cn(
+            "shrink-0 text-xs font-medium rounded-full px-3 py-1.5 border transition-all whitespace-nowrap",
+            r.isSelected
+              ? "bg-foreground text-background border-foreground"
+              : "text-muted-foreground border-border hover:border-foreground/50 hover:text-foreground"
+          )}
+        >
+          {r.emoji} {r.name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ── Sort options ───────────────────────────────────────────────────────────────
 
 const SORT_OPTIONS = [
@@ -106,6 +157,7 @@ export function AllOrgsShell({
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("bumicerts");
   const [countryFilter, setCountryFilter] = useState<string | null>(null);
+  const [bioregionFilter, setBioregionFilter] = useState<string | null>(null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
@@ -120,13 +172,14 @@ export function AllOrgsShell({
       );
     }
     if (countryFilter) result = result.filter((o) => o.country === countryFilter);
+    if (bioregionFilter) result = result.filter((o) => countryToRealm[o.country] === bioregionFilter);
     switch (sort) {
       case "bumicerts": result.sort((a, b) => b.bumicertCount - a.bumicertCount); break;
       case "alpha":     result.sort((a, b) => a.displayName.localeCompare(b.displayName)); break;
       case "newest":    result.sort((a, b) => (b.startDate ?? "").localeCompare(a.startDate ?? "")); break;
     }
     return result;
-  }, [organizations, query, sort, countryFilter]);
+  }, [organizations, query, sort, countryFilter, bioregionFilter]);
 
   return (
     <section className="pt-6 pb-20 md:pb-28 px-6">
@@ -211,6 +264,20 @@ export function AllOrgsShell({
           </div>
 
           {/*
+            Bioregion chips — OneEarth biogeographic realms derived from country codes.
+            Provides a higher-level geographic filter complementary to individual countries.
+          */}
+          <div className="overflow-x-auto scrollbar-hidden">
+            <Suspense fallback={<CountryChipsSkeleton />}>
+              <BioregionChips
+                organizations={organizations}
+                bioregionFilter={bioregionFilter}
+                setBioregionFilter={setBioregionFilter}
+              />
+            </Suspense>
+          </div>
+
+          {/*
             Country chips — secondary dynamic content derived from organizations.
             In loading.tsx, organizations=[] so chips won't render, but the
             Suspense boundary shows CountryChipsSkeleton.
@@ -258,7 +325,7 @@ export function AllOrgsShell({
             </div>
           ) : (
             <motion.div
-              key={`${query}-${sort}-${countryFilter}`}
+              key={`${query}-${sort}-${countryFilter}-${bioregionFilter}`}
               variants={containerVariants}
               initial="hidden"
               animate="visible"

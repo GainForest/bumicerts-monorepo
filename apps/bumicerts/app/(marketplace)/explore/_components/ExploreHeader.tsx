@@ -16,6 +16,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { links } from "@/lib/links";
 import { countries } from "@/lib/countries";
+import { realms, countryToRealm } from "@/lib/bioregions";
 import { useHeaderContext } from "../../_components/Header/context";
 import { HeaderContent } from "../../_components/Header/HeaderContent";
 import type { BumicertData } from "@/lib/types";
@@ -41,6 +42,7 @@ import {
 export type Filters = {
   organizations: string[];
   countries: string[];
+  bioregions: string[];
   objectives: string[];
 };
 
@@ -63,6 +65,19 @@ function buildFilterCategories(bumicerts: BumicertData[]) {
     label: countries[code]?.name ?? code,
   }));
 
+  // Derive bioregion options from country codes present in the data
+  const realmIds = new Set<string>();
+  for (const b of bumicerts) {
+    const realmId = countryToRealm[b.country];
+    if (realmId) realmIds.add(realmId);
+  }
+  const bioregionOptions = Array.from(realmIds)
+    .map((id) => ({
+      value: id,
+      label: `${realms[id]?.emoji ?? ""} ${realms[id]?.name ?? id}`,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
   const objectives = Array.from(
     new Set(bumicerts.flatMap((b) => b.objectives)),
   ).map((o) => ({ value: o, label: o }));
@@ -73,6 +88,12 @@ function buildFilterCategories(bumicerts: BumicertData[]) {
       label: "Organization",
       icon: BuildingIcon,
       options: organizations,
+    },
+    {
+      key: "bioregions" as const,
+      label: "Bioregion",
+      icon: MapPinIcon,
+      options: bioregionOptions,
     },
     {
       key: "countries" as const,
@@ -123,7 +144,7 @@ function AllFiltersModalContent({
   };
 
   const clearAllPending = () => {
-    setPendingFilters({ organizations: [], countries: [], objectives: [] });
+    setPendingFilters({ organizations: [], countries: [], bioregions: [], objectives: [] });
   };
 
   const handleApply = () => {
@@ -138,6 +159,7 @@ function AllFiltersModalContent({
   const pendingCount =
     pendingFilters.organizations.length +
     pendingFilters.countries.length +
+    pendingFilters.bioregions.length +
     pendingFilters.objectives.length;
 
   return (

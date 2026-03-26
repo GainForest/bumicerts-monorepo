@@ -4,12 +4,13 @@ import { useState, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import { CompassIcon } from "lucide-react";
 import type { BumicertData } from "@/lib/types";
+import { countryToRealm } from "@/lib/bioregions";
 import { BumicertGrid } from "./BumicertGrid";
 import { ExploreHeaderSlots, type Filters } from "./ExploreHeader";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const EMPTY_FILTERS: Filters = { organizations: [], countries: [], objectives: [] };
+const EMPTY_FILTERS: Filters = { organizations: [], countries: [], bioregions: [], objectives: [] };
 
 // ── Shell ─────────────────────────────────────────────────────────────────────
 
@@ -53,12 +54,17 @@ export function ExploreShell({
   }, []);
 
   const activeFilterCount =
-    filters.organizations.length + filters.countries.length + filters.objectives.length;
+    filters.organizations.length + filters.countries.length + filters.bioregions.length + filters.objectives.length;
 
   const filtered = useMemo(() => {
     let result = [...bumicerts];
     if (filters.organizations.length > 0)
       result = result.filter((b) => filters.organizations.includes(b.organizationDid));
+    if (filters.bioregions.length > 0)
+      result = result.filter((b) => {
+        const realmId = countryToRealm[b.country];
+        return realmId ? filters.bioregions.includes(realmId) : false;
+      });
     if (filters.countries.length > 0)
       result = result.filter((b) => filters.countries.includes(b.country));
     if (filters.objectives.length > 0)
