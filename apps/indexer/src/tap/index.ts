@@ -255,6 +255,10 @@ export class TapSync {
     await this.consumer.removeRepos(dids);
   }
 
+  getDiscoveryRelayUrl(): string {
+    return this.discoveryRelayUrl;
+  }
+
   // ============================================================
   // STATS
   // ============================================================

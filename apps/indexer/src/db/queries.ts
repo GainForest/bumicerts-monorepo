@@ -97,6 +97,23 @@ export async function deleteRecordsByDid(did: string): Promise<void> {
   await sql`DELETE FROM records WHERE did = ${did}`;
 }
 
+/**
+ * Delete all records belonging to a list of DIDs in a single query.
+ * Used by reindexRepoByDid to wipe existing entries before re-backfilling.
+ */
+export async function deleteRecordsByDids(dids: string[]): Promise<void> {
+  if (dids.length === 0) return;
+  await sql`DELETE FROM records WHERE did = ANY(${dids}::text[])`;
+}
+
+/**
+ * Delete all records for a given collection NSID.
+ * Used by reindexRepoByCollection to wipe before re-backfilling.
+ */
+export async function deleteRecordsByCollection(collection: string): Promise<void> {
+  await sql`DELETE FROM records WHERE collection = ${collection}`;
+}
+
 // ============================================================
 // RECORD READS
 // ============================================================
