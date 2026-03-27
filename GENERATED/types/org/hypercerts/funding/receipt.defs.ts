@@ -3,7 +3,7 @@
  */
 
 import { l } from '@atproto/lex'
-import * as CertifiedDefs from './..\\..\\..\\app\\certified\\defs.defs.ts'
+import * as CertifiedDefs from './../../../app/certified/defs.defs.ts'
 
 const $nsid = 'org.hypercerts.funding.receipt'
 

@@ -3,7 +3,7 @@
  */
 
 import { l } from '@atproto/lex'
-import * as HypercertsDefs from './..\\defs.defs.ts'
+import * as HypercertsDefs from './../defs.defs.ts'
 
 const $nsid = 'org.hypercerts.claim.rights'
 
