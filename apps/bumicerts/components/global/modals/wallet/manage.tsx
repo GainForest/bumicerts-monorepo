@@ -10,7 +10,7 @@
  */
 
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+
 import { useModal } from "@/components/ui/modal/context";
 import {
   ModalContent,
@@ -18,9 +18,10 @@ import {
   ModalTitle,
 } from "@/components/ui/modal/modal";
 import { Button } from "@/components/ui/button";
-import { queries } from "@/lib/graphql/queries";
+import { trpc } from "@/lib/trpc/client";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { clientEnv } from "@/lib/env/client";
-import type { EvmLink } from "@/lib/graphql/queries/linkEvm";
+import type { EvmLink } from "@/lib/graphql-dev/queries/linkEvm";
 import { AddWalletModal } from "./add";
 import { DeleteWalletModal } from "./delete";
 import { MODAL_IDS } from "@/components/global/modals/ids";
@@ -121,7 +122,7 @@ export function ManageWalletsModal({
   onChanged,
 }: ManageWalletsModalProps) {
   const { pushModal, popModal, stack, hide } = useModal();
-  const queryClient = useQueryClient();
+  const indexerUtils = indexerTrpc.useUtils();
   const facilitatorAddress = clientEnv.NEXT_PUBLIC_FACILITATOR_WALLET_ADDRESS;
 
   const [links, setLinks] = useState<EvmLink[]>(initialLinks);
@@ -135,7 +136,7 @@ export function ManageWalletsModal({
   };
 
   const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: queries.linkEvm.key({ did: ownerDid }) });
+    void indexerUtils.link.evm.list.invalidate({ did: ownerDid });
     onChanged();
   };
 

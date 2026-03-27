@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useQueries } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { MapPinIcon, ExternalLinkIcon, Loader2Icon } from "lucide-react";
 import type { BumicertData } from "@/lib/types";
-import { queries } from "@/lib/graphql/queries";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { links } from "@/lib/links";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -117,13 +116,9 @@ export function SiteBoundariesTab({ bumicert }: { bumicert: BumicertData }) {
     .filter((parsed): parsed is { did: string; rkey: string } => parsed !== null);
 
   // One query per linked location — fetched by exact did + rkey
-  const locationResults = useQueries({
-    queries: parsedRefs.map((ref) => ({
-      queryKey: ["locations", { did: ref.did, rkey: ref.rkey }],
-      queryFn: () => queries.locations.fetch({ did: ref.did, rkey: ref.rkey }),
-      staleTime: 30 * 1_000,
-    })),
-  });
+  const locationResults = indexerTrpc.useQueries((t) =>
+    parsedRefs.map((ref) => t.locations.list({ did: ref.did, rkey: ref.rkey }))
+  );
 
   const isLoading = locationResults.some((r) => r.isLoading);
 

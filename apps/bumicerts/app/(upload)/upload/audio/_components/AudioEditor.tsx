@@ -7,10 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import FileInput from "@/components/ui/FileInput";
 import { trpc } from "@/lib/trpc/client";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { toSerializableFile } from "@/lib/mutations-utils";
 import { formatError } from "@/lib/utils/trpc-errors";
-import { queries, type AudioRecordingItem } from "@/lib/graphql/queries/index";
-import { useQueryClient } from "@tanstack/react-query";
+import type { AudioRecordingItem } from "@/lib/graphql-dev/queries/audio";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -69,7 +69,7 @@ interface AudioEditorProps {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function AudioEditor({ mode, initialData, onClose }: AudioEditorProps) {
-  const queryClient = useQueryClient();
+  const indexerUtils = indexerTrpc.useUtils();
 
   const rkey = initialData?.metadata?.rkey;
   const initRecord = initialData?.record;
@@ -104,7 +104,7 @@ export function AudioEditor({ mode, initialData, onClose }: AudioEditorProps) {
   const { mutate: createAudio, isPending: isCreating } =
     trpc.organization.recordings.audio.create.useMutation({
       onSuccess: () => {
-        void queryClient.invalidateQueries({ queryKey: queries.audio.key() });
+        void indexerUtils.audio.list.invalidate();
         setIsCompleted(true);
       },
       onError: (err) => {
@@ -115,7 +115,7 @@ export function AudioEditor({ mode, initialData, onClose }: AudioEditorProps) {
   const { mutate: updateAudio, isPending: isUpdating } =
     trpc.organization.recordings.audio.update.useMutation({
       onSuccess: () => {
-        void queryClient.invalidateQueries({ queryKey: queries.audio.key() });
+        void indexerUtils.audio.list.invalidate();
         setIsCompleted(true);
       },
       onError: (err) => {

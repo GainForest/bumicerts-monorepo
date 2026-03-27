@@ -7,7 +7,6 @@
  */
 
 import { cache } from "react";
-import { queries, type OrgInfo, type OrgActivity } from "@/lib/graphql/queries/index";
 import {
   orgInfoToOrganizationData,
   activitiesToBumicertDataArray,
@@ -15,13 +14,12 @@ import {
   type GraphQLHcActivityItem,
 } from "@/lib/adapters";
 import type { OrganizationData, BumicertData } from "@/lib/types";
+import { getIndexerCaller } from "@/lib/trpc/indexer/server";
 
 export const getOrgData = cache(async (did: string) => {
   try {
-    const data = await queries.organization.fetch({ did }) as {
-      org: OrgInfo | null;
-      activities: OrgActivity[];
-    };
+    const caller = await getIndexerCaller();
+    const data = await caller.organization.byDid({ did });
     return { data, error: null };
   } catch (error) {
     return { data: null, error };

@@ -1,9 +1,7 @@
 /**
- * Query key factories for non-GraphQL queries.
+ * Query key factories for non-tRPC queries.
  *
- * GraphQL query keys are auto-derived by the `queries.*` registry
- * (see lib/graphql/queries/index.ts) and do not belong here.
- *
+ * tRPC query keys are managed automatically by the tRPC React Query integration.
  * Only REST / Supabase fetch-based queries live here.
  */
 

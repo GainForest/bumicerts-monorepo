@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ClockIcon, FileTextIcon, ExternalLinkIcon, Trash2Icon, AlertTriangleIcon } from "lucide-react";
-import { queries, type AttachmentItem } from "@/lib/graphql/queries";
+import type { AttachmentItem } from "@/lib/graphql-dev/queries/attachments";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { formatError } from "@/lib/utils/trpc-errors";
 import { EvidenceLinker } from "../timeline/EvidenceLinker";
 import Image from "next/image";
@@ -147,12 +147,12 @@ interface EntryProps {
 
 function TimelineEntry({ item, isLast, index, isOwner }: EntryProps) {
   const { metadata, creatorInfo, record } = item;
-  const queryClient = useQueryClient();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  const indexerUtils = indexerTrpc.useUtils();
   const deleteAttachment = trpc.context.attachment.delete.useMutation();
 
   const date = formatDate(record?.createdAt ?? metadata?.createdAt);
@@ -183,7 +183,7 @@ function TimelineEntry({ item, isLast, index, isOwner }: EntryProps) {
     setIsDeleting(true);
     try {
       await deleteAttachment.mutateAsync({ rkey });
-      await queryClient.invalidateQueries({ queryKey: queries.attachments.key() });
+      await indexerUtils.context.attachments.invalidate();
     } catch (e) {
       setDeleteError(formatError(e));
       setIsDeleting(false);
@@ -312,10 +312,10 @@ export function TimelineTab({
   bumicertTitle,
   isOwner,
 }: TimelineTabProps) {
-  const { data, isLoading } = queries.attachments.useQuery({ did: organizationDid });
+  const { data, isLoading } = indexerTrpc.context.attachments.useQuery({ did: organizationDid });
 
-  const entries = (data ?? []).filter((item) =>
-    item.record?.subjects?.some((s) => s.uri === activityUri)
+  const entries: AttachmentItem[] = (data ?? []).filter((item) =>
+    item.record?.subjects?.some((s: { uri?: string | null }) => s.uri === activityUri)
   );
 
   return (

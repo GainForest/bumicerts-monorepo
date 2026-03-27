@@ -156,7 +156,6 @@ export function StepCredentials() {
       return { available: !exactMatch, checked: true };
     },
     enabled: debouncedHandle.length >= 3,
-    staleTime: 30 * 1_000,
   });
 
   const handleAvailability: HandleAvailability = useMemo(() => {

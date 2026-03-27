@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { HeartIcon, WalletIcon, UserIcon } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import type { LeaderboardEntry } from "@/lib/graphql/queries";
+import type { LeaderboardEntry } from "@/lib/utils/leaderboard";
 
 // ── Rank badge ────────────────────────────────────────────────────────────────
 

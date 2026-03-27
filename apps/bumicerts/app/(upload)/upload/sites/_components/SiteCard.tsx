@@ -12,12 +12,13 @@ import {
   PencilIcon,
   Trash2Icon,
 } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { trpc } from "@/lib/trpc/client";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { useModal } from "@/components/ui/modal/context";
 import { SiteEditorModal, SiteEditorModalId } from "@/components/global/modals/upload/site/editor";
 import { getShapefilePreviewUrl } from "@/lib/shapefile";
-import { queries, type CertifiedLocation } from "@/lib/graphql/queries/index";
+import type { CertifiedLocation } from "@/lib/graphql-dev/queries/locations";
 import { formatError } from "@/lib/utils/trpc-errors";
 import {
   DropdownMenu,
@@ -73,7 +74,7 @@ interface SiteCardProps {
 }
 
 export function SiteCard({ site, defaultSiteUri }: SiteCardProps) {
-  const queryClient = useQueryClient();
+  const indexerUtils = indexerTrpc.useUtils();
   const { pushModal, show } = useModal();
   const [mutationError, setMutationError] = useState<string | null>(null);
 
@@ -92,7 +93,6 @@ export function SiteCard({ site, defaultSiteUri }: SiteCardProps) {
       return res.json() as Promise<GeoJSON.GeoJSON>;
     },
     enabled: !!locationUrl && !inlineCoord,
-    staleTime: 5 * 60 * 1000,
   });
 
   // Simple area + centroid from GeoJSON or inline coordinate
@@ -105,7 +105,7 @@ export function SiteCard({ site, defaultSiteUri }: SiteCardProps) {
     trpc.organization.defaultSite.set.useMutation({
       onSuccess: () => {
         setMutationError(null);
-        void queryClient.invalidateQueries({ queryKey: queries.locations.key() });
+        void indexerUtils.locations.list.invalidate();
       },
       onError: (err) => {
         setMutationError(formatError(err));
@@ -116,7 +116,7 @@ export function SiteCard({ site, defaultSiteUri }: SiteCardProps) {
     trpc.certified.location.delete.useMutation({
       onSuccess: () => {
         setMutationError(null);
-        void queryClient.invalidateQueries({ queryKey: queries.locations.key() });
+        void indexerUtils.locations.list.invalidate();
       },
       onError: (err) => {
         setMutationError(formatError(err));

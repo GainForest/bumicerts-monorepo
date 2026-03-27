@@ -28,8 +28,8 @@ import { ContributorRow } from "./ContributorRow";
 import { ContributorSelector } from "./ContributorSelector";
 import QuerySuspense from "@/components/query-suspense";
 
-import { queries } from "@/lib/graphql/queries/index";
-import type { CertifiedLocation } from "@/lib/graphql/queries/index";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
+import type { CertifiedLocation } from "@/lib/graphql-dev/queries/locations";
 import { queryKeys } from "@/lib/query-keys";
 
 const SiteEditorModal = dynamic(
@@ -97,9 +97,8 @@ const Step3 = () => {
     isPending: isSitesPending,
     isPlaceholderData: isOlderSites,
     error: sitesFetchError,
-  } = queries.locations.useQuery({ did: auth.user?.did ?? "" });
+  } = indexerTrpc.locations.list.useQuery({ did: auth.user?.did ?? "" });
 
-  // sitesResponse is CertifiedLocation[] directly
   const sites = sitesResponse as CertifiedLocation[] | undefined;
   const isSitesLoading = isSitesPending || isOlderSites;
 

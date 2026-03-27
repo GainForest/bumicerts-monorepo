@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useCartStore } from "@/components/stores/cart";
 import { useAtprotoStore } from "@/components/stores/atproto";
 import { useAccount } from "wagmi";
-import { queries } from "@/lib/graphql/queries";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { clientEnv } from "@/lib/env/client";
 import { links } from "@/lib/links";
 import { Button } from "@/components/ui/button";
@@ -21,8 +21,8 @@ import {
   type CheckoutItem,
 } from "./hooks/useCheckoutFlow";
 import { useBatchPayment } from "./hooks/useBatchPayment";
-import type { CartBumicertItem } from "@/lib/graphql/queries/cartBumicert";
-import type { EvmLink } from "@/lib/graphql/queries/linkEvm";
+import type { CartBumicertItem } from "@/lib/graphql-dev/queries/cartBumicert";
+import type { EvmLink } from "@/lib/graphql-dev/queries/linkEvm";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -59,9 +59,12 @@ function isDonationOpen(
 // ---------------------------------------------------------------------------
 
 function useCheckoutItemLoader(id: string, facilitatorAddress: string | undefined) {
-  const { data: item, isLoading: itemLoading } = queries.cartBumicert.useQuery({ id });
+  const { data: item, isLoading: itemLoading } = indexerTrpc.claim.activity.get.useQuery({ id }, { retry: false });
   const ownerDid = item?.organizationDid ?? "";
-  const { data: evmLinks = [], isLoading: linksLoading } = queries.linkEvm.useQuery({ did: ownerDid });
+  const { data: evmLinks = [], isLoading: linksLoading } = indexerTrpc.link.evm.list.useQuery(
+    { did: ownerDid },
+    { enabled: !!ownerDid, retry: false }
+  );
 
   const isLoading = itemLoading || (!!ownerDid && linksLoading);
   const isOpen = item ? isDonationOpen(item, evmLinks, facilitatorAddress) : false;

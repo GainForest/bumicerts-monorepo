@@ -6,7 +6,8 @@ import { links } from "@/lib/links";
 import { ArrowUpRightIcon, InboxIcon, Loader2Icon } from "lucide-react";
 import Link from "next/link";
 import React, { useMemo } from "react";
-import { queries, type Activity } from "@/lib/graphql/queries/index";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
+import type { GraphQLHcActivityItem } from "@/lib/adapters";
 
 const MyBumicerts = () => {
   const auth = useAtprotoStore((state) => state.auth);
@@ -15,13 +16,15 @@ const MyBumicerts = () => {
     data: activitiesData,
     isPending: isPendingActivityClaims,
     error: errorActivityClaims,
-  } = queries.activities.useQuery({ did: auth.authenticated ? auth.user.did : "" });
+  } = indexerTrpc.activities.list.useQuery(
+    { did: auth.authenticated ? auth.user.did : "" },
+    { enabled: auth.authenticated }
+  );
 
   const bumicerts = useMemo(() => {
     if (!auth.authenticated) return undefined;
     if (!activitiesData) return undefined;
-    // activitiesData is Activity[] when params contain { did }
-    return Array.isArray(activitiesData) ? activitiesData as Activity[] : [];
+    return Array.isArray(activitiesData) ? (activitiesData as GraphQLHcActivityItem[]) : [];
   }, [activitiesData, auth]);
 
   return (

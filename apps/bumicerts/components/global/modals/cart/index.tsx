@@ -18,10 +18,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { useCartStore } from "@/components/stores/cart";
 import { useModal } from "@/components/ui/modal/context";
-import { queries } from "@/lib/graphql/queries";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { clientEnv } from "@/lib/env/client";
-import type { CartBumicertItem } from "@/lib/graphql/queries/cartBumicert";
-import type { EvmLink } from "@/lib/graphql/queries/linkEvm";
+import type { CartBumicertItem } from "@/lib/graphql-dev/queries/cartBumicert";
+import type { EvmLink } from "@/lib/graphql-dev/queries/linkEvm";
 import {
   ModalContent,
   ModalHeader,
@@ -149,9 +149,12 @@ function CartItemLoader({
   onRemove: () => void;
   onResolved: (id: string, resolved: ResolvedCartItem | null) => void;
 }) {
-  const { data: item, isLoading: itemLoading } = queries.cartBumicert.useQuery({ id });
+  const { data: item, isLoading: itemLoading } = indexerTrpc.claim.activity.get.useQuery({ id }, { retry: false });
   const ownerDid = item?.organizationDid ?? "";
-  const { data: evmLinks = [], isLoading: linksLoading } = queries.linkEvm.useQuery({ did: ownerDid });
+  const { data: evmLinks = [], isLoading: linksLoading } = indexerTrpc.link.evm.list.useQuery(
+    { did: ownerDid },
+    { enabled: !!ownerDid, retry: false }
+  );
 
   const isLoading = itemLoading || (!!ownerDid && linksLoading);
 

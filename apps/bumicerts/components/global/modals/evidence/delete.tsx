@@ -15,8 +15,7 @@ import {
   ModalDescription,
 } from "@/components/ui/modal/modal";
 import { trpc } from "@/lib/trpc/client";
-import { useQueryClient } from "@tanstack/react-query";
-import { queries } from "@/lib/graphql/queries";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { formatError } from "@/lib/utils/trpc-errors";
 
 export interface EvidenceDeleteModalProps {
@@ -34,7 +33,7 @@ export function EvidenceDeleteModal({
   onDeleted,
 }: EvidenceDeleteModalProps) {
   const { hide, clear } = useModal();
-  const queryClient = useQueryClient();
+  const indexerUtils = indexerTrpc.useUtils();
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,7 +44,7 @@ export function EvidenceDeleteModal({
     setIsDeleting(true);
     try {
       await deleteAttachment.mutateAsync({ rkey });
-      await queryClient.invalidateQueries({ queryKey: queries.attachments.key() });
+      await indexerUtils.context.attachments.invalidate();
       onDeleted();
       hide().then(() => clear());
     } catch (e) {

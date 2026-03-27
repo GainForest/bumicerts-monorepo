@@ -28,7 +28,7 @@ import {
   Trash2Icon,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useQueryClient } from "@tanstack/react-query";
+
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -38,8 +38,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { trpc } from "@/lib/trpc/client";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { formatError } from "@/lib/utils/trpc-errors";
-import { queries, type AudioRecordingItem } from "@/lib/graphql/queries/index";
+import type { AudioRecordingItem } from "@/lib/graphql-dev/queries/audio";
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -52,14 +53,14 @@ interface AudioCardProps {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function AudioCard({ audio, onEdit }: AudioCardProps) {
-  const queryClient = useQueryClient();
+  const indexerUtils = indexerTrpc.useUtils();
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const { mutate: deleteAudio, isPending: isDeleting } =
     trpc.organization.recordings.audio.delete.useMutation({
       onSuccess: () => {
-        void queryClient.invalidateQueries({ queryKey: queries.audio.key() });
+        void indexerUtils.audio.list.invalidate();
         setIsConfirmingDelete(false);
         setDeleteError(null);
       },

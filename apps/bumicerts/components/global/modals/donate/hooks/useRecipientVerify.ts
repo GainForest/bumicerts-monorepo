@@ -20,7 +20,6 @@ export function useRecipientVerify(orgDid: string) {
   return useQuery({
     queryKey:  ["recipient-verify", orgDid],
     queryFn:   () => fetchRecipientStatus(orgDid),
-    staleTime: 5 * 60 * 1_000,
     retry:     false,
     enabled:   !!orgDid,
   });

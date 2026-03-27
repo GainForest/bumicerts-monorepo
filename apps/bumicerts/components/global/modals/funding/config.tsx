@@ -6,7 +6,6 @@
  */
 
 import { useState, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useModal } from "@/components/ui/modal/context";
 import {
   ModalContent,
@@ -25,11 +24,11 @@ import {
   AccordionContent,
 } from "@/components/ui/accordion";
 import { useEvmLinks } from "@/hooks/useEvmLinks";
-import { queries } from "@/lib/graphql/queries";
+import { trpc } from "@/lib/trpc/client";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { clientEnv } from "@/lib/env/client";
 import type { FundingConfigData } from "@/lib/types";
-import type { EvmLink } from "@/lib/graphql/queries/linkEvm";
-import { trpc } from "@/lib/trpc/client";
+import type { EvmLink } from "@/lib/graphql-dev/queries/linkEvm";
 import { formatError } from "@/lib/utils/trpc-errors";
 import { AddWalletModal } from "@/components/global/modals/wallet/add";
 import { ManageWalletsModal } from "@/components/global/modals/wallet/manage";
@@ -127,7 +126,7 @@ export function FundingConfigModal({
   onSaved,
 }: FundingConfigModalProps) {
   const { pushModal, popModal, stack, hide } = useModal();
-  const queryClient = useQueryClient();
+  const indexerUtils = indexerTrpc.useUtils();
   const facilitatorAddress = clientEnv.NEXT_PUBLIC_FACILITATOR_WALLET_ADDRESS;
 
   const { data: evmLinks = [], refetch: refetchLinks } = useEvmLinks(ownerDid);
@@ -173,7 +172,7 @@ export function FundingConfigModal({
   };
 
   const invalidateLinks = () => {
-    queryClient.invalidateQueries({ queryKey: queries.linkEvm.key({ did: ownerDid }) });
+    void indexerUtils.link.evm.list.invalidate({ did: ownerDid });
     refetchLinks();
   };
 

@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Trash2Icon, PencilIcon, CheckIcon, XIcon } from "lucide-react";
 import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
-import { queries } from "@/lib/graphql/queries/index";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 
 interface ContributorRowProps {
     value: string;
@@ -27,7 +27,10 @@ export function ContributorRow({ value, onEdit, onRemove }: ContributorRowProps)
 
     const shouldFetch = isDidOrHandle(value);
 
-    const { data: profile, isPending } = queries.actor.useQuery({ handleOrDid: value });
+    const { data: profile, isPending } = indexerTrpc.actor.profile.useQuery(
+      { handleOrDid: value },
+      { enabled: shouldFetch, retry: false }
+    );
 
     const handleSave = () => {
         onEdit(editValue);

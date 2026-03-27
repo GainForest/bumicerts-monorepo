@@ -24,12 +24,11 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LeafletEditor } from "@/components/ui/leaflet-editor";
 import { useAtprotoStore } from "@/components/stores/atproto";
-import { queries } from "@/lib/graphql/queries";
-import type { AudioRecordingItem } from "@/lib/graphql/queries";
-import type { OccurrenceItem } from "@/lib/graphql/queries";
-import type { CertifiedLocation } from "@/lib/graphql/queries";
+import type { AudioRecordingItem } from "@/lib/graphql-dev/queries/audio";
+import type { OccurrenceItem } from "@/lib/graphql-dev/queries/occurrences";
+import type { CertifiedLocation } from "@/lib/graphql-dev/queries/locations";
 import { trpc } from "@/lib/trpc/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { formatError } from "@/lib/utils/trpc-errors";
 import { links } from "@/lib/links";
 import Link from "next/link";
@@ -219,7 +218,7 @@ export function EvidencePickerModal({
 }: EvidencePickerModalProps) {
   const { hide, clear } = useModal();
   const auth = useAtprotoStore((state) => state.auth);
-  const queryClient = useQueryClient();
+  const indexerUtils = indexerTrpc.useUtils();
 
   const [activeTab, setActiveTab] = useState<TabId>("audio");
   const [selectedUris, setSelectedUris] = useState<Set<string>>(new Set());
@@ -229,15 +228,9 @@ export function EvidencePickerModal({
 
   // ── Queries ──────────────────────────────────────────────────────────────
 
-  const { data: audioData, isLoading: audioLoading } = queries.audio.useQuery(
-    { did: organizationDid }
-  );
-  const { data: occurrenceData, isLoading: occurrenceLoading } = queries.occurrences.useQuery(
-    { did: organizationDid }
-  );
-  const { data: locationData, isLoading: locationLoading } = queries.locations.useQuery(
-    { did: organizationDid }
-  );
+  const { data: audioData, isLoading: audioLoading } = indexerTrpc.audio.list.useQuery({ did: organizationDid });
+  const { data: occurrenceData, isLoading: occurrenceLoading } = indexerTrpc.dwc.occurrences.useQuery({ did: organizationDid });
+  const { data: locationData, isLoading: locationLoading } = indexerTrpc.locations.list.useQuery({ did: organizationDid });
 
   const audioItems = audioData ?? [];
   const occurrenceItems = occurrenceData ?? [];
@@ -308,7 +301,7 @@ export function EvidencePickerModal({
         });
       }
 
-      await queryClient.invalidateQueries({ queryKey: queries.attachments.key() });
+      await indexerUtils.context.attachments.invalidate();
       onLinked();
       hide().then(() => clear());
     } catch (e) {

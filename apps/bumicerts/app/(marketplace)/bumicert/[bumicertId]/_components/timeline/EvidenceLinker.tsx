@@ -14,10 +14,11 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LeafletEditor } from "@/components/ui/leaflet-editor";
 import { useAtprotoStore } from "@/components/stores/atproto";
-import { queries } from "@/lib/graphql/queries";
-import type { AudioRecordingItem, OccurrenceItem, CertifiedLocation } from "@/lib/graphql/queries";
+import type { AudioRecordingItem } from "@/lib/graphql-dev/queries/audio";
+import type { OccurrenceItem } from "@/lib/graphql-dev/queries/occurrences";
+import type { CertifiedLocation } from "@/lib/graphql-dev/queries/locations";
 import { trpc } from "@/lib/trpc/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { formatError } from "@/lib/utils/trpc-errors";
 import { links } from "@/lib/links";
 import Link from "next/link";
@@ -143,7 +144,7 @@ export function EvidenceLinker({
   organizationDid,
 }: EvidenceLinkerProps) {
   const auth = useAtprotoStore((state) => state.auth);
-  const queryClient = useQueryClient();
+  const indexerUtils = indexerTrpc.useUtils();
 
   const [activeTab, setActiveTab] = useState<TabId>("audio");
   const [selectedUris, setSelectedUris] = useState<Set<string>>(new Set());
@@ -154,15 +155,9 @@ export function EvidenceLinker({
 
   // ── Queries ────────────────────────────────────────────────────────────────
 
-  const { data: audioData, isLoading: audioLoading } = queries.audio.useQuery({
-    did: organizationDid,
-  });
-  const { data: occurrenceData, isLoading: occurrenceLoading } = queries.occurrences.useQuery({
-    did: organizationDid,
-  });
-  const { data: locationData, isLoading: locationLoading } = queries.locations.useQuery({
-    did: organizationDid,
-  });
+  const { data: audioData, isLoading: audioLoading } = indexerTrpc.audio.list.useQuery({ did: organizationDid });
+  const { data: occurrenceData, isLoading: occurrenceLoading } = indexerTrpc.dwc.occurrences.useQuery({ did: organizationDid });
+  const { data: locationData, isLoading: locationLoading } = indexerTrpc.locations.list.useQuery({ did: organizationDid });
 
   const audioItems: AudioRecordingItem[] = audioData ?? [];
   const occurrenceItems: OccurrenceItem[] = occurrenceData ?? [];
@@ -239,7 +234,7 @@ export function EvidenceLinker({
         });
       }
 
-      await queryClient.invalidateQueries({ queryKey: queries.attachments.key() });
+      await indexerUtils.context.attachments.invalidate();
       setSuccessCount(selectedCount);
       setSelectedUris(new Set());
       setDescription(EMPTY_DOC);

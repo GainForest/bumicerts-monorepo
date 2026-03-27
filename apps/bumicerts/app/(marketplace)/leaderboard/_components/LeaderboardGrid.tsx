@@ -1,7 +1,7 @@
 "use client";
 
 import { TrophyIcon } from "lucide-react";
-import type { LeaderboardEntry } from "@/lib/graphql/queries";
+import type { LeaderboardEntry } from "@/lib/utils/leaderboard";
 import { DonorCard } from "./DonorCard";
 
 interface LeaderboardGridProps {

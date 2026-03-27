@@ -10,7 +10,7 @@ import {
   SiteEditorModal,
   SiteEditorModalId,
 } from "@/components/global/modals/upload/site/editor";
-import { queries } from "@/lib/graphql/queries/index";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { SiteCard } from "./SiteCard";
 import { SitesSkeleton } from "./SitesSkeleton";
 
@@ -26,7 +26,7 @@ export function SitesClient({ did }: SitesClientProps) {
   const queryClient = useQueryClient();
   const { pushModal, show } = useModal();
 
-  const { data: sites, isLoading, error } = queries.locations.useQuery({ did });
+  const { data: sites, isLoading, error } = indexerTrpc.locations.list.useQuery({ did });
 
   const handleAddSite = () => {
     pushModal(
@@ -53,11 +53,8 @@ export function SitesClient({ did }: SitesClientProps) {
           <Button
             variant="outline"
             size="sm"
-            onClick={() =>
-              void queryClient.invalidateQueries({
-                queryKey: queries.locations.key(),
-              })
-            }
+            onClick={() => void queryClient.invalidateQueries()}
+
           >
             Retry
           </Button>

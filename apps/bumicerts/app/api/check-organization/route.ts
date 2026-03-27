@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { queries } from "@/lib/graphql/queries/index";
+import { getIndexerCaller } from "@/lib/trpc/indexer/server";
 
 /**
  * GET /api/check-organization?did=<did>
@@ -20,9 +20,9 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const result = await queries.organization.fetch({ did });
-    // The discriminated return type: { did } params → { org, activities }
-    const isOrganization = "org" in result && result.org !== null;
+    const caller = await getIndexerCaller();
+    const result = await caller.organization.byDid({ did });
+    const isOrganization = result.org !== null;
     return NextResponse.json({ isOrganization });
   } catch {
     // Network/indexer errors → treat as not found

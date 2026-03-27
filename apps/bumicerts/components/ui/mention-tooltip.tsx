@@ -73,14 +73,12 @@ function MentionCard({ did, handle }: MentionCardProps) {
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ["bsky-profile", did],
     queryFn: () => fetchBskyProfile(did),
-    staleTime: 5 * 60 * 1000,
     retry: false,
   });
 
   const { data: isOrg } = useQuery({
     queryKey: ["is-gainforest-org", did],
     queryFn: () => fetchIsOrganization(did),
-    staleTime: 5 * 60 * 1000,
     retry: false,
   });
 

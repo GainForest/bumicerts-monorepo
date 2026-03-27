@@ -1,6 +1,3 @@
-import { graphqlClient } from "@/lib/graphql/client";
-import { graphql } from "@/lib/graphql/tada";
-import { HcActivityFragment } from "@/lib/graphql/fragments";
 import {
   activitiesToBumicertDataArray,
   type GraphQLHcActivityItem,
@@ -8,6 +5,7 @@ import {
 import type { BumicertData } from "@/lib/types";
 import { ExploreShell } from "./_components/ExploreShell";
 import { requirePublicUrl } from "@/lib/url";
+import { getIndexerCaller } from "@/lib/trpc/indexer/server";
 
 export const metadata = {
   title: "Explore Bumicerts — Verified Regenerative Impact Projects",
@@ -15,52 +13,19 @@ export const metadata = {
     "Browse verified environmental impact certificates from nature stewards around the world. Filter by country, organization, and impact area.",
 };
 
-const ExploreActivitiesQuery = graphql(
-  `
-    query ExploreActivities(
-      $limit: Int
-      $cursor: String
-      $where: ActivityWhereInput
-    ) {
-      hypercerts {
-        claim {
-          activity(
-            limit: $limit
-            cursor: $cursor
-            where: $where
-            order: DESC
-            sortBy: CREATED_AT
-          ) {
-            data {
-              ...HcActivityFields
-            }
-            pageInfo {
-              endCursor
-              hasNextPage
-              count
-            }
-          }
-        }
-      }
-    }
-  `,
-  [HcActivityFragment],
-);
-
 export default async function ExplorePage() {
   let bumicerts: BumicertData[] = [];
 
   try {
-    const response = await graphqlClient.request(ExploreActivitiesQuery, {
+    const caller = await getIndexerCaller();
+    const response = await caller.activities.list({
       limit: 1000,
-      where: {
-        hasImage: true,
-        hasOrganizationInfoRecord: true,
-        labelTier: "high-quality",
-      },
+      hasImage: true,
+      hasOrganizationInfoRecord: true,
+      labelTier: "high-quality",
     });
-    const activities = (response.hypercerts?.claim?.activity?.data ??
-      []) as GraphQLHcActivityItem[];
+    // list() with no `did` returns { data, pageInfo }
+    const activities = ("data" in response ? response.data : []) as GraphQLHcActivityItem[];
     bumicerts = activitiesToBumicertDataArray(activities);
   } catch (error) {
     console.error("Failed to fetch bumicerts:", error);

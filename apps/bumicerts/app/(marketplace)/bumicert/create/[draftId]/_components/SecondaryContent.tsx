@@ -7,7 +7,6 @@ import BiokoHoldingMagnifierImage from "@/app/(marketplace)/bumicert/create/[dra
 import BiokoHoldingConfettiImage from "@/app/(marketplace)/bumicert/create/[draftId]/_assets/bioko-holding-confetti.png";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDownIcon, EyeIcon, LightbulbIcon } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import useNewBumicertStore from "../store";
 import BumicertPreviewCard from "./Steps/Step4/BumicertPreviewCard";
 import { BumicertCardVisual } from "@/app/(marketplace)/explore/_components/BumicertCard";
@@ -15,7 +14,7 @@ import { useFormStore } from "../form-store";
 import { useAtprotoStore } from "@/components/stores/atproto";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { queries } from "@/lib/graphql/queries/index";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 
 const stepImages = [
   {
@@ -82,17 +81,11 @@ const SecondaryContent = () => {
 
   const did = auth.user?.did ?? "";
 
-  // Fetch the full single-org record — this shares the cache with UploadDashboardClient
-  // (same queryFn + key) so no extra network request when coming from the org upload page.
-  const { data: orgSingleData, isPlaceholderData: isOlderData } = useQuery({
-    queryKey: ["org-dashboard", did],
-    queryFn: () => queries.organization.fetch({ did }),
-    enabled: !!did,
-    staleTime: 60 * 1_000,
-  });
+  const { data: orgSingleData, isPlaceholderData: isOlderData } = indexerTrpc.organization.byDid.useQuery(
+    { did }
+  );
 
-  // Narrow to the single-org variant (vs list variant) before accessing .org
-  const org = orgSingleData && "org" in orgSingleData ? orgSingleData.org : null;
+  const org = orgSingleData?.org ?? null;
   const logoUrl = isOlderData ? null : (org?.record?.logo?.uri ?? null);
   const organizationName = org?.record?.displayName ?? "";
 

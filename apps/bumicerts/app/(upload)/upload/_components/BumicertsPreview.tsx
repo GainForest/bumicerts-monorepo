@@ -7,11 +7,9 @@ import { ArrowRightIcon, PlusIcon } from "lucide-react";
 import BumicertIcon from "@/icons/BumicertIcon";
 import { links } from "@/lib/links";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useQuery } from "@tanstack/react-query";
-import { queries } from "@/lib/graphql/queries/index";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import type { OrganizationData } from "@/lib/types";
-import { activitiesToBumicertDataArray } from "@/lib/adapters";
-import type { OrgActivity } from "@/lib/graphql/queries/organization";
+import { activitiesToBumicertDataArray, type GraphQLHcActivityItem } from "@/lib/adapters";
 
 interface BumicertsPreviewProps {
   organization: OrganizationData;
@@ -23,18 +21,12 @@ interface BumicertsPreviewProps {
  * "View all" links to the bumicerts management page.
  */
 export function BumicertsPreview({ organization }: BumicertsPreviewProps) {
-  const { data, isLoading } = useQuery({
-    queryKey: ["org-bumicerts-preview", organization.did],
-    queryFn: async () => {
-      const result = await queries.organization.fetch({ did: organization.did });
-      // Result is the single-org shape: { org, activities }
-      if (!("activities" in result)) return [];
-      return activitiesToBumicertDataArray(
-        (result.activities as OrgActivity[]).slice(0, 2)
-      );
-    },
-    staleTime: 60 * 1000,
-  });
+  const { data: orgData, isLoading } = indexerTrpc.organization.byDid.useQuery(
+    { did: organization.did }
+  );
+  const data = orgData
+    ? activitiesToBumicertDataArray((orgData.activities as GraphQLHcActivityItem[]).slice(0, 2))
+    : undefined;
 
   const bumicerts = data ?? [];
 

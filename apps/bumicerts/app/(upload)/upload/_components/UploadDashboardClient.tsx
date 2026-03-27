@@ -29,9 +29,8 @@
 
 import { useEffect, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { trpc } from "@/lib/trpc/client";
-import { queries } from "@/lib/graphql/queries/index";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { orgInfoToOrganizationData } from "@/lib/adapters";
 import type { GraphQLOrgInfoItem } from "@/lib/adapters";
 import type { OrganizationData } from "@/lib/types";
@@ -61,7 +60,7 @@ interface UploadDashboardClientProps {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function UploadDashboardClient({ did }: UploadDashboardClientProps) {
-  const queryClient = useQueryClient();
+  const indexerUtils = indexerTrpc.useUtils();
   const [mode, setMode] = useUploadMode();
   const isEditing = mode === "edit";
 
@@ -76,15 +75,10 @@ export function UploadDashboardClient({ did }: UploadDashboardClientProps) {
   const hasChanges = useUploadDashboardStore((s) => s.hasChanges);
 
   // ── Data fetch ──────────────────────────────────────────────────────────────
-  const { data: fetchedOrg, isLoading, error } = useQuery({
-    queryKey: ["org-dashboard", did],
-    queryFn: async () => {
-      const result = await queries.organization.fetch({ did });
-      if (!("org" in result) || !result.org) return null;
-      return orgInfoToOrganizationData(result.org as GraphQLOrgInfoItem, 0);
-    },
-    staleTime: 60 * 1000,
-  });
+  const { data: orgData, isLoading, error } = indexerTrpc.organization.byDid.useQuery({ did });
+  const fetchedOrg = orgData?.org
+    ? orgInfoToOrganizationData(orgData.org as GraphQLOrgInfoItem, 0)
+    : null;
 
   useEffect(() => {
     if (fetchedOrg) {
@@ -101,7 +95,10 @@ export function UploadDashboardClient({ did }: UploadDashboardClientProps) {
       //      for instant preview. The background refetch will replace it with the real
       //      CDN URL once the indexer processes the new blob.
       //    - Fields the user didn't change fall back to the existing serverData values.
-      const current = queryClient.getQueryData<OrganizationData | null>(["org-dashboard", did]);
+      const cachedOrg = indexerUtils.organization.byDid.getData({ did });
+      const current: OrganizationData | null | undefined = cachedOrg?.org
+        ? orgInfoToOrganizationData(cachedOrg.org as GraphQLOrgInfoItem, 0)
+        : null;
       if (current) {
         const rec = result.record;
         const shortDesc = rec.shortDescription;
@@ -131,7 +128,10 @@ export function UploadDashboardClient({ did }: UploadDashboardClientProps) {
           logoUrl,
           coverImageUrl,
         };
-        queryClient.setQueryData(["org-dashboard", did], optimistic);
+        // Store the optimistic OrganizationData in the upload dashboard store
+        // so the UI updates instantly (the tRPC cache holds the raw org data shape,
+        // not the OrganizationData shape, so we update the store directly)
+        setServerData(optimistic);
       }
 
       // 2. Clear edit mode — return to view mode.
@@ -142,7 +142,7 @@ export function UploadDashboardClient({ did }: UploadDashboardClientProps) {
 
       // 4. Invalidate in the background so the real indexer data replaces the
       //    optimistic state once it's available (mainly for image CDN URLs).
-      void queryClient.invalidateQueries({ queryKey: ["org-dashboard", did] });
+      void indexerUtils.organization.byDid.invalidate({ did });
     },
     onError: (mutationErr) => {
       setSaving(false);

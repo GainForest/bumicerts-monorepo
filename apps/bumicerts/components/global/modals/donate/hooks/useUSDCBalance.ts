@@ -15,8 +15,7 @@ export function useUSDCBalance(address: `0x${string}` | undefined) {
     args:         address ? [address] : undefined,
     chainId:      CHAIN_ID,
     query: {
-      enabled:   !!address,
-      staleTime: 30_000,
+      enabled: !!address,
     },
   });
 

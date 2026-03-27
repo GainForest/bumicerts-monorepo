@@ -5,10 +5,10 @@ import { motion } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 import { HeartIcon, ExternalLinkIcon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { queries } from "@/lib/graphql/queries/index";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { clientEnv } from "@/lib/env/client";
 import type { BumicertData } from "@/lib/types";
-import type { FundingReceiptItem } from "@/lib/graphql/queries/fundingReceipts";
+import type { FundingReceiptItem } from "@/lib/graphql-dev/queries/fundingReceipts";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -179,14 +179,15 @@ export function DonationsSection({ bumicert }: DonationsSectionProps) {
   const activityUri = buildActivityUri(bumicert);
 
   // When facilitatorDid is empty the module's `enabled()` returns false — query is skipped.
-  const { data: allReceipts, isLoading } = queries.fundingReceipts.useQuery({
-    did: facilitatorDid,
-  });
+  const { data: allReceipts, isLoading } = indexerTrpc.funding.receipts.useQuery(
+    { did: facilitatorDid },
+    { enabled: !!facilitatorDid }
+  );
 
   // Filter receipts to only those `for` this bumicert's AT-URI
   const receipts = useMemo(() => {
     if (!allReceipts) return [];
-    return allReceipts.filter((r) => r.record?.for === activityUri);
+    return (allReceipts as FundingReceiptItem[]).filter((r) => r.record?.for === activityUri);
   }, [allReceipts, activityUri]);
 
   // ── Loading ──────────────────────────────────────────────────────────────────

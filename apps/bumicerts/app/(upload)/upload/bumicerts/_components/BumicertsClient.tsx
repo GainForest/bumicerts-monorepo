@@ -6,10 +6,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import Container from "@/components/ui/container";
 import { BumicertCardVisual, BumicertCardSkeleton } from "@/app/(marketplace)/explore/_components/BumicertCard";
-import { queries } from "@/lib/graphql/queries/index";
-import { activityToBumicertData } from "@/lib/adapters";
+import { activityToBumicertData, type GraphQLHcActivityItem } from "@/lib/adapters";
 import { links } from "@/lib/links";
-import type { Activity } from "@/lib/graphql/queries/activities";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -20,9 +19,9 @@ interface BumicertsClientProps {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function BumicertsClient({ did }: BumicertsClientProps) {
-  const { data, isLoading } = queries.activities.useQuery({ did });
+  const { data, isLoading } = indexerTrpc.activities.list.useQuery({ did });
 
-  const activities = (data as Activity[] | undefined) ?? [];
+  const activities = (Array.isArray(data) ? data : []) as GraphQLHcActivityItem[];
   const bumicerts = activities.map((a) => activityToBumicertData(a));
 
   return (

@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { TrophyIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { LeaderboardPeriod } from "@/lib/graphql/queries";
+import type { Period as LeaderboardPeriod } from "@/lib/utils/leaderboard";
 
 // ── Period filter chips ───────────────────────────────────────────────────────
 

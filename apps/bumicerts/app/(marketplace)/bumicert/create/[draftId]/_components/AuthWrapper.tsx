@@ -9,7 +9,7 @@ import AtprotoSignInButton from "@/components/global/Header/AtprotoSignInButton"
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { queries } from "@/lib/graphql/queries/index";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { links } from "@/lib/links";
 
 const AuthWrapper = ({
@@ -26,9 +26,8 @@ const AuthWrapper = ({
   const {
     isPending: isPendingOrganizationInfo,
     error: organizationInfoError,
-    data: orgData,
     isPlaceholderData: isOlderData,
-  } = queries.organization.useQuery({ did: auth.user?.did ?? "" });
+  } = indexerTrpc.organization.byDid.useQuery({ did: auth.user?.did ?? "" });
 
   const isLoadingOrganizationInfo = isPendingOrganizationInfo || isOlderData;
   const isAuthenticated = auth.status === "AUTHENTICATED";

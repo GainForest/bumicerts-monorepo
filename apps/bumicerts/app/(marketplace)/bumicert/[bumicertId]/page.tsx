@@ -1,18 +1,19 @@
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { queries, type Activity, type ActivityOrgInfo } from "@/lib/graphql/queries/index";
-import { activityToBumicertData, extractTextFromLinearDocument } from "@/lib/adapters";
+import { activityToBumicertData, extractTextFromLinearDocument, type GraphQLHcActivityItem, type GraphQLOrgInfoItem } from "@/lib/adapters";
 import type { FundingConfigData } from "@/lib/types";
 import { BumicertDetail } from "./_components/BumicertDetail";
 import ErrorPage from "@/components/error-page";
 import Container from "@/components/ui/container";
 import { auth } from "@/lib/auth";
 import { requirePublicUrl } from "@/lib/url";
+import { getIndexerCaller } from "@/lib/trpc/indexer/server";
 
 const getActivityData = cache(async (did: string) => {
   try {
-    const data = await queries.activities.fetch({ did, orgDid: did }) as { activities: Activity[]; org: ActivityOrgInfo | null };
+    const caller = await getIndexerCaller();
+    const data = await caller.activities.list({ did, orgDid: did }) as { activities: GraphQLHcActivityItem[]; org: GraphQLOrgInfoItem | null };
     return { data, error: null };
   } catch (error) {
     return { data: null, error };

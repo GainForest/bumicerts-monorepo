@@ -1,4 +1,3 @@
-import { queries, type OrgInfo } from "@/lib/graphql/queries/index";
 import {
   orgInfoToOrganizationData,
   type GraphQLOrgInfoItem,
@@ -6,6 +5,7 @@ import {
 import { AllOrgsShell } from "./_components/AllOrgsShell";
 import { serverEnv } from "@/lib/env/server";
 import { productionOrganizations } from "./_data/organizations";
+import { getIndexerCaller } from "@/lib/trpc/indexer/server";
 
 export const metadata = {
   title: "Organizations — Bumicerts",
@@ -20,8 +20,9 @@ export default async function AllOrganizationsPage() {
   let fetchError = false;
 
   try {
-    const response = await queries.organization.fetch({ limit: 1000 }) as { data: OrgInfo[]; pageInfo: unknown };
-    const orgInfos = response.data as GraphQLOrgInfoItem[];
+    const caller = await getIndexerCaller();
+    const response = await caller.organization.list({ limit: 1000 });
+    const orgInfos = ("data" in response ? response.data : []) as GraphQLOrgInfoItem[];
 
     const filtered = isProduction
       ? orgInfos.filter((item) => {

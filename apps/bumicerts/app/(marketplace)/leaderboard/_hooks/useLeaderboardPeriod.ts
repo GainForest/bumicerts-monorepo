@@ -1,5 +1,5 @@
 import { parseAsStringLiteral, useQueryState } from "nuqs";
-import type { LeaderboardPeriod } from "@/lib/graphql/queries";
+import type { Period as LeaderboardPeriod } from "@/lib/utils/leaderboard";
 
 const periods = ["all", "month", "week"] as const;
 

@@ -11,11 +11,11 @@ import { Loader2Icon, UploadIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAtprotoStore } from "@/components/stores/atproto";
 import { useModal } from "@/components/ui/modal/context";
-import { useQueryClient } from "@tanstack/react-query";
 import { toSerializableFile } from "@/lib/mutations-utils";
 import { trpc } from "@/lib/trpc/client";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { formatError } from "@/lib/utils/trpc-errors";
-import { queries } from "@/lib/graphql/queries/index";
+
 
 export const UploadLogoModalId = "upload/organization/logo";
 
@@ -24,7 +24,7 @@ export const UploadLogoModal = () => {
   const [logo, setLogo] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const auth = useAtprotoStore((state) => state.auth);
-  const queryClient = useQueryClient();
+  const indexerUtils = indexerTrpc.useUtils();
 
   const {
     mutate: _updateMutation,
@@ -33,7 +33,7 @@ export const UploadLogoModal = () => {
   } = trpc.organization.info.update.useMutation({
     onSuccess: () => {
       setUploadError(null);
-      queryClient.invalidateQueries({ queryKey: queries.organization.key() });
+      void indexerUtils.organization.invalidate();
     },
     onError: (err) => {
       setUploadError(formatError(err));

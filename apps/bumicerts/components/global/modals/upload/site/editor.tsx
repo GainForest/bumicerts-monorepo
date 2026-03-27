@@ -10,7 +10,7 @@ import { useState, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { parseAtUri, toSerializableFile } from "@/lib/mutations-utils";
 import { formatError } from "@/lib/utils/trpc-errors";
-import { queries } from "@/lib/graphql/queries/index";
+
 import FileInput from "@/components/ui/FileInput";
 import { Input } from "@/components/ui/input";
 import { ArrowLeftIcon, CheckIcon, Loader2Icon, PencilIcon } from "lucide-react";
@@ -20,8 +20,8 @@ import DrawPolygonModal, {
   DrawPolygonModalId,
 } from "@/components/global/modals/draw-polygon";
 import { useAtprotoStore } from "@/components/stores/atproto";
-import { useQueryClient } from "@tanstack/react-query";
 import { trpc } from "@/lib/trpc/client";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 
 export const SiteEditorModalId = "site/editor";
 
@@ -90,7 +90,7 @@ export const SiteEditorModal = ({ initialData }: SiteEditorModalProps) => {
   const [isCompleted, setIsCompleted] = useState(false);
 
   const { stack, popModal, hide, pushModal, show } = useModal();
-  const queryClient = useQueryClient();
+  const indexerUtils = indexerTrpc.useUtils();
 
   // Create mutation
   const {
@@ -99,7 +99,7 @@ export const SiteEditorModal = ({ initialData }: SiteEditorModalProps) => {
     error: addError,
   } = trpc.certified.location.create.useMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queries.locations.key() });
+      void indexerUtils.locations.list.invalidate();
       setIsCompleted(true);
     },
   });
@@ -117,7 +117,7 @@ export const SiteEditorModal = ({ initialData }: SiteEditorModalProps) => {
     error: updateError,
   } = trpc.certified.location.update.useMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queries.locations.key() });
+      void indexerUtils.locations.list.invalidate();
       setIsCompleted(true);
     },
   });

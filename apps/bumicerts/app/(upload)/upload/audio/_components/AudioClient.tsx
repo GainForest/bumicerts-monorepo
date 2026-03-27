@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Container from "@/components/ui/container";
 import { cn } from "@/lib/utils";
-import { queries } from "@/lib/graphql/queries/index";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { AudioCard } from "./AudioCard";
 import { AudioEditor } from "./AudioEditor";
 import { AudioSkeleton } from "./AudioSkeleton";
@@ -47,7 +47,7 @@ export function AudioClient({ did }: AudioClientProps) {
   );
 
   // ── Data ────────────────────────────────────────────────────────────────────
-  const { data: recordings, isLoading } = queries.audio.useQuery({ did });
+  const { data: recordings, isLoading } = indexerTrpc.audio.list.useQuery({ did });
   const allRecordings = recordings ?? [];
 
   // ── Filter ──────────────────────────────────────────────────────────────────

@@ -4,7 +4,7 @@ import { useModal } from "@/components/ui/modal/context";
 import { Loader2Icon, UploadIcon } from "lucide-react";
 import { useFormStore } from "../../../form-store";
 import { UploadLogoModal, UploadLogoModalId } from "./UploadLogoModal";
-import { queries } from "@/lib/graphql/queries/index";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { BumicertCardVisual } from "@/app/(marketplace)/explore/_components/BumicertCard";
 
 const BumicertPreviewCard = () => {
@@ -20,7 +20,7 @@ const BumicertPreviewCard = () => {
     data: orgLogoData,
     isPending: isPendingOrganizationInfo,
     isPlaceholderData: isOlderData,
-  } = queries.organization.logo.useQuery({ did: auth.user?.did ?? "" });
+  } = indexerTrpc.organization.logo.useQuery({ did: auth.user?.did ?? "" });
 
   const logoFromData = isOlderData ? undefined : orgLogoData;
   const logoUrl = logoFromData ?? null;
