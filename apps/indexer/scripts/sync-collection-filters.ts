@@ -1,12 +1,16 @@
 #!/usr/bin/env bun
 /**
- * Syncs TAP_COLLECTION_FILTERS in .env and Railway env files with indexed collections.
+ * Syncs TAP_COLLECTION_FILTERS and DISCOVERY_COLLECTIONS in env files
+ * with the current set of indexed collections.
  *
  * Updates:
- *   - .env (for local Docker development)
- *   - railway/tap.env.railway (for Railway deployment reference)
+ *   - .env                        (local Docker development)
+ *   - .env.example                (documentation / reference)
+ *   - .env.railway                (indexer Railway service)
+ *   - railway/tap.env.railway     (tap Railway service)
  *
- * Run this before `docker:up` or after adding new lexicons.
+ * Run this after adding new lexicons (or it runs automatically as part of
+ * `bun run gen:indexer`, `bun run docker:up`, and `bun run docker:reset`).
  *
  * Usage: bun run scripts/sync-collection-filters.ts
  */
@@ -14,71 +18,126 @@
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join } from "path";
 import { getCollectionFiltersString } from "../src/tap/collection-filters.ts";
+import { INDEXED_COLLECTIONS } from "../src/tap/collections.ts";
 
 const ROOT = join(import.meta.dir, "..");
-const ENV_KEY = "TAP_COLLECTION_FILTERS";
 
-const FILES_TO_UPDATE = [
-  join(ROOT, ".env"),
-  join(ROOT, "railway/tap.env.railway"),
+// ── Derived values ──────────────────────────────────────────────────────────
+
+/** TAP_COLLECTION_FILTERS — wildcard namespace patterns for the Tap service */
+const TAP_COLLECTION_FILTERS = getCollectionFiltersString();
+
+/**
+ * DISCOVERY_COLLECTIONS — all indexed collection NSIDs, comma-separated.
+ * Used by the indexer on startup to discover all relevant DIDs via the relay.
+ */
+const DISCOVERY_COLLECTIONS = INDEXED_COLLECTIONS.join(",");
+
+// ── Files and which keys to update ─────────────────────────────────────────
+
+interface EnvUpdate {
+  key: string;
+  value: string;
+}
+
+interface FileSpec {
+  path: string;
+  updates: EnvUpdate[];
+}
+
+const FILES: FileSpec[] = [
+  {
+    path: join(ROOT, ".env"),
+    updates: [
+      { key: "TAP_COLLECTION_FILTERS", value: TAP_COLLECTION_FILTERS },
+      { key: "DISCOVERY_COLLECTIONS",  value: DISCOVERY_COLLECTIONS  },
+    ],
+  },
+  {
+    path: join(ROOT, ".env.example"),
+    updates: [
+      { key: "TAP_COLLECTION_FILTERS", value: TAP_COLLECTION_FILTERS },
+      { key: "DISCOVERY_COLLECTIONS",  value: DISCOVERY_COLLECTIONS  },
+    ],
+  },
+  {
+    path: join(ROOT, ".env.railway"),
+    updates: [
+      { key: "DISCOVERY_COLLECTIONS",  value: DISCOVERY_COLLECTIONS  },
+    ],
+  },
+  {
+    path: join(ROOT, "railway", "tap.env.railway"),
+    updates: [
+      { key: "TAP_COLLECTION_FILTERS", value: TAP_COLLECTION_FILTERS },
+    ],
+  },
 ];
 
-function updateEnvFile(filePath: string, filters: string): boolean {
-  if (!existsSync(filePath)) {
-    console.log(`  Skipped: ${filePath} (not found)`);
-    return false;
-  }
+// ── Helpers ─────────────────────────────────────────────────────────────────
 
-  let content = readFileSync(filePath, "utf-8");
-  const regex = new RegExp(`^${ENV_KEY}=.*$`, "m");
-  const fileName = filePath.split("/").pop();
+function updateEnvKey(content: string, key: string, value: string): { content: string; changed: boolean } {
+  const regex = new RegExp(`^${key}=.*$`, "m");
+  const newLine = `${key}=${value}`;
 
   if (regex.test(content)) {
-    const oldValue = content.match(regex)?.[0];
-    const newValue = `${ENV_KEY}=${filters}`;
-
-    if (oldValue === newValue) {
-      console.log(`  ${fileName}: already up to date`);
-      return false;
-    }
-
-    content = content.replace(regex, newValue);
-    writeFileSync(filePath, content);
-    console.log(`  ${fileName}: updated`);
-    return true;
-  } else {
-    // Add new value (append to end)
-    content =
-      content.trimEnd() +
-      `\n\n# Auto-generated from INDEXED_COLLECTIONS (do not edit manually)\n${ENV_KEY}=${filters}\n`;
-    writeFileSync(filePath, content);
-    console.log(`  ${fileName}: added`);
-    return true;
+    const existing = content.match(regex)![0];
+    if (existing === newLine) return { content, changed: false };
+    return { content: content.replace(regex, newLine), changed: true };
   }
+
+  // Key not found — append at end
+  const appended =
+    content.trimEnd() +
+    `\n\n# Auto-generated from INDEXED_COLLECTIONS (do not edit manually)\n${newLine}\n`;
+  return { content: appended, changed: true };
 }
 
-function syncCollectionFilters(): void {
-  const filters = getCollectionFiltersString();
+function syncFile(spec: FileSpec): number {
+  if (!existsSync(spec.path)) {
+    console.log(`  Skipped: ${spec.path} (not found)`);
+    return 0;
+  }
 
-  console.log(`\nDerived collection filters from INDEXED_COLLECTIONS:`);
-  console.log(`  ${filters}\n`);
+  let content = readFileSync(spec.path, "utf-8");
+  const fileName = spec.path.split("/").pop()!;
+  let changedCount = 0;
 
-  console.log("Updating env files:");
-  let updated = 0;
-
-  for (const file of FILES_TO_UPDATE) {
-    if (updateEnvFile(file, filters)) {
-      updated++;
+  for (const { key, value } of spec.updates) {
+    const result = updateEnvKey(content, key, value);
+    if (result.changed) {
+      content = result.content;
+      console.log(`  ${fileName}: updated ${key}`);
+      changedCount++;
+    } else {
+      console.log(`  ${fileName}: ${key} already up to date`);
     }
   }
 
-  console.log();
-  if (updated > 0) {
-    console.log(`✅ Updated ${updated} file(s)`);
-    console.log(`\n⚠️  Remember to also update TAP_COLLECTION_FILTERS in Railway UI!`);
-  } else {
-    console.log("✅ All files are up to date");
+  if (changedCount > 0) {
+    writeFileSync(spec.path, content);
   }
+
+  return changedCount;
 }
 
-syncCollectionFilters();
+// ── Main ────────────────────────────────────────────────────────────────────
+
+console.log("\n=== sync-collection-filters ===\n");
+console.log(`TAP_COLLECTION_FILTERS  = ${TAP_COLLECTION_FILTERS}`);
+console.log(`DISCOVERY_COLLECTIONS   = ${DISCOVERY_COLLECTIONS}`);
+console.log("\nUpdating env files:");
+
+let totalUpdated = 0;
+for (const spec of FILES) {
+  totalUpdated += syncFile(spec);
+}
+
+console.log();
+if (totalUpdated > 0) {
+  console.log(`✅ Updated ${totalUpdated} key(s) across env files`);
+  console.log(`\n⚠️  Remember to also update TAP_COLLECTION_FILTERS, DISCOVERY_COLLECTIONS,`);
+  console.log(`   and TAP_SIGNAL_COLLECTION in the Railway UI!`);
+} else {
+  console.log("✅ All env files are up to date");
+}
