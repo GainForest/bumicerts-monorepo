@@ -26,6 +26,7 @@ COPY package.json bun.lock* ./
 COPY GENERATED/package.json GENERATED/
 COPY apps/indexer/package.json apps/indexer/
 COPY apps/bumicerts/package.json apps/bumicerts/
+COPY apps/bumicerts-docs/package.json apps/bumicerts-docs/
 COPY packages/atproto-auth-next/package.json packages/atproto-auth-next/
 COPY packages/atproto-mutations-core/package.json packages/atproto-mutations-core/
 COPY packages/atproto-mutations-next/package.json packages/atproto-mutations-next/
