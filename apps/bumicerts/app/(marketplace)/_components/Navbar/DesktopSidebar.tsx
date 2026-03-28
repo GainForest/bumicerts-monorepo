@@ -84,7 +84,7 @@ function MarketplaceWelcomeCard() {
         <div className="flex flex-col w-full items-center gap-1">
           <span className="font-instrument text-2xl">Marketplace</span>
           <p className="text-xs text-muted-foreground text-pretty text-center">
-            This is Bumicerts Marketplace. Discover and support regenerative impact projects.
+            This is the Bumicerts Marketplace. Discover and support regenerative impact projects.
           </p>
         </div>
       </motion.div>
