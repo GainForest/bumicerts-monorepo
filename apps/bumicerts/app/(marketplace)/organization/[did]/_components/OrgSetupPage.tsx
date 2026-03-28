@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Image from "next/image";
@@ -40,6 +40,7 @@ import {
   MapPinHouseIcon,
   CalendarPlusIcon,
   MapPinPlusIcon,
+  CheckCircle2Icon,
 } from "lucide-react";
 
 import { countries } from "@/lib/countries";
@@ -50,6 +51,7 @@ import { extractTextFromLinearDocument } from "@/lib/adapters";
 import type { LeafletLinearDocument } from "@gainforest/leaflet-react";
 import type { LinearDocument } from "@gainforest/atproto-mutations-next";
 import { trpc } from "@/lib/trpc/client";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { formatError } from "@/lib/utils/trpc-errors";
 import { toSerializableFile } from "@/lib/mutations-utils";
 
@@ -132,9 +134,11 @@ export function OrgSetupPage({ did }: { did: string }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [countdown, setCountdown] = useState(3);
+  const [statusMessage, setStatusMessage] = useState("Saved!");
 
   const upsertOrgInfo = trpc.organization.info.upsert.useMutation();
+  const indexerUtils = indexerTrpc.useUtils();
+  const pollingRef = useRef(false);
 
   const updateForm = (patch: Partial<FormState>) =>
     setForm((prev) => ({ ...prev, ...patch }));
@@ -182,17 +186,44 @@ export function OrgSetupPage({ did }: { did: string }) {
     };
   }, [logoPreviewUrl]);
 
-  // ── Success countdown → refresh ──────────────────────────────────────────────
+  // ── Poll indexer after save, then refresh ───────────────────────────────────
 
   useEffect(() => {
-    if (!saveSuccess) return;
-    if (countdown <= 0) {
-      router.refresh();
-      return;
+    if (!saveSuccess || pollingRef.current) return;
+    pollingRef.current = true;
+
+    const MAX_ATTEMPTS = 20;
+    const POLL_INTERVAL = 1_500; // ms
+    let attempt = 0;
+    let cancelled = false;
+
+    async function poll() {
+      while (!cancelled && attempt < MAX_ATTEMPTS) {
+        attempt++;
+        setStatusMessage(`Waiting for indexer\u2026 (${attempt}/${MAX_ATTEMPTS})`);
+        try {
+          const result = await indexerUtils.organization.byDid.fetch({ did });
+          if (result?.org) {
+            setStatusMessage("Indexed! Refreshing\u2026");
+            router.refresh();
+            return;
+          }
+        } catch {
+          // indexer not ready yet, keep polling
+        }
+        await new Promise((r) => setTimeout(r, POLL_INTERVAL));
+      }
+      // Exhausted attempts — refresh anyway (indexer may be slow but page
+      // will at least re-render; user can also manually reload)
+      if (!cancelled) {
+        setStatusMessage("Refreshing\u2026");
+        router.refresh();
+      }
     }
-    const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [saveSuccess, countdown, router]);
+
+    void poll();
+    return () => { cancelled = true; };
+  }, [saveSuccess, did, router, indexerUtils]);
 
   // ── BrandFetch ──────────────────────────────────────────────────────────────
 
@@ -647,8 +678,9 @@ export function OrgSetupPage({ did }: { did: string }) {
         <div className="w-full flex justify-center">
           {saveSuccess ? (
             <div className="flex items-center gap-2 text-sm text-primary">
+              <CheckCircle2Icon className="size-4" />
               <Loader2Icon className="size-4 animate-spin" />
-              <span>Saved successfully! Refreshing in {countdown}…</span>
+              <span>{statusMessage}</span>
             </div>
           ) : (
             <Button
