@@ -38,14 +38,24 @@
     "changeset": "changeset",
     "version": "changeset version",
     "release": "bun run build && changeset publish",
+    "bdd": "node --import tsx ./node_modules/.bin/cucumber-js --config cucumber.mjs",
+    "bdd:offline": "node --import tsx ./node_modules/.bin/cucumber-js --config cucumber.mjs --tags '@offline and not @integration'",
+    "bdd:integration": "node --import tsx ./node_modules/.bin/cucumber-js --config cucumber.mjs --tags '@integration'",
+    "bdd:generate": "bun run bdd/ai/generate-features.ts",
+    "bdd:generate-steps": "bun run bdd/ai/generate-steps.ts",
+    "bdd:analyze": "bun run bdd/ai/analyze-coverage.ts",
     "prepare": "husky"
   },
   "devDependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
     "@atproto/lex": "^0.0.19",
     "@changesets/cli": "^2.29.8",
+    "@cucumber/cucumber": "^12.7.0",
+    "@cucumber/pretty-formatter": "^3.2.0",
     "@types/bun": "^1.2.7",
     "husky": "^9.1.7",
     "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
 }
