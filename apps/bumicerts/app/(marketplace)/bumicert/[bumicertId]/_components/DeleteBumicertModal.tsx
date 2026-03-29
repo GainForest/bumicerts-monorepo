@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useModal } from "@/components/ui/modal/context";
 import {
   ModalContent,
@@ -9,6 +10,7 @@ import {
   ModalTitle,
 } from "@/components/ui/modal/modal";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { links } from "@/lib/links";
@@ -25,6 +27,11 @@ type DeleteBumicertModalProps = {
 const DeleteBumicertModal = ({ rkey, title }: DeleteBumicertModalProps) => {
   const { stack, popModal, hide } = useModal();
   const router = useRouter();
+  const [confirmationText, setConfirmationText] = useState("");
+
+  const bumicertTitle = title.trim() === "" ? "Untitled Bumicert" : title;
+  const confirmationMatches =
+    confirmationText.trim().toLowerCase() === bumicertTitle.trim().toLowerCase();
 
   const {
     mutate: deleteBumicert,
@@ -38,6 +45,7 @@ const DeleteBumicertModal = ({ rkey, title }: DeleteBumicertModalProps) => {
   });
 
   const handleDelete = () => {
+    if (!confirmationMatches) return;
     deleteBumicert({ rkey });
   };
 
@@ -59,8 +67,6 @@ const DeleteBumicertModal = ({ rkey, title }: DeleteBumicertModalProps) => {
     }
   };
 
-  const bumicertTitle = title.trim() === "" ? "Untitled Bumicert" : title;
-
   return (
     <ModalContent>
       <ModalHeader
@@ -76,25 +82,29 @@ const DeleteBumicertModal = ({ rkey, title }: DeleteBumicertModalProps) => {
         <ModalDescription>
           {success
             ? "Bumicert has been deleted successfully."
-            : "Confirm your selection to delete the bumicert."}
+            : "This action is permanent and cannot be undone."}
         </ModalDescription>
       </ModalHeader>
       <AnimatePresence>
         {!success ? (
           <motion.div
-            className="flex flex-col items-center gap-2 mt-4"
+            className="flex flex-col gap-3 mt-4"
             exit={{ opacity: 0, filter: "blur(10px)", scale: 0.5 }}
           >
             <p>
-              Are you sure that you want to{" "}
-              <span className="text-destructive">permanently delete</span> the
-              bumicert,{" "}
-              <strong className="font-medium text-foreground my-2">
-                {bumicertTitle}?
-              </strong>
-              <br />
-              This action cannot be undone.
+              To confirm, type{" "}
+              <strong className="font-medium text-foreground">
+                {bumicertTitle}
+              </strong>{" "}
+              below.
             </p>
+            <Input
+              value={confirmationText}
+              onChange={(e) => setConfirmationText(e.target.value)}
+              placeholder={bumicertTitle}
+              disabled={isPending}
+              autoFocus
+            />
             {error && (
               <div className="text-red-500 w-full text-left text-sm">
                 {error.message}
@@ -111,7 +121,7 @@ const DeleteBumicertModal = ({ rkey, title }: DeleteBumicertModalProps) => {
               </Button>
               <Button
                 variant="destructive"
-                disabled={isPending}
+                disabled={isPending || !confirmationMatches}
                 onClick={handleDelete}
                 className="w-full"
               >

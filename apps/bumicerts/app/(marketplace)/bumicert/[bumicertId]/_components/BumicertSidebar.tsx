@@ -90,7 +90,7 @@ export function BumicertSidebar({ bumicert, isOwner, fundingConfig }: BumicertSi
           className="w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
           onClick={handleDeleteClick}
         >
-          <Trash2Icon className="h-4 w-4" />
+          <Trash2Icon />
           Delete Bumicert
         </Button>
       )}

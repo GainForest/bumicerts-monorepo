@@ -260,7 +260,7 @@ export function EvidencePickerModal({
 
   // ── Mutations ─────────────────────────────────────────────────────────────
 
-  const createAttachment = trpc.context.attachment.create.useMutation();
+  const createAttachment = trpc.hypercertsContext.attachment.create.useMutation();
 
   const handleLink = async () => {
     if (selectedCount === 0) return;
@@ -302,7 +302,7 @@ export function EvidencePickerModal({
         });
       }
 
-      await indexerUtils.context.attachments.invalidate();
+      await indexerUtils.hypercertsContext.attachments.invalidate();
       onLinked();
       hide().then(() => clear());
     } catch (e) {

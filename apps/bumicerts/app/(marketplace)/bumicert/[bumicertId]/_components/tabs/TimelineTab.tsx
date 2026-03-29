@@ -153,7 +153,7 @@ function TimelineEntry({ item, isLast, index, isOwner }: EntryProps) {
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const indexerUtils = indexerTrpc.useUtils();
-  const deleteAttachment = trpc.context.attachment.delete.useMutation();
+  const deleteAttachment = trpc.hypercertsContext.attachment.delete.useMutation();
 
   const date = formatDate(record?.createdAt ?? metadata?.createdAt);
   const label = contentTypeLabel(record?.contentType);
@@ -183,7 +183,7 @@ function TimelineEntry({ item, isLast, index, isOwner }: EntryProps) {
     setIsDeleting(true);
     try {
       await deleteAttachment.mutateAsync({ rkey });
-      await indexerUtils.context.attachments.invalidate();
+      await indexerUtils.hypercertsContext.attachments.invalidate();
     } catch (e) {
       setDeleteError(formatError(e));
       setIsDeleting(false);
@@ -312,7 +312,7 @@ export function TimelineTab({
   bumicertTitle,
   isOwner,
 }: TimelineTabProps) {
-  const { data, isLoading } = indexerTrpc.context.attachments.useQuery({ did: organizationDid });
+  const { data, isLoading } = indexerTrpc.hypercertsContext.attachments.useQuery({ did: organizationDid });
 
   const entries: AttachmentItem[] = (data ?? []).filter((item) =>
     item.record?.subjects?.some((s: { uri?: string | null }) => s.uri === activityUri)

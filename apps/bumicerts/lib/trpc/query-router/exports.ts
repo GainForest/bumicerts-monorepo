@@ -10,5 +10,5 @@ export { actorRouter } from "./actor";
 export { fundingQueryRouter } from "./funding";
 export { linkEvmQueryRouter } from "./link-evm";
 export { claimQueryRouter } from "./claim";
-export { contextQueryRouter } from "./context";
+export { hypercertsContextQueryRouter } from "./context";
 export { dwcQueryRouter } from "./dwc";

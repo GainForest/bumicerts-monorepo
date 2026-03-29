@@ -189,7 +189,7 @@ export function EvidenceLinker({
 
   // ── Mutation ───────────────────────────────────────────────────────────────
 
-  const createAttachment = trpc.context.attachment.create.useMutation();
+  const createAttachment = trpc.hypercertsContext.attachment.create.useMutation();
 
   const audioUriSet = new Set(audioItems.map((a) => a.metadata?.uri).filter(Boolean) as string[]);
   const occurrenceUriSet = new Set(
@@ -234,7 +234,7 @@ export function EvidenceLinker({
         });
       }
 
-      await indexerUtils.context.attachments.invalidate();
+      await indexerUtils.hypercertsContext.attachments.invalidate();
       setSuccessCount(selectedCount);
       setSelectedUris(new Set());
       setDescription(EMPTY_DOC);

@@ -14,7 +14,7 @@ export const appRouter = router({
   claim: router({
     activity: entityRouter(mutations.claim.activity),
   }),
-  context: router({
+  hypercertsContext: router({
     attachment: entityRouter(mutations.context.attachment),
   }),
   certified: router({

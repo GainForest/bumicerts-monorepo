@@ -14,7 +14,7 @@
  *   funding.*        — receipts  (leaderboard computed client-side)
  *   link.evm.*       — list  (merges with package's create/update/delete)
  *   claim.activity.* — get   (merges with package's create/update/upsert/delete)
- *   context.*        — attachments  (merges with package's attachment CRUD)
+ *   hypercertsContext.* — attachments  (merges with package's attachment CRUD)
  *   dwc.*            — occurrences  (merges with package's occurrence/measurement)
  */
 
@@ -27,7 +27,7 @@ import { actorRouter } from "./actor";
 import { fundingQueryRouter } from "./funding";
 import { linkEvmQueryRouter } from "./link-evm";
 import { claimQueryRouter } from "./claim";
-import { contextQueryRouter } from "./context";
+import { hypercertsContextQueryRouter } from "./context";
 import { dwcQueryRouter } from "./dwc";
 
 export const localQueryRouter = queryRouter({
@@ -41,7 +41,7 @@ export const localQueryRouter = queryRouter({
     evm: linkEvmQueryRouter,
   }),
   claim: claimQueryRouter,
-  context: contextQueryRouter,
+  hypercertsContext: hypercertsContextQueryRouter,
   dwc: dwcQueryRouter,
 });
 

@@ -37,14 +37,14 @@ export function EvidenceDeleteModal({
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const deleteAttachment = trpc.context.attachment.delete.useMutation();
+  const deleteAttachment = trpc.hypercertsContext.attachment.delete.useMutation();
 
   const handleDelete = async () => {
     setError(null);
     setIsDeleting(true);
     try {
       await deleteAttachment.mutateAsync({ rkey });
-      await indexerUtils.context.attachments.invalidate();
+      await indexerUtils.hypercertsContext.attachments.invalidate();
       onDeleted();
       hide().then(() => clear());
     } catch (e) {
