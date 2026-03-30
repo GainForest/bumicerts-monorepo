@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { BarChart3Icon } from "lucide-react";
 
 interface DashboardShellProps {
   animate?: boolean;
@@ -24,9 +25,12 @@ export function DashboardShell({
           className="mb-8 flex flex-wrap items-end justify-between gap-4"
         >
           <div>
-            <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground font-medium mb-2">
-              Platform Analytics
-            </p>
+            <div className="flex items-center gap-2 mb-2">
+              <BarChart3Icon className="h-4 w-4 text-primary" />
+              <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground font-medium">
+                Platform Analytics
+              </p>
+            </div>
             <h1
               className="text-3xl md:text-4xl lg:text-5xl font-light tracking-[-0.02em] leading-[1.1] text-foreground"
               style={{ fontFamily: "var(--font-garamond-var)" }}

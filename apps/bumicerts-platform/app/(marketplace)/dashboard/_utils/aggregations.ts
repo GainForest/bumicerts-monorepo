@@ -33,16 +33,23 @@ function extractDonor(
 }
 
 /**
+ * Safely parses an amount string, returning 0 for any non-numeric value.
+ * Prevents NaN from propagating through aggregation totals.
+ */
+function safeAmount(raw: string | null | undefined): number {
+  const parsed = parseFloat(raw ?? "0");
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+/**
  * Returns the effective timestamp of a receipt, preferring occurredAt.
+ * Returns null for missing or malformed date strings.
  */
 function receiptDate(item: FundingReceiptItem): Date | null {
   const raw = item.record?.occurredAt ?? item.record?.createdAt;
   if (!raw) return null;
-  try {
-    return new Date(raw);
-  } catch {
-    return null;
-  }
+  const d = new Date(raw);
+  return Number.isNaN(d.getTime()) ? null : d;
 }
 
 /**
@@ -85,7 +92,7 @@ export function computeKPIs(receipts: FundingReceiptItem[]): DashboardKPIs {
   const bumicertUris = new Set<string>();
 
   for (const r of usdcOnly) {
-    totalRaised += parseFloat(r.record?.amount ?? "0");
+    totalRaised += safeAmount(r.record?.amount);
 
     const donor = extractDonor(r);
     if (donor) donorIds.add(donor.id);
@@ -148,7 +155,7 @@ export function computeTimeSeries(
     if (!d) continue;
 
     const key = bucket(d);
-    const amount = parseFloat(r.record?.amount ?? "0");
+    const amount = safeAmount(r.record?.amount);
     const existing = map.get(key);
     if (existing) {
       existing.amount += amount;
@@ -197,7 +204,7 @@ export function computeTopDonors(
     const donor = extractDonor(r);
     if (!donor) continue;
 
-    const amount = parseFloat(r.record?.amount ?? "0");
+    const amount = safeAmount(r.record?.amount);
     const dateStr = r.record?.occurredAt ?? r.record?.createdAt ?? null;
     const existing = map.get(donor.id);
 
@@ -254,7 +261,7 @@ export function computePerOrg(receipts: FundingReceiptItem[]): OrgRow[] {
     const orgDid = r.record?.to;
     if (!orgDid) continue;
 
-    const amount = parseFloat(r.record?.amount ?? "0");
+    const amount = safeAmount(r.record?.amount);
     const bumicertUri = r.record?.for ?? "";
     const donor = extractDonor(r);
 
@@ -317,7 +324,7 @@ export function computeRecentTransactions(
         date: r.record?.occurredAt ?? r.record?.createdAt ?? null,
         donorId: donor?.id ?? null,
         donorType: donor?.type ?? null,
-        amount: parseFloat(r.record?.amount ?? "0"),
+        amount: safeAmount(r.record?.amount),
         currency: r.record?.currency ?? "USDC",
         bumicertUri: r.record?.for ?? null,
         txHash: r.record?.transactionId ?? null,

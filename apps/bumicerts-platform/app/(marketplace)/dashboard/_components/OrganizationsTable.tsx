@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronsUpDownIcon, ChevronUpIcon, ChevronDownIcon, ExternalLinkIcon } from "lucide-react";
+import { ChevronsUpDownIcon, ChevronUpIcon, ChevronDownIcon, ExternalLinkIcon, BuildingIcon } from "lucide-react";
 import { links } from "@/lib/links";
 import type { OrgRow } from "../_utils/aggregations";
 
@@ -76,7 +76,8 @@ export function OrganizationsTable({ rows }: OrganizationsTableProps) {
 
   return (
     <div className="rounded-2xl border border-border bg-background overflow-hidden">
-      <div className="px-5 pt-5 pb-3">
+      <div className="px-5 pt-5 pb-3 flex items-center gap-2">
+        <BuildingIcon className="h-4 w-4 text-primary" />
         <span className="text-xs uppercase tracking-[0.15em] text-muted-foreground font-medium">
           By Organization
         </span>

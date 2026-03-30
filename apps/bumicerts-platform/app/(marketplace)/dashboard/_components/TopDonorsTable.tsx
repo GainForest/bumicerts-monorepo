@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronsUpDownIcon, ChevronUpIcon, ChevronDownIcon } from "lucide-react";
+import { ChevronsUpDownIcon, ChevronUpIcon, ChevronDownIcon, UsersIcon } from "lucide-react";
 import type { TopDonorRow } from "../_utils/aggregations";
 
 interface TopDonorsTableProps {
@@ -81,7 +81,8 @@ export function TopDonorsTable({ rows }: TopDonorsTableProps) {
 
   return (
     <div className="rounded-2xl border border-border bg-background overflow-hidden">
-      <div className="px-5 pt-5 pb-3">
+      <div className="px-5 pt-5 pb-3 flex items-center gap-2">
+        <UsersIcon className="h-4 w-4 text-primary" />
         <span className="text-xs uppercase tracking-[0.15em] text-muted-foreground font-medium">
           Top Donors
         </span>

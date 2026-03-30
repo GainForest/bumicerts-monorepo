@@ -1,19 +1,19 @@
 "use client";
 
 import { parseAsStringLiteral, useQueryState } from "nuqs";
-import type { Period } from "@/lib/utils/leaderboard";
 
 const PERIODS = ["all", "month", "week"] as const;
+type DashboardPeriod = (typeof PERIODS)[number];
 
-const LABELS: Record<Period, string> = {
+const LABELS: Record<DashboardPeriod, string> = {
   all: "All Time",
   month: "Past 30 Days",
   week: "Past 7 Days",
 };
 
 interface PeriodFilterProps {
-  period: Period;
-  onPeriodChange: (p: Period) => void;
+  period: DashboardPeriod;
+  onPeriodChange: (p: DashboardPeriod) => void;
 }
 
 export function PeriodFilter({ period, onPeriodChange }: PeriodFilterProps) {
@@ -50,8 +50,5 @@ export function useDashboardPeriod() {
     parseAsStringLiteral(PERIODS).withDefault("all"),
   );
 
-  return {
-    period: period as Period,
-    setPeriod: setPeriod as (p: Period) => void,
-  };
+  return { period, setPeriod };
 }

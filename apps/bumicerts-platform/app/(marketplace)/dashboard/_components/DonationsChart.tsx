@@ -9,6 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { TrendingUpIcon } from "lucide-react";
 import type { TimeGranularity, TimeSeriesPoint } from "../_utils/aggregations";
 
 interface DonationsChartProps {
@@ -72,9 +73,12 @@ export function DonationsChart({
       {/* Section header */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
-          <span className="text-xs uppercase tracking-[0.15em] text-muted-foreground font-medium">
-            Donation Volume Over Time
-          </span>
+          <div className="flex items-center gap-2">
+            <TrendingUpIcon className="h-4 w-4 text-primary" />
+            <span className="text-xs uppercase tracking-[0.15em] text-muted-foreground font-medium">
+              Donation Volume Over Time
+            </span>
+          </div>
           <p className="text-sm text-muted-foreground mt-0.5">
             USDC raised per {granularity}
           </p>

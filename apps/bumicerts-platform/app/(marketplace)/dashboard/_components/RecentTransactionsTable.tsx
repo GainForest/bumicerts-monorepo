@@ -1,6 +1,7 @@
 "use client";
 
-import { ExternalLinkIcon } from "lucide-react";
+import { ExternalLinkIcon, ClockIcon } from "lucide-react";
+import { links } from "@/lib/links";
 import type { TransactionRow } from "../_utils/aggregations";
 
 interface RecentTransactionsTableProps {
@@ -22,17 +23,16 @@ function truncateBumicertUri(uri: string): string {
   return parts[parts.length - 1] ?? uri;
 }
 
-function baseScanUrl(txHash: string): string {
-  return `https://basescan.org/tx/${txHash}`;
-}
-
 export function RecentTransactionsTable({ rows }: RecentTransactionsTableProps) {
   return (
     <div className="rounded-2xl border border-border bg-background overflow-hidden">
       <div className="px-5 pt-5 pb-3">
-        <span className="text-xs uppercase tracking-[0.15em] text-muted-foreground font-medium">
-          Recent Transactions
-        </span>
+        <div className="flex items-center gap-2">
+          <ClockIcon className="h-4 w-4 text-primary" />
+          <span className="text-xs uppercase tracking-[0.15em] text-muted-foreground font-medium">
+            Recent Transactions
+          </span>
+        </div>
         <p className="text-xs text-muted-foreground mt-0.5">
           Latest {rows.length} donation{rows.length !== 1 ? "s" : ""}
         </p>
@@ -115,7 +115,7 @@ export function RecentTransactionsTable({ rows }: RecentTransactionsTableProps) 
                   <td className="py-2.5 px-3">
                     {row.txHash ? (
                       <a
-                        href={baseScanUrl(row.txHash)}
+                        href={links.external.basescan(row.txHash)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 font-mono text-xs text-primary hover:underline"
