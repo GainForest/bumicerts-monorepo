@@ -38,10 +38,10 @@ jobs:
               - 'packages/**'
               - 'GENERATED/**'
             bumicerts:
-              - 'apps/bumicerts/**'
-              - '!apps/bumicerts/**/*.md'
-              - 'apps/bumicerts/app/**/*.md'
-              - 'apps/bumicerts/public/**/*.md'
+              - 'apps/bumicerts-platform/**'
+              - '!apps/bumicerts-platform/**/*.md'
+              - 'apps/bumicerts-platform/app/**/*.md'
+              - 'apps/bumicerts-platform/public/**/*.md'
             indexer:
               - 'apps/indexer/**'
               - 'packages/internal-utils/**'
@@ -167,7 +167,7 @@ jobs:
 
       - name: Typecheck bumicerts
         run: bun run typecheck
-        working-directory: apps/bumicerts
+        working-directory: apps/bumicerts-platform
         env:
           SKIP_ENV_VALIDATION: "1"
 
