@@ -63,7 +63,7 @@
     }
   },
   "devDependencies": {
-    "@supabase/supabase-js": "^2.93.2",
+    "@supabase/supabase-js": "^2.97.0",
     "@types/bun": "latest",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3"
