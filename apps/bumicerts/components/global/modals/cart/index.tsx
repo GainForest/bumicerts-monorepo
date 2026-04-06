@@ -82,17 +82,17 @@ function CartItemRow({
 
   return (
     <div className={cn(
-      "flex items-center gap-3 py-3 border-b border-border/60 last:border-0",
+      "flex items-center gap-3 py-3 border-b border-border/60 last:border-0 min-w-0",
       unavailable && "opacity-50"
     )}>
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 overflow-hidden">
         <p className={cn(
-          "text-sm font-medium leading-tight truncate",
+          "text-sm font-medium leading-tight truncate w-full",
           unavailable ? "text-muted-foreground" : "text-foreground"
         )}>
           {item.title || "Untitled"}
         </p>
-        <p className="text-xs text-muted-foreground truncate mt-0.5">
+        <p className="text-xs text-muted-foreground truncate mt-0.5 w-full">
           {item.organizationName}
         </p>
       </div>
@@ -321,7 +321,7 @@ function CartListWithCallback({
   }
 
   return (
-    <div>
+    <div className="w-full overflow-hidden">
       {!allResolved ? (
         ids.map((id) => (
           <CartItemLoader
