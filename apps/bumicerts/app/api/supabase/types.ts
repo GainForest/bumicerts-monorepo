@@ -176,27 +176,27 @@ export type Database = {
         }
         Relationships: []
       }
-      invites: {
+      email_verification_codes: {
         Row: {
           email: string
-          invite_token: string
+          otp_hash: string
           pds_domain: string
-          used_at: string | null
-          used_by_did: string | null
+          verified_at: string | null
+          expires_at: string
         }
         Insert: {
           email: string
-          invite_token: string
+          otp_hash: string
           pds_domain: string
-          used_at?: string | null
-          used_by_did?: string | null
+          verified_at?: string | null
+          expires_at: string
         }
         Update: {
           email?: string
-          invite_token?: string
+          otp_hash?: string
           pds_domain?: string
-          used_at?: string | null
-          used_by_did?: string | null
+          verified_at?: string | null
+          expires_at?: string
         }
         Relationships: []
       }

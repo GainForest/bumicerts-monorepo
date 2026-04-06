@@ -46,7 +46,7 @@ export const links = {
     gainforestMapViewer: (shapefileUrl: string) =>
       `https://legacy.gainforest.app/?shapefile=${encodeURIComponent(shapefileUrl)}&showUI=false`,
     basescan: (txHash: string) => `https://basescan.org/tx/${txHash}`,
-    github: "https://www.github.com/GainForest/atproto-packages",
+    github: "https://www.github.com/GainForest/bumicerts-platform",
     twitter: "https://www.x.com/GainForestNow",
     gainforest: "https://www.gainforest.earth",
     gbifPublisher:
@@ -57,8 +57,8 @@ export const links = {
   },
   api: {
     onboarding: {
-      sendInviteEmail: "/onboarding/api/send-invite-email",
-      verifyInviteCode: "/onboarding/api/verify-invite-code",
+      sendVerificationCode: "/onboarding/api/send-verification-code",
+      verifyEmailCode: "/onboarding/api/verify-email-code",
       generateShortDescription: "/onboarding/api/generate-short-description",
       fetchBrandInfo: "/onboarding/api/fetch-brand-info",
       onboard: "/onboarding/api/onboard",

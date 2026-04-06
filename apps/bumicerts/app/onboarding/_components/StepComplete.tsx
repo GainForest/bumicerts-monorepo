@@ -48,7 +48,6 @@ export function StepComplete() {
       formData.append("email", data.email.trim().toLowerCase());
       formData.append("password", data.password);
       formData.append("handle", data.handle);
-      formData.append("inviteCode", data.inviteCode);
       formData.append("pdsDomain", data.selectedPdsDomain || defaultSignupPdsDomain);
       formData.append("displayName", data.organizationName);
       formData.append("shortDescription", data.shortDescription);

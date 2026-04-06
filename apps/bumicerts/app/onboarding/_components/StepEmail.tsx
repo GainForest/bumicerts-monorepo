@@ -14,7 +14,7 @@ type Phase = "email" | "code";
 export function StepEmail() {
   const { data, updateData, nextStep, prevStep, setError, error } =
     useOnboardingStore();
-  const [phase, setPhase] = useState<Phase>(data.inviteCode ? "code" : "email");
+  const [phase, setPhase] = useState<Phase>(data.otpCode ? "code" : "email");
   const [isLoading, setIsLoading] = useState(false);
   const [retryAfter, setRetryAfter] = useState<Date | null>(null);
   const [countdown, setCountdown] = useState<number>(0);
@@ -23,7 +23,7 @@ export function StepEmail() {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email);
-  const isValidCode = data.inviteCode.trim().length > 0;
+  const isValidCode = data.otpCode.trim().length === 6 && /^\d{6}$/.test(data.otpCode.trim());
 
   // Countdown timer for rate limit
   useEffect(() => {
@@ -66,7 +66,7 @@ export function StepEmail() {
     setError(null);
 
     try {
-      const response = await fetch(links.api.onboarding.sendInviteEmail, {
+      const response = await fetch(links.api.onboarding.sendVerificationCode, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -118,12 +118,12 @@ export function StepEmail() {
     setError(null);
 
     try {
-      const response = await fetch(links.api.onboarding.verifyInviteCode, {
+      const response = await fetch(links.api.onboarding.verifyEmailCode, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: data.email.trim().toLowerCase(),
-          inviteCode: data.inviteCode.trim(),
+          otp: data.otpCode.trim(),
           pdsDomain: defaultPdsDomain,
         }),
       });
@@ -146,7 +146,7 @@ export function StepEmail() {
 
   const handleChangeEmail = () => {
     setPhase("email");
-    updateData({ inviteCode: "" });
+    updateData({ otpCode: "" });
     setError(null);
     setHasExistingCode(false);
   };
@@ -188,7 +188,7 @@ export function StepEmail() {
           <div className="text-center space-y-1">
             <h1 className="text-2xl font-serif font-bold">Verify Your Email</h1>
             <p className="text-sm text-muted-foreground">
-              We&apos;ll send a verification code to your email.
+              We&apos;ll send a 6-digit code to your email (valid for 10 minutes).
             </p>
           </div>
 
@@ -306,16 +306,21 @@ export function StepEmail() {
               Verification Code
             </label>
             <Input
-              id="invite-code"
+              id="otp-code"
               type="text"
-              placeholder="Enter the code from your email"
-              value={data.inviteCode}
+              placeholder="Enter the 6-digit code"
+              value={data.otpCode}
               onChange={(e) => {
-                updateData({ inviteCode: e.target.value });
+                // Only allow digits and limit to 6 characters
+                const value = e.target.value.replace(/\D/g, "").slice(0, 6);
+                updateData({ otpCode: value });
                 setError(null);
               }}
               disabled={isLoading}
               autoComplete="one-time-code"
+              maxLength={6}
+              inputMode="numeric"
+              pattern="[0-9]*"
             />
           </div>
 

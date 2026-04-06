@@ -9,3 +9,10 @@ export const getInviteEmailConfig = () => {
 
   return { from, subject };
 };
+
+export const getVerificationEmailConfig = () => {
+  const from = "noreply@gainforest.id";
+  const subject = "Your Bumicerts Verification Code";
+
+  return { from, subject };
+};

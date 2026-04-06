@@ -25,7 +25,7 @@ export type OnboardingData = {
 
   // Step 2: Email
   email: string;
-  inviteCode: string;
+  otpCode: string;
 
   // Step 3: Org Details
   country: string;
@@ -74,7 +74,7 @@ const initialData: OnboardingData = {
   organizationName: "",
   acceptedCodeOfConduct: false,
   email: "",
-  inviteCode: "",
+  otpCode: "",
   country: "",
   startDate: null,
   longDescription: "",

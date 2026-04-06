@@ -1,17 +1,18 @@
 /**
- * POST /api/atproto/onboarding/send-invite-email
+ * POST /onboarding/api/send-verification-code
  *
- * Sends an ATProto PDS invite code to a user's email address.
+ * Sends a 6-digit OTP verification code to a user's email address.
  *
  * Usage:
- *   POST /api/atproto/onboarding/send-invite-email
+ *   POST /onboarding/api/send-verification-code
  *   Body: { email: "user@example.com", pdsDomain: "climateai.org" | "gainforest.id" }
  *
  * How it works:
- *   1. Rate limiting: Max 1 email per address per 5 minutes
- *   2. Invite code: Checks DB for existing code matching email+pdsDomain, reuses if found, otherwise mints new one via PDS admin API
- *   3. Email: Sends invite code via Resend
- *   4. Tracking: Records rate limit attempts immediately after checks pass (before email send) to prevent TOCTOU races
+ *   1. Rate limiting: Max 1 email per address per 5 minutes, 10 per IP per hour
+ *   2. OTP generation: Creates a 6-digit numeric code, hashes it with SHA-256
+ *   3. Database upsert: Stores hash with 10-minute expiry (replaces any existing code for email+pdsDomain)
+ *   4. Email: Sends OTP via Resend
+ *   5. Tracking: Records rate limit attempts immediately after checks pass
  *
  * Responses:
  *   200: { success: true }
@@ -22,12 +23,9 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { signupPDSDomains, defaultSignupPdsDomain, type SignupPDSDomain } from "@/lib/config/pds";
-import { InviteCodeEmail } from "@/email-templates/InviteCodeEmail";
-import {
-  getOrCreateInviteCode,
-  isInviteCodeError,
-} from "@/lib/atproto/invites";
-import { getInviteEmailConfig, resend } from "@/lib/email/resend";
+import { VerificationCodeEmail } from "@/email-templates/VerificationCodeEmail";
+import { generateOTP, hashOTP, getOTPExpiry } from "@/lib/otp";
+import { getVerificationEmailConfig, resend } from "@/lib/email/resend";
 import { checkRateLimit, recordRateLimitAttempt, getClientIp, RATE_LIMITS } from "@/lib/rate-limit";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
@@ -78,9 +76,10 @@ export async function POST(req: NextRequest) {
 
     // Check IP and email rate limits in parallel (independent DB queries)
     const [ipLimit, emailLimit] = await Promise.all([
-      checkRateLimit(`ip:${clientIp}`, 'send-invite-email', RATE_LIMITS.sendInviteEmail.byIp),
-      checkRateLimit(`email:${email}`, 'send-invite-email', RATE_LIMITS.sendInviteEmail.byEmail),
+      checkRateLimit(`ip:${clientIp}`, 'send-verification-code', RATE_LIMITS.sendVerificationCode.byIp),
+      checkRateLimit(`email:${email}`, 'send-verification-code', RATE_LIMITS.sendVerificationCode.byEmail),
     ]);
+
     if (process.env.NODE_ENV !== 'development') {
       if (!ipLimit.allowed) {
         return Response.json(
@@ -90,49 +89,67 @@ export async function POST(req: NextRequest) {
       }
       if (!emailLimit.allowed) {
         return Response.json(
-          { error: 'RateLimitExceeded', message: 'Please wait before requesting another invite code', retryAfter: emailLimit.resetAt.toISOString() },
+          { error: 'RateLimitExceeded', message: 'Please wait before requesting another verification code', retryAfter: emailLimit.resetAt.toISOString() },
           { status: 429, headers: { 'Retry-After': String(Math.ceil((emailLimit.resetAt.getTime() - Date.now()) / 1000)) } }
         );
       }
     }
 
     // Record rate limit attempts immediately after checks pass, before any email
-    // sending or invite code logic, to prevent TOCTOU race conditions where two
+    // sending or OTP logic, to prevent TOCTOU race conditions where two
     // concurrent requests both pass the check before either records an attempt.
     await Promise.all([
-      recordRateLimitAttempt(`ip:${clientIp}`, 'send-invite-email'),
-      recordRateLimitAttempt(`email:${email}`, 'send-invite-email'),
+      recordRateLimitAttempt(`ip:${clientIp}`, 'send-verification-code'),
+      recordRateLimitAttempt(`email:${email}`, 'send-verification-code'),
     ]);
 
-    const inviteCode = await getOrCreateInviteCode(
-      supabase,
-      email,
-      pdsDomain
-    );
+    // Generate OTP and hash it
+    const otp = generateOTP();
+    const otpHash = hashOTP(otp);
+    const expiresAt = getOTPExpiry();
 
-    const { from, subject } = getInviteEmailConfig();
-    const { error } = await resend.emails.send({
+    // Upsert verification code (replaces any existing code for this email+pdsDomain)
+    const { error: upsertError } = await supabase
+      .from("email_verification_codes")
+      .upsert(
+        {
+          email,
+          otp_hash: otpHash,
+          pds_domain: pdsDomain,
+          expires_at: expiresAt,
+          verified_at: null,
+        },
+        { onConflict: "email,pds_domain" }
+      );
+
+    if (upsertError) {
+      console.error("Failed to store verification code:", upsertError);
+      return Response.json(
+        { error: "DatabaseError", message: "Failed to generate verification code" },
+        { status: 500 }
+      );
+    }
+
+    // Send email with OTP
+    const { from, subject } = getVerificationEmailConfig();
+    const { error: emailError } = await resend.emails.send({
       from,
       to: [email],
       subject,
-      react: InviteCodeEmail({ inviteCode, pdsDomain }),
+      react: VerificationCodeEmail({ otp, pdsDomain }),
     });
 
-    if (error) {
-      console.error("Failed to send invite email:", error);
+    if (emailError) {
+      console.error("Failed to send verification email:", emailError);
       return Response.json(
-        { error: "EmailError", message: "Failed to send invite email" },
+        { error: "EmailError", message: "Failed to send verification email" },
         { status: 502 }
       );
     }
 
     return Response.json({ success: true });
   } catch (err: unknown) {
-    if (isInviteCodeError(err)) {
-      return Response.json(err.payload, { status: err.status });
-    }
-
-    console.error("Unexpected error in send-invite-email:", err);
+    console.error("Unexpected error in send-verification-code:", err);
     return Response.json(
       {
         error: "InternalServerError",
