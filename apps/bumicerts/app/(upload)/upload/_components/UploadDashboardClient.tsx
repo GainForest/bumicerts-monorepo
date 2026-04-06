@@ -339,7 +339,8 @@ export function UploadDashboardClient({ did }: UploadDashboardClientProps) {
     }
 
     if (edits.startDate !== null) {
-      data.startDate = edits.startDate as `${string}-${string}-${string}T${string}:${string}:${string}Z`;
+      // Convert YYYY-MM-DD to full ISO datetime format
+      data.startDate = `${edits.startDate}T00:00:00.000Z` as `${string}-${string}-${string}T${string}:${string}:${string}Z`;
     }
 
     // Images must be wrapped in SmallImage shape { image: SerializableFile }
