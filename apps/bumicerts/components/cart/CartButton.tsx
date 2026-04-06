@@ -11,7 +11,7 @@ export function CartButton() {
   const { pushModal, show } = useModal();
 
   const handleOpen = () => {
-    pushModal({ id: MODAL_IDS.CART, content: <CartModal />, dialogWidth: "max-w-md" }, true);
+    pushModal({ id: MODAL_IDS.CART, content: <CartModal /> }, true);
     show();
   };
 

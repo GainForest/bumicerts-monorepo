@@ -239,7 +239,7 @@ export function CartModal() {
   };
 
   return (
-    <ModalContent dismissible={false}>
+    <ModalContent dismissible={false} className="max-w-md">
       <ModalHeader
         backAction={stack.length > 1 ? handleClose : undefined}
       >
