@@ -90,11 +90,15 @@ import { deleteLinkEvm } from "./mutations/link.evm/delete";
 // ac.multimedia
 // ---------------------------------------------------------------------------
 import { createAcMultimedia } from "./mutations/ac.multimedia/create";
+import { updateAcMultimedia } from "./mutations/ac.multimedia/update";
+import { deleteAcMultimedia } from "./mutations/ac.multimedia/delete";
 
 // ---------------------------------------------------------------------------
 // dwc.occurrence
 // ---------------------------------------------------------------------------
 import { createDwcOccurrence } from "./mutations/dwc.occurrence/create";
+import { updateDwcOccurrence } from "./mutations/dwc.occurrence/update";
+import { deleteDwcOccurrence } from "./mutations/dwc.occurrence/delete";
 
 // ---------------------------------------------------------------------------
 // context.attachment
@@ -108,6 +112,8 @@ import { deleteContextAttachment } from "./mutations/context.attachment/delete";
 // dwc.measurement
 // ---------------------------------------------------------------------------
 import { createDwcMeasurement } from "./mutations/dwc.measurement/create";
+import { updateDwcMeasurement } from "./mutations/dwc.measurement/update";
+import { deleteDwcMeasurement } from "./mutations/dwc.measurement/delete";
 
 // ---------------------------------------------------------------------------
 // blob
@@ -184,6 +190,8 @@ export const mutations = {
     },
     multimedia: {
       create: createAcMultimedia,
+      update: updateAcMultimedia,
+      delete: deleteAcMultimedia,
     },
   },
   context: {
@@ -197,9 +205,13 @@ export const mutations = {
   dwc: {
     occurrence: {
       create: createDwcOccurrence,
+      update: updateDwcOccurrence,
+      delete: deleteDwcOccurrence,
     },
     measurement: {
       create: createDwcMeasurement,
+      update: updateDwcMeasurement,
+      delete: deleteDwcMeasurement,
     },
   },
   blob: {

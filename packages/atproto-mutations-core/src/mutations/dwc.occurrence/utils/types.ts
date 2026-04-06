@@ -1,5 +1,9 @@
 import type { Main as DwcOccurrenceRecord } from "@gainforest/generated/app/gainforest/dwc/occurrence.defs";
-import type { RecordMutationResult } from "../../../utils/shared/types";
+import type {
+  DeleteRecordInput,
+  DeleteRecordResult,
+  RecordMutationResult,
+} from "../../../utils/shared/types";
 
 export type { DwcOccurrenceRecord };
 
@@ -32,3 +36,17 @@ export type CreateDwcOccurrenceInput = {
   projectRef?: string;
   rkey?: string;
 };
+
+// ---------------------------------------------------------------------------
+// Update / Delete
+// ---------------------------------------------------------------------------
+
+export type UpdateDwcOccurrenceData = Partial<Omit<CreateDwcOccurrenceInput, "rkey">>;
+
+export type UpdateDwcOccurrenceInput = {
+  rkey: string;
+  data: UpdateDwcOccurrenceData;
+  unset?: ReadonlyArray<keyof UpdateDwcOccurrenceData>;
+};
+
+export type { DeleteRecordInput, DeleteRecordResult };

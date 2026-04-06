@@ -10,12 +10,13 @@
  *   activities.*     — list (discriminated by input shape)
  *   locations.*      — list (did-only or did+rkey)
  *   audio.*          — list
+ *   multimedia.*     — list
  *   actor.*          — profile  (Bluesky public API)
  *   funding.*        — receipts  (leaderboard computed client-side)
  *   link.evm.*       — list  (merges with package's create/update/delete)
  *   claim.activity.* — get   (merges with package's create/update/upsert/delete)
  *   context.*        — attachments  (merges with package's attachment CRUD)
- *   dwc.*            — occurrences  (merges with package's occurrence/measurement)
+ *   dwc.*            — occurrences + measurements  (merges with package's occurrence/measurement)
  */
 
 import { queryRouter } from "./init";
@@ -23,6 +24,7 @@ import { organizationRouter } from "./organization";
 import { activitiesRouter } from "./activities";
 import { locationsRouter } from "./locations";
 import { audioRouter } from "./audio";
+import { multimediaRouter } from "./multimedia";
 import { actorRouter } from "./actor";
 import { fundingQueryRouter } from "./funding";
 import { linkEvmQueryRouter } from "./link-evm";
@@ -35,6 +37,7 @@ export const localQueryRouter = queryRouter({
   activities: activitiesRouter,
   locations: locationsRouter,
   audio: audioRouter,
+  multimedia: multimediaRouter,
   actor: actorRouter,
   funding: fundingQueryRouter,
   link: queryRouter({

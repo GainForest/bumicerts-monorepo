@@ -1,7 +1,11 @@
 import type {
   Main as DwcMeasurementRecord,
 } from "@gainforest/generated/app/gainforest/dwc/measurement.defs";
-import type { RecordMutationResult } from "../../../utils/shared/types";
+import type {
+  DeleteRecordInput,
+  DeleteRecordResult,
+  RecordMutationResult,
+} from "../../../utils/shared/types";
 
 export type { DwcMeasurementRecord };
 
@@ -41,3 +45,34 @@ export type CreateDwcMeasurementInput = {
   /** Optional caller-supplied rkey. PDS assigns a TID if omitted. */
   rkey?: string;
 };
+
+// ---------------------------------------------------------------------------
+// Update / Delete
+// ---------------------------------------------------------------------------
+
+export type UpdateDwcMeasurementData = {
+  occurrenceRef?: string;
+  occurrenceID?: string;
+  measuredBy?: string;
+  measuredByID?: string;
+  measurementDate?: string;
+  measurementMethod?: string;
+  measurementRemarks?: string;
+  result?: DwcMeasurementRecord["result"];
+  flora?: FloraMeasurementFields;
+};
+
+export type UpdateDwcMeasurementInput = {
+  rkey: string;
+  data: UpdateDwcMeasurementData;
+  unset?: ReadonlyArray<
+    | "occurrenceID"
+    | "measuredBy"
+    | "measuredByID"
+    | "measurementDate"
+    | "measurementMethod"
+    | "measurementRemarks"
+  >;
+};
+
+export type { DeleteRecordInput, DeleteRecordResult };

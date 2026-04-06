@@ -140,6 +140,46 @@ export {
   AudioRecordingPdsError,
 } from "@gainforest/atproto-mutations-core";
 
+// dwc.occurrence types — safe everywhere
+export type {
+  CreateDwcOccurrenceInput,
+  UpdateDwcOccurrenceInput,
+  DwcOccurrenceMutationResult,
+  DwcOccurrenceRecord,
+} from "@gainforest/atproto-mutations-core";
+export {
+  DwcOccurrenceValidationError,
+  DwcOccurrenceNotFoundError,
+  DwcOccurrencePdsError,
+} from "@gainforest/atproto-mutations-core";
+
+// dwc.measurement types — safe everywhere
+export type {
+  CreateDwcMeasurementInput,
+  UpdateDwcMeasurementInput,
+  DwcMeasurementMutationResult,
+  DwcMeasurementRecord,
+  FloraMeasurementFields,
+} from "@gainforest/atproto-mutations-core";
+export {
+  DwcMeasurementValidationError,
+  DwcMeasurementNotFoundError,
+  DwcMeasurementPdsError,
+} from "@gainforest/atproto-mutations-core";
+
+// ac.multimedia types — safe everywhere
+export type {
+  CreateAcMultimediaInput,
+  UpdateAcMultimediaInput,
+  AcMultimediaMutationResult,
+  AcMultimediaRecord,
+} from "@gainforest/atproto-mutations-core";
+export {
+  AcMultimediaValidationError,
+  AcMultimediaNotFoundError,
+  AcMultimediaPdsError,
+} from "@gainforest/atproto-mutations-core";
+
 // GeoJSON utilities — safe everywhere
 export {
   GeoJsonValidationError,

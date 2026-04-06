@@ -158,18 +158,21 @@ export {
 // dwc.occurrence
 export {
   DwcOccurrenceValidationError,
+  DwcOccurrenceNotFoundError,
   DwcOccurrencePdsError,
 } from "./mutations/dwc.occurrence/utils/errors";
 
 // dwc.measurement
 export {
   DwcMeasurementValidationError,
+  DwcMeasurementNotFoundError,
   DwcMeasurementPdsError,
 } from "./mutations/dwc.measurement/utils/errors";
 
 // ac.multimedia
 export {
   AcMultimediaValidationError,
+  AcMultimediaNotFoundError,
   AcMultimediaPdsError,
 } from "./mutations/ac.multimedia/utils/errors";
 
@@ -290,6 +293,7 @@ export type {
 // dwc.occurrence
 export type {
   CreateDwcOccurrenceInput,
+  UpdateDwcOccurrenceInput,
   DwcOccurrenceMutationResult,
   DwcOccurrenceRecord,
 } from "./mutations/dwc.occurrence/utils/types";
@@ -297,6 +301,7 @@ export type {
 // dwc.measurement
 export type {
   CreateDwcMeasurementInput,
+  UpdateDwcMeasurementInput,
   DwcMeasurementMutationResult,
   DwcMeasurementRecord,
   FloraMeasurementFields,
@@ -305,6 +310,7 @@ export type {
 // ac.multimedia
 export type {
   CreateAcMultimediaInput,
+  UpdateAcMultimediaInput,
   AcMultimediaMutationResult,
   AcMultimediaRecord,
 } from "./mutations/ac.multimedia/utils/types";

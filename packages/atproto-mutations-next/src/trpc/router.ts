@@ -37,14 +37,20 @@ export const appRouter = router({
     audio: entityRouter(mutations.ac.audio),
     multimedia: router({
       create: effectMutation(mutations.ac.multimedia.create),
+      update: effectMutation(mutations.ac.multimedia.update),
+      delete: effectMutation(mutations.ac.multimedia.delete),
     }),
   }),
   dwc: router({
     occurrence: router({
       create: effectMutation(mutations.dwc.occurrence.create),
+      update: effectMutation(mutations.dwc.occurrence.update),
+      delete: effectMutation(mutations.dwc.occurrence.delete),
     }),
     measurement: router({
       create: effectMutation(mutations.dwc.measurement.create),
+      update: effectMutation(mutations.dwc.measurement.update),
+      delete: effectMutation(mutations.dwc.measurement.delete),
     }),
   }),
   blob: router({

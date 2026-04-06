@@ -27,7 +27,7 @@
  *      optimistic data with real CDN URLs once the indexer has processed it.
  */
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { trpc } from "@/lib/trpc/client";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
@@ -57,12 +57,111 @@ interface UploadDashboardClientProps {
   did: string;
 }
 
+type PendingIndexerSync = {
+  expected: Partial<
+    Pick<
+      OrganizationData,
+      | "displayName"
+      | "shortDescription"
+      | "longDescription"
+      | "country"
+      | "website"
+      | "startDate"
+      | "visibility"
+    >
+  >;
+  previousLogoUrl: string | null;
+  previousCoverImageUrl: string | null;
+  awaitLogoUrl: boolean;
+  awaitCoverImageUrl: boolean;
+  imageSyncDeadlineAt: number;
+};
+
+const IMAGE_SYNC_FALLBACK_MS = 20_000;
+
+function sameLongDescription(
+  left: OrganizationData["longDescription"] | undefined,
+  right: OrganizationData["longDescription"] | undefined
+): boolean {
+  return JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
+}
+
+function matchesPendingIndexerSync(
+  org: OrganizationData,
+  pending: PendingIndexerSync
+): boolean {
+  const imageSyncTimedOut = Date.now() >= pending.imageSyncDeadlineAt;
+
+  if (
+    pending.expected.displayName !== undefined &&
+    org.displayName !== pending.expected.displayName
+  ) {
+    return false;
+  }
+
+  if (
+    pending.expected.shortDescription !== undefined &&
+    org.shortDescription !== pending.expected.shortDescription
+  ) {
+    return false;
+  }
+
+  if (
+    pending.expected.longDescription !== undefined &&
+    !sameLongDescription(org.longDescription, pending.expected.longDescription)
+  ) {
+    return false;
+  }
+
+  if (pending.expected.country !== undefined && org.country !== pending.expected.country) {
+    return false;
+  }
+
+  if (pending.expected.website !== undefined && org.website !== pending.expected.website) {
+    return false;
+  }
+
+  if (
+    pending.expected.startDate !== undefined &&
+    org.startDate !== pending.expected.startDate
+  ) {
+    return false;
+  }
+
+  if (
+    pending.expected.visibility !== undefined &&
+    org.visibility !== pending.expected.visibility
+  ) {
+    return false;
+  }
+
+  if (
+    pending.awaitLogoUrl &&
+    !imageSyncTimedOut &&
+    (!org.logoUrl || org.logoUrl === pending.previousLogoUrl)
+  ) {
+    return false;
+  }
+
+  if (
+    pending.awaitCoverImageUrl &&
+    !imageSyncTimedOut &&
+    (!org.coverImageUrl || org.coverImageUrl === pending.previousCoverImageUrl)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function UploadDashboardClient({ did }: UploadDashboardClientProps) {
   const indexerUtils = indexerTrpc.useUtils();
   const [mode, setMode] = useUploadMode();
   const isEditing = mode === "edit";
+  const lastServerSyncAt = useRef(0);
+  const pendingIndexerSyncRef = useRef<PendingIndexerSync | null>(null);
 
   // ── Store ───────────────────────────────────────────────────────────────────
   const serverData = useUploadDashboardStore((s) => s.serverData);
@@ -75,16 +174,30 @@ export function UploadDashboardClient({ did }: UploadDashboardClientProps) {
   const hasChanges = useUploadDashboardStore((s) => s.hasChanges);
 
   // ── Data fetch ──────────────────────────────────────────────────────────────
-  const { data: orgData, isLoading, error } = indexerTrpc.organization.byDid.useQuery({ did });
-  const fetchedOrg = orgData?.org
-    ? orgInfoToOrganizationData(orgData.org as GraphQLOrgInfoItem, 0)
-    : null;
+  const {
+    data: orgData,
+    dataUpdatedAt,
+    isLoading,
+    error,
+  } = indexerTrpc.organization.byDid.useQuery({ did });
+  const hasFetchedOrg = orgData?.org !== null && orgData?.org !== undefined;
 
   useEffect(() => {
-    if (fetchedOrg) {
-      setServerData(fetchedOrg);
+    if (!orgData?.org || dataUpdatedAt === 0 || lastServerSyncAt.current === dataUpdatedAt) {
+      return;
     }
-  }, [fetchedOrg, setServerData]);
+
+    const nextServerData = orgInfoToOrganizationData(orgData.org as GraphQLOrgInfoItem, 0);
+    const pendingIndexerSync = pendingIndexerSyncRef.current;
+
+    if (pendingIndexerSync && !matchesPendingIndexerSync(nextServerData, pendingIndexerSync)) {
+      return;
+    }
+
+    pendingIndexerSyncRef.current = null;
+    lastServerSyncAt.current = dataUpdatedAt;
+    setServerData(nextServerData);
+  }, [dataUpdatedAt, orgData, setServerData]);
 
   // ── Mutations ───────────────────────────────────────────────────────────────
   const updateMutation = trpc.organization.info.update.useMutation({
@@ -132,6 +245,31 @@ export function UploadDashboardClient({ did }: UploadDashboardClientProps) {
         // so the UI updates instantly (the tRPC cache holds the raw org data shape,
         // not the OrganizationData shape, so we update the store directly)
         setServerData(optimistic);
+
+        pendingIndexerSyncRef.current = {
+          expected: {
+            ...(edits.displayName !== null
+              ? { displayName: optimistic.displayName }
+              : {}),
+            ...(edits.shortDescription !== null
+              ? { shortDescription: optimistic.shortDescription }
+              : {}),
+            ...(edits.longDescription !== null
+              ? { longDescription: optimistic.longDescription }
+              : {}),
+            ...(edits.country !== null ? { country: optimistic.country } : {}),
+            ...(edits.website !== null ? { website: optimistic.website } : {}),
+            ...(edits.startDate !== null ? { startDate: optimistic.startDate } : {}),
+            ...(edits.visibility !== null
+              ? { visibility: optimistic.visibility }
+              : {}),
+          },
+          previousLogoUrl: current.logoUrl ?? null,
+          previousCoverImageUrl: current.coverImageUrl ?? null,
+          awaitLogoUrl: edits.logo !== null,
+          awaitCoverImageUrl: edits.coverImage !== null,
+          imageSyncDeadlineAt: Date.now() + IMAGE_SYNC_FALLBACK_MS,
+        };
       }
 
       // 2. Clear edit mode — return to view mode.
@@ -238,7 +376,7 @@ export function UploadDashboardClient({ did }: UploadDashboardClientProps) {
   }
 
   // Organization doesn't exist yet — prompt user to set it up
-  if (!fetchedOrg && !serverData) {
+  if (!hasFetchedOrg && !serverData) {
     return (
       <Container className="pt-4">
         <OrgSetupPrompt did={did} />

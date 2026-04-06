@@ -7,6 +7,12 @@ export class AcMultimediaValidationError extends Data.TaggedError(
   cause?: unknown;
 }> {}
 
+export class AcMultimediaNotFoundError extends Data.TaggedError(
+  "AcMultimediaNotFoundError"
+)<{
+  rkey: string;
+}> {}
+
 export class AcMultimediaPdsError extends Data.TaggedError(
   "AcMultimediaPdsError"
 )<{

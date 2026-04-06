@@ -3,19 +3,26 @@
 /**
  * UploadNavGrid
  *
- * A 4-column dashboard grid shown in view mode below the org about section.
+ * A dashboard grid shown in view mode below the org about section.
  * Each card navigates to a section of the upload platform.
  *
  * Cards:
  *   Edit Profile  → /upload?mode=edit
  *   Sites         → /upload/sites
  *   Audio         → /upload/audio
+ *   Trees         → /upload/trees/manage
  *   Bumicerts     → /upload/bumicerts
  */
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRightIcon, MapPinIcon, MicIcon, PencilIcon } from "lucide-react";
+import {
+  ArrowRightIcon,
+  MapPinIcon,
+  MicIcon,
+  PencilIcon,
+  TreesIcon,
+} from "lucide-react";
 import BumicertIcon from "@/icons/BumicertIcon";
 import { links } from "@/lib/links";
 import type { ComponentType } from "react";
@@ -52,6 +59,14 @@ const NAV_CARDS: NavCard[] = [
     Icon: MicIcon,
   },
   {
+    id: "trees",
+    label: "Trees",
+    description:
+      "Review uploaded tree records, update details, and manage linked photos.",
+    href: links.upload.treesManage,
+    Icon: TreesIcon,
+  },
+  {
     id: "bumicerts",
     label: "Bumicerts",
     description: "Create and manage verified impact certificates for your work.",
@@ -63,7 +78,7 @@ const NAV_CARDS: NavCard[] = [
 export function UploadNavGrid() {
   return (
     <div className="pt-4 pb-2">
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
         {NAV_CARDS.map((card, i) => {
           const Icon = card.Icon;
           return (

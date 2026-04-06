@@ -93,6 +93,7 @@ export const createAcMultimedia = (
     // The stored blobRef must use the normalized mimeType so the PDS accepts the record write.
     const raw = uploadResult.data.blob as { ref: unknown; mimeType: string; size: number };
     const blobRef = { $type: "blob" as const, ref: raw.ref, mimeType: raw.mimeType, size: raw.size };
+    const normalizedMimeType = raw.mimeType;
 
     // 3. Build and validate the record.
     const createdAt = new Date().toISOString();
@@ -100,7 +101,7 @@ export const createAcMultimedia = (
       $type: COLLECTION,
       file: blobRef,
       subjectPart,
-      format: format ?? imageFile.type,
+      format: format ?? normalizedMimeType,
       createdAt,
       ...(occurrenceRef !== undefined && { occurrenceRef }),
       ...(siteRef !== undefined && { siteRef }),

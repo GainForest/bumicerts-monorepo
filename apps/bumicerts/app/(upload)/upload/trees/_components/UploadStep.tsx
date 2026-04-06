@@ -83,11 +83,14 @@ export default function UploadStep({ validRows, onBack, onComplete }: UploadStep
           <PhotoAttachModal
             occurrenceUri={occurrenceUri}
             speciesName={speciesName}
-            onPhotoUploaded={(uri) => {
+            onPhotoUploaded={(uploadedPhoto) => {
+              if (uploadedPhoto.previewUrl) {
+                URL.revokeObjectURL(uploadedPhoto.previewUrl);
+              }
               setPhotoUris((prev) => {
                 const next = new Map(prev);
                 const existing = next.get(rowIndex) ?? [];
-                next.set(rowIndex, [...existing, uri]);
+                next.set(rowIndex, [...existing, uploadedPhoto.uri]);
                 return next;
               });
               setRowStatuses((prev) => {

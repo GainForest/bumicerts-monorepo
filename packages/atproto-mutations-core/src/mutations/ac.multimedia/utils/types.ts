@@ -1,6 +1,10 @@
 import type { Main as AcMultimediaRecord } from "@gainforest/generated/app/gainforest/ac/multimedia.defs";
 import type { SerializableFile } from "../../../blob/types";
-import type { RecordMutationResult } from "../../../utils/shared/types";
+import type {
+  DeleteRecordInput,
+  DeleteRecordResult,
+  RecordMutationResult,
+} from "../../../utils/shared/types";
 
 export type { AcMultimediaRecord };
 
@@ -42,3 +46,20 @@ export type CreateAcMultimediaInput = {
   /** Optional caller-supplied rkey. PDS assigns a TID if omitted. */
   rkey?: string;
 };
+
+// ---------------------------------------------------------------------------
+// Update / Delete
+// ---------------------------------------------------------------------------
+
+export type UpdateAcMultimediaData = Partial<
+  Omit<CreateAcMultimediaInput, "imageFile" | "rkey">
+>;
+
+export type UpdateAcMultimediaInput = {
+  rkey: string;
+  data: UpdateAcMultimediaData;
+  unset?: ReadonlyArray<keyof UpdateAcMultimediaData>;
+  newImageFile?: SerializableFile;
+};
+
+export type { DeleteRecordInput, DeleteRecordResult };
