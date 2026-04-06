@@ -24,6 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       packages_changed: ${{ steps.changes.outputs.packages }}
+      bumicerts_changed: ${{ steps.changes.outputs.bumicerts }}
       indexer_changed: ${{ steps.changes.outputs.indexer }}
       collection_filters: ${{ steps.filters.outputs.value }}
     steps:
@@ -33,14 +34,19 @@ jobs:
         id: changes
         with:
           filters: |
-             packages:
-               - 'packages/**'
-               - 'GENERATED/**'
-             indexer:
-               - 'apps/indexer/**'
-               - 'packages/internal-utils/**'
-               - 'GENERATED/lexicons/**'
-               - 'GENERATED/scripts/generate-collections.ts'
+            packages:
+              - 'packages/**'
+              - 'GENERATED/**'
+            bumicerts:
+              - 'apps/bumicerts/**'
+              - '!apps/bumicerts/**/*.md'
+              - 'apps/bumicerts/app/**/*.md'
+              - 'apps/bumicerts/public/**/*.md'
+            indexer:
+              - 'apps/indexer/**'
+              - 'packages/internal-utils/**'
+              - 'GENERATED/lexicons/**'
+              - 'GENERATED/scripts/generate-collections.ts'
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -125,6 +131,45 @@ jobs:
           cd ../atproto-mutations-next && bun run typecheck
           cd ../atproto-auth-next && bun run typecheck
           cd ../leaflet-react && bun run typecheck
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Bumicerts: Validate
+  # ─────────────────────────────────────────────────────────────────────────────
+  bumicerts:
+    name: Validate Bumicerts
+    needs: setup
+    if: needs.setup.outputs.bumicerts_changed == 'true' || needs.setup.outputs.packages_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2.7"
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-deps-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-deps-
+
+      - name: Install dependencies
+        run: bun install
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: packages-dist
+          path: packages
+
+      # GENERATED/types/ is committed to git, so checkout already has them.
+      # No need to regenerate here.
+
+      - name: Typecheck bumicerts
+        run: bun run typecheck
+        working-directory: apps/bumicerts
+        env:
+          SKIP_ENV_VALIDATION: "1"
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Indexer: Validate + Deploy to Railway
