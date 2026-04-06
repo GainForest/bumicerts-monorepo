@@ -7,6 +7,14 @@
 
 import type { FundingReceiptItem } from "@/lib/graphql-dev/queries/fundingReceipts";
 
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+/**
+ * USD-pegged currencies accepted by the platform.
+ * All are treated as equivalent to USD for display purposes.
+ */
+const USD_CURRENCIES = ["USD", "USDC"] as const;
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type Period = "all" | "month" | "week";
@@ -31,20 +39,29 @@ export interface LeaderboardResult {
 /**
  * Extracts donor identifier from a funding receipt.
  * Returns { id, type } where type is "did" or "wallet".
+ * 
+ * Logic:
+ * - If from.did exists and is a valid DID -> identified donor (non-anonymous)
+ * - Otherwise -> anonymous donor, extract wallet from notes
  */
 function extractDonor(item: FundingReceiptItem): { id: string; type: "did" | "wallet" } | null {
   const from = item.record?.from as { did?: string } | null | undefined;
   const notes = item.record?.notes;
 
-  // Identified donor: DID in `from.did`
-  if (from && typeof from === "object" && from.did) {
-    return { id: from.did, type: "did" };
+  // Identified donor: from.did exists and is a valid DID string
+  if (from !== null && from !== undefined && typeof from === "object" && !Array.isArray(from)) {
+    const obj = from as Record<string, unknown>;
+    if (typeof obj.did === "string" && obj.did.startsWith("did:")) {
+      return { id: obj.did, type: "did" };
+    }
   }
 
-  // Anonymous donor: wallet address in notes
-  if (notes) {
-    const walletMatch = notes.match(/Anonymous donor wallet:\s*(0x[a-fA-F0-9]+)/i);
-    if (walletMatch) {
+  // Anonymous donor: from is undefined/null/empty, extract wallet from notes
+  if (typeof notes === "string" && notes) {
+    // New format: "0xABCD paid 100USDC using wallet"
+    // Legacy format: "Anonymous donor wallet: 0xABCD"  
+    const walletMatch = notes.match(/^(0x[a-fA-F0-9]{40})/i) ?? notes.match(/Anonymous donor wallet:\s*(0x[a-fA-F0-9]{40})/i);
+    if (walletMatch?.[1]) {
       return { id: walletMatch[1], type: "wallet" };
     }
   }
@@ -78,20 +95,24 @@ function filterByPeriod(receipts: FundingReceiptItem[], period: Period): Funding
 /**
  * Aggregates funding receipts into a leaderboard result.
  *
- * Only USDC donations are counted. Donors are identified by DID (for
- * identified donors) or wallet address extracted from `record.notes`
+ * Only USD-pegged currencies are counted. Donors are identified by DID (for
+ * identified donors) or wallet address extracted from record.notes
  * (for anonymous donors).
  */
 export function aggregateToLeaderboard(
   receipts: FundingReceiptItem[],
   period: Period = "all",
-  limit: number = 100
+  limit: number = 100,
+  includeAnonymous: boolean = true
 ): LeaderboardResult {
   // 1. Filter by period
   const filtered = filterByPeriod(receipts, period);
 
-  // 2. Filter USDC only
-  const usdcOnly = filtered.filter((r) => r.record?.currency === "USDC");
+  // 2. Filter USD-pegged currencies only
+  const usdOnly = filtered.filter((r) => {
+    const currency = r.record?.currency?.toUpperCase();
+    return currency && (USD_CURRENCIES as readonly string[]).includes(currency);
+  });
 
   // 3. Group by donor
   const donorMap = new Map<
@@ -104,9 +125,12 @@ export function aggregateToLeaderboard(
     }
   >();
 
-  for (const receipt of usdcOnly) {
+  for (const receipt of usdOnly) {
     const donor = extractDonor(receipt);
     if (!donor) continue;
+
+    // Filter anonymous donations if includeAnonymous is false
+    if (!includeAnonymous && donor.type === "wallet") continue;
 
     const amount = parseFloat(receipt.record?.amount ?? "0");
     const dateStr = receipt.record?.occurredAt ?? receipt.record?.createdAt ?? null;
@@ -145,9 +169,15 @@ export function aggregateToLeaderboard(
     ...entry,
   }));
 
+  // Calculate total from entries that were actually aggregated
+  const totalAmountSum = Array.from(donorMap.values()).reduce(
+    (sum, data) => sum + data.totalAmount,
+    0
+  );
+
   return {
     entries,
     totalDonorsCount: donorMap.size,
-    totalAmountSum: sorted.reduce((sum, e) => sum + e.totalAmount, 0),
+    totalAmountSum,
   };
 }

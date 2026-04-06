@@ -261,12 +261,14 @@ export async function POST(req: NextRequest) {
   const agentLayer = getFacilitatorLayer();
   const now = new Date().toISOString();
 
-  // Build `from` value for receipts
-  const donorDid = body.anonymous ? undefined : body.donorDid;
-  const fromValue = donorDid
-    ? { did: donorDid as `did:${string}:${string}` }
-    : { did: clientEnv.NEXT_PUBLIC_FACILITATOR_DID as `did:${string}:${string}` };
+  // Build `from` field:
+  // - For anonymous donors: leave undefined
+  // - For identified donors: wrap their DID as { did: "did:..." }
+  const fromValue = body.anonymous || !body.donorDid
+    ? undefined
+    : { did: body.donorDid as `did:${string}:${string}` };
 
+  const currency = body.currency ?? "USDC";
   const results: BatchItemResult[] = [];
 
   for (const { item, wallet } of resolvedItems) {
@@ -293,19 +295,19 @@ export async function POST(req: NextRequest) {
     // Write funding receipt (even if transfer failed, to record the attempt)
     let receiptUri: string | null = null;
     if (success) {
+      const notes = `${authorization.from} paid ${item.amount}${currency} using wallet`;
+      
       const receiptEither = await Effect.runPromise(
         mutations.funding.receipt.create({
           from:           fromValue,
           to:             item.orgDid,
           amount:         item.amount,
-          currency:       body.currency ?? "USDC",
+          currency,
           paymentRail:    "x402-usdc-base-batch",
           paymentNetwork: "base",
           transactionId:  transactionHash,
           for:            item.activityUri as AtUriString,
-          notes:          body.anonymous
-            ? `Anonymous donor wallet: ${authorization.from}`
-            : undefined,
+          notes,
           occurredAt:     now,
         }).pipe(
           Effect.provide(agentLayer),

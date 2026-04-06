@@ -206,29 +206,28 @@ export async function POST(req: NextRequest) {
   const amount = body.amount ?? String(Number(authorization.value) / 1e6);
   const now = new Date().toISOString();
 
-  // Build `from` as CertifiedDefs.Did — the lexicon requires { did: "did:..." }
-  // where the DID must be a valid DID string (format: 'did').
-  // For anonymous donors: use the facilitator's own DID as the record author.
-  //   The donor's wallet address is recorded in `notes` instead.
-  // For identified donors: wrap their DID.
-  const donorDid = body.anonymous ? undefined : body.donorDid;
-  const fromValue = donorDid
-    ? { did: donorDid as `did:${string}:${string}` }
-    : { did: clientEnv.NEXT_PUBLIC_FACILITATOR_DID as `did:${string}:${string}` };
+  // Build `from` field:
+  // - For anonymous donors: leave undefined
+  // - For identified donors: wrap their DID as { did: "did:..." }
+  const fromValue = body.anonymous || !body.donorDid
+    ? undefined
+    : { did: body.donorDid as `did:${string}:${string}` };
+
+  // Build notes with template: "${sender} paid ${amt}${currency} using ${mode}"
+  const currency = body.currency ?? "USDC";
+  const notes = `${authorization.from} paid ${amount}${currency} using wallet`;
 
   const receiptEither = await Effect.runPromise(
     mutations.funding.receipt.create({
       from:           fromValue,
       to:             body.orgDid ?? recipientWallet,
       amount,
-      currency:       body.currency ?? "USDC",
+      currency,
       paymentRail:    "x402-usdc-base",
       paymentNetwork: "base",
       transactionId:  transactionHash,
       for:            body.activityUri as AtUriString | undefined,
-      notes:          body.anonymous
-                        ? `Anonymous donor wallet: ${authorization.from}`
-                        : undefined,
+      notes,
       occurredAt:     now,
     }).pipe(
       Effect.provide(agentLayer),
