@@ -8,6 +8,7 @@ export const links = {
   home: "/home",
   onboarding: "/onboarding",
   leaderboard: "/leaderboard",
+  dashboard: "/dashboard",
   checkout: "/checkout",
   myOrganization: (did?: string) =>
     did ? `/organization/${encodeURIComponent(did)}` : "/organization",
@@ -43,9 +44,15 @@ export const links = {
      */
     gainforestMapViewer: (shapefileUrl: string) =>
       `https://legacy.gainforest.app/?shapefile=${encodeURIComponent(shapefileUrl)}&showUI=false`,
-    github: "https://www.github.com/GainForest/atproto-packages",
+    basescan: (txHash: string) => `https://basescan.org/tx/${txHash}`,
+    github: "https://www.github.com/GainForest/bumicerts-platform",
     twitter: "https://www.x.com/GainForestNow",
     gainforest: "https://www.gainforest.earth",
+    gbifPublisher:
+      "https://www.gbif.org/publisher/c02486e8-eb54-4e94-81d8-1038cc58e208",
+  },
+  assets: {
+    treeDataTemplate: "/templates/tree-data-template.csv",
   },
   api: {
     onboarding: {

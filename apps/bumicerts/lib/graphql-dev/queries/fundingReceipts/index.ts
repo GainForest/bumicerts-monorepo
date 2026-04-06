@@ -21,10 +21,16 @@ import type { QueryModule } from "@/lib/graphql-dev/create-query";
 // ── Document ──────────────────────────────────────────────────────────────────
 
 const byDidDocument = graphql(`
-  query FundingReceiptsByDid($did: String!) {
+  query FundingReceiptsByDid($did: String!, $limit: Int, $cursor: String) {
     hypercerts {
       funding {
-        receipt(where: { did: $did }, order: DESC, sortBy: CREATED_AT) {
+        receipt(
+          where: { did: $did }
+          limit: $limit
+          cursor: $cursor
+          order: DESC
+          sortBy: CREATED_AT
+        ) {
           data {
             metadata {
               did
@@ -48,6 +54,11 @@ const byDidDocument = graphql(`
               createdAt
             }
           }
+          pageInfo {
+            endCursor
+            hasNextPage
+            count
+          }
         }
       }
     }
@@ -65,11 +76,40 @@ export type FundingReceiptItem = NonNullable<_DataArr>[number];
 export type Params = { did: string };
 export type Result = FundingReceiptItem[];
 
+// ── Pagination ────────────────────────────────────────────────────────────────
+
+/** Items per GraphQL request — generous to minimise round trips. */
+const PAGE_SIZE = 200;
+
+/** Hard cap on pages to prevent runaway loops (200 × 50 = 10 000 receipts). */
+const MAX_PAGES = 50;
+
 // ── Fetch ─────────────────────────────────────────────────────────────────────
 
 export async function fetch(params: Params): Promise<Result> {
-  const res = await graphqlClient.request(byDidDocument, { did: params.did });
-  return (res.hypercerts?.funding?.receipt?.data ?? []) as Result;
+  const allReceipts: FundingReceiptItem[] = [];
+  let cursor: string | undefined;
+
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const res = await graphqlClient.request(byDidDocument, {
+      did: params.did,
+      limit: PAGE_SIZE,
+      cursor,
+    });
+
+    const receipt = res.hypercerts?.funding?.receipt;
+    const data = (receipt?.data ?? []) as FundingReceiptItem[];
+    allReceipts.push(...data);
+
+    const pageInfo = receipt?.pageInfo;
+    if (pageInfo?.hasNextPage && pageInfo.endCursor) {
+      cursor = pageInfo.endCursor;
+    } else {
+      break;
+    }
+  }
+
+  return allReceipts;
 }
 
 // ── Default options ───────────────────────────────────────────────────────────

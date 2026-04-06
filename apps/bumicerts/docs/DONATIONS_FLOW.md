@@ -105,7 +105,6 @@ export const DECIMALS          = 6
 ## Complete File Structure
 
 ```
-apps/bumicerts/
 ├── app/
 │   ├── api/
 │   │   ├── fund/
@@ -853,7 +852,7 @@ export async function createLinkAttestationAction(
 
 Organizations must link a wallet before donations can be received. Add a `WalletLinkSection` component to the organization settings page.
 
-**Location:** `apps/bumicerts/app/(marketplace)/organization/[did]/_components/WalletLinkSection.tsx`
+**Location:** `app/(marketplace)/organization/[did]/_components/WalletLinkSection.tsx`
 
 **Flow:**
 1. Org admin visits their org page.
@@ -907,7 +906,7 @@ const message = {
 ## Dependencies to Add
 
 ```json
-// apps/bumicerts/package.json — add to dependencies:
+// package.json — add to dependencies:
 {
   "viem": "^2.x",
   "wagmi": "^2.x",
@@ -920,7 +919,7 @@ const message = {
 ## Implementation Phases
 
 ### Phase 1: Infrastructure (Week 1)
-- [ ] Add `viem`, `wagmi`, `@rainbow-me/rainbowkit` to `apps/bumicerts/package.json`
+- [ ] Add `viem`, `wagmi`, `@rainbow-me/rainbowkit` to `package.json`
 - [ ] Create `components/providers/WagmiProvider.tsx` (configured for Base, chain ID 8453)
 - [ ] Wrap `app/layout.tsx` with `WagmiProvider`
 - [ ] Add env vars to `lib/env.ts`: `FACILITATOR_PRIVATE_KEY`, `FACILITATOR_DID`, `FACILITATOR_PDS_URL`, `BASE_RPC_URL`

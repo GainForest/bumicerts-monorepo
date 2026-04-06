@@ -7,7 +7,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useCsvParser } from "@/lib/upload/use-csv-parser";
 import { detectKoboFormat } from "@/lib/upload/kobo-mapper";
 import { autoDetectMappings } from "@/lib/upload/column-mapper";
+import { links } from "@/lib/links";
 import type { ColumnMapping } from "@/lib/upload/types";
+import TreeDataGuide from "./TreeDataGuide";
 
 type FileDropStepProps = {
   onFileAndMappings: (
@@ -109,6 +111,9 @@ export default function FileDropStep({ onFileAndMappings }: FileDropStepProps) {
 
   return (
     <div className="space-y-5">
+      {/* Tree data guide accordion */}
+      <TreeDataGuide />
+
       {/* Header */}
       <div>
         <h2 className="text-lg font-semibold">Upload Your File</h2>
@@ -201,6 +206,30 @@ export default function FileDropStep({ onFileAndMappings }: FileDropStepProps) {
           </div>
         </div>
       )}
+
+      {/* GBIF disclaimer */}
+      <p className="text-xs text-muted-foreground leading-relaxed">
+        By uploading, you agree that your tree data will be published publicly on{" "}
+        <a
+          href={links.external.gbifPublisher}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-foreground transition-colors"
+        >
+          GBIF
+        </a>{" "}
+        (Global Biodiversity Information Facility) and GainForest&apos;s Green
+        Globe. You remain the data owner. GainForest is the{" "}
+        <a
+          href={links.external.gbifPublisher}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-foreground transition-colors"
+        >
+          publisher
+        </a>
+        .
+      </p>
 
       {/* Footer */}
       <div className="flex items-center justify-end pt-2 border-t border-border">
