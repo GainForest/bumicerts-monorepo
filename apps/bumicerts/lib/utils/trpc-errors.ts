@@ -129,6 +129,14 @@ function parseValidationMessage(message: string): string | null {
     return `${friendlyField} must be a valid ${friendlyType}`;
   }
 
+  // Pattern: Invalid Datetime: Got ("...")
+  const invalidDatetimeMatch = message.match(/Invalid Datetime:.*at \$\.(\w+)/i);
+  if (invalidDatetimeMatch) {
+    const field = invalidDatetimeMatch[1];
+    const friendlyField = formatFieldName(field);
+    return `${friendlyField} has an invalid date format. Please select a valid date.`;
+  }
+
   // Pattern: required / missing
   if (
     (message.includes("required") || message.includes("missing")) &&
@@ -143,6 +151,16 @@ function parseValidationMessage(message: string): string | null {
     friendlyField
   ) {
     return `${friendlyField} has an invalid format`;
+  }
+
+  // Pattern: invalid type (e.g., "Expected string, received number")
+  if (message.includes("Expected") && message.includes("received") && friendlyField) {
+    return `${friendlyField} has an incorrect type`;
+  }
+
+  // Pattern: out of range / invalid value
+  if ((message.includes("out of range") || message.includes("invalid value")) && friendlyField) {
+    return `${friendlyField} contains an invalid value`;
   }
 
   return null;
