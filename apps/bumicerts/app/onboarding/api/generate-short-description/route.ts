@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
 
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
       const prompt = `You are a copywriter helping an environmental conservation organization create a short description for their profile.
 
