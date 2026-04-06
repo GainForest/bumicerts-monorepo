@@ -20,15 +20,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc/client";
 import { toSerializableFile } from "@/lib/mutations-utils";
+import type { AcMultimediaRecord } from "@gainforest/atproto-mutations-next";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
+export type UploadedPhotoPayload = {
+  uri: string;
+  rkey: string;
+  cid: string;
+  record: AcMultimediaRecord;
+  previewUrl: string | null;
+};
+
 type PhotoAttachModalProps = {
   occurrenceUri: string;
   speciesName: string;
-  onPhotoUploaded: (multimediaUri: string) => void;
+  onPhotoUploaded: (uploadedPhoto: UploadedPhotoPayload) => void;
 };
 
 type SubjectPart =
@@ -170,7 +179,13 @@ export default function PhotoAttachModal({
       });
 
       setUploadState("success");
-      onPhotoUploaded(result.uri);
+      onPhotoUploaded({
+        uri: result.uri,
+        rkey: result.rkey,
+        cid: result.cid,
+        record: result.record,
+        previewUrl: URL.createObjectURL(imageFile),
+      });
       await handleClose();
     } catch (err) {
       setUploadState("error");

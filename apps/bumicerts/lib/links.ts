@@ -26,6 +26,7 @@ export const links = {
     audio: "/upload/audio",
     bumicerts: "/upload/bumicerts",
     trees: "/upload/trees",
+    treesManage: "/upload/trees/manage",
   },
   user: didCatcher((did) => `/user/${did}`),
   explore: "/explore",
@@ -45,7 +46,7 @@ export const links = {
     gainforestMapViewer: (shapefileUrl: string) =>
       `https://legacy.gainforest.app/?shapefile=${encodeURIComponent(shapefileUrl)}&showUI=false`,
     basescan: (txHash: string) => `https://basescan.org/tx/${txHash}`,
-    github: "https://www.github.com/GainForest/bumicerts-platform",
+    github: "https://www.github.com/GainForest/atproto-packages",
     twitter: "https://www.x.com/GainForestNow",
     gainforest: "https://www.gainforest.earth",
     gbifPublisher:

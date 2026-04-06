@@ -40,9 +40,14 @@ const byDidDocument = graphql(`
               eventDate
               decimalLatitude
               decimalLongitude
+              recordedBy
               country
+              countryCode
               stateProvince
               locality
+              occurrenceRemarks
+              habitat
+              basisOfRecord
               createdAt
             }
           }

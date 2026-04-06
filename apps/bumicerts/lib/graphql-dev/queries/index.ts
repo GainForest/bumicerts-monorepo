@@ -40,6 +40,7 @@ import * as linkEvm from "./linkEvm";
 import * as cartBumicert from "./cartBumicert";
 import * as attachments from "./attachments";
 import * as occurrences from "./occurrences";
+import * as measurements from "./measurements";
 import * as multimedia from "./multimedia";
 
 export const queries = {
@@ -116,6 +117,12 @@ export const queries = {
     /** Invalidates ALL occurrence queries. */
     key: () => ["occurrences"] as const,
   },
+
+  measurements: {
+    ...createQuery(["measurements"], measurements),
+    /** Invalidates ALL measurement queries. */
+    key: () => ["measurements"] as const,
+  },
 };
 
 // Re-export types that consumers commonly need
@@ -130,4 +137,5 @@ export type { EvmLink } from "./linkEvm";
 export type { CartBumicertItem } from "./cartBumicert";
 export type { AttachmentItem } from "./attachments";
 export type { OccurrenceItem } from "./occurrences";
+export type { MeasurementItem } from "./measurements";
 export type { MultimediaItem } from "./multimedia";

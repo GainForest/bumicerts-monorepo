@@ -16,7 +16,7 @@
  *   link.evm.*       — list  (merges with package's create/update/delete)
  *   claim.activity.* — get   (merges with package's create/update/upsert/delete)
  *   context.*        — attachments  (merges with package's attachment CRUD)
- *   dwc.*            — occurrences  (merges with package's occurrence/measurement)
+ *   dwc.*            — occurrences + measurements  (merges with package's occurrence/measurement)
  */
 
 import { queryRouter } from "./init";
