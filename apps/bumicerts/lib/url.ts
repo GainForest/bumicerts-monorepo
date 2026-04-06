@@ -41,7 +41,7 @@ import { clientEnv } from "@/lib/env/client";
 export function getPublicUrl(): string | undefined {
   // 1. Explicit override always wins (local dev, ngrok, etc.)
   if (clientEnv.NEXT_PUBLIC_BASE_URL) {
-    return clientEnv.NEXT_PUBLIC_BASE_URL.replace(/\/$/, "");
+    return clientEnv.NEXT_PUBLIC_BASE_URL.trim().replace(/\/$/, "");
   }
 
   // 2. On Vercel preview deployments, use VERCEL_URL (the actual preview URL)
@@ -49,16 +49,16 @@ export function getPublicUrl(): string | undefined {
   //    custom domain, even on preview deploys). This ensures OAuth redirect_uris
   //    point back to the preview deployment, not production.
   if (serverEnv.VERCEL_ENV === "preview" && serverEnv.VERCEL_URL) {
-    return `https://${serverEnv.VERCEL_URL}`;
+    return `https://${serverEnv.VERCEL_URL.trim()}`;
   }
 
   // 3. Production: prefer the shortest custom domain, fall back to raw alias.
   const raw =
     (serverEnv.VERCEL_PROJECT_PRODUCTION_URL
-      ? `https://${serverEnv.VERCEL_PROJECT_PRODUCTION_URL}`
+      ? `https://${serverEnv.VERCEL_PROJECT_PRODUCTION_URL.trim()}`
       : undefined) ??
     (serverEnv.VERCEL_URL
-      ? `https://${serverEnv.VERCEL_URL}`
+      ? `https://${serverEnv.VERCEL_URL.trim()}`
       : undefined);
 
   return raw?.replace(/\/$/, "");
