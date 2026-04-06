@@ -20,6 +20,14 @@ function truncateDid(id: string): string {
   return `${id.slice(0, 6)}…${id.slice(-4)}`;
 }
 
+function formatDonorLabel(donorId: string, donorType: "did" | "wallet"): string {
+  const truncated = truncateDid(donorId);
+  if (donorType === "wallet") {
+    return `Anonymous (${truncated})`;
+  }
+  return truncated;
+}
+
 interface SortIconProps {
   col: SortKey;
   sortKey: SortKey;
@@ -123,13 +131,10 @@ export function TopDonorsTable({ rows }: TopDonorsTableProps) {
                   </td>
                   <td className="py-2.5 px-3">
                     <span
-                      className="font-mono text-xs text-foreground"
+                      className="text-xs text-foreground"
                       title={row.donorId}
                     >
-                      {truncateDid(row.donorId)}
-                    </span>
-                    <span className="ml-2 text-[10px] uppercase tracking-[0.08em] text-muted-foreground/60 bg-muted/60 border border-border/50 rounded-full px-1.5 py-0.5">
-                      {row.donorType === "did" ? "ATProto" : "Wallet"}
+                      {formatDonorLabel(row.donorId, row.donorType)}
                     </span>
                   </td>
                   <td className="py-2.5 px-3 text-foreground tabular-nums">

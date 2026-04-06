@@ -25,19 +25,10 @@ function buildActivityUri(bumicert: BumicertData): string {
  *   truncated form of the DID.
  */
 function resolveDonorLabel(item: FundingReceiptItem): string {
-  const notes = item.record?.notes;
   const from = item.record?.from as { did?: string } | null | undefined;
+  const notes = item.record?.notes;
 
-  // Anonymous path: wallet address is in notes
-  if (notes) {
-    const walletMatch = notes.match(/Anonymous donor wallet:\s*(0x[a-fA-F0-9]+)/i);
-    if (walletMatch) {
-      const addr = walletMatch[1];
-      return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
-    }
-  }
-
-  // Identified donor: DID in `from.did`
+  // Identified donor: from.did exists
   if (from && typeof from === "object" && from.did) {
     const did = from.did;
     // Truncate long DIDs: show method:network:first8…last6
@@ -49,6 +40,17 @@ function resolveDonorLabel(item: FundingReceiptItem): string {
       }
     }
     return did;
+  }
+
+  // Anonymous donor: from is undefined, extract wallet from notes
+  if (notes) {
+    // New format: "0xABCD paid 100USDC using wallet"
+    // Legacy format: "Anonymous donor wallet: 0xABCD"
+    const walletMatch = notes.match(/^(0x[a-fA-F0-9]{40})/i) ?? notes.match(/Anonymous donor wallet:\s*(0x[a-fA-F0-9]+)/i);
+    if (walletMatch) {
+      const addr = walletMatch[1];
+      return `Anonymous (${addr.slice(0, 6)}…${addr.slice(-4)})`;
+    }
   }
 
   return "Anonymous";
@@ -65,7 +67,9 @@ function DonationCard({
 }) {
   const donor = resolveDonorLabel(item);
   const amount = parseFloat(item.record?.amount ?? "0");
-  const currency = item.record?.currency ?? "USD";
+  // Normalize USD-pegged currencies to "USD" for display
+  const rawCurrency = item.record?.currency ?? "USD";
+  const currency = ["USD", "USDC"].includes(rawCurrency.toUpperCase()) ? "USD" : rawCurrency;
   const txId = item.record?.transactionId;
   const occurredAt = item.record?.occurredAt ?? item.record?.createdAt;
 

@@ -33,11 +33,11 @@ function RankBadge({ rank }: { rank: number }) {
 
 function truncateDonorId(donorId: string, type: "did" | "wallet"): string {
   if (type === "wallet") {
-    // Wallet addresses: 0xAbcd...1234
-    if (donorId.length > 12) {
-      return `${donorId.slice(0, 6)}…${donorId.slice(-4)}`;
-    }
-    return donorId;
+    // Wallet addresses: Anonymous (0xAbcd...1234)
+    const truncated = donorId.length > 12
+      ? `${donorId.slice(0, 6)}…${donorId.slice(-4)}`
+      : donorId;
+    return `Anonymous (${truncated})`;
   }
 
   // DIDs: did:plc:abc123...xyz789
@@ -114,7 +114,7 @@ export function DonorCard({ entry, index }: DonorCardProps) {
         <div className="text-base font-bold text-foreground">
           ${entry.totalAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </div>
-        <div className="text-xs text-muted-foreground">USDC</div>
+        <div className="text-xs text-muted-foreground">USD</div>
       </div>
     </motion.div>
   );

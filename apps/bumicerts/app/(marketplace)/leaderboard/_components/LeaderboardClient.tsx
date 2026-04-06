@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { clientEnv } from "@/lib/env/client";
 import { aggregateToLeaderboard } from "@/lib/utils/leaderboard";
@@ -12,6 +12,7 @@ import type { FundingReceiptItem } from "@/lib/graphql-dev/queries/fundingReceip
 
 export function LeaderboardClient() {
   const { period, setPeriod } = useLeaderboardPeriod();
+  const [includeAnonymous, setIncludeAnonymous] = useState(true);
   const facilitatorDid = clientEnv.NEXT_PUBLIC_FACILITATOR_DID ?? "";
 
   const { data: receipts, isLoading } = indexerTrpc.funding.receipts.useQuery(
@@ -21,14 +22,16 @@ export function LeaderboardClient() {
 
   const leaderboard = useMemo(() => {
     if (!receipts) return null;
-    return aggregateToLeaderboard(receipts as FundingReceiptItem[], period, 100);
-  }, [receipts, period]);
+    return aggregateToLeaderboard(receipts as FundingReceiptItem[], period, 100, includeAnonymous);
+  }, [receipts, period, includeAnonymous]);
 
   return (
     <LeaderboardShell
       animate={false}
       period={period}
       onPeriodChange={setPeriod}
+      includeAnonymous={includeAnonymous}
+      onIncludeAnonymousChange={setIncludeAnonymous}
       totalDonors={leaderboard?.totalDonorsCount ?? 0}
       totalRaised={leaderboard?.totalAmountSum ?? 0}
     >

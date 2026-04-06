@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { TrophyIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { Period as LeaderboardPeriod } from "@/lib/utils/leaderboard";
 
 // ── Period filter chips ───────────────────────────────────────────────────────
@@ -57,7 +58,7 @@ function StatsSummary({
         </span>
         <span className="text-xl font-bold text-primary">
           ${totalRaised.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
-          <span className="text-sm font-normal text-primary/70">USDC</span>
+          <span className="text-sm font-normal text-primary/70">USD</span>
         </span>
       </div>
       <div className="rounded-xl border border-border bg-muted/30 px-4 py-2.5 inline-flex flex-col">
@@ -78,6 +79,8 @@ export interface LeaderboardShellProps {
   animate?: boolean;
   period?: LeaderboardPeriod;
   onPeriodChange?: (p: LeaderboardPeriod) => void;
+  includeAnonymous?: boolean;
+  onIncludeAnonymousChange?: (include: boolean) => void;
   totalDonors?: number;
   totalRaised?: number;
   children?: React.ReactNode;
@@ -87,6 +90,8 @@ export function LeaderboardShell({
   animate = true,
   period = "all",
   onPeriodChange,
+  includeAnonymous = true,
+  onIncludeAnonymousChange,
   totalDonors = 0,
   totalRaised = 0,
   children,
@@ -129,25 +134,39 @@ export function LeaderboardShell({
           transition={{ duration: 0.5, delay: 0.1, ease: [0.25, 0.1, 0.25, 1] }}
           className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6"
         >
-          {onPeriodChange ? (
-            <PeriodChips period={period} onPeriodChange={onPeriodChange} />
-          ) : (
-            <div className="flex items-center gap-2">
-              {PERIODS.map((p) => (
-                <div
-                  key={p.value}
-                  className={cn(
-                    "shrink-0 text-xs font-medium rounded-full px-3 py-1.5 border",
-                    p.value === "all"
-                      ? "bg-foreground text-background border-foreground"
-                      : "text-muted-foreground/50 border-border/50"
-                  )}
-                >
-                  {p.label}
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="flex flex-col gap-3">
+            {onPeriodChange ? (
+              <PeriodChips period={period} onPeriodChange={onPeriodChange} />
+            ) : (
+              <div className="flex items-center gap-2">
+                {PERIODS.map((p) => (
+                  <div
+                    key={p.value}
+                    className={cn(
+                      "shrink-0 text-xs font-medium rounded-full px-3 py-1.5 border",
+                      p.value === "all"
+                        ? "bg-foreground text-background border-foreground"
+                        : "text-muted-foreground/50 border-border/50"
+                    )}
+                  >
+                    {p.label}
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {onIncludeAnonymousChange && (
+              <label className="flex items-center gap-2 cursor-pointer">
+                <Checkbox
+                  checked={includeAnonymous}
+                  onCheckedChange={onIncludeAnonymousChange}
+                />
+                <span className="text-xs text-muted-foreground select-none">
+                  Include anonymous donors
+                </span>
+              </label>
+            )}
+          </div>
           <StatsSummary totalDonors={totalDonors} totalRaised={totalRaised} />
         </motion.div>
 

@@ -34,15 +34,7 @@ function extractDonor(
   const from = item.record?.from;
   const notes = item.record?.notes;
 
-  // 1. Wallet address from notes — handles both:
-  //    "Anonymous donor wallet: 0xABC..."  (current format)
-  //    "Original: 0.01 CELO from 0xABC..."  (legacy format)
-  if (typeof notes === "string" && notes) {
-    const match = notes.match(/(0x[a-fA-F0-9]{40})/);
-    if (match?.[1]) return { id: match[1], type: "wallet" };
-  }
-
-  // 2a. Identified donor — `from` as object { did: "did:..." }
+  // Identified donor: from.did exists
   if (from !== null && typeof from === "object" && !Array.isArray(from)) {
     const obj = from as Record<string, unknown>;
     if (typeof obj.did === "string" && obj.did.startsWith("did:")) {
@@ -50,9 +42,16 @@ function extractDonor(
     }
   }
 
-  // 2b. Identified donor — `from` as plain DID string
+  // Legacy: Identified donor — `from` as plain DID string
   if (typeof from === "string" && from.startsWith("did:")) {
     return { id: from, type: "did" };
+  }
+
+  // Anonymous donor: from is undefined, extract wallet from notes
+  if (typeof notes === "string" && notes) {
+    // Handles all formats: new, legacy anonymous, and migrated
+    const match = notes.match(/(0x[a-fA-F0-9]{40})/);
+    if (match?.[1]) return { id: match[1], type: "wallet" };
   }
 
   return null;

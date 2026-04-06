@@ -17,6 +17,16 @@ function truncateId(id: string): string {
   return `${id.slice(0, 6)}…${id.slice(-4)}`;
 }
 
+function formatDonorLabel(donorId: string | null, donorType: "did" | "wallet" | null): string {
+  if (!donorId) return "Anonymous";
+  
+  const truncated = truncateId(donorId);
+  if (donorType === "wallet") {
+    return `Anonymous (${truncated})`;
+  }
+  return truncated;
+}
+
 function truncateBumicertUri(uri: string): string {
   // at://did:plc:xxx/org.hypercerts.claim.activity/rkey → last segment
   const parts = uri.split("/");
@@ -83,21 +93,12 @@ export function RecentTransactionsTable({ rows }: RecentTransactionsTableProps) 
                       : "—"}
                   </td>
                   <td className="py-2.5 px-3">
-                    {row.donorId ? (
-                      <span className="flex items-center gap-1.5">
-                        <span
-                          className="font-mono text-xs text-foreground"
-                          title={row.donorId}
-                        >
-                          {truncateId(row.donorId)}
-                        </span>
-                        <span className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground/60 bg-muted/60 border border-border/50 rounded-full px-1.5 py-0.5">
-                          {row.donorType === "did" ? "ATProto" : "Wallet"}
-                        </span>
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">Anonymous</span>
-                    )}
+                    <span
+                      className="text-xs text-foreground"
+                      title={row.donorId ?? undefined}
+                    >
+                      {formatDonorLabel(row.donorId, row.donorType)}
+                    </span>
                   </td>
                   <td className="py-2.5 px-3 text-foreground tabular-nums font-medium whitespace-nowrap">
                     {new Intl.NumberFormat("en-US", {
