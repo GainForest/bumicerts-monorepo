@@ -14,7 +14,3 @@ dist/
 
 # GENERATED/types/ is intentionally committed — used by packages and apps.
 # packages/*/dist/ is NOT committed — CI and Vercel build packages from source.
-
-# bumicerts is maintained as a standalone repo (gainforest/bumicerts-platform).
-# It lives here locally for monorepo workspace dev but is not tracked by this repo.
-apps/bumicerts/

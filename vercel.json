@@ -1,0 +1,5 @@
+{
+  "buildCommand": "bun run bumicerts:vercel-build",
+  "installCommand": "bun install",
+  "outputDirectory": "apps/bumicerts/.next"
+}

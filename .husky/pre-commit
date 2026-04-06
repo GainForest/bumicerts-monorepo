@@ -3,14 +3,17 @@
 STAGED=$(git diff --cached --name-only)
 
 run_indexer=false
+run_bumicerts=false
 run_packages=false
 
 echo "$STAGED" | grep -q '^apps/indexer/'   && run_indexer=true
+echo "$STAGED" | grep -q '^apps/bumicerts/' && run_bumicerts=true
 echo "$STAGED" | grep -q '^packages/'       && run_packages=true
 
-# If a shared package changes, also check indexer
+# If a shared package changes, also check both apps
 if $run_packages; then
   run_indexer=true
+  run_bumicerts=true
 fi
 
 if $run_packages; then
@@ -25,4 +28,11 @@ fi
 if $run_indexer; then
   echo "⚡ Typechecking indexer..."
   bun run indexer:typecheck || exit 1
+fi
+
+if $run_bumicerts; then
+  echo "⚡ Typechecking bumicerts..."
+  bun run bumicerts:typecheck || exit 1
+  echo "⚡ Linting bumicerts..."
+  bun run bumicerts:lint || exit 1
 fi
