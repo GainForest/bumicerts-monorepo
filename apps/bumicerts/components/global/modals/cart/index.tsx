@@ -82,17 +82,17 @@ function CartItemRow({
 
   return (
     <div className={cn(
-      "flex items-center gap-3 py-3 border-b border-border/60 last:border-0 min-w-0",
+      "flex items-center gap-3 py-3 border-b border-border/60 last:border-0",
       unavailable && "opacity-50"
     )}>
-      <div className="flex-1 min-w-0 overflow-hidden">
+      <div className="flex-1 min-w-0">
         <p className={cn(
-          "text-sm font-medium leading-tight truncate w-full",
+          "text-sm font-medium leading-tight truncate block",
           unavailable ? "text-muted-foreground" : "text-foreground"
         )}>
           {item.title || "Untitled"}
         </p>
-        <p className="text-xs text-muted-foreground truncate mt-0.5 w-full">
+        <p className="text-xs text-muted-foreground truncate mt-0.5 block">
           {item.organizationName}
         </p>
       </div>
@@ -249,7 +249,7 @@ export function CartModal() {
         </ModalDescription>
       </ModalHeader>
 
-      <div className="pt-1">
+      <div className="pt-1 max-w-full overflow-hidden">
         {items.length === 0 ? (
           <EmptyState />
         ) : (
