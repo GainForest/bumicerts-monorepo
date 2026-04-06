@@ -82,10 +82,10 @@ function CartItemRow({
 
   return (
     <div className={cn(
-      "flex items-center gap-3 py-3 border-b border-border/60 last:border-0",
+      "grid grid-cols-[1fr_auto] items-center gap-3 py-3 border-b border-border/60 last:border-0",
       unavailable && "opacity-50"
     )}>
-      <div className="flex-1 overflow-hidden">
+      <div className="min-w-0">
         <p className={cn(
           "text-sm font-medium leading-tight truncate",
           unavailable ? "text-muted-foreground" : "text-foreground"
@@ -96,7 +96,7 @@ function CartItemRow({
           {item.organizationName}
         </p>
       </div>
-      <div className="flex items-center gap-0.5 shrink-0">
+      <div className="flex items-center gap-0.5">
         <Button
           asChild
           size="icon"
