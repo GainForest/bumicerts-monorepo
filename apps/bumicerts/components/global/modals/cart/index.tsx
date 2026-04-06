@@ -85,14 +85,14 @@ function CartItemRow({
       "flex items-center gap-3 py-3 border-b border-border/60 last:border-0",
       unavailable && "opacity-50"
     )}>
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 overflow-hidden">
         <p className={cn(
-          "text-sm font-medium leading-tight truncate block",
+          "text-sm font-medium leading-tight truncate",
           unavailable ? "text-muted-foreground" : "text-foreground"
         )}>
           {item.title || "Untitled"}
         </p>
-        <p className="text-xs text-muted-foreground truncate mt-0.5 block">
+        <p className="text-xs text-muted-foreground truncate mt-0.5">
           {item.organizationName}
         </p>
       </div>
