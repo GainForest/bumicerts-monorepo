@@ -206,6 +206,13 @@ const Step3 = () => {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-1 p-2">
+                    <Button
+                      variant="outline"
+                      className="h-auto px-4 pl-6 py-2 rounded-lg justify-start"
+                      onClick={onAddSite}
+                    >
+                      <PlusCircleIcon /> Add a site
+                    </Button>
                     {sites.map((site) => {
                       const cid = site.metadata?.cid;
                       const uri = site.metadata?.uri;
@@ -242,13 +249,6 @@ const Step3 = () => {
                         </QuerySuspense>
                       );
                     })}
-                    <Button
-                      variant="outline"
-                      className="h-auto rounded-lg"
-                      onClick={onAddSite}
-                    >
-                      <PlusCircleIcon /> Add a site
-                    </Button>
                   </div>
                 )
                 }
