@@ -6,6 +6,7 @@
  */
 
 import type { FundingReceiptItem } from "@/lib/graphql-dev/queries/fundingReceipts";
+import { extractDonor as extractDonorFromReceipt } from "./extract-donor";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -39,34 +40,9 @@ export interface LeaderboardResult {
 /**
  * Extracts donor identifier from a funding receipt.
  * Returns { id, type } where type is "did" or "wallet".
- * 
- * Logic:
- * - If from.did exists and is a valid DID -> identified donor (non-anonymous)
- * - Otherwise -> anonymous donor, extract wallet from notes
  */
 function extractDonor(item: FundingReceiptItem): { id: string; type: "did" | "wallet" } | null {
-  const from = item.record?.from as { did?: string } | null | undefined;
-  const notes = item.record?.notes;
-
-  // Identified donor: from.did exists and is a valid DID string
-  if (from !== null && from !== undefined && typeof from === "object" && !Array.isArray(from)) {
-    const obj = from as Record<string, unknown>;
-    if (typeof obj.did === "string" && obj.did.startsWith("did:")) {
-      return { id: obj.did, type: "did" };
-    }
-  }
-
-  // Anonymous donor: from is undefined/null/empty, extract wallet from notes
-  if (typeof notes === "string" && notes) {
-    // New format: "0xABCD paid 100USDC using wallet"
-    // Legacy format: "Anonymous donor wallet: 0xABCD"  
-    const walletMatch = notes.match(/^(0x[a-fA-F0-9]{40})/i) ?? notes.match(/Anonymous donor wallet:\s*(0x[a-fA-F0-9]{40})/i);
-    if (walletMatch?.[1]) {
-      return { id: walletMatch[1], type: "wallet" };
-    }
-  }
-
-  return null;
+  return extractDonorFromReceipt(item.record?.from);
 }
 
 /**

@@ -322,10 +322,10 @@ export async function POST(req: NextRequest) {
   const now = new Date().toISOString();
 
   // Build `from` field:
-  // - For anonymous donors: leave undefined
+  // - For anonymous donors: store wallet address using Text type
   // - For identified donors: wrap their DID as { $type, did }
   const fromValue = body.anonymous || !body.donorDid
-    ? undefined
+    ? { $type: "org.hypercerts.funding.receipt#text" as const, value: authorization.from }
     : { $type: "app.certified.defs#did" as const, did: body.donorDid as `did:${string}:${string}` };
 
   const currency = body.currency ?? "USDC";

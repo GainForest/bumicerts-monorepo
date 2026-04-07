@@ -20,6 +20,7 @@ import { clientEnv } from "@/lib/env/client";
 import * as fundingReceipts from "../fundingReceipts";
 import type { FundingReceiptItem } from "../fundingReceipts";
 import type { QueryModule } from "@/lib/graphql-dev/create-query";
+import { extractDonor as extractDonorFromReceipt } from "@/lib/utils/extract-donor";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -54,23 +55,7 @@ export type Result = LeaderboardResult;
  * Returns { id, type } where type is "did" or "wallet".
  */
 function extractDonor(item: FundingReceiptItem): { id: string; type: "did" | "wallet" } | null {
-  const from = item.record?.from as { did?: string } | null | undefined;
-  const notes = item.record?.notes;
-
-  // Identified donor: DID in `from.did`
-  if (from && typeof from === "object" && from.did) {
-    return { id: from.did, type: "did" };
-  }
-
-  // Anonymous donor: wallet address in notes
-  if (notes) {
-    const walletMatch = notes.match(/Anonymous donor wallet:\s*(0x[a-fA-F0-9]+)/i);
-    if (walletMatch) {
-      return { id: walletMatch[1], type: "wallet" };
-    }
-  }
-
-  return null;
+  return extractDonorFromReceipt(item.record?.from);
 }
 
 /**

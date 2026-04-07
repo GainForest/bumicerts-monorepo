@@ -6,6 +6,7 @@
  */
 
 import type { FundingReceiptItem } from "@/lib/graphql-dev/queries/fundingReceipts";
+import { extractDonor as extractDonorFromReceipt } from "@/lib/utils/extract-donor";
 
 // ── Helper to extract URI from StrongRef ─────────────────────────────────────
 
@@ -39,48 +40,11 @@ import type { Period } from "@/lib/utils/leaderboard";
 /**
  * Extracts the donor identifier from a receipt.
  * Returns { id, type } or null if the receipt cannot be attributed.
- *
- * The data has two generations of receipts:
- *
- *   Legacy (migrated):
- *     from = null
- *     notes = "Original: 0.01 CELO from 0xWALLET"
- *
- *   Current (bumicerts-platform):
- *     from = { did: "did:..." } (or null for anonymous)
- *     notes = "Anonymous donor wallet: 0xWALLET"  (anonymous only)
- *
- * Strategy:
- *   1. Check `notes` for any 0x address — covers both legacy and current.
- *   2. Check `from` as { did } object or plain DID string — identified donors.
  */
 function extractDonor(
   item: FundingReceiptItem,
 ): { id: string; type: "did" | "wallet" } | null {
-  const from = item.record?.from;
-  const notes = item.record?.notes;
-
-  // Identified donor: from.did exists
-  if (from !== null && typeof from === "object" && !Array.isArray(from)) {
-    const obj = from as Record<string, unknown>;
-    if (typeof obj.did === "string" && obj.did.startsWith("did:")) {
-      return { id: obj.did, type: "did" };
-    }
-  }
-
-  // Legacy: Identified donor — `from` as plain DID string
-  if (typeof from === "string" && from.startsWith("did:")) {
-    return { id: from, type: "did" };
-  }
-
-  // Anonymous donor: from is undefined, extract wallet from notes
-  if (typeof notes === "string" && notes) {
-    // Handles all formats: new, legacy anonymous, and migrated
-    const match = notes.match(/(0x[a-fA-F0-9]{40})/);
-    if (match?.[1]) return { id: match[1], type: "wallet" };
-  }
-
-  return null;
+  return extractDonorFromReceipt(item.record?.from);
 }
 
 /**

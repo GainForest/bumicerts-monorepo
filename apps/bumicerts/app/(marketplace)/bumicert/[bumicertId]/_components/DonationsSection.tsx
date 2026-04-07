@@ -10,6 +10,7 @@ import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { clientEnv } from "@/lib/env/client";
 import type { BumicertData } from "@/lib/types";
 import type { FundingReceiptItem } from "@/lib/graphql-dev/queries/fundingReceipts";
+import { extractDonor } from "@/lib/utils/extract-donor";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -34,26 +35,19 @@ function extractUriFromStrongRef(strongRef: unknown): string | null {
 function resolveDonorInfo(item: FundingReceiptItem): 
   | { type: "did"; did: string }
   | { type: "wallet"; label: string } {
-  const from = item.record?.from as { did?: string } | null | undefined;
-  const notes = item.record?.notes;
+  const donor = extractDonor(item.record?.from);
 
-  // Identified donor: from.did exists
-  if (from && typeof from === "object" && from.did) {
-    return { type: "did", did: from.did };
+  if (!donor) {
+    return { type: "wallet", label: "Anonymous" };
   }
 
-  // Anonymous donor: from is undefined, extract wallet from notes
-  if (notes) {
-    // New format: "0xABCD paid 100USDC using wallet"
-    // Legacy format: "Anonymous donor wallet: 0xABCD"
-    const walletMatch = notes.match(/^(0x[a-fA-F0-9]{40})/i) ?? notes.match(/Anonymous donor wallet:\s*(0x[a-fA-F0-9]+)/i);
-    if (walletMatch) {
-      const addr = walletMatch[1];
-      return { type: "wallet", label: `Anonymous (${addr.slice(0, 6)}…${addr.slice(-4)})` };
-    }
+  if (donor.type === "did") {
+    return { type: "did", did: donor.id };
   }
 
-  return { type: "wallet", label: "Anonymous" };
+  // Anonymous donor with wallet address
+  const addr = donor.id;
+  return { type: "wallet", label: `Anonymous (${addr.slice(0, 6)}…${addr.slice(-4)})` };
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────────

@@ -155,8 +155,10 @@ export function DonationHistory({ userDid }: DonationHistoryProps) {
   const userDonations = useMemo(() => {
     if (!allReceipts) return [];
     return (allReceipts as FundingReceiptItem[]).filter((receipt: FundingReceiptItem) => {
-      const from = receipt.record?.from as { did?: string } | null | undefined;
-      return from && typeof from === "object" && from.did === userDid;
+      const from = receipt.record?.from;
+      if (!from || typeof from !== "object" || Array.isArray(from)) return false;
+      const obj = from as Record<string, unknown>;
+      return obj.$type === "app.certified.defs#did" && obj.did === userDid;
     });
   }, [allReceipts, userDid]);
 
