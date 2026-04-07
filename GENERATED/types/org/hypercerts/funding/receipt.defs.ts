@@ -15,17 +15,19 @@ type Main = {
   $type: 'org.hypercerts.funding.receipt'
 
   /**
-   * The sender of the funds (either an account DID or a strong reference to a record). Optional — omit to represent anonymity.
+   * The sender of the funds (a free-text string, an account DID, or a strong reference to a record). Optional — omit to represent anonymity.
    */
   from?:
+    | l.$Typed<Text>
     | l.$Typed<CertifiedDefs.Did>
     | l.$Typed<RepoStrongRef.Main>
     | l.Unknown$TypedObject
 
   /**
-   * The recipient of the funds (either an account DID or a strong reference to a record).
+   * The recipient of the funds (a free-text string, an account DID, or a strong reference to a record).
    */
   to:
+    | l.$Typed<Text>
     | l.$Typed<CertifiedDefs.Did>
     | l.$Typed<RepoStrongRef.Main>
     | l.Unknown$TypedObject
@@ -86,6 +88,7 @@ const main = l.record<'tid', Main>(
     from: l.optional(
       l.typedUnion(
         [
+          l.typedRef<Text>((() => text) as any),
           l.typedRef<CertifiedDefs.Did>((() => CertifiedDefs.did) as any),
           l.typedRef<RepoStrongRef.Main>((() => RepoStrongRef.main) as any),
         ],
@@ -94,6 +97,7 @@ const main = l.record<'tid', Main>(
     ),
     to: l.typedUnion(
       [
+        l.typedRef<Text>((() => text) as any),
         l.typedRef<CertifiedDefs.Did>((() => CertifiedDefs.did) as any),
         l.typedRef<RepoStrongRef.Main>((() => RepoStrongRef.main) as any),
       ],
@@ -127,3 +131,24 @@ export const $assert = /*#__PURE__*/ main.assert.bind(main),
   $safeParse = /*#__PURE__*/ main.safeParse.bind(main),
   $validate = /*#__PURE__*/ main.validate.bind(main),
   $safeValidate = /*#__PURE__*/ main.safeValidate.bind(main)
+
+/** A free-text string value (e.g. a display name, wallet address, or other identifier). */
+type Text = {
+  $type?: 'org.hypercerts.funding.receipt#text'
+
+  /**
+   * The string value.
+   */
+  value: string
+}
+
+export type { Text }
+
+/** A free-text string value (e.g. a display name, wallet address, or other identifier). */
+const text = l.typedObject<Text>(
+  $nsid,
+  'text',
+  l.object({ value: l.string({ maxLength: 2048 }) }),
+)
+
+export { text }

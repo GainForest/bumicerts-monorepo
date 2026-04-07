@@ -215,7 +215,7 @@ export async function mapCertifiedActorProfile(row: RecordRow) {
 export const CertifiedBadgeAwardRecordType = builder.simpleObject("CertifiedBadgeAwardRecord", {
   description: "Pure payload for app.certified.badge.award. Records a badge award to a user, project, or activity claim.",
   fields: (t) => ({
-        badge: t.field({ type: "JSON", nullable: true, description: "Reference to the badge definition for this award." }),
+        badge: t.field({ type: StrongRefType, nullable: true, description: "Strong reference to the badge definition at the time of award. The record referenced must conform with the lexicon app.certified.badge.definition." }),
         subject: t.field({ type: "JSON", nullable: true, description: "Entity the badge award is for (either an account DID or any specific AT Protocol record), e.g. a user, a project, or a specific activity claim." }),
         note: t.string({ nullable: true, description: "Optional statement explaining the reason for this badge award." }),
         url: t.string({ nullable: true, description: "Optional URL the badge award links to." }),
@@ -245,7 +245,7 @@ export async function mapCertifiedBadgeAward(row: RecordRow) {
     metadata:    rowToMeta(row),
     creatorInfo: await resolveCreatorInfo(row.did),
     record: {
-            badge: j(p, "badge"),
+            badge: extractStrongRef(j(p, "badge")),
             subject: j(p, "subject"),
             note: s(p, "note"),
             url: s(p, "url"),
@@ -261,7 +261,7 @@ export async function mapCertifiedBadgeAward(row: RecordRow) {
 export const CertifiedBadgeDefinitionRecordType = builder.simpleObject("CertifiedBadgeDefinitionRecord", {
   description: "Pure payload for app.certified.badge.definition. Defines a badge that can be awarded via badge award records to users, projects, or activity claims.",
   fields: (t) => ({
-        badgeType: t.string({ nullable: true, description: "Category of the badge (e.g. endorsement, participation, affiliation)." }),
+        badgeType: t.string({ nullable: true, description: "Category of the badge. Values beyond the known set are permitted." }),
         title: t.string({ nullable: true, description: "Human-readable title of the badge." }),
         icon: t.field({ type: "JSON", nullable: true, description: "Icon representing the badge, stored as a blob for compact visual display." }),
         description: t.string({ nullable: true, description: "Optional short statement describing what the badge represents." }),
@@ -309,7 +309,7 @@ export async function mapCertifiedBadgeDefinition(row: RecordRow) {
 export const CertifiedBadgeResponseRecordType = builder.simpleObject("CertifiedBadgeResponseRecord", {
   description: "Pure payload for app.certified.badge.response. Recipient response to a badge award.",
   fields: (t) => ({
-        badgeAward: t.field({ type: "JSON", nullable: true, description: "Reference to the badge award." }),
+        badgeAward: t.field({ type: StrongRefType, nullable: true, description: "Strong reference to the badge award being responded to. The record referenced must conform with the lexicon app.certified.badge.award." }),
         response: t.string({ nullable: true, description: "The recipient’s response for the badge (accepted or rejected)." }),
         weight: t.string({ nullable: true, description: "Optional relative weight for accepted badges, assigned by the recipient." }),
         createdAt: t.field({ type: "DateTime", nullable: true, description: "Client-declared timestamp when this record was originally created" }),
@@ -338,7 +338,7 @@ export async function mapCertifiedBadgeResponse(row: RecordRow) {
     metadata:    rowToMeta(row),
     creatorInfo: await resolveCreatorInfo(row.did),
     record: {
-            badgeAward: j(p, "badgeAward"),
+            badgeAward: extractStrongRef(j(p, "badgeAward")),
             response: s(p, "response"),
             weight: s(p, "weight"),
             createdAt: s(p, "createdAt"),
@@ -1813,9 +1813,10 @@ export async function mapHypercertsClaimRights(row: RecordRow) {
 export const HypercertsCollectionRecordType = builder.simpleObject("HypercertsCollectionRecord", {
   description: "Pure payload for org.hypercerts.collection. A collection/group of items (activities and/or other collections). Collections support recursive nesting.",
   fields: (t) => ({
-        type: t.string({ nullable: true, description: "The type of this collection. Possible fields can be 'favorites', 'project', or any other type of collection." }),
+        type: t.string({ nullable: true, description: "The type of this collection. Values beyond the known set are permitted." }),
         title: t.string({ nullable: true, description: "Display name for this collection (e.g. 'Q1 2025 Impact Projects')" }),
-        shortDescription: t.string({ nullable: true, description: "Short summary of this collection, suitable for previews and list views" }),
+        shortDescription: t.string({ nullable: true, description: "Short summary of this collection, suitable for previews and list views. Rich text annotations may be provided via `shortDescriptionFacets`." }),
+        shortDescriptionFacets: t.field({ type: "JSON", nullable: true, description: "Rich text annotations for `shortDescription` (mentions, URLs, hashtags, etc)." }),
         description: t.field({ type: "JSON", nullable: true, description: "Rich-text description, represented as a Leaflet linear document." }),
         avatar: t.field({ type: "JSON", nullable: true, description: "The collection's avatar/profile image as a URI or image blob." }),
         banner: t.field({ type: "JSON", nullable: true, description: "Larger horizontal image to display behind the collection view." }),
@@ -1850,6 +1851,7 @@ export async function mapHypercertsCollection(row: RecordRow) {
             type: s(p, "type"),
             title: s(p, "title"),
             shortDescription: s(p, "shortDescription"),
+            shortDescriptionFacets: j(p, "shortDescriptionFacets"),
             description: j(p, "description"),
             avatar: await resolveBlobsInValue(j(p, "avatar"), row.did),
             banner: await resolveBlobsInValue(j(p, "banner"), row.did),
@@ -1914,7 +1916,7 @@ export const HypercertsContextAttachmentRecordType = builder.simpleObject("Hyper
   description: "Pure payload for org.hypercerts.context.attachment. An attachment providing commentary, context, evidence, or documentary material related to a hypercert record (e.g. an activity, project, claim, or evaluation).",
   fields: (t) => ({
         subjects: t.field({ type: [StrongRefType], nullable: true, description: "References to the subject(s) the attachment is connected to—this may be an activity claim, outcome claim, measurement, evaluation, or even another attachment. This is optional as the attachment can exist before the claim is recorded." }),
-        contentType: t.string({ nullable: true, description: "The type of attachment, e.g. report, audit, evidence, testimonial, methodology, etc." }),
+        contentType: t.string({ nullable: true, description: "The type of attachment. Values beyond the known set are permitted." }),
         content: t.field({ type: "JSON", nullable: true, description: "The files, documents, or external references included in this attachment record." }),
         title: t.string({ nullable: true, description: "Display title for this attachment (e.g. 'Impact Assessment Report', 'Audit Findings')" }),
         shortDescription: t.string({ nullable: true, description: "Short summary of this attachment, suitable for previews and list views. Rich text annotations may be provided via `shortDescriptionFacets`." }),
@@ -2083,8 +2085,8 @@ export async function mapHypercertsContextMeasurement(row: RecordRow) {
 export const HypercertsFundingReceiptRecordType = builder.simpleObject("HypercertsFundingReceiptRecord", {
   description: "Pure payload for org.hypercerts.funding.receipt. Records a funding receipt for a payment from one user to another user. It may be recorded by the recipient, by the sender, or by a third party. The sender may remain anonymous.",
   fields: (t) => ({
-        from: t.field({ type: "JSON", nullable: true, description: "The sender of the funds (either an account DID or a strong reference to a record). Optional — omit to represent anonymity." }),
-        to: t.field({ type: "JSON", nullable: true, description: "The recipient of the funds (either an account DID or a strong reference to a record)." }),
+        from: t.field({ type: "JSON", nullable: true, description: "The sender of the funds (a free-text string, an account DID, or a strong reference to a record). Optional — omit to represent anonymity." }),
+        to: t.field({ type: "JSON", nullable: true, description: "The recipient of the funds (a free-text string, an account DID, or a strong reference to a record)." }),
         amount: t.string({ nullable: true, description: "Amount of funding received as a numeric string (e.g. '1000.50')." }),
         currency: t.string({ nullable: true, description: "Currency of the payment (e.g. EUR, USD, ETH)." }),
         paymentRail: t.string({ nullable: true, description: "How the funds were transferred (e.g. bank_transfer, credit_card, onchain, cash, check, payment_processor)." }),
