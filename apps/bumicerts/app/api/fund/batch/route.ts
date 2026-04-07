@@ -388,8 +388,9 @@ export async function POST(req: NextRequest) {
     if (success) {
       const notes = `${authorization.from} paid ${item.amount}${currency} using wallet`;
       
-      // Build `to` field as { $type, did }
-      const toValue = { $type: "app.certified.defs#did" as const, did: item.orgDid as `did:${string}:${string}` };
+      // Build `to` field: store recipient wallet address using Text type
+      // The org DID can be derived from the `for` field (activity AT-URI contains org DID)
+      const toValue = { $type: "org.hypercerts.funding.receipt#text" as const, value: recipientWallet };
       
       // Build `for` field with CID from prefetched map
       const activityCid = cidMap.get(item.activityUri);

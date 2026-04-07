@@ -273,15 +273,9 @@ export async function POST(req: NextRequest) {
     ? { $type: "org.hypercerts.funding.receipt#text" as const, value: authorization.from }
     : { $type: "app.certified.defs#did" as const, did: body.donorDid as `did:${string}:${string}` };
 
-  // Build `to` field: wrap orgDid as { $type, did }
-  // Require orgDid - fail if missing (no fallback to recipientWallet)
-  if (!body.orgDid) {
-    return Response.json(
-      { success: false, error: "Missing orgDid in request body" },
-      { status: 400 }
-    );
-  }
-  const toValue = { $type: "app.certified.defs#did" as const, did: body.orgDid as `did:${string}:${string}` };
+  // Build `to` field: store recipient wallet address using Text type
+  // The org DID can be derived from the `for` field (activity AT-URI contains org DID)
+  const toValue = { $type: "org.hypercerts.funding.receipt#text" as const, value: recipientWallet };
 
   // Build `for` field: fetch CID for activity if activityUri is provided
   let forValue: { uri: AtUriString; cid: string } | undefined;

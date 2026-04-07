@@ -6,7 +6,7 @@
  */
 
 import type { FundingReceiptItem } from "@/lib/graphql-dev/queries/fundingReceipts";
-import { extractDonor as extractDonorFromReceipt } from "@/lib/utils/extract-donor";
+import { extractDonor as extractDonorFromReceipt, extractOrgDidFromFor } from "@/lib/utils/extract-donor";
 
 // ── Helper to extract URI from StrongRef ─────────────────────────────────────
 
@@ -20,19 +20,7 @@ function extractUriFromStrongRef(strongRef: unknown): string | null {
   return typeof ref.uri === "string" ? ref.uri : null;
 }
 
-/**
- * Extracts the DID from the `to` field union type.
- * The `to` field is now a union: { did: string } | { uri: string, cid: string }
- */
-function extractDidFromTo(to: unknown): string | null {
-  if (!to || typeof to !== "object") return null;
-  const obj = to as Record<string, unknown>;
-  // Check if it's a DID reference
-  if (typeof obj.did === "string") return obj.did;
-  // Check if it's a strongRef with a URI
-  if (typeof obj.uri === "string") return obj.uri;
-  return null;
-}
+
 import type { Period } from "@/lib/utils/leaderboard";
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
@@ -311,7 +299,7 @@ export function computePerOrg(receipts: FundingReceiptItem[]): OrgRow[] {
   >();
 
   for (const r of usdcOnly) {
-    const orgDid = extractDidFromTo(r.record?.to);
+    const orgDid = extractOrgDidFromFor(r.record?.for);
     if (!orgDid) continue;
 
     const amount = safeAmount(r.record?.amount);
