@@ -339,8 +339,10 @@ type CertifiedBadgeAwardPage {
 Pure payload for app.certified.badge.award. Records a badge award to a user, project, or activity claim.
 """
 type CertifiedBadgeAwardRecord {
-  """Reference to the badge definition for this award."""
-  badge: JSON
+  """
+  Strong reference to the badge definition at the time of award. The record referenced must conform with the lexicon app.certified.badge.definition.
+  """
+  badge: StrongRef
 
   """Client-declared timestamp when this record was originally created"""
   createdAt: DateTime
@@ -378,7 +380,7 @@ type CertifiedBadgeDefinitionRecord {
   """
   allowedIssuers: JSON
 
-  """Category of the badge (e.g. endorsement, participation, affiliation)."""
+  """Category of the badge. Values beyond the known set are permitted."""
   badgeType: String
 
   """Client-declared timestamp when this record was originally created"""
@@ -424,8 +426,10 @@ type CertifiedBadgeResponsePage {
 Pure payload for app.certified.badge.response. Recipient response to a badge award.
 """
 type CertifiedBadgeResponseRecord {
-  """Reference to the badge award."""
-  badgeAward: JSON
+  """
+  Strong reference to the badge award being responded to. The record referenced must conform with the lexicon app.certified.badge.award.
+  """
+  badgeAward: StrongRef
 
   """Client-declared timestamp when this record was originally created"""
   createdAt: DateTime
@@ -2330,14 +2334,21 @@ type HypercertsCollectionRecord {
   """
   location: StrongRef
 
-  """Short summary of this collection, suitable for previews and list views"""
+  """
+  Short summary of this collection, suitable for previews and list views. Rich text annotations may be provided via `shortDescriptionFacets`.
+  """
   shortDescription: String
+
+  """
+  Rich text annotations for `shortDescription` (mentions, URLs, hashtags, etc).
+  """
+  shortDescriptionFacets: JSON
 
   """Display name for this collection (e.g. 'Q1 2025 Impact Projects')"""
   title: String
 
   """
-  The type of this collection. Possible fields can be 'favorites', 'project', or any other type of collection.
+  The type of this collection. Values beyond the known set are permitted.
   """
   type: String
 }
@@ -2399,9 +2410,7 @@ type HypercertsContextAttachmentRecord {
   """
   content: JSON
 
-  """
-  The type of attachment, e.g. report, audit, evidence, testimonial, methodology, etc.
-  """
+  """The type of attachment. Values beyond the known set are permitted."""
   contentType: String
 
   """Client-declared timestamp when this record was originally created."""
@@ -2612,7 +2621,7 @@ type HypercertsFundingReceiptRecord {
   for: StrongRef
 
   """
-  The sender of the funds (either an account DID or a strong reference to a record). Optional — omit to represent anonymity.
+  The sender of the funds (a free-text string, an account DID, or a strong reference to a record). Optional — omit to represent anonymity.
   """
   from: JSON
 
@@ -2633,7 +2642,7 @@ type HypercertsFundingReceiptRecord {
   paymentRail: String
 
   """
-  The recipient of the funds (either an account DID or a strong reference to a record).
+  The recipient of the funds (a free-text string, an account DID, or a strong reference to a record).
   """
   to: JSON
 
