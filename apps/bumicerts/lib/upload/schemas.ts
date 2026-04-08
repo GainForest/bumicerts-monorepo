@@ -1,11 +1,14 @@
 import { z } from "zod";
 import type {
+  ColumnMapping,
   FloraMeasurementBundle,
   OccurrenceInput,
+  PhotoEntry,
   RowError,
   ValidatedRow,
   ValidationResult,
 } from "./types";
+import { inferSubjectPartFromColumnName } from "./column-mapper";
 
 const DATE_PATTERNS = [
   /^\d{4}-\d{2}-\d{2}$/, // YYYY-MM-DD
@@ -49,7 +52,9 @@ const MeasurementFields = {
   canopyCover: z.coerce.number().min(0).max(100).optional(),
 };
 
-export const TreeRowSchema = OccurrenceRowSchema.merge(z.object(MeasurementFields));
+export const TreeRowSchema = OccurrenceRowSchema.merge(
+  z.object(MeasurementFields)
+);
 
 type TreeRowOutput = z.output<typeof TreeRowSchema>;
 
@@ -100,9 +105,74 @@ function extractOccurrence(row: TreeRowOutput): OccurrenceInput {
   };
 }
 
-export function parseAndValidateRows(rows: Record<string, string>[]): ValidationResult {
+// ─────────────────────────────────────────────────────────────────────────────
+// Multi-photo extraction
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Split a cell value that may contain multiple URLs separated by commas or
+ * semicolons. Trims whitespace and drops empty segments.
+ */
+function splitPhotoUrls(value: string): string[] {
+  return value
+    .split(/[,;]/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+}
+
+/**
+ * Extract photo entries from a raw CSV row using the column mappings.
+ * Supports:
+ *   - Multiple columns mapped to `photoUrl` (each with subject part inferred from column name)
+ *   - Comma/semicolon-separated URLs in a single cell (each URL becomes a separate entry)
+ */
+function extractPhotos(
+  rawRow: Record<string, string>,
+  photoMappings: { sourceColumn: string; subjectPart: string }[]
+): PhotoEntry[] {
+  const photos: PhotoEntry[] = [];
+
+  for (const { sourceColumn, subjectPart } of photoMappings) {
+    const cellValue = rawRow[sourceColumn];
+    if (!cellValue || cellValue.trim() === "") {
+      continue;
+    }
+
+    const urls = splitPhotoUrls(cellValue);
+    for (const url of urls) {
+      photos.push({ url, subjectPart });
+    }
+  }
+
+  return photos;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main validation
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Parse, validate, and extract structured data from mapped CSV rows.
+ *
+ * @param rows - Mapped rows (target field names as keys)
+ * @param rawRows - Original CSV rows (source column names as keys) — used for multi-photo extraction
+ * @param mappings - Column mappings (used to identify which source columns are photo URLs)
+ */
+export function parseAndValidateRows(
+  rows: Record<string, string>[],
+  rawRows?: Record<string, string>[],
+  mappings?: ColumnMapping[]
+): ValidationResult {
   const valid: ValidatedRow[] = [];
   const errors: RowError[] = [];
+
+  // Pre-compute photo column → subject part mapping
+  const photoMappings = (mappings ?? [])
+    .filter((m) => m.targetField === "photoUrl")
+    .map((m) => ({
+      sourceColumn: m.sourceColumn,
+      subjectPart: inferSubjectPartFromColumnName(m.sourceColumn),
+    }));
 
   for (let index = 0; index < rows.length; index++) {
     const row = rows[index] as unknown;
@@ -111,7 +181,20 @@ export function parseAndValidateRows(rows: Record<string, string>[]): Validation
     if (result.success) {
       const occurrence = extractOccurrence(result.data);
       const floraMeasurement = extractFloraMeasurement(result.data);
-      valid.push({ index, occurrence, floraMeasurement });
+      const validatedRow: ValidatedRow = { index, occurrence, floraMeasurement };
+
+      // Extract photos from the original (unmapped) row using source column names
+      if (rawRows && photoMappings.length > 0) {
+        const rawRow = rawRows[index];
+        if (rawRow) {
+          const photos = extractPhotos(rawRow, photoMappings);
+          if (photos.length > 0) {
+            validatedRow.photos = photos;
+          }
+        }
+      }
+
+      valid.push(validatedRow);
     } else {
       const issues = result.error.issues.map((issue) => ({
         path: issue.path.join(".") || "root",

@@ -31,6 +31,7 @@ import { linkEvmQueryRouter } from "./link-evm";
 import { claimQueryRouter } from "./claim";
 import { contextQueryRouter } from "./context";
 import { dwcQueryRouter } from "./dwc";
+import { datasetsRouter } from "./datasets";
 
 export const localQueryRouter = queryRouter({
   organization: organizationRouter,
@@ -38,6 +39,7 @@ export const localQueryRouter = queryRouter({
   locations: locationsRouter,
   audio: audioRouter,
   multimedia: multimediaRouter,
+  datasets: datasetsRouter,
   actor: actorRouter,
   funding: fundingQueryRouter,
   link: queryRouter({

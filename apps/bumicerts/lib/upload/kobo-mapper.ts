@@ -92,6 +92,14 @@ const KOBO_PATTERNS: KoboPattern[] = [
 
   // Habitat
   { pattern: "habitat", targetField: "habitat" },
+
+  // Photo / media
+  // koboSpecific: _attachments is a KoboToolbox metadata field containing URLs
+  { pattern: "_attachments", targetField: "photoUrl", koboSpecific: true },
+  { pattern: "photo", targetField: "photoUrl" },
+  { pattern: "image", targetField: "photoUrl" },
+  { pattern: "picture", targetField: "photoUrl" },
+  { pattern: "attachment_url", targetField: "photoUrl" },
 ];
 
 /**

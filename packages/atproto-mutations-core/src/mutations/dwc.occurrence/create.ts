@@ -48,6 +48,8 @@ export const createDwcOccurrence = (
       geodeticDatum = "EPSG:4326",
       license = "CC-BY-4.0",
       projectRef,
+      establishmentMeans,
+      datasetRef,
       rkey,
     } = input;
 
@@ -74,6 +76,8 @@ export const createDwcOccurrence = (
       ...(habitat !== undefined ? { habitat } : {}),
       ...(samplingProtocol !== undefined ? { samplingProtocol } : {}),
       ...(projectRef !== undefined ? { projectRef } : {}),
+      ...(establishmentMeans !== undefined ? { establishmentMeans } : {}),
+      ...(datasetRef !== undefined ? { datasetRef } : {}),
       createdAt,
     };
 

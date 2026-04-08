@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { CheckCircle2, XCircle, AlertTriangle, ChevronDown, ChevronRight, Loader2, Camera } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CheckCircle2, XCircle, AlertTriangle, ChevronDown, ChevronRight, Loader2, Camera, ImageDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc/client";
 import type { ValidatedRow } from "@/lib/upload/types";
 import { occurrenceInputToCreateInput } from "@/lib/upload/occurrence-adapter";
+import { fetchPhotoFromUrl } from "@/lib/upload/fetch-photo-from-url";
 import { useModal } from "@/components/ui/modal/context";
 import { MODAL_IDS } from "@/components/global/modals/ids";
 import PhotoAttachModal from "@/components/global/modals/upload/photo-attachment";
@@ -28,6 +29,19 @@ type UploadProgress = {
   currentRow: string;
 };
 
+type PhotoFetchStatus =
+  | { state: "pending" }
+  | { state: "fetching" }
+  | { state: "fetched"; photoUri: string }
+  | { state: "photo-error"; error: string };
+
+type PhotoFetchProgress = {
+  current: number;
+  total: number;
+  successes: number;
+  failures: number;
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
@@ -41,6 +55,9 @@ const SESSION_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 type UploadStepProps = {
   validRows: ValidatedRow[];
+  establishmentMeans: string | null;
+  datasetName: string;
+  datasetDescription: string;
   onBack: () => void;
   onComplete: () => void;
 };
@@ -49,7 +66,9 @@ type UploadStepProps = {
 // Component
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function UploadStep({ validRows, onBack, onComplete }: UploadStepProps) {
+export default function UploadStep({ validRows, establishmentMeans, datasetName, datasetDescription, onBack, onComplete }: UploadStepProps) {
+  const createDataset = trpc.dwc.dataset.create.useMutation();
+  const updateDataset = trpc.dwc.dataset.update.useMutation();
   const createOccurrence = trpc.dwc.occurrence.create.useMutation();
   const createMeasurement = trpc.dwc.measurement.create.useMutation();
   const { pushModal, show } = useModal();
@@ -68,11 +87,37 @@ export default function UploadStep({ validRows, onBack, onComplete }: UploadStep
   );
   const [failedRowsOpen, setFailedRowsOpen] = useState(false);
 
-  // Photo attachment state
+  // Photo attachment state (manual)
   const [photoUris, setPhotoUris] = useState<Map<number, string[]>>(new Map());
+
+  // Phase 2: background photo fetch from URLs
+  // Build a flat list of all photos to fetch: { rowIndex, photoIndex, url, subjectPart }
+  const photoFetchQueue = useMemo(() => {
+    const queue: { rowIndex: number; url: string; subjectPart: string }[] = [];
+    for (let i = 0; i < validRows.length; i++) {
+      const row = validRows[i];
+      if (!row?.photos) continue;
+      for (const photo of row.photos) {
+        queue.push({ rowIndex: i, url: photo.url, subjectPart: photo.subjectPart });
+      }
+    }
+    return queue;
+  }, [validRows]);
+  const hasPhotoUrls = photoFetchQueue.length > 0;
+
+  const [photoFetchStarted, setPhotoFetchStarted] = useState(false);
+  const [photoFetchDone, setPhotoFetchDone] = useState(false);
+  const [photoFetchStatuses, setPhotoFetchStatuses] = useState<Record<number, PhotoFetchStatus>>({});
+  const [photoFetchProgress, setPhotoFetchProgress] = useState<PhotoFetchProgress>({
+    current: 0,
+    total: photoFetchQueue.length,
+    successes: 0,
+    failures: 0,
+  });
 
   // Prevent double-run in StrictMode
   const uploadRef = useRef(false);
+  const photoFetchRef = useRef(false);
 
   // ── Photo attachment ──────────────────────────────────────────────────────
   const handleAddPhoto = (rowIndex: number, occurrenceUri: string, speciesName: string) => {
@@ -129,6 +174,26 @@ export default function UploadStep({ validRows, onBack, onComplete }: UploadStep
     // Clear sessionStorage once upload begins (state is no longer "pending")
     sessionStorage.removeItem(STORAGE_KEY);
 
+    // ── Phase 0: Create dataset record (if named) ─────────────────────────
+    let datasetUri: string | undefined;
+    let datasetRkey: string | undefined;
+
+    if (datasetName.length > 0) {
+      try {
+        const dsResult = await createDataset.mutateAsync({
+          name: datasetName,
+          ...(datasetDescription.length > 0 ? { description: datasetDescription } : {}),
+          ...(establishmentMeans ? { establishmentMeans } : {}),
+        });
+        datasetUri = dsResult.uri;
+        datasetRkey = dsResult.rkey;
+      } catch {
+        // Dataset creation failed — continue without datasetRef
+        // (occurrences will still be created, just ungrouped)
+      }
+    }
+
+    // ── Phase 1: Create occurrences + measurements ────────────────────────
     let successes = 0;
     let failures = 0;
 
@@ -151,7 +216,12 @@ export default function UploadStep({ validRows, onBack, onComplete }: UploadStep
 
       try {
         // 1. Create occurrence — adapter converts number lat/lon → string for ATProto
-        const occInput = occurrenceInputToCreateInput(row.occurrence);
+        const occurrence: typeof row.occurrence = {
+          ...row.occurrence,
+          ...(establishmentMeans ? { establishmentMeans } : {}),
+          ...(datasetUri ? { datasetRef: datasetUri } : {}),
+        };
+        const occInput = occurrenceInputToCreateInput(occurrence);
         const occResult = await createOccurrence.mutateAsync(occInput);
 
         // 2. Create one bundled measurement record per occurrence
@@ -189,8 +259,20 @@ export default function UploadStep({ validRows, onBack, onComplete }: UploadStep
       }));
     }
 
+    // ── Phase 1.5: Update dataset with final recordCount ──────────────────
+    if (datasetRkey && successes > 0) {
+      try {
+        await updateDataset.mutateAsync({
+          rkey: datasetRkey,
+          data: { recordCount: successes },
+        });
+      } catch {
+        // Non-critical — dataset still exists, just without recordCount
+      }
+    }
+
     setUploadDone(true);
-  }, [validRows, createOccurrence, createMeasurement]);
+  }, [validRows, createDataset, updateDataset, createOccurrence, createMeasurement, establishmentMeans, datasetName, datasetDescription]);
 
   // Auto-start upload on mount (layout already enforces auth)
   useEffect(() => {
@@ -199,11 +281,112 @@ export default function UploadStep({ validRows, onBack, onComplete }: UploadStep
     }
   }, [uploadStarted, runUpload]);
 
+  // ── Phase 2: Fetch photos from URLs (background, after Phase 1) ───────────
+  const runPhotoFetch = useCallback(async () => {
+    if (photoFetchRef.current) return;
+    photoFetchRef.current = true;
+    setPhotoFetchStarted(true);
+
+    let successes = 0;
+    let failures = 0;
+
+    for (let pIdx = 0; pIdx < photoFetchQueue.length; pIdx++) {
+      const entry = photoFetchQueue[pIdx];
+      if (!entry) continue;
+      const { rowIndex, url, subjectPart } = entry;
+
+      // Find the occurrence URI from Phase 1
+      const rowStatus = rowStatuses[rowIndex];
+      if (rowStatus?.state !== "success") {
+        // Occurrence failed — skip photo for this row
+        failures += 1;
+        setPhotoFetchStatuses((prev) => ({
+          ...prev,
+          [rowIndex]: { state: "photo-error", error: "Occurrence upload failed; photo skipped." },
+        }));
+        setPhotoFetchProgress((prev) => ({
+          ...prev,
+          current: pIdx + 1,
+          failures,
+        }));
+        continue;
+      }
+
+      // Mark as fetching
+      setPhotoFetchStatuses((prev) => ({
+        ...prev,
+        [rowIndex]: { state: "fetching" },
+      }));
+      setPhotoFetchProgress((prev) => ({
+        ...prev,
+        current: pIdx + 1,
+      }));
+
+      try {
+        const result = await fetchPhotoFromUrl({
+          url,
+          occurrenceRef: rowStatus.occurrenceUri,
+          subjectPart,
+        });
+
+        successes += 1;
+        setPhotoFetchStatuses((prev) => ({
+          ...prev,
+          [rowIndex]: { state: "fetched", photoUri: result.uri },
+        }));
+
+        // Also update the row's photo count + photo URIs
+        setPhotoUris((prev) => {
+          const next = new Map(prev);
+          const existing = next.get(rowIndex) ?? [];
+          next.set(rowIndex, [...existing, result.uri]);
+          return next;
+        });
+        setRowStatuses((prev) => {
+          const next = [...prev];
+          const s = next[rowIndex];
+          if (s?.state === "success") {
+            next[rowIndex] = { ...s, photoCount: s.photoCount + 1 };
+          }
+          return next;
+        });
+      } catch (err) {
+        failures += 1;
+        setPhotoFetchStatuses((prev) => ({
+          ...prev,
+          [rowIndex]: { state: "photo-error", error: String(err) },
+        }));
+      }
+
+      setPhotoFetchProgress((prev) => ({
+        ...prev,
+        successes,
+        failures,
+      }));
+    }
+
+    setPhotoFetchDone(true);
+  }, [photoFetchQueue, rowStatuses]);
+
+  // Auto-start photo fetch after Phase 1 completes
+  useEffect(() => {
+    if (uploadDone && hasPhotoUrls && !photoFetchStarted) {
+      void runPhotoFetch();
+    }
+  }, [uploadDone, hasPhotoUrls, photoFetchStarted, runPhotoFetch]);
+
   // ── Derived values ────────────────────────────────────────────────────────
   const { current, total, successes, failures, currentRow } = progress;
   const progressPercent = total > 0 ? Math.round((current / total) * 100) : 0;
   const allSucceeded = uploadDone && failures === 0;
   const someFailed = uploadDone && failures > 0;
+
+  // Phase 2 is complete when either there are no photo URLs or photo fetch is done
+  const allPhasesComplete = uploadDone && (!hasPhotoUrls || photoFetchDone);
+  const photoFetchPercent =
+    photoFetchProgress.total > 0
+      ? Math.round((photoFetchProgress.current / photoFetchProgress.total) * 100)
+      : 0;
 
   const failedRows = rowStatuses
     .map((status, i) => ({ status, row: validRows[i], index: i }))
@@ -263,6 +446,56 @@ export default function UploadStep({ validRows, onBack, onComplete }: UploadStep
         </div>
       )}
 
+      {/* Phase 2: Photo fetch progress */}
+      {uploadDone && hasPhotoUrls && (
+        <div className="space-y-2 rounded-lg border border-border p-4">
+          <div className="flex items-center gap-2">
+            <ImageDown className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-sm font-medium">
+              {photoFetchDone
+                ? "Photo fetch complete"
+                : "Fetching photos from URLs\u2026"}
+            </h3>
+          </div>
+
+          {!photoFetchDone && (
+            <>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
+                  Photo {photoFetchProgress.current} of {photoFetchProgress.total}
+                </span>
+                <span className="text-muted-foreground font-mono">
+                  {photoFetchPercent}%
+                </span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-primary transition-all duration-300"
+                  style={{ width: `${photoFetchPercent}%` }}
+                />
+              </div>
+            </>
+          )}
+
+          <p className="text-xs text-muted-foreground">
+            {photoFetchProgress.successes} fetched
+            {photoFetchProgress.failures > 0
+              ? `, ${photoFetchProgress.failures} failed`
+              : ""}
+            {" of "}
+            {photoFetchProgress.total} photo URL
+            {photoFetchProgress.total !== 1 ? "s" : ""}
+          </p>
+
+          {photoFetchDone && photoFetchProgress.failures > 0 && (
+            <p className="text-xs text-yellow-600 dark:text-yellow-400">
+              Some photos could not be fetched. You can add them manually using
+              the Tree Manager.
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Per-row status list */}
       <div className="rounded-lg border overflow-hidden">
         <div className="max-h-64 overflow-y-auto divide-y divide-border">
@@ -302,6 +535,25 @@ export default function UploadStep({ validRows, onBack, onComplete }: UploadStep
                       {rowPhotos.length}
                     </span>
                   )}
+                  {/* Photo fetch status indicator */}
+                  {(() => {
+                    const pfs = photoFetchStatuses[i];
+                    if (pfs?.state === "fetching") {
+                      return (
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <ImageDown className="h-3 w-3 animate-pulse" />
+                        </span>
+                      );
+                    }
+                    if (pfs?.state === "photo-error") {
+                      return (
+                        <span className="text-xs text-yellow-500" title={pfs.error}>
+                          <AlertTriangle className="h-3 w-3" />
+                        </span>
+                      );
+                    }
+                    return null;
+                  })()}
                   {/* Status icon */}
                   <span>
                     {status?.state === "pending" && (
@@ -317,8 +569,8 @@ export default function UploadStep({ validRows, onBack, onComplete }: UploadStep
                       <XCircle className="h-4 w-4 text-destructive" />
                     )}
                   </span>
-                  {/* Add Photo button — only shown after upload completes */}
-                  {isSuccess && uploadDone && (
+                  {/* Add Photo button — only shown after all phases complete */}
+                  {isSuccess && allPhasesComplete && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -381,12 +633,12 @@ export default function UploadStep({ validRows, onBack, onComplete }: UploadStep
         <Button
           variant="outline"
           onClick={onBack}
-          disabled={uploadStarted && !uploadDone}
+          disabled={uploadStarted && !allPhasesComplete}
         >
           Back to Preview
         </Button>
 
-        {uploadDone && (
+        {allPhasesComplete && (
           <div className="flex gap-2">
             <Button variant="outline" onClick={onComplete}>
               Upload More Data

@@ -75,6 +75,26 @@ const FIELD_DOCS: FieldDoc[] = [
     description: "Diameter at breast height (cm)",
     format: "Number",
   },
+  {
+    field: "establishmentMeans",
+    description: "How the tree was established (native, managed, etc.)",
+    format: "Enum",
+  },
+  {
+    field: "photo_tree",
+    description: "URL to a photo of the whole tree (Google Drive, etc.)",
+    format: "URL",
+  },
+  {
+    field: "photo_leaf",
+    description: "URL to a photo of the leaf. Subject part auto-detected.",
+    format: "URL",
+  },
+  {
+    field: "photo_bark",
+    description: "URL to a photo of the bark. Subject part auto-detected.",
+    format: "URL",
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────

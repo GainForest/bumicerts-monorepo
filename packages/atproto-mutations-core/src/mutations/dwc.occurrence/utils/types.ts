@@ -34,6 +34,8 @@ export type CreateDwcOccurrenceInput = {
   geodeticDatum?: string;
   license?: string;
   projectRef?: string;
+  establishmentMeans?: string;
+  datasetRef?: string;
   rkey?: string;
 };
 

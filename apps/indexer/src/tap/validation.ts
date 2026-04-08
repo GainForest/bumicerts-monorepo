@@ -49,6 +49,7 @@ const SCHEMA_REGISTRY: Record<IndexedCollection, LexSchema> = {
   "app.gainforest.ac.audio":                               generated.app.gainforest.ac.audio,
   "app.gainforest.ac.deployment":                          generated.app.gainforest.ac.deployment,
   "app.gainforest.ac.multimedia":                          generated.app.gainforest.ac.multimedia,
+  "app.gainforest.dwc.dataset":                            generated.app.gainforest.dwc.dataset,
   "app.gainforest.dwc.event":                              generated.app.gainforest.dwc.event,
   "app.gainforest.dwc.measurement":                        generated.app.gainforest.dwc.measurement,
   "app.gainforest.dwc.occurrence":                         generated.app.gainforest.dwc.occurrence,

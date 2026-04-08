@@ -13,7 +13,11 @@ import {
 } from "@/components/ui/select";
 import { TARGET_FIELDS } from "@/lib/upload/types";
 import type { ColumnMapping } from "@/lib/upload/types";
+import { inferSubjectPartFromColumnName } from "@/lib/upload/column-mapper";
 import { CheckCircle2, AlertTriangle } from "lucide-react";
+
+/** Target fields that allow multiple source columns (no duplicate warning). */
+const MULTI_MAP_TARGETS = new Set(["photoUrl"]);
 
 type ColumnMappingStepProps = {
   headers: string[];
@@ -46,6 +50,7 @@ const OCCURRENCE_OPTIONAL = TARGET_FIELDS.filter(
   (f) => f.category === "occurrence" && !f.required
 );
 const MEASUREMENTS = TARGET_FIELDS.filter((f) => f.category === "measurement");
+const MEDIA = TARGET_FIELDS.filter((f) => f.category === "media");
 
 /** Return the first non-empty value for a given column across all rows */
 function getSampleValue(
@@ -103,10 +108,11 @@ export default function ColumnMappingStep({
   const allRequiredMapped = missingRequired.length === 0;
 
   // Detect which source columns have duplicate targets (only the second+ occurrence is a dupe)
+  // Multi-map targets (e.g. photoUrl) are excluded — multiple columns are expected.
   const duplicateSourceColumns = useMemo(() => {
     const dupes = new Set<string>();
-    for (const [, sources] of Object.entries(targetToSources)) {
-      if (sources.length > 1) {
+    for (const [target, sources] of Object.entries(targetToSources)) {
+      if (sources.length > 1 && !MULTI_MAP_TARGETS.has(target)) {
         // Mark all but the first as duplicates
         for (let i = 1; i < sources.length; i++) {
           const src = sources[i];
@@ -255,8 +261,25 @@ export default function ColumnMappingStep({
                           </SelectItem>
                         ))}
                       </SelectGroup>
+
+                      {/* Media */}
+                      <SelectGroup>
+                        <SelectLabel>Media</SelectLabel>
+                        {MEDIA.map((f) => (
+                          <SelectItem key={f.field} value={f.field}>
+                            {f.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
+
+                  {/* Photo subject part chip */}
+                  {isMapped && currentTarget === "photoUrl" && (
+                    <span className="text-[10px] text-muted-foreground bg-muted rounded-full px-2 py-0.5 shrink-0">
+                      {inferSubjectPartFromColumnName(header)}
+                    </span>
+                  )}
 
                   {/* Status icon */}
                   {isDuplicate ? (
@@ -285,6 +308,8 @@ export default function ColumnMappingStep({
           <span>
             Multiple source columns are mapped to the same target field. Only
             the first mapping will be used; duplicates are highlighted.
+            (Photo URL columns are an exception — multiple columns can map to
+            Photo URL for multi-photo trees.)
           </span>
         </div>
       )}

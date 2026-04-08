@@ -48,6 +48,8 @@ const byDidDocument = graphql(`
               occurrenceRemarks
               habitat
               basisOfRecord
+              establishmentMeans
+              datasetRef
               createdAt
             }
           }

@@ -26,6 +26,8 @@ export function occurrenceInputToCreateInput(
   habitat?: string;
   samplingProtocol?: string;
   kingdom?: string;
+  establishmentMeans?: string;
+  datasetRef?: string;
 } {
   const input: ReturnType<typeof occurrenceInputToCreateInput> = {
     scientificName: occurrence.scientificName,
@@ -47,6 +49,8 @@ export function occurrenceInputToCreateInput(
   if (occurrence.habitat !== undefined) input.habitat = occurrence.habitat;
   if (occurrence.samplingProtocol !== undefined) input.samplingProtocol = occurrence.samplingProtocol;
   if (occurrence.kingdom !== undefined) input.kingdom = occurrence.kingdom;
+  if (occurrence.establishmentMeans !== undefined) input.establishmentMeans = occurrence.establishmentMeans;
+  if (occurrence.datasetRef !== undefined) input.datasetRef = occurrence.datasetRef;
 
   return input;
 }

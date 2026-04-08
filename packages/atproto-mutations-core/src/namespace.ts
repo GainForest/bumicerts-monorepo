@@ -94,6 +94,13 @@ import { updateAcMultimedia } from "./mutations/ac.multimedia/update";
 import { deleteAcMultimedia } from "./mutations/ac.multimedia/delete";
 
 // ---------------------------------------------------------------------------
+// dwc.dataset
+// ---------------------------------------------------------------------------
+import { createDwcDataset } from "./mutations/dwc.dataset/create";
+import { updateDwcDataset } from "./mutations/dwc.dataset/update";
+import { deleteDwcDataset } from "./mutations/dwc.dataset/delete";
+
+// ---------------------------------------------------------------------------
 // dwc.occurrence
 // ---------------------------------------------------------------------------
 import { createDwcOccurrence } from "./mutations/dwc.occurrence/create";
@@ -203,6 +210,11 @@ export const mutations = {
     },
   },
   dwc: {
+    dataset: {
+      create: createDwcDataset,
+      update: updateDwcDataset,
+      delete: deleteDwcDataset,
+    },
     occurrence: {
       create: createDwcOccurrence,
       update: updateDwcOccurrence,

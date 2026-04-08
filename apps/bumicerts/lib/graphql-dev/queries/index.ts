@@ -42,6 +42,7 @@ import * as attachments from "./attachments";
 import * as occurrences from "./occurrences";
 import * as measurements from "./measurements";
 import * as multimedia from "./multimedia";
+import * as datasets from "./datasets";
 
 export const queries = {
   organization: {
@@ -123,6 +124,12 @@ export const queries = {
     /** Invalidates ALL measurement queries. */
     key: () => ["measurements"] as const,
   },
+
+  datasets: {
+    ...createQuery(["datasets"], datasets),
+    /** Invalidates ALL dataset queries. */
+    key: () => ["datasets"] as const,
+  },
 };
 
 // Re-export types that consumers commonly need
@@ -139,3 +146,4 @@ export type { AttachmentItem } from "./attachments";
 export type { OccurrenceItem } from "./occurrences";
 export type { MeasurementItem } from "./measurements";
 export type { MultimediaItem } from "./multimedia";
+export type { DatasetItem } from "./datasets";

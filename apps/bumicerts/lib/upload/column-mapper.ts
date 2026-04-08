@@ -1,5 +1,48 @@
 import type { ColumnMapping, MappedRow } from "./types";
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Subject part detection from column names
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SUBJECT_PART_KEYWORDS: { keywords: string[]; subjectPart: string }[] = [
+  { keywords: ["leaf", "leaves", "foliage"], subjectPart: "leaf" },
+  { keywords: ["bark"], subjectPart: "bark" },
+  { keywords: ["flower", "bloom", "blossom"], subjectPart: "flower" },
+  { keywords: ["fruit"], subjectPart: "fruit" },
+  { keywords: ["seed"], subjectPart: "seed" },
+  { keywords: ["stem", "trunk"], subjectPart: "stem" },
+  { keywords: ["twig", "branch"], subjectPart: "twig" },
+  { keywords: ["bud"], subjectPart: "bud" },
+  { keywords: ["root"], subjectPart: "root" },
+];
+
+/**
+ * Infer the subject part from a column header name.
+ *
+ * Looks for subject-part keywords in the header (e.g., "photo_leaf" → "leaf",
+ * "bark_image" → "bark"). Falls back to "entireOrganism" when no keyword matches.
+ */
+export function inferSubjectPartFromColumnName(header: string): string {
+  const normalized = header.toLowerCase().replace(/[^a-z]/g, " ");
+
+  for (const { keywords, subjectPart } of SUBJECT_PART_KEYWORDS) {
+    for (const keyword of keywords) {
+      if (normalized.includes(keyword)) {
+        return subjectPart;
+      }
+    }
+  }
+
+  return "entireOrganism";
+}
+
+/** Target fields that allow multiple source columns (no dedup). */
+const MULTI_MAP_TARGETS = new Set(["photoUrl"]);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Known patterns for auto-detecting column mappings
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
  * Known patterns for auto-detecting column mappings.
  * Each entry maps a list of source column name patterns (case-insensitive)
@@ -60,12 +103,47 @@ const KNOWN_PATTERNS: { patterns: string[]; target: string }[] = [
     patterns: ["crown_diameter", "canopy_diameter", "canopy_cover"],
     target: "canopyCover",
   },
+
+  // Media fields — photoUrl allows multiple columns (multi-photo per tree)
+  {
+    patterns: [
+      "photo_url",
+      "photourl",
+      "photo",
+      "image_url",
+      "imageurl",
+      "image",
+      "attachment",
+      "attachment_url",
+      "picture",
+      "picture_url",
+      // Multi-photo patterns (subject part is inferred from the column name)
+      "photo_tree",
+      "photo_leaf",
+      "photo_bark",
+      "photo_flower",
+      "photo_fruit",
+      "photo_stem",
+      "photo_root",
+      "photo_seed",
+      "photo_bud",
+      "photo_twig",
+      "tree_photo",
+      "leaf_photo",
+      "bark_photo",
+      "flower_photo",
+      "fruit_photo",
+      "stem_photo",
+    ],
+    target: "photoUrl",
+  },
 ];
 
 /**
  * Auto-detect column mappings for generic CSV files based on common field naming conventions.
- * Matching is case-insensitive. If multiple source columns match the same target, the first
- * match (by header order) is used. Unrecognized headers are excluded from the result.
+ * Matching is case-insensitive. For most targets, only the first matching column wins.
+ * For targets in MULTI_MAP_TARGETS (e.g. photoUrl), multiple columns can map to the same
+ * target — this enables multi-photo-per-tree support.
  * NOTE: 'name' alone does NOT map to vernacularName.
  *
  * @param headers - Array of CSV column header strings
@@ -73,6 +151,7 @@ const KNOWN_PATTERNS: { patterns: string[]; target: string }[] = [
  */
 export function autoDetectMappings(headers: string[]): ColumnMapping[] {
   // Track which targets have already been claimed to enforce "first match wins"
+  // (except for multi-map targets like photoUrl)
   const claimedTargets = new Set<string>();
   const mappings: ColumnMapping[] = [];
 
@@ -80,8 +159,12 @@ export function autoDetectMappings(headers: string[]): ColumnMapping[] {
     const normalizedHeader = header.toLowerCase().trim();
 
     for (const { patterns, target } of KNOWN_PATTERNS) {
-      if (patterns.includes(normalizedHeader) && !claimedTargets.has(target)) {
-        claimedTargets.add(target);
+      const isMultiMap = MULTI_MAP_TARGETS.has(target);
+
+      if (patterns.includes(normalizedHeader) && (isMultiMap || !claimedTargets.has(target))) {
+        if (!isMultiMap) {
+          claimedTargets.add(target);
+        }
         mappings.push({ sourceColumn: header, targetField: target });
         break;
       }

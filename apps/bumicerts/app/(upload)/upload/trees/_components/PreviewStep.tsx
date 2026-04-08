@@ -3,6 +3,7 @@
 import { useMemo, useState, Fragment } from "react";
 import { Button } from "@/components/ui/button";
 import {
+  Camera,
   ChevronDown,
   ChevronRight,
   CheckCircle2,
@@ -59,20 +60,28 @@ export default function PreviewStep({
 
   // Apply mappings then validate — computed once on mount.
   // mappedRows is returned here to avoid calling applyMappings a second time.
-  const { validationResult, mappedHeaders, mappedRows } = useMemo(() => {
+  const { validationResult, mappedHeaders, mappedRows, hasAnyPhotos } = useMemo(() => {
     const mapped = applyMappings(parsedData, mappings);
-    const result = parseAndValidateRows(mapped);
+    const result = parseAndValidateRows(mapped, parsedData, mappings);
     // Collect the unique target field names that appear in the mapped data
+    // Exclude photoUrl — it's replaced by a synthetic "Photos" column
     const headerSet = new Set<string>();
     for (const row of mapped) {
       for (const key of Object.keys(row)) {
-        headerSet.add(key);
+        if (key !== "photoUrl") {
+          headerSet.add(key);
+        }
       }
     }
+
+    // Check if any valid row has photos
+    const anyPhotos = result.valid.some((r) => r.photos && r.photos.length > 0);
+
     return {
       validationResult: result,
       mappedHeaders: Array.from(headerSet),
       mappedRows: mapped,
+      hasAnyPhotos: anyPhotos,
     };
   }, [parsedData, mappings]);
 
@@ -80,6 +89,17 @@ export default function PreviewStep({
   const totalRows = parsedData.length;
   const validCount = valid.length;
   const errorCount = errors.length;
+
+  // Build a lookup: original row index → photo count (from validated rows)
+  const photoCountByIndex = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const row of valid) {
+      if (row.photos && row.photos.length > 0) {
+        map.set(row.index, row.photos.length);
+      }
+    }
+    return map;
+  }, [valid]);
 
   // Build a lookup: row index -> error issues
   const errorByIndex = useMemo(() => {
@@ -179,6 +199,11 @@ export default function PreviewStep({
                     {getFieldLabel(header)}
                   </th>
                 ))}
+                {hasAnyPhotos && (
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground uppercase tracking-wide whitespace-nowrap">
+                    Photos
+                  </th>
+                )}
                 <th className="px-3 py-2 text-left font-medium text-muted-foreground uppercase tracking-wide w-16">
                   Status
                 </th>
@@ -218,6 +243,26 @@ export default function PreviewStep({
                           )}
                         </td>
                       ))}
+                      {hasAnyPhotos && (
+                        <td className="px-3 py-2">
+                          {(() => {
+                            const count = photoCountByIndex.get(rowIndex);
+                            if (!count) {
+                              return (
+                                <span className="text-muted-foreground/50 italic text-xs">
+                                  —
+                                </span>
+                              );
+                            }
+                            return (
+                              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                                <Camera className="h-3 w-3" />
+                                {count}
+                              </span>
+                            );
+                          })()}
+                        </td>
+                      )}
                       <td className="px-3 py-2">
                         {hasError ? (
                           <div className="flex items-center gap-1 text-destructive">
@@ -239,7 +284,7 @@ export default function PreviewStep({
                         className="bg-destructive/5"
                       >
                         <td
-                          colSpan={mappedHeaders.length + 2}
+                          colSpan={mappedHeaders.length + (hasAnyPhotos ? 3 : 2)}
                           className="px-4 py-2"
                         >
                           <ul className="space-y-0.5">

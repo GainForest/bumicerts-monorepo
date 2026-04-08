@@ -480,6 +480,17 @@ type Main = {
    * URL to a representative species image.
    */
   speciesImageUrl?: l.UriString
+
+  /**
+   * The process by which the organism became established at the location. Uses the GBIF controlled vocabulary for establishmentMeans.
+   */
+  establishmentMeans?:
+    | 'native'
+    | 'introduced'
+    | 'naturalised'
+    | 'invasive'
+    | 'managed'
+    | 'uncertain'
 }
 
 export type { Main }
@@ -627,6 +638,16 @@ const main = l.record<'tid', Main>(
     datasetRef: l.optional(l.string({ format: 'at-uri' })),
     thumbnailUrl: l.optional(l.string({ format: 'uri' })),
     speciesImageUrl: l.optional(l.string({ format: 'uri' })),
+    establishmentMeans: l.optional(
+      l.enum([
+        'native',
+        'introduced',
+        'naturalised',
+        'invasive',
+        'managed',
+        'uncertain',
+      ]),
+    ),
   }),
 )
 

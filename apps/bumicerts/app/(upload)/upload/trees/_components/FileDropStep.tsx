@@ -4,19 +4,38 @@ import { useRef, useState, useCallback } from "react";
 import { Upload, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useCsvParser } from "@/lib/upload/use-csv-parser";
 import { detectKoboFormat } from "@/lib/upload/kobo-mapper";
 import { autoDetectMappings } from "@/lib/upload/column-mapper";
 import { links } from "@/lib/links";
+import { cn } from "@/lib/utils";
 import type { ColumnMapping } from "@/lib/upload/types";
 import TreeDataGuide from "./TreeDataGuide";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Establishment means options (full GBIF vocabulary)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ESTABLISHMENT_MEANS_OPTIONS = [
+  { value: "native", label: "Native" },
+  { value: "introduced", label: "Introduced" },
+  { value: "naturalised", label: "Naturalised" },
+  { value: "invasive", label: "Invasive" },
+  { value: "managed", label: "Managed" },
+  { value: "uncertain", label: "Uncertain" },
+] as const;
 
 type FileDropStepProps = {
   onFileAndMappings: (
     file: File,
     parsedData: Record<string, string>[],
     headers: string[],
-    mappings: ColumnMapping[]
+    mappings: ColumnMapping[],
+    establishmentMeans: string | null,
+    datasetName: string,
+    datasetDescription: string,
   ) => void;
 };
 
@@ -44,6 +63,9 @@ export default function FileDropStep({ onFileAndMappings }: FileDropStepProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [establishmentMeans, setEstablishmentMeans] = useState<string | null>(null);
+  const [datasetName, setDatasetName] = useState("");
+  const [datasetDescription, setDatasetDescription] = useState("");
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -102,7 +124,15 @@ export default function FileDropStep({ onFileAndMappings }: FileDropStepProps) {
       ? koboResult.mappings
       : autoDetectMappings(headers);
 
-    onFileAndMappings(selectedFile, parsedData, headers, mappings);
+    onFileAndMappings(
+      selectedFile,
+      parsedData,
+      headers,
+      mappings,
+      establishmentMeans,
+      datasetName.trim(),
+      datasetDescription.trim(),
+    );
   };
 
   const hasFile = selectedFile !== null;
@@ -206,6 +236,74 @@ export default function FileDropStep({ onFileAndMappings }: FileDropStepProps) {
           </div>
         </div>
       )}
+
+      {/* Dataset name + description (optional) */}
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <label htmlFor="dataset-name" className="text-sm font-medium">
+            Dataset name{" "}
+            <span className="text-muted-foreground font-normal">(optional)</span>
+          </label>
+          <p className="text-xs text-muted-foreground">
+            Give this upload a name so you can find and reference it later.
+          </p>
+          <Input
+            id="dataset-name"
+            value={datasetName}
+            onChange={(e) => setDatasetName(e.target.value)}
+            placeholder="e.g. March 2025 Danum Valley Survey"
+          />
+        </div>
+        {datasetName.trim().length > 0 && (
+          <div className="space-y-1.5">
+            <label htmlFor="dataset-description" className="text-sm font-medium">
+              Description{" "}
+              <span className="text-muted-foreground font-normal">(optional)</span>
+            </label>
+            <Textarea
+              id="dataset-description"
+              value={datasetDescription}
+              onChange={(e) => setDatasetDescription(e.target.value)}
+              placeholder="Describe the dataset contents, methodology, or purpose..."
+              rows={2}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Establishment means toggle pills */}
+      <div className="space-y-2">
+        <label className="text-sm font-medium">
+          Establishment means{" "}
+          <span className="text-muted-foreground font-normal">(optional)</span>
+        </label>
+        <p className="text-xs text-muted-foreground">
+          How were these trees established at their locations? This applies to
+          all records in this upload.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {ESTABLISHMENT_MEANS_OPTIONS.map((option) => {
+            const isSelected = establishmentMeans === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() =>
+                  setEstablishmentMeans(isSelected ? null : option.value)
+                }
+                className={cn(
+                  "rounded-full border px-3.5 py-1.5 text-sm transition-colors",
+                  isSelected
+                    ? "border-primary bg-primary/10 text-primary font-medium"
+                    : "border-border bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                )}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* GBIF disclaimer */}
       <p className="text-xs text-muted-foreground leading-relaxed">

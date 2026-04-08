@@ -18,6 +18,9 @@ type WizardState = {
   headers: string[] | null;
   mappings: ColumnMapping[];
   validRows: ValidatedRow[];
+  establishmentMeans: string | null;
+  datasetName: string;
+  datasetDescription: string;
 };
 
 const INITIAL_STATE: WizardState = {
@@ -27,6 +30,9 @@ const INITIAL_STATE: WizardState = {
   headers: null,
   mappings: [],
   validRows: [],
+  establishmentMeans: null,
+  datasetName: "",
+  datasetDescription: "",
 };
 
 /**
@@ -138,7 +144,10 @@ export function TreeUploadWizard() {
     file: File,
     parsedData: Record<string, string>[],
     headers: string[],
-    mappings: ColumnMapping[]
+    mappings: ColumnMapping[],
+    establishmentMeans: string | null,
+    datasetName: string,
+    datasetDescription: string,
   ) => {
     setState((prev) => ({
       ...prev,
@@ -146,6 +155,9 @@ export function TreeUploadWizard() {
       parsedData,
       headers,
       mappings,
+      establishmentMeans,
+      datasetName,
+      datasetDescription,
       currentStep: 2,
     }));
   };
@@ -183,7 +195,7 @@ export function TreeUploadWizard() {
     setState((prev) => ({ ...prev, currentStep: 3 }));
   };
 
-  const { currentStep, parsedData, headers, mappings, validRows } = state;
+  const { currentStep, parsedData, headers, mappings, validRows, establishmentMeans, datasetName, datasetDescription } = state;
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
@@ -227,6 +239,9 @@ export function TreeUploadWizard() {
       {currentStep === 4 && (
         <UploadStep
           validRows={validRows}
+          establishmentMeans={establishmentMeans}
+          datasetName={datasetName}
+          datasetDescription={datasetDescription}
           onBack={handleBackToStep3}
           onComplete={handleComplete}
         />

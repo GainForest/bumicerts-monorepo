@@ -8,6 +8,7 @@ import {
   Camera,
   ChevronLeftIcon,
   CirclePlusIcon,
+  DatabaseIcon,
   Loader2,
   MapPin,
   RefreshCcw,
@@ -18,6 +19,13 @@ import { parseAsString, useQueryState } from "nuqs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import Container from "@/components/ui/container";
 import { useModal } from "@/components/ui/modal/context";
@@ -29,6 +37,7 @@ import { formatError } from "@/lib/utils/trpc-errors";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { trpc } from "@/lib/trpc/client";
 import type {
+  DatasetItem,
   MeasurementItem,
   MultimediaItem,
   OccurrenceItem,
@@ -72,6 +81,7 @@ const OPTIONAL_OCCURRENCE_FIELDS: OptionalOccurrenceField[] = [
   "country",
   "occurrenceRemarks",
   "habitat",
+  "establishmentMeans",
 ];
 
 const EMPTY_OCCURRENCE_DRAFT: TreeOccurrenceDraft = {
@@ -85,7 +95,19 @@ const EMPTY_OCCURRENCE_DRAFT: TreeOccurrenceDraft = {
   decimalLongitude: "",
   occurrenceRemarks: "",
   habitat: "",
+  establishmentMeans: "",
 };
+
+const ESTABLISHMENT_MEANS_OPTIONS = [
+  { value: "native", label: "Native" },
+  { value: "introduced", label: "Introduced" },
+  { value: "naturalised", label: "Naturalised" },
+  { value: "invasive", label: "Invasive" },
+  { value: "managed", label: "Managed" },
+  { value: "uncertain", label: "Uncertain" },
+] as const;
+
+const ESTABLISHMENT_MEANS_SENTINEL = "__none__";
 
 const EMPTY_MEASUREMENT_DRAFT: TreeMeasurementDraft = {
   dbh: "",
@@ -158,7 +180,8 @@ function sameOccurrenceRecord(
     left.decimalLatitude === right.decimalLatitude &&
     left.decimalLongitude === right.decimalLongitude &&
     left.occurrenceRemarks === right.occurrenceRemarks &&
-    left.habitat === right.habitat
+    left.habitat === right.habitat &&
+    left.establishmentMeans === right.establishmentMeans
   );
 }
 
@@ -341,10 +364,12 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     "tree",
     parseAsString.withDefault("")
   );
+  const [datasetFilter, setDatasetFilter] = useState<string | null>(null);
 
   const occurrencesQuery = indexerTrpc.dwc.occurrences.useQuery({ did });
   const measurementsQuery = indexerTrpc.dwc.measurements.useQuery({ did });
   const multimediaQuery = indexerTrpc.multimedia.list.useQuery({ did });
+  const datasetsQuery = indexerTrpc.datasets.list.useQuery({ did });
 
   const updateOccurrence = trpc.dwc.occurrence.update.useMutation();
   const deleteOccurrence = trpc.dwc.occurrence.delete.useMutation();
@@ -486,17 +511,44 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     [mergedOccurrences, mergedMeasurements, mergedMultimedia]
   );
 
+  // Dataset lookup: URI → DatasetItem for display + filtering
+  const datasetItems = useMemo(() => datasetsQuery.data ?? [], [datasetsQuery.data]);
+  const datasetLookup = useMemo(() => {
+    const map = new Map<string, DatasetItem>();
+    for (const ds of datasetItems) {
+      const uri = ds.metadata?.uri;
+      if (uri) {
+        map.set(uri, ds);
+      }
+    }
+    return map;
+  }, [datasetItems]);
+
   const filteredTrees = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) {
-      return treeItems;
+    // Apply dataset filter first
+    let trees = treeItems;
+    if (datasetFilter) {
+      trees = trees.filter((item) => {
+        const ref = item.occurrence.record?.datasetRef;
+        return typeof ref === "string" && ref === datasetFilter;
+      });
     }
 
-    return treeItems.filter((item) => {
+    // Then apply search query
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) {
+      return trees;
+    }
+
+    return trees.filter((item) => {
       const record = item.occurrence.record;
       if (!record) {
         return false;
       }
+
+      // Resolve dataset name for search
+      const datasetRef = record.datasetRef;
+      const datasetName = typeof datasetRef === "string" ? datasetLookup.get(datasetRef)?.record?.name : null;
 
       const haystack = [
         record.scientificName,
@@ -505,6 +557,7 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
         record.country,
         record.recordedBy,
         record.eventDate,
+        datasetName,
       ]
         .filter((value): value is string => typeof value === "string" && value.length > 0)
         .join(" ")
@@ -512,7 +565,7 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
 
       return haystack.includes(query);
     });
-  }, [searchQuery, treeItems]);
+  }, [searchQuery, treeItems, datasetFilter, datasetLookup]);
 
   const selectedTree = useMemo(() => {
     if (!selectedTreeRkey) {
@@ -1076,16 +1129,45 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
       </div>
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative w-full lg:max-w-sm">
-          <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={searchQuery}
-            onChange={(event) => void setSearchQuery(event.target.value || null)}
-            placeholder="Search by species, locality, recorder, or date"
-            className="pl-9"
-          />
+        <div className="flex flex-col gap-2 w-full lg:flex-row lg:items-center lg:max-w-2xl">
+          <div className="relative w-full lg:max-w-sm">
+            <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(event) => void setSearchQuery(event.target.value || null)}
+              placeholder="Search by species, locality, recorder, or date"
+              className="pl-9"
+            />
+          </div>
+          {datasetItems.length > 0 && (
+            <Select
+              value={datasetFilter ?? "__all__"}
+              onValueChange={(value) => setDatasetFilter(value === "__all__" ? null : value)}
+            >
+              <SelectTrigger className="w-full lg:w-56 shrink-0">
+                <div className="flex items-center gap-1.5 truncate">
+                  <DatabaseIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                  <SelectValue placeholder="All datasets" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All datasets</SelectItem>
+                {datasetItems.map((ds) => {
+                  const uri = ds.metadata?.uri;
+                  if (!uri) return null;
+                  const count = ds.record?.recordCount;
+                  return (
+                    <SelectItem key={uri} value={uri}>
+                      {ds.record?.name ?? "Unnamed"}
+                      {count != null ? ` (${count})` : ""}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          )}
         </div>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground shrink-0">
           {filteredTrees.length} of {treeItems.length} tree record
           {treeItems.length === 1 ? "" : "s"}
         </p>
@@ -1159,6 +1241,16 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
                         </div>
 
                         <div className="flex flex-col items-end gap-1 shrink-0">
+                          {(() => {
+                            const dsRef = record.datasetRef;
+                            const dsName = typeof dsRef === "string" ? datasetLookup.get(dsRef)?.record?.name : null;
+                            return dsName ? (
+                              <Badge variant="outline" className="max-w-[10rem] truncate text-[10px]">
+                                <DatabaseIcon className="size-2.5 shrink-0 mr-0.5" />
+                                {dsName}
+                              </Badge>
+                            ) : null;
+                          })()}
                           {item.photos.length > 0 ? (
                             <Badge variant="outline">{item.photos.length} photos</Badge>
                           ) : null}
@@ -1219,6 +1311,16 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
                       <span className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1">
                         {formatEventDate(activeTree.occurrence.record?.eventDate)}
                       </span>
+                      {(() => {
+                        const dsRef = activeTree.occurrence.record?.datasetRef;
+                        const dsName = typeof dsRef === "string" ? datasetLookup.get(dsRef)?.record?.name : null;
+                        return dsName ? (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1">
+                            <DatabaseIcon className="size-3" />
+                            {dsName}
+                          </span>
+                        ) : null;
+                      })()}
                     </div>
                   </div>
 
@@ -1329,6 +1431,31 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
                       }
                       rows={3}
                     />
+                  </Field>
+                  <Field label="Establishment means">
+                    <Select
+                      value={occurrenceDraft.establishmentMeans || ESTABLISHMENT_MEANS_SENTINEL}
+                      onValueChange={(value) =>
+                        handleOccurrenceFieldChange(
+                          "establishmentMeans",
+                          value === ESTABLISHMENT_MEANS_SENTINEL ? "" : value
+                        )
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Not specified" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={ESTABLISHMENT_MEANS_SENTINEL}>
+                          <span className="text-muted-foreground">Not specified</span>
+                        </SelectItem>
+                        {ESTABLISHMENT_MEANS_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </Field>
                   <Field label="Occurrence remarks">
                     <Textarea

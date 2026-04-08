@@ -19,6 +19,7 @@ export type TreeOccurrenceDraft = {
   decimalLongitude: string;
   occurrenceRemarks: string;
   habitat: string;
+  establishmentMeans: string;
 };
 
 export type TreeMeasurementDraft = {
@@ -173,6 +174,7 @@ export function getTreeOccurrenceDraft(
     decimalLongitude: occurrence.decimalLongitude ?? "",
     occurrenceRemarks: occurrence.occurrenceRemarks ?? "",
     habitat: occurrence.habitat ?? "",
+    establishmentMeans: typeof occurrence.establishmentMeans === "string" ? occurrence.establishmentMeans : "",
   };
 }
 

@@ -11,7 +11,7 @@
  */
 
 import { useState } from "react";
-import { MicIcon, TreesIcon, MapPinIcon, ExternalLinkIcon } from "lucide-react";
+import { MicIcon, TreesIcon, MapPinIcon, DatabaseIcon, ExternalLinkIcon } from "lucide-react";
 import { useModal } from "@/components/ui/modal/context";
 import {
   ModalContent,
@@ -27,6 +27,7 @@ import { useAtprotoStore } from "@/components/stores/atproto";
 import type { AudioRecordingItem } from "@/lib/graphql-dev/queries/audio";
 import type { OccurrenceItem } from "@/lib/graphql-dev/queries/occurrences";
 import type { CertifiedLocation } from "@/lib/graphql-dev/queries/locations";
+import type { DatasetItem } from "@/lib/graphql-dev/queries/datasets";
 import { trpc } from "@/lib/trpc/client";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { formatError } from "@/lib/utils/trpc-errors";
@@ -36,12 +37,13 @@ import type { LeafletLinearDocument } from "@gainforest/leaflet-react";
 
 // ── Tab types ─────────────────────────────────────────────────────────────────
 
-type TabId = "audio" | "trees" | "sites";
+type TabId = "audio" | "trees" | "sites" | "datasets";
 
 const TABS: { id: TabId; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "audio", label: "Audio", icon: MicIcon },
   { id: "trees", label: "Trees", icon: TreesIcon },
   { id: "sites", label: "Sites", icon: MapPinIcon },
+  { id: "datasets", label: "Datasets", icon: DatabaseIcon },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -160,6 +162,44 @@ function SiteRow({
   );
 }
 
+function DatasetRow({
+  item,
+  selected,
+  onToggle,
+}: {
+  item: DatasetItem;
+  selected: boolean;
+  onToggle: () => void;
+}) {
+  const name = item.record?.name ?? "Unnamed dataset";
+  const count = item.record?.recordCount;
+  const date = formatDate(item.record?.createdAt ?? item.metadata?.createdAt);
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-all duration-150 ${
+        selected
+          ? "border-primary/40 bg-primary/5"
+          : "border-border hover:border-border/80 hover:bg-muted/30"
+      }`}
+    >
+      <div className={`h-4 w-4 rounded-sm border-2 shrink-0 flex items-center justify-center transition-colors ${selected ? "bg-primary border-primary" : "border-muted-foreground/40"}`}>
+        {selected && <div className="h-2 w-2 rounded-[2px] bg-primary-foreground" />}
+      </div>
+      <DatabaseIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-foreground truncate">{name}</p>
+        <p className="text-xs text-muted-foreground">
+          {[count != null ? `${count} record${count !== 1 ? "s" : ""}` : null, date]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
+      </div>
+    </button>
+  );
+}
+
 // ── Loading skeleton ──────────────────────────────────────────────────────────
 
 function ListSkeleton() {
@@ -176,7 +216,7 @@ function ListSkeleton() {
 
 function EmptyState({ tab, manageHref }: { tab: TabId; manageHref: string }) {
   const label =
-    tab === "audio" ? "audio recordings" : tab === "trees" ? "tree occurrences" : "sites";
+    tab === "audio" ? "audio recordings" : tab === "trees" ? "tree occurrences" : tab === "datasets" ? "datasets" : "sites";
   return (
     <div className="flex flex-col items-center gap-3 py-8 text-center text-muted-foreground">
       <p className="text-sm">No {label} uploaded yet.</p>
@@ -232,14 +272,17 @@ export function EvidencePickerModal({
   const { data: audioData, isLoading: audioLoading } = indexerTrpc.audio.list.useQuery({ did: organizationDid });
   const { data: occurrenceData, isLoading: occurrenceLoading } = indexerTrpc.dwc.occurrences.useQuery({ did: organizationDid });
   const { data: locationData, isLoading: locationLoading } = indexerTrpc.locations.list.useQuery({ did: organizationDid });
+  const { data: datasetData, isLoading: datasetLoading } = indexerTrpc.datasets.list.useQuery({ did: organizationDid });
 
   const audioItems = audioData ?? [];
   const occurrenceItems = occurrenceData ?? [];
   const locationItems = locationData ?? [];
+  const datasetItems = datasetData ?? [];
 
   const isLoading =
     activeTab === "audio" ? audioLoading :
     activeTab === "trees" ? occurrenceLoading :
+    activeTab === "datasets" ? datasetLoading :
     locationLoading;
 
   // ── Selection helpers ─────────────────────────────────────────────────────
@@ -272,6 +315,7 @@ export function EvidencePickerModal({
     // Build title + contentType per URI based on which list it belongs to.
     const audioUriSet = new Set(audioItems.map((a) => a.metadata?.uri).filter(Boolean));
     const occurrenceUriSet = new Set(occurrenceItems.map((o) => o.metadata?.uri).filter(Boolean));
+    const datasetUriSet = new Set(datasetItems.map((d) => d.metadata?.uri).filter(Boolean));
 
     try {
       for (const uri of selectedUris) {
@@ -287,6 +331,10 @@ export function EvidencePickerModal({
           const species = item?.record?.scientificName ?? item?.record?.vernacularName ?? "Occurrence";
           title = `Tree: ${species}`;
           contentType = "occurrence";
+        } else if (datasetUriSet.has(uri)) {
+          const item = datasetItems.find((d) => d.metadata?.uri === uri);
+          title = `Dataset: ${item?.record?.name ?? "Dataset"}`;
+          contentType = "dataset";
         } else {
           const item = locationItems.find((l) => l.metadata?.uri === uri);
           title = `Site: ${item?.record?.name ?? "Location"}`;
@@ -321,6 +369,7 @@ export function EvidencePickerModal({
   const manageHref =
     activeTab === "audio" ? links.upload.audio :
     activeTab === "trees" ? links.upload.trees :
+    activeTab === "datasets" ? links.upload.trees :
     links.upload.sites;
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -384,6 +433,23 @@ export function EvidencePickerModal({
               if (!uri) return null;
               return (
                 <OccurrenceRow
+                  key={uri}
+                  item={item}
+                  selected={selectedUris.has(uri)}
+                  onToggle={() => toggle(uri)}
+                />
+              );
+            })
+          )
+        ) : activeTab === "datasets" ? (
+          datasetItems.length === 0 ? (
+            <EmptyState tab="datasets" manageHref={manageHref} />
+          ) : (
+            datasetItems.map((item) => {
+              const uri = item.metadata?.uri;
+              if (!uri) return null;
+              return (
+                <DatasetRow
                   key={uri}
                   item={item}
                   selected={selectedUris.has(uri)}

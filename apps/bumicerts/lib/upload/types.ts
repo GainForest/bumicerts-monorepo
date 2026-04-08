@@ -21,6 +21,8 @@ export type OccurrenceInput = {
   habitat?: string;
   samplingProtocol?: string;
   kingdom?: string;
+  establishmentMeans?: string;
+  datasetRef?: string;
 };
 
 export type FloraMeasurementBundle = {
@@ -30,10 +32,16 @@ export type FloraMeasurementBundle = {
   canopyCoverPercent?: string;
 };
 
+export type PhotoEntry = {
+  url: string;
+  subjectPart: string;
+};
+
 export type ValidatedRow = {
   index: number;
   occurrence: OccurrenceInput;
   floraMeasurement: FloraMeasurementBundle | null;
+  photos?: PhotoEntry[];
 };
 
 export type RowError = {
@@ -50,7 +58,7 @@ export type TargetField = {
   field: string;
   label: string;
   required: boolean;
-  category: "occurrence" | "measurement";
+  category: "occurrence" | "measurement" | "media";
 };
 
 export const TARGET_FIELDS: TargetField[] = [
@@ -72,4 +80,6 @@ export const TARGET_FIELDS: TargetField[] = [
   { field: "dbh", label: "DBH", required: false, category: "measurement" },
   { field: "diameter", label: "Diameter", required: false, category: "measurement" },
   { field: "canopyCoverPercent", label: "Canopy Cover (%)", required: false, category: "measurement" },
+  // Media (1) — multiple columns can map to photoUrl; subject part is auto-detected from column name
+  { field: "photoUrl", label: "Photo URL", required: false, category: "media" },
 ];
