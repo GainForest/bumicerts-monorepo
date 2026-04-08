@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, XCircle, AlertTriangle, ChevronDown, ChevronRight, Loader2, Camera, ImageDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc/client";
@@ -91,17 +91,26 @@ export default function UploadStep({ validRows, establishmentMeans, datasetName,
   const [photoUris, setPhotoUris] = useState<Map<number, string[]>>(new Map());
 
   // Phase 2: background photo fetch from URLs
-  const rowsWithPhotos = validRows
-    .map((row, i) => ({ row, index: i }))
-    .filter(({ row }) => typeof row.photoUrl === "string" && row.photoUrl.length > 0);
-  const hasPhotoUrls = rowsWithPhotos.length > 0;
+  // Build a flat list of all photos to fetch: { rowIndex, photoIndex, url, subjectPart }
+  const photoFetchQueue = useMemo(() => {
+    const queue: { rowIndex: number; url: string; subjectPart: string }[] = [];
+    for (let i = 0; i < validRows.length; i++) {
+      const row = validRows[i];
+      if (!row?.photos) continue;
+      for (const photo of row.photos) {
+        queue.push({ rowIndex: i, url: photo.url, subjectPart: photo.subjectPart });
+      }
+    }
+    return queue;
+  }, [validRows]);
+  const hasPhotoUrls = photoFetchQueue.length > 0;
 
   const [photoFetchStarted, setPhotoFetchStarted] = useState(false);
   const [photoFetchDone, setPhotoFetchDone] = useState(false);
   const [photoFetchStatuses, setPhotoFetchStatuses] = useState<Record<number, PhotoFetchStatus>>({});
   const [photoFetchProgress, setPhotoFetchProgress] = useState<PhotoFetchProgress>({
     current: 0,
-    total: rowsWithPhotos.length,
+    total: photoFetchQueue.length,
     successes: 0,
     failures: 0,
   });
@@ -281,13 +290,10 @@ export default function UploadStep({ validRows, establishmentMeans, datasetName,
     let successes = 0;
     let failures = 0;
 
-    for (let pIdx = 0; pIdx < rowsWithPhotos.length; pIdx++) {
-      const entry = rowsWithPhotos[pIdx];
+    for (let pIdx = 0; pIdx < photoFetchQueue.length; pIdx++) {
+      const entry = photoFetchQueue[pIdx];
       if (!entry) continue;
-      const { row, index: rowIndex } = entry;
-      const photoUrl = row.photoUrl;
-
-      if (!photoUrl) continue;
+      const { rowIndex, url, subjectPart } = entry;
 
       // Find the occurrence URI from Phase 1
       const rowStatus = rowStatuses[rowIndex];
@@ -318,9 +324,9 @@ export default function UploadStep({ validRows, establishmentMeans, datasetName,
 
       try {
         const result = await fetchPhotoFromUrl({
-          url: photoUrl,
+          url,
           occurrenceRef: rowStatus.occurrenceUri,
-          subjectPart: row.subjectPart ?? "entireOrganism",
+          subjectPart,
         });
 
         successes += 1;
@@ -360,7 +366,7 @@ export default function UploadStep({ validRows, establishmentMeans, datasetName,
     }
 
     setPhotoFetchDone(true);
-  }, [rowsWithPhotos, rowStatuses]);
+  }, [photoFetchQueue, rowStatuses]);
 
   // Auto-start photo fetch after Phase 1 completes
   useEffect(() => {

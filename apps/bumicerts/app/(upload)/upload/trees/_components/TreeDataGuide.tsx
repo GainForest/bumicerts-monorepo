@@ -81,14 +81,19 @@ const FIELD_DOCS: FieldDoc[] = [
     format: "Enum",
   },
   {
-    field: "photoUrl",
-    description: "URL to a photo of the tree (Google Drive, etc.)",
+    field: "photo_tree",
+    description: "URL to a photo of the whole tree (Google Drive, etc.)",
     format: "URL",
   },
   {
-    field: "subjectPart",
-    description: "Part shown in the photo (e.g. entireOrganism, leaf, bark)",
-    format: "Text",
+    field: "photo_leaf",
+    description: "URL to a photo of the leaf. Subject part auto-detected.",
+    format: "URL",
+  },
+  {
+    field: "photo_bark",
+    description: "URL to a photo of the bark. Subject part auto-detected.",
+    format: "URL",
   },
 ];
 

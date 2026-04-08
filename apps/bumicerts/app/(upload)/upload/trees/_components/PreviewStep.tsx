@@ -61,7 +61,7 @@ export default function PreviewStep({
   // mappedRows is returned here to avoid calling applyMappings a second time.
   const { validationResult, mappedHeaders, mappedRows } = useMemo(() => {
     const mapped = applyMappings(parsedData, mappings);
-    const result = parseAndValidateRows(mapped);
+    const result = parseAndValidateRows(mapped, parsedData, mappings);
     // Collect the unique target field names that appear in the mapped data
     const headerSet = new Set<string>();
     for (const row of mapped) {
