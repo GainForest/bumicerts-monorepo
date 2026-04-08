@@ -365,7 +365,9 @@ export function StepOrgDetails() {
               </InputGroupAddon>
               <InputGroupInput
                 id="website"
-                type="url"
+                type="text"
+                inputMode="url"
+                autoComplete="url"
                 placeholder="Your organization's website"
                 value={data.website}
                 onChange={(e) => handleWebsiteChange(e.target.value)}

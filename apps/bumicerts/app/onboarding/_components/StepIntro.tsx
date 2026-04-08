@@ -77,7 +77,9 @@ export function StepIntro() {
             </label>
             <Input
               id="website"
-              type="url"
+              type="text"
+              inputMode="url"
+              autoComplete="url"
               placeholder="https://your-organization.org"
               value={data.website}
               className="mt-1"
