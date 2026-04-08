@@ -112,6 +112,8 @@ export const GainforestDwcOccurrenceRecordType = builder.simpleObject("Gainfores
     identificationRemarks:         t.string({ nullable: true }),
     previousIdentifications:       t.string({ nullable: true }),
     dynamicProperties:             t.string({ nullable: true }),
+    establishmentMeans:            t.string({ nullable: true }),
+    datasetRef:                    t.string({ nullable: true }),
     // Typed BlobRefType — richer than JSON, lets clients read uri/cid/mimeType/size directly
     imageEvidence:                 t.field({ type: BlobRefType, nullable: true }),
     audioEvidence:                 t.field({ type: BlobRefType, nullable: true }),
@@ -193,6 +195,8 @@ export async function mapGainforestDwcOccurrence(row: RecordRow) {
       identificationRemarks: s(p, "identificationRemarks"),
       previousIdentifications: s(p, "previousIdentifications"),
       dynamicProperties: s(p, "dynamicProperties"),
+      establishmentMeans: s(p, "establishmentMeans"),
+      datasetRef: s(p, "datasetRef"),
       // Typed blob resolution via extractBlobRef (→ BlobRefType)
       imageEvidence:       await extractBlobRef(j(p, "imageEvidence"),       did),
       audioEvidence:       await extractBlobRef(j(p, "audioEvidence"),       did),
