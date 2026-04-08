@@ -3,9 +3,9 @@
  */
 
 import { l } from '@atproto/lex'
-import * as CommonDefs from '../common/defs.defs.ts'
-import * as PagesLinearDocument from '../../../pub/leaflet/pages/linearDocument.defs.ts'
-import * as HypercertsDefs from '../../../org/hypercerts/defs.defs.ts'
+import * as CommonDefs from './../common/defs.defs.ts'
+import * as PagesLinearDocument from './../../../pub/leaflet/pages/linearDocument.defs.ts'
+import * as HypercertsDefs from './../../../org/hypercerts/defs.defs.ts'
 
 const $nsid = 'app.gainforest.organization.info'
 

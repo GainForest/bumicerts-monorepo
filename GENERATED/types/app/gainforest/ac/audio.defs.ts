@@ -3,7 +3,7 @@
  */
 
 import { l } from '@atproto/lex'
-import * as CommonDefs from '../common/defs.defs.ts'
+import * as CommonDefs from './../common/defs.defs.ts'
 
 const $nsid = 'app.gainforest.ac.audio'
 

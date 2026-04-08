@@ -3,9 +3,9 @@
  */
 
 import { l } from '@atproto/lex'
-import * as RepoStrongRef from './..\\..\\com\\atproto\\repo\\strongRef.defs.ts'
-import * as HypercertsDefs from './..\\hypercerts\\defs.defs.ts'
-import * as ClaimActivity from './..\\hypercerts\\claim\\activity.defs.ts'
+import * as RepoStrongRef from './../../com/atproto/repo/strongRef.defs.ts'
+import * as HypercertsDefs from './../hypercerts/defs.defs.ts'
+import * as ClaimActivity from './../hypercerts/claim/activity.defs.ts'
 
 const $nsid = 'org.hyperboards.board'
 

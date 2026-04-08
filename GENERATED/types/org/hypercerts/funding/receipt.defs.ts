@@ -3,8 +3,8 @@
  */
 
 import { l } from '@atproto/lex'
-import * as CertifiedDefs from '../../../app/certified/defs.defs.ts'
-import * as RepoStrongRef from '../../../com/atproto/repo/strongRef.defs.ts'
+import * as CertifiedDefs from './../../../app/certified/defs.defs.ts'
+import * as RepoStrongRef from './../../../com/atproto/repo/strongRef.defs.ts'
 
 const $nsid = 'org.hypercerts.funding.receipt'
 

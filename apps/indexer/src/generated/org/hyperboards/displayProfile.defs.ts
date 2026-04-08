@@ -3,7 +3,7 @@
  */
 
 import { l } from '@atproto/lex'
-import * as HypercertsDefs from './..\\hypercerts\\defs.defs.ts'
+import * as HypercertsDefs from './../hypercerts/defs.defs.ts'
 
 const $nsid = 'org.hyperboards.displayProfile'
 

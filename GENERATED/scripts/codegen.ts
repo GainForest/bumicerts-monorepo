@@ -66,6 +66,53 @@ async function* walkJson(dir: string): AsyncGenerator<string> {
   }
 }
 
+async function* walkTs(dir: string): AsyncGenerator<string> {
+  const entries = await readdir(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      yield* walkTs(full);
+    } else if (entry.isFile() && entry.name.endsWith(".ts")) {
+      yield full;
+    }
+  }
+}
+
+/**
+ * Post-process generated .ts files to normalise Windows backslash import paths
+ * to forward slashes. `@atproto/lex` uses Node's `path.join()` internally,
+ * which produces OS-specific separators. This makes the output identical on
+ * Windows and macOS/Linux.
+ *
+ * On macOS/Linux this is a no-op (no backslashes to fix).
+ */
+async function normalizeImportPaths(dir: string): Promise<number> {
+  let fixedCount = 0;
+  for await (const filePath of walkTs(dir)) {
+    const content = await readFile(filePath, "utf8");
+    if (!content.includes("\\")) continue;
+
+    const fixed = content.replace(
+      /^((?:import|export) .+ from ['"])(.+?)(['"])/gm,
+      (match, prefix: string, importPath: string, suffix: string) => {
+        if (!importPath.includes("\\")) return match;
+        fixedCount++;
+        // Replace backslashes with forward slashes, then collapse any
+        // resulting double slashes (e.g. './..//' → './../')
+        const normalised = importPath
+          .replaceAll("\\", "/")
+          .replace(/\/{2,}/g, "/");
+        return `${prefix}${normalised}${suffix}`;
+      }
+    );
+
+    if (fixed !== content) {
+      await writeFile(filePath, fixed, "utf8");
+    }
+  }
+  return fixedCount;
+}
+
 async function lexiconCount(): Promise<number> {
   let count = 0;
   for await (const _ of walkJson(LEXICONS_DIR)) count++;
@@ -179,5 +226,11 @@ if (EXCLUDED_NSIDS.size > 0) {
 await assertLexiconsExist();
 await applyLexiconPatches();
 await runLexBuild();
+
+// Normalise Windows backslash import paths → forward slashes
+const fixedCount = await normalizeImportPaths(OUT_DIR);
+if (fixedCount > 0) {
+  console.log(`[codegen] Normalised ${fixedCount} backslash import path(s) in ${OUT_DIR}`);
+}
 
 console.log(`\n[codegen] Done. Types written to ${OUT_DIR}`);
