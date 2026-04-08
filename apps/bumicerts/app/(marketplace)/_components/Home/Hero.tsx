@@ -67,11 +67,11 @@ export function Hero() {
                 className="inline-block"
               >
                 <Image
-                  src="/assets/media/images/logo.svg"
+                  src="/assets/media/images/app-icon.png"
                   alt="Bumicerts"
                   width={56}
                   height={56}
-                  className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-xl bg-primary/10 p-1.5 border border-primary/20"
+                  className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 drop-shadow-lg"
                 />
               </motion.span>
             </span>{" "}

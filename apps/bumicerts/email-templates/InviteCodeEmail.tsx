@@ -42,7 +42,7 @@ export function InviteCodeEmail({ inviteCode, pdsDomain }: InviteCodeEmailProps)
           <div style={{ padding: "48px 48px 0" }}>
             {/* Logo mark */}
             <img
-              src="https://bumicerts.gainforest.app/assets/media/images/logo.png"
+              src="https://bumicerts.gainforest.app/assets/media/images/gainforest-logo.png"
               alt="Bumicerts"
               width={36}
               height={36}

@@ -168,7 +168,7 @@ export function WhatIsBumicert() {
               </div>
               
               <BumicertCardVisual
-                logoUrl="/assets/media/images/logo.svg"
+                logoUrl="/assets/media/images/gainforest-logo.svg"
                 coverImage="/assets/media/images/hero-bumicert-card/image0.png"
                 title="Reforestation of Mount Halimun"
                 description="Community-led restoration of native forest in West Java, Indonesia. 5,000 trees planted across 12 hectares."

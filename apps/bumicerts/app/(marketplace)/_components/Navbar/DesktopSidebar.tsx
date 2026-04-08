@@ -73,12 +73,11 @@ function MarketplaceWelcomeCard() {
         {/* Logo centred at the top */}
         <div className="flex justify-center mb-3 mt-1">
           <Image
-            src="/assets/media/images/logo.svg"
+            src="/assets/media/images/app-icon.png"
             alt="Bumicerts"
             width={32}
             height={32}
-            className="dark:invert dark:brightness-200 -mb-2"
-            style={{ filter: "sepia(100%) saturate(0%) brightness(0.2)" }}
+            className="drop-shadow-md -mb-2"
           />
         </div>
         <div className="flex flex-col w-full items-center gap-1">

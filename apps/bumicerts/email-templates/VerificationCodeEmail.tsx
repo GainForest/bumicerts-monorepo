@@ -43,7 +43,7 @@ export function VerificationCodeEmail({ otp, pdsDomain }: VerificationCodeEmailP
             {/* Logo mark */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="https://bumicerts.gainforest.app/assets/media/images/logo.png"
+              src="https://bumicerts.gainforest.app/assets/media/images/gainforest-logo.png"
               alt="Bumicerts"
               width={36}
               height={36}

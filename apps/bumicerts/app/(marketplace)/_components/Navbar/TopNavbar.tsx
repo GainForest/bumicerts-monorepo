@@ -58,12 +58,11 @@ export function TopNavbar() {
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
           >
             <Image
-              src="/assets/media/images/logo.svg"
+              src="/assets/media/images/app-icon.png"
               alt="Bumicerts"
               width={28}
               height={28}
-              className="rounded-lg dark:invert dark:brightness-200"
-              style={{ filter: "sepia(100%) saturate(0%) brightness(0.2)" }}
+              className="drop-shadow-md"
             />
           </motion.div>
           <span

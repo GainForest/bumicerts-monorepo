@@ -84,9 +84,9 @@ export default function OnboardingPage() {
                 <div className="h-16 w-16 bg-primary blur-2xl rounded-full animate-pulse" />
               </div>
               <Image
-                src="/assets/media/images/logo.svg"
-                className="brightness-50"
-                alt="GainForest"
+                src="/assets/media/images/app-icon.png"
+                className="drop-shadow-lg"
+                alt="Bumicerts"
                 width={64}
                 height={64}
               />

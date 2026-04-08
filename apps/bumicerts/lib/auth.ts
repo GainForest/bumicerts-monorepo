@@ -66,7 +66,7 @@ function getAuth() {
       ? { url: clientEnv.NEXT_PUBLIC_EPDS_URL }
       : undefined,
     onCallback: { redirectTo: "/auth/complete" },
-    logoUri: publicUrl ? `${publicUrl}/assets/media/images/logo.png` : undefined,
+    logoUri: publicUrl ? `${publicUrl}/assets/media/images/app-icon.png` : undefined,
     brandColor: "#2FCE8A",
     backgroundColor: "#FFFFFF",
     emailTemplateUri: publicUrl ? `${publicUrl}/assets/email/otp-template.html` : undefined,

@@ -18,12 +18,11 @@ export function HomeFooter() {
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2.5">
             <Image
-              src="/assets/media/images/logo.svg"
+              src="/assets/media/images/app-icon.png"
               alt="Bumicerts"
               width={28}
               height={28}
-              className="dark:invert dark:brightness-200"
-              style={{ filter: "sepia(100%) saturate(0%) brightness(0.2)" }}
+              className="drop-shadow-md"
             />
             <span className="font-serif text-xl font-bold tracking-tight">
               Bumicerts

@@ -51,7 +51,7 @@ export function StepIntro() {
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="h-16 w-16 bg-primary blur-2xl rounded-full animate-pulse" />
           </div>
-          <Image src="/assets/media/images/logo.svg" className="brightness-50" alt="GainForest Logo" width={64} height={64} />
+          <Image src="/assets/media/images/gainforest-logo.svg" className="brightness-50" alt="GainForest Logo" width={64} height={64} />
         </div>
 
         {/* Title */}

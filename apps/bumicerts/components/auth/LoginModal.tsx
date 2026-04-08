@@ -365,7 +365,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
       {/* Logo */}
       <div className="flex justify-center mb-4">
         <Image
-          src="/assets/media/images/logo.svg"
+          src="/assets/media/images/gainforest-logo.svg"
           alt="GainForest"
           width={40}
           height={40}

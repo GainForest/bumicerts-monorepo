@@ -72,6 +72,7 @@ export function generateMetadata(): Metadata {
         url: "/favicon-dark.ico",
         media: "(prefers-color-scheme: dark)",
       },
+      { rel: "apple-touch-icon", url: "/apple-touch-icon.png" },
     ],
     robots: "noindex, nofollow",
     openGraph: {

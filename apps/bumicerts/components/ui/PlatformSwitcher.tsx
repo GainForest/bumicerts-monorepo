@@ -76,15 +76,14 @@ export function PlatformSwitcher({ currentPlatform }: PlatformSwitcherProps) {
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.1, type: "spring", stiffness: 300, damping: 20 }}
-            className="h-8 w-8 rounded-xl border border-border shadow-sm bg-background flex items-center justify-center shrink-0"
+            className="h-8 w-8 flex items-center justify-center shrink-0"
           >
             <Image
-              src="/assets/media/images/logo.svg"
+              src="/assets/media/images/app-icon.png"
               alt="Bumicerts"
-              width={24}
-              height={24}
-              className="dark:invert dark:brightness-200"
-              style={{ filter: "sepia(100%) saturate(0%) brightness(0.2)" }}
+              width={28}
+              height={28}
+              className="drop-shadow-md"
             />
           </motion.div>
 
