@@ -3,7 +3,7 @@
  */
 
 import { l } from '@atproto/lex'
-import * as CertifiedDefs from './../defs.defs.ts'
+import * as CertifiedDefs from '../defs.defs.ts'
 
 const $nsid = 'app.certified.badge.definition'
 

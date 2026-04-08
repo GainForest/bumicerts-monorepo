@@ -3,10 +3,10 @@
  */
 
 import { l } from '@atproto/lex'
-import * as RichtextFacet from './../../app/bsky/richtext/facet.defs.ts'
-import * as PagesLinearDocument from './../../pub/leaflet/pages/linearDocument.defs.ts'
+import * as RichtextFacet from '../../app/bsky/richtext/facet.defs.ts'
+import * as PagesLinearDocument from '../../pub/leaflet/pages/linearDocument.defs.ts'
 import * as HypercertsDefs from './defs.defs.ts'
-import * as RepoStrongRef from './../../com/atproto/repo/strongRef.defs.ts'
+import * as RepoStrongRef from '../../com/atproto/repo/strongRef.defs.ts'
 
 const $nsid = 'org.hypercerts.collection'
 

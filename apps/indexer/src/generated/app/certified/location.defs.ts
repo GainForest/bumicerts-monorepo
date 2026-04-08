@@ -3,7 +3,7 @@
  */
 
 import { l } from '@atproto/lex'
-import * as HypercertsDefs from './../../org/hypercerts/defs.defs.ts'
+import * as HypercertsDefs from '../../org/hypercerts/defs.defs.ts'
 
 const $nsid = 'app.certified.location'
 

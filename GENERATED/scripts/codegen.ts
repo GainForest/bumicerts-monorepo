@@ -101,7 +101,8 @@ async function normalizeImportPaths(dir: string): Promise<number> {
         // resulting double slashes (e.g. './..//' → './../')
         const normalised = importPath
           .replaceAll("\\", "/")
-          .replace(/\/{2,}/g, "/");
+          .replace(/\/{2,}/g, "/")
+          .replace(/^\.\/\.\./, "..");
         return `${prefix}${normalised}${suffix}`;
       }
     );

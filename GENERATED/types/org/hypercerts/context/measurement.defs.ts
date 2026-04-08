@@ -3,9 +3,9 @@
  */
 
 import { l } from '@atproto/lex'
-import * as RepoStrongRef from './../../../com/atproto/repo/strongRef.defs.ts'
-import * as CertifiedDefs from './../../../app/certified/defs.defs.ts'
-import * as RichtextFacet from './../../../app/bsky/richtext/facet.defs.ts'
+import * as RepoStrongRef from '../../../com/atproto/repo/strongRef.defs.ts'
+import * as CertifiedDefs from '../../../app/certified/defs.defs.ts'
+import * as RichtextFacet from '../../../app/bsky/richtext/facet.defs.ts'
 
 const $nsid = 'org.hypercerts.context.measurement'
 

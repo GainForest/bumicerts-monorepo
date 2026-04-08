@@ -3,7 +3,7 @@
  */
 
 import { l } from '@atproto/lex'
-import * as RichtextFacet from './../../bsky/richtext/facet.defs.ts'
+import * as RichtextFacet from '../../bsky/richtext/facet.defs.ts'
 
 const $nsid = 'app.gainforest.common.defs'
 

@@ -3,8 +3,8 @@
  */
 
 import { l } from '@atproto/lex'
-import * as RepoStrongRef from './../../../com/atproto/repo/strongRef.defs.ts'
-import * as CertifiedDefs from './../defs.defs.ts'
+import * as RepoStrongRef from '../../../com/atproto/repo/strongRef.defs.ts'
+import * as CertifiedDefs from '../defs.defs.ts'
 
 const $nsid = 'app.certified.badge.award'
 

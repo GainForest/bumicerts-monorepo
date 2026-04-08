@@ -3,8 +3,8 @@
  */
 
 import { l } from '@atproto/lex'
-import * as RepoStrongRef from './../../../com/atproto/repo/strongRef.defs.ts'
-import * as HypercertsDefs from './../defs.defs.ts'
+import * as RepoStrongRef from '../../../com/atproto/repo/strongRef.defs.ts'
+import * as HypercertsDefs from '../defs.defs.ts'
 
 const $nsid = 'org.hypercerts.context.acknowledgement'
 
