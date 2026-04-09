@@ -81,20 +81,35 @@ export function SuccessModal({
   const shareUrl = bumicertId
     ? `${baseUrl}${links.bumicert.view(bumicertId)}`
     : `${baseUrl}${links.leaderboard}`;
-  const shareText = `I just donated $${amount.toFixed(2)} USDC to support ${organizationName} on Bumicerts!`;
+  const shareText = bumicertId
+    ? `I just donated $${amount.toFixed(2)} to this bumicert: ${shareUrl}`
+    : `I just donated $${amount.toFixed(2)} on Bumicerts!`;
 
   const handleShareX = () => {
-    const text = encodeURIComponent(shareText);
-    const url = encodeURIComponent(shareUrl);
-    window.open(
-      `https://twitter.com/intent/tweet?text=${text}&url=${url}`,
-      "_blank",
-      "noopener,noreferrer"
-    );
+    // If bumicertId exists, shareText already includes the URL
+    if (bumicertId) {
+      const text = encodeURIComponent(shareText);
+      window.open(
+        `https://twitter.com/intent/tweet?text=${text}`,
+        "_blank",
+        "noopener,noreferrer"
+      );
+    } else {
+      const text = encodeURIComponent(shareText);
+      const url = encodeURIComponent(shareUrl);
+      window.open(
+        `https://twitter.com/intent/tweet?text=${text}&url=${url}`,
+        "_blank",
+        "noopener,noreferrer"
+      );
+    }
   };
 
   const handleShareBluesky = () => {
-    const text = encodeURIComponent(`${shareText} ${shareUrl}`);
+    // For Bluesky, always include URL in text (even if already in shareText for bumicerts)
+    const text = bumicertId
+      ? encodeURIComponent(shareText)
+      : encodeURIComponent(`${shareText} ${shareUrl}`);
     window.open(
       `https://bsky.app/intent/compose?text=${text}`,
       "_blank",
@@ -104,7 +119,8 @@ export function SuccessModal({
 
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
+      const copyText = bumicertId ? shareText : `${shareText} ${shareUrl}`;
+      await navigator.clipboard.writeText(copyText);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
