@@ -205,17 +205,38 @@ E2E_TEST_PDS_DOMAIN=climateai.org
 
 ### How It Works
 
-The tests automate the real OAuth flow that users go through:
+The E2E suite uses **auth state reuse** to make authenticated tests fast:
 
-1. **Opens the login modal** on your app
-2. **Enters the test handle** and selects the PDS domain
-3. **Clicks authorize** to start OAuth
-4. **Waits for redirect** to the PDS authorization page
-5. **Enters the password** on the PDS page
-6. **Submits and waits** for OAuth callback
-7. **Completes authentication** and redirects back to the app
+#### First Time / Auth State Not Found:
+1. **Performs full OAuth login** (once, before first `@auth` scenario)
+2. **Saves browser state** to `e2e/.auth/user.json` (gitignored)
+3. This includes cookies, localStorage, and session data
 
-This tests the full authentication flow end-to-end, just like a real user.
+#### Subsequent Test Runs:
+1. **Loads saved auth state** from file
+2. **Skips OAuth flow entirely** - instant authentication!
+3. All `@auth` scenarios start already logged in
+
+#### OAuth Flow Details (when needed):
+The full OAuth automation includes:
+1. Opens the login modal on your app
+2. Enters the test handle and selects the PDS domain
+3. Clicks authorize to start OAuth
+4. Waits for redirect to the PDS authorization page
+5. Enters the password on the PDS page
+6. Submits and waits for OAuth callback
+7. Completes authentication and redirects back to the app
+
+**Performance:**
+- Without auth state reuse: ~30s per test (OAuth each time)
+- With auth state reuse: ~30s once + instant for remaining tests
+- Example: 10 auth tests take ~30s instead of ~5 minutes!
+
+**Auth State Management:**
+- Auth state is saved to `e2e/.auth/user.json` (gitignored)
+- To force re-authentication: `rm -rf e2e/.auth/`
+- State is long-lived (persists across test runs)
+- Each developer has their own local auth state
 
 ### Writing Authenticated Tests
 
@@ -232,7 +253,7 @@ Scenario: User can edit organization
 ### Available Auth Steps
 
 **Given:**
-- `I am logged in as the test user` - Injects auth session
+- `I am logged in as the test user` - Verifies auth state is loaded (auth happens in Before hook)
 - `I am logged out` - Clears auth session
 
 **Then:**
@@ -272,11 +293,16 @@ bun run test:e2e -- --tags "not @auth"
 - OAuth flow may have failed - check browser screenshots in `reports/screenshots/`
 
 **Tests are slow:**
-- OAuth flow takes 5-10 seconds per login
+- First auth test performs OAuth (~30s), subsequent tests reuse state (instant)
+- Delete `e2e/.auth/` if you suspect stale auth state
 - Consider running with `E2E_HEADLESS=true` for faster execution
 - Use `@auth` tag filtering to run only auth tests when debugging
 
-See `docs/e2e-cucumber-setup.md` for more details on the testing framework.
+**Auth state is stale / "not authenticated" errors:**
+- Delete the saved state: `rm -rf e2e/.auth/`
+- Next test run will perform fresh OAuth and save new state
+
+See `apps/bumicerts/skills/e2e.md` for more details on the testing framework.
 
 ## Troubleshooting
 

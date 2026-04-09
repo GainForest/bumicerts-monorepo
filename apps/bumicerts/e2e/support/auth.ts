@@ -8,10 +8,17 @@
  * 4. Entering password on PDS page
  * 5. Handling callback
  * 6. Waiting for authentication completion
+ *
+ * Auth State Reuse:
+ * - performAuthSetup() runs once and saves browser state to .auth/user.json
+ * - Subsequent tests load this state instead of re-authenticating
  */
 
 import type { AppWorld } from './world.js'
+import type { Browser, BrowserContext } from '@playwright/test'
 import { getPage } from './utils.js'
+import { resolve } from 'node:path'
+import { testEnv } from './env.js'
 
 /**
  * Logs in using the full OAuth flow
@@ -235,4 +242,168 @@ export async function logout(world: AppWorld): Promise<void> {
 export function isAuthAvailable(world: AppWorld): boolean {
   const { testHandle, testPassword } = world.env
   return Boolean(testHandle && testPassword)
+}
+
+/**
+ * Performs OAuth authentication setup and saves browser state to file
+ *
+ * This function should be called once before any @auth tests run.
+ * It creates a temporary browser context, performs the full OAuth flow,
+ * and saves the authenticated state to e2e/.auth/user.json.
+ *
+ * Subsequent tests can load this state instead of re-authenticating.
+ *
+ * @param browser - Shared Playwright browser instance
+ * @param authStatePath - Path to save the auth state file
+ * @throws Error if authentication fails or required env vars are missing
+ */
+export async function performAuthSetup(
+  browser: Browser,
+  authStatePath: string
+): Promise<void> {
+  const { testHandle, testPassword, testPdsDomain, appUrl } = testEnv
+
+  // Validate required env vars
+  if (!testHandle) {
+    throw new Error(
+      'E2E_TEST_HANDLE is not set. Add it to e2e/.env for authenticated tests.\n' +
+        'See e2e/.env.example for details.'
+    )
+  }
+
+  if (!testPassword) {
+    throw new Error(
+      'E2E_TEST_PASSWORD is not set. Add it to e2e/.env for authenticated tests.\n' +
+        'See e2e/.env.example for details.'
+    )
+  }
+
+  console.log(`\n🔐 Setting up authentication for ${testHandle}...`)
+  console.log(`   Auth state will be saved to: ${authStatePath}`)
+
+  // Create temporary context for authentication
+  const context: BrowserContext = await browser.newContext({
+    viewport: { width: 1280, height: 720 },
+  })
+  const page = await context.newPage()
+
+  try {
+    // Step 1: Navigate to home page
+    await page.goto(appUrl)
+    await page.waitForLoadState('domcontentloaded')
+
+    // Step 2: Click "Launch app" button on homepage (if it exists)
+    const launchAppButton = page.locator('button:has-text("Launch app"), a:has-text("Launch app")').first()
+    const launchAppExists = await launchAppButton.isVisible({ timeout: 2000 }).catch(() => false)
+    
+    if (launchAppExists) {
+      console.log('  → Clicking "Launch app" button...')
+      await launchAppButton.click()
+      await page.waitForLoadState('domcontentloaded')
+      await page.waitForTimeout(1000)
+    }
+
+    // Step 3: Open login modal
+    console.log('  → Looking for "Get started" button...')
+    const getStartedButton = page.locator('button:has-text("Get started")').first()
+    await getStartedButton.waitFor({ state: 'visible', timeout: 5000 })
+    await getStartedButton.click()
+    await page.waitForTimeout(1000)
+
+    // Step 4: Click on the "Handle" tab
+    console.log('  → Clicking Handle tab...')
+    const handleTab = page.locator('button:has-text("Handle")').first()
+    await handleTab.click()
+    await page.waitForTimeout(500)
+
+    // Step 5: Enter just the username part
+    const username = testHandle.split('.')[0]
+    console.log(`  → Entering username: ${username}`)
+    
+    const handleInput = page.locator('input#login-handle')
+    await handleInput.waitFor({ state: 'visible', timeout: 3000 })
+    await handleInput.fill(username)
+
+    // Step 6: Select PDS domain from dropdown
+    console.log(`  → Selecting PDS domain: ${testPdsDomain}`)
+    
+    const pdsDropdownButton = page.locator('button:has-text(".' + (testPdsDomain ?? 'climateai.org') + '")').first()
+    const dropdownExists = await pdsDropdownButton.isVisible({ timeout: 2000 }).catch(() => false)
+    
+    if (!dropdownExists || testPdsDomain !== 'climateai.org') {
+      const anyPdsButton = page.locator('button.shrink-0:has(svg)').filter({ hasText: '.' }).first()
+      const anyDropdownExists = await anyPdsButton.isVisible().catch(() => false)
+      
+      if (anyDropdownExists) {
+        await anyPdsButton.click()
+        await page.waitForTimeout(300)
+        
+        const domainOption = page.locator(`button:has-text("${testPdsDomain ?? 'climateai.org'}")`)
+        await domainOption.first().click()
+        await page.waitForTimeout(300)
+      }
+    }
+
+    // Step 7: Click the Continue button
+    console.log('  → Clicking Continue button...')
+    const continueButton = page.locator('button[type="submit"]:has-text("Continue")').first()
+    await continueButton.click()
+
+    console.log('⏳ Waiting for redirect to PDS authorization page...')
+
+    // Step 8: Wait for redirect to PDS authorization page
+    await page.waitForURL(url => {
+      const urlString = url.toString()
+      const pdsDomain = testPdsDomain ?? 'climateai.org'
+      return urlString.includes(pdsDomain) && 
+             (urlString.includes('/oauth/') || urlString.includes('/authorize'))
+    }, { timeout: 15000 })
+
+    console.log(`✓ Redirected to PDS authorization page`)
+
+    // Step 9: Fill in password on PDS page
+    console.log('  → Entering password on PDS page...')
+    const passwordInput = page.locator('input[type="password"]').first()
+    await passwordInput.waitFor({ state: 'visible', timeout: 10000 })
+    await passwordInput.fill(testPassword)
+
+    // Step 10: Submit the password
+    console.log('  → Submitting password...')
+    const passwordSubmitButton = page.locator('button[type="submit"], button:has-text("Next"), button:has-text("Sign in"), button:has-text("Continue")').first()
+    await passwordSubmitButton.click()
+
+    // Step 11: Wait for and click the "Approve" button
+    console.log('  → Waiting for Approve button...')
+    const approveButton = page.locator('button:has-text("Approve"), button:has-text("Allow"), button:has-text("Authorize")').first()
+    await approveButton.waitFor({ state: 'visible', timeout: 10000 })
+    await approveButton.click()
+
+    console.log('⏳ Waiting for OAuth callback and redirects...')
+
+    // Step 12: Wait for navigation to complete
+    try {
+      await page.waitForLoadState('networkidle', { timeout: 15000 })
+    } catch (e) {
+      // networkidle might timeout, that's okay
+    }
+
+    await page.waitForTimeout(2000)
+
+    const finalUrl = page.url()
+
+    // Verify we're back on our app
+    if (finalUrl.includes(testPdsDomain ?? 'climateai.org')) {
+      throw new Error(`OAuth flow did not complete - still on PDS page: ${finalUrl}`)
+    }
+
+    console.log(`✓ OAuth flow complete! Final URL: ${finalUrl}`)
+
+    // Save the authenticated browser state
+    await context.storageState({ path: authStatePath })
+    console.log(`✅ Auth state saved to: ${authStatePath}`)
+
+  } finally {
+    // Clean up temporary context
+    await context.close()
+  }
 }
