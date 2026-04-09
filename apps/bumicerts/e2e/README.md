@@ -183,21 +183,126 @@ await page.fill('[name="email"]', 'test@example.com')
 await page.click('button[type="submit"]')
 ```
 
-## Future: Authentication Testing
+## Authenticated Testing
 
-To add login/auth tests:
+### Setup
 
-1. Create `e2e/features/auth.feature`
-2. Create `e2e/step-definitions/auth.steps.ts`
-3. Test account needed on `climateai.org` PDS
-4. Steps to automate:
-   - Enter handle in login modal
-   - Follow OAuth redirect
-   - Enter password on PDS page
-   - Handle callback
-   - Verify authenticated state
+Authenticated tests automate the **full OAuth login flow**. This requires:
 
-See `docs/e2e-cucumber-setup.md` for more details on the testing framework.
+1. **Test account** on `climateai.org` or another PDS
+2. **Environment variables** in `e2e/.env`:
+
+```bash
+# Your test account handle (e.g., testuser.climateai.org)
+E2E_TEST_HANDLE=testuser.climateai.org
+
+# Your test account password
+E2E_TEST_PASSWORD=<your_password>
+
+# PDS domain (optional, defaults to climateai.org)
+E2E_TEST_PDS_DOMAIN=climateai.org
+```
+
+### How It Works
+
+The E2E suite uses **auth state reuse** to make authenticated tests fast:
+
+#### First Time / Auth State Not Found:
+1. **Performs full OAuth login** (once, before first `@auth` scenario)
+2. **Saves browser state** to `e2e/.auth/user.json` (gitignored)
+3. This includes cookies, localStorage, and session data
+
+#### Subsequent Test Runs:
+1. **Loads saved auth state** from file
+2. **Skips OAuth flow entirely** - instant authentication!
+3. All `@auth` scenarios start already logged in
+
+#### OAuth Flow Details (when needed):
+The full OAuth automation includes:
+1. Opens the login modal on your app
+2. Enters the test handle and selects the PDS domain
+3. Clicks authorize to start OAuth
+4. Waits for redirect to the PDS authorization page
+5. Enters the password on the PDS page
+6. Submits and waits for OAuth callback
+7. Completes authentication and redirects back to the app
+
+**Performance:**
+- Without auth state reuse: ~30s per test (OAuth each time)
+- With auth state reuse: ~30s once + instant for remaining tests
+- Example: 10 auth tests take ~30s instead of ~5 minutes!
+
+**Auth State Management:**
+- Auth state is saved to `e2e/.auth/user.json` (gitignored)
+- To force re-authentication: `rm -rf e2e/.auth/`
+- State is long-lived (persists across test runs)
+- Each developer has their own local auth state
+
+### Writing Authenticated Tests
+
+Tag scenarios with `@auth` and use the authentication steps:
+
+```gherkin
+@auth
+Scenario: User can edit organization
+  Given I am logged in as the test user
+  When the user navigates to "/upload"
+  Then I should be logged in
+```
+
+### Available Auth Steps
+
+**Given:**
+- `I am logged in as the test user` - Verifies auth state is loaded (auth happens in Before hook)
+- `I am logged out` - Clears auth session
+
+**Then:**
+- `I should be logged in` - Verifies user menu visible
+- `I should see my handle in the header` - Verifies handle appears
+
+### Running Auth Tests
+
+```bash
+# Run all tests including authenticated ones
+bun run test:e2e
+
+# Run only authenticated tests
+bun run test:e2e -- --tags @auth
+
+# Skip authenticated tests
+bun run test:e2e -- --tags "not @auth"
+```
+
+### Troubleshooting
+
+**"E2E_TEST_HANDLE is not set" error:**
+- Fill in the test credentials in `e2e/.env`
+- Format: `username.pdsdomain.com` (e.g., `testuser.climateai.org`)
+
+**"E2E_TEST_PASSWORD is not set" error:**
+- Add your test account password to `e2e/.env`
+- This is the password you use to log into the PDS
+
+**Login fails / stuck on PDS page:**
+- Verify your handle and password are correct
+- Try logging in manually first to verify credentials work
+- Check if PDS page UI has changed (selectors may need updating)
+
+**"Page not authenticated" errors:**
+- Verify your test account has an organization record
+- OAuth flow may have failed - check browser screenshots in `reports/screenshots/`
+
+**Tests are slow:**
+- First auth test performs OAuth (~30s), subsequent tests reuse state (instant)
+- Delete `e2e/.auth/` if you suspect stale auth state
+- Consider running with `E2E_HEADLESS=true` for faster execution
+- Use `@auth` tag filtering to run only auth tests when debugging
+
+**Auth state is stale / "not authenticated" errors:**
+- Delete the saved state: `rm -rf e2e/.auth/`
+- Next test run will perform fresh OAuth and save new state
+
+See `apps/bumicerts/skills/e2e.md` for more details on the testing framework.
 
 ## Troubleshooting
 

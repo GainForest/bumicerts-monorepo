@@ -9,7 +9,20 @@ import { config } from 'dotenv'
 import { resolve } from 'node:path'
 
 // Load environment variables from e2e/.env
-config({ path: resolve(process.cwd(), 'e2e/.env') })
+// Use process.cwd() which is the project root where tests are run from
+const envPath = resolve(process.cwd(), 'e2e', '.env')
+const result = config({ path: envPath })
+
+if (result.error) {
+  console.error('❌ Failed to load .env file:', result.error)
+  console.error('Tried path:', envPath)
+  console.error('Current working directory:', process.cwd())
+  throw result.error
+}
+
+console.log('✅ Loaded .env from:', envPath)
+console.log('📋 E2E_APP_URL:', process.env.E2E_APP_URL)
+console.log('📋 E2E_TEST_HANDLE:', process.env.E2E_TEST_HANDLE)
 
 /**
  * Helper to require an environment variable
@@ -57,4 +70,9 @@ export const testEnv = {
   // Timeouts (in milliseconds)
   defaultTimeout: Number.parseInt(optional('E2E_DEFAULT_TIMEOUT', '30000') ?? '30000'),
   navigationTimeout: Number.parseInt(optional('E2E_NAVIGATION_TIMEOUT', '30000') ?? '30000'),
+
+  // Test account credentials (for authenticated tests via OAuth)
+  testHandle: optional('E2E_TEST_HANDLE'),
+  testPassword: optional('E2E_TEST_PASSWORD'),
+  testPdsDomain: optional('E2E_TEST_PDS_DOMAIN', 'climateai.org'),
 } as const
