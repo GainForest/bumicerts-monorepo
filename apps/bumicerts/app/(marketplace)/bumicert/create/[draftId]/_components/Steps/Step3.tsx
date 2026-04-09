@@ -85,6 +85,7 @@ const Step3 = () => {
     pushModal(
       {
         id: SiteEditorModalId,
+        dialogWidth: "max-w-2xl",
         content: <SiteEditorModal initialData={null} />,
       },
       true
