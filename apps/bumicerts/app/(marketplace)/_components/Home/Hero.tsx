@@ -49,7 +49,7 @@ export function Hero() {
           className="text-center max-w-4xl"
         >
           <h1
-            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light tracking-[-0.02em] leading-[1.1] text-foreground"
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light tracking-[-0.02em] leading-[1.1] text-black"
             style={{ fontFamily: "var(--font-garamond-var)" }}
           >
             Verified Impact{" "}
@@ -78,7 +78,7 @@ export function Hero() {
             Starts
             <br />
             <span
-              className="text-foreground/80"
+              className="text-primary"
               style={{
                 fontFamily: "var(--font-instrument-serif-var)",
                 fontStyle: "italic",

@@ -38,7 +38,8 @@ export function TopNavbar() {
         <div
           className="absolute inset-0 z-1"
           style={{
-            background: "linear-gradient(to bottom, var(--background) 0%, transparent 100%)",
+            background:
+              "linear-gradient(to bottom, white 0%, transparent 100%)",
             opacity: 0.85,
           }}
         />
@@ -66,7 +67,7 @@ export function TopNavbar() {
             />
           </motion.div>
           <span
-            className="text-base font-medium tracking-tight text-foreground/80 group-hover:text-foreground transition-colors duration-200"
+            className="text-base font-medium tracking-tight text-black/80 group-hover:text-black transition-colors duration-200"
             style={{ fontFamily: "var(--font-garamond-var)" }}
           >
             Bumicerts
@@ -93,15 +94,18 @@ export function TopNavbar() {
           <Drawer.Root open={drawerOpen} onOpenChange={setDrawerOpen}>
             <Drawer.Trigger
               aria-controls={drawerId}
-              className="flex items-center gap-2 text-sm font-medium text-foreground/70 hover:text-foreground transition-colors cursor-pointer"
+              className="flex items-center gap-2 text-sm font-medium text-black/70 hover:text-black transition-colors cursor-pointer"
             >
               Menu
-              <span className="text-foreground/30">=</span>
+              <span className="text-black/30">=</span>
             </Drawer.Trigger>
 
             <Drawer.Portal>
               <Drawer.Overlay className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" />
-              <Drawer.Content id={drawerId} className="fixed top-0 right-0 bottom-0 w-full max-w-md z-50 bg-background border-l border-border flex flex-col">
+              <Drawer.Content
+                id={drawerId}
+                className="fixed top-0 right-0 bottom-0 w-full max-w-md z-50 bg-background border-l border-border flex flex-col"
+              >
                 {/* Close button */}
                 <div className="flex items-center justify-between p-6 border-b border-border">
                   <span className="text-sm font-medium tracking-wide uppercase text-muted-foreground">
