@@ -58,7 +58,7 @@ interface AmountModalProps {
 }
 
 export function AmountModal({ bumicert, fundingConfig }: AmountModalProps) {
-  const { pushModal, stack, hide, popModal } = useModal();
+  const { pushModal, hide, clear } = useModal();
   const auth = useAtprotoStore((state) => state.auth);
   const isAuthenticated = auth.status === "AUTHENTICATED";
   const { address, isConnected } = useAccount();
@@ -73,12 +73,9 @@ export function AmountModal({ bumicert, fundingConfig }: AmountModalProps) {
   const [customInput, setCustomInput] = useState<string>(String(initialAmount));
   const [anonymous, setAnonymous] = useState(false);
 
-  const handleClose = () => {
-    if (stack.length === 1) {
-      hide().then(() => popModal());
-    } else {
-      popModal();
-    }
+  const handleCancel = async () => {
+    await hide();
+    clear();
   };
 
   const handlePreset = (preset: number) => {
@@ -114,7 +111,7 @@ export function AmountModal({ bumicert, fundingConfig }: AmountModalProps) {
 
   return (
     <ModalContent dismissible={false}>
-      <ModalHeader backAction={stack.length > 1 ? handleClose : undefined}>
+      <ModalHeader>
         <ModalTitle>Support Bumicert</ModalTitle>
         <ModalDescription>
           {bumicert.title}
@@ -191,7 +188,7 @@ export function AmountModal({ bumicert, fundingConfig }: AmountModalProps) {
           Continue with Card
           <span className="text-xs bg-muted-foreground text-muted px-1 rounded-xs uppercase font-mono">Coming soon</span>
         </Button> */}
-        <Button variant="ghost" onClick={handleClose} className="w-full">
+        <Button variant="outline" onClick={handleCancel} className="w-full">
           Cancel
         </Button>
       </ModalFooter>

@@ -19,7 +19,6 @@ export const MODAL_IDS = {
   DONATE_WALLET: "donate/wallet",
   DONATE_CONFIRM: "donate/confirm",
   DONATE_SUCCESS: "donate/success",
-  DONATE_LINK_WALLET: "donate/link-wallet",
 
   // Upload / org management
   UPLOAD_IMAGE_EDITOR: "upload/image-editor",

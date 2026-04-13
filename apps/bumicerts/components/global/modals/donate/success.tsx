@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useModal } from "@/components/ui/modal/context";
 import {
   ModalContent,
@@ -11,7 +12,6 @@ import {
 } from "@/components/ui/modal/modal";
 import { Button } from "@/components/ui/button";
 import { links } from "@/lib/links";
-import Link from "next/link";
 import {
   CheckIcon,
   CopyIcon,
@@ -63,17 +63,21 @@ export function SuccessModal({
   anonymous,
   bumicertId,
 }: SuccessModalProps) {
-  const { hide, popModal, stack } = useModal();
+  const { hide, clear } = useModal();
+  const router = useRouter();
   const [copied, setCopied] = useState(false);
 
   const baseScanUrl = `https://basescan.org/tx/${transactionHash}`;
 
-  const handleDone = () => {
-    if (stack.length === 1) {
-      hide().then(() => popModal());
-    } else {
-      popModal();
-    }
+  const handleDone = async () => {
+    await hide();
+    clear();
+  };
+
+  const handleNavigate = async (href: string) => {
+    await hide();
+    clear();
+    router.push(href);
   };
 
   // Share functionality
@@ -222,29 +226,23 @@ export function SuccessModal({
         <div className="flex flex-col gap-1 pt-2 border-t border-border">
           {bumicertId && (
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
-              asChild
               className="w-full justify-start"
-              onClick={handleDone}
+              onClick={() => handleNavigate(links.bumicert.view(bumicertId))}
             >
-              <Link href={links.bumicert.view(bumicertId)}>
-                View bumicert →
-              </Link>
+              View bumicert →
             </Button>
           )}
 
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
-            asChild
-            className="w-full justify-start"
-            onClick={handleDone}
+            className="w-full justify-start flex items-center gap-2"
+            onClick={() => handleNavigate(links.leaderboard)}
           >
-            <Link href={links.leaderboard} className="flex items-center gap-2">
-              <TrophyIcon className="size-4" />
-              View leaderboard →
-            </Link>
+            <TrophyIcon />
+            View leaderboard →
           </Button>
         </div>
       </div>

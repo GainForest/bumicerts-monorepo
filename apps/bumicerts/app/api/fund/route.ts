@@ -269,9 +269,15 @@ export async function POST(req: NextRequest) {
   // Build `from` field:
   // - For anonymous donors: store wallet address using Text type
   // - For identified donors: wrap their DID as { $type, did }
-  const fromValue = body.anonymous || !body.donorDid
+  // - If donorDid is missing but anonymous is false, log warning and fallback to wallet address
+  const fromValue = body.anonymous
     ? { $type: "org.hypercerts.funding.receipt#text" as const, value: authorization.from }
-    : { $type: "app.certified.defs#did" as const, did: body.donorDid as `did:${string}:${string}` };
+    : body.donorDid
+      ? { $type: "app.certified.defs#did" as const, did: body.donorDid as `did:${string}:${string}` }
+      : (() => {
+          console.warn("[fund] donorDid missing but anonymous=false, falling back to wallet address");
+          return { $type: "org.hypercerts.funding.receipt#text" as const, value: authorization.from };
+        })();
 
   // Build `to` field: store recipient wallet address using Text type
   // The org DID can be derived from the `for` field (activity AT-URI contains org DID)

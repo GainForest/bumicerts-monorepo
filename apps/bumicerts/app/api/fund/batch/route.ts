@@ -324,9 +324,15 @@ export async function POST(req: NextRequest) {
   // Build `from` field:
   // - For anonymous donors: store wallet address using Text type
   // - For identified donors: wrap their DID as { $type, did }
-  const fromValue = body.anonymous || !body.donorDid
+  // - If donorDid is missing but anonymous is false, log warning and fallback to wallet address
+  const fromValue = body.anonymous
     ? { $type: "org.hypercerts.funding.receipt#text" as const, value: authorization.from }
-    : { $type: "app.certified.defs#did" as const, did: body.donorDid as `did:${string}:${string}` };
+    : body.donorDid
+      ? { $type: "app.certified.defs#did" as const, did: body.donorDid as `did:${string}:${string}` }
+      : (() => {
+          console.warn("[fund/batch] donorDid missing but anonymous=false, falling back to wallet address");
+          return { $type: "org.hypercerts.funding.receipt#text" as const, value: authorization.from };
+        })();
 
   const currency = body.currency ?? "USDC";
   
@@ -362,9 +368,12 @@ export async function POST(req: NextRequest) {
 
   const results: BatchItemResult[] = [];
 
-  for (const { item, wallet } of resolvedItems) {
+  for (let index = 0; index < resolvedItems.length; index++) {
+    const { item, wallet } = resolvedItems[index];
     const recipientWallet = wallet as `0x${string}`;
     const amountNumber = parseFloat(item.amount);
+
+    console.log(`[fund/batch] Processing item ${index + 1}/${resolvedItems.length} for ${item.activityUri}`);
 
     let transactionHash: `0x${string}` = "0x" as `0x${string}`;
     let success = false;
@@ -372,12 +381,14 @@ export async function POST(req: NextRequest) {
 
     try {
       // Transfer from facilitator to org
+      console.log(`[fund/batch] Executing transfer to ${recipientWallet} for ${amountNumber} USDC`);
       const result = await executeSimpleTransfer({
         to: recipientWallet,
         amount: amountNumber,
       });
       transactionHash = result.transactionHash;
       success = true;
+      console.log(`[fund/batch] ✓ Transfer successful: ${transactionHash}`);
     } catch (err) {
       console.error(`[fund/batch] Facilitator->${item.orgDid} transfer failed:`, err);
       error = err instanceof Error ? err.message : String(err);
@@ -399,6 +410,7 @@ export async function POST(req: NextRequest) {
       } else {
         const forValue = { uri: item.activityUri as AtUriString, cid: activityCid };
         
+        console.log(`[fund/batch] Creating receipt for ${item.activityUri}...`);
         const receiptEither = await Effect.runPromise(
           mutations.funding.receipt.create({
             from:           fromValue,
@@ -419,8 +431,9 @@ export async function POST(req: NextRequest) {
 
         if (receiptEither._tag === "Right") {
           receiptUri = receiptEither.right.uri;
+          console.log(`[fund/batch] ✓ Receipt created: ${receiptUri}`);
         } else {
-          console.error(`[fund/batch] Failed to write receipt for ${item.activityUri}:`, receiptEither.left);
+          console.error(`[fund/batch] ✗ Receipt creation failed for ${item.activityUri}:`, receiptEither.left);
         }
       }
     }

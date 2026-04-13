@@ -16,7 +16,6 @@ import type { BumicertData } from "@/lib/types";
 import { MODAL_IDS } from "@/components/global/modals/ids";
 import { useUSDCBalance } from "./hooks/useUSDCBalance";
 import { SuccessModal } from "./success";
-import { LinkWalletModal } from "./link-wallet";
 import { toUsdcUnits, EIP3009_TYPES } from "@/lib/facilitator/usdc";
 
 type TxState = "idle" | "waiting-signature" | "processing" | "rejected";
@@ -29,7 +28,7 @@ interface ConfirmModalProps {
 }
 
 export function ConfirmModal({ bumicert, amount, anonymous, recipientWallet }: ConfirmModalProps) {
-  const { pushModal, popModal, stack, hide } = useModal();
+  const { pushModal, popModal, hide, clear } = useModal();
   const { address } = useAccount();
   const auth = useAtprotoStore((state) => state.auth);
   const { balance, isLoading: isBalanceLoading } = useUSDCBalance(address);
@@ -46,11 +45,12 @@ export function ConfirmModal({ bumicert, amount, anonymous, recipientWallet }: C
   const hasEnoughBalance = balance !== null && parseFloat(balance) >= amount;
 
   const handleBack = () => {
-    if (stack.length === 1) {
-      hide().then(() => popModal());
-    } else {
-      popModal();
-    }
+    popModal();
+  };
+
+  const handleCancel = async () => {
+    await hide();
+    clear();
   };
 
   function buildTypedData(toWallet: `0x${string}`) {
@@ -178,7 +178,7 @@ export function ConfirmModal({ bumicert, amount, anonymous, recipientWallet }: C
           <p className="text-xs text-muted-foreground">No gas required from you</p>
         </div>
         <ModalFooter>
-          <Button variant="ghost" onClick={handleBack} className="w-full" disabled>
+          <Button variant="outline" onClick={handleCancel} className="w-full" disabled>
             Cancel
           </Button>
         </ModalFooter>
@@ -199,7 +199,7 @@ export function ConfirmModal({ bumicert, amount, anonymous, recipientWallet }: C
           <p className="text-sm text-muted-foreground">This usually takes a few seconds</p>
         </div>
         <ModalFooter>
-          <Button variant="ghost" onClick={handleBack} className="w-full" disabled>
+          <Button variant="outline" onClick={handleCancel} className="w-full" disabled>
             Cancel
           </Button>
         </ModalFooter>
@@ -256,32 +256,6 @@ export function ConfirmModal({ bumicert, amount, anonymous, recipientWallet }: C
         </p>
       </div>
 
-      {isAuthenticated && !anonymous && (
-        <div className="border border-amber-200 bg-amber-50 dark:bg-amber-950/20 rounded-lg px-4 py-3">
-          <p className="text-xs text-amber-800 dark:text-amber-400 mb-1">
-            ⚠️ This wallet isn&apos;t linked to your Bumicerts identity yet.
-          </p>
-          <button
-            className="text-xs text-primary font-medium hover:underline"
-            onClick={() =>
-              pushModal({
-                id: MODAL_IDS.DONATE_LINK_WALLET,
-                content: (
-                  <LinkWalletModal
-                    bumicert={bumicert}
-                    amount={amount}
-                    anonymous={anonymous}
-                    recipientWallet={recipientWallet}
-                  />
-                ),
-              })
-            }
-          >
-            Link wallet to my account →
-          </button>
-        </div>
-      )}
-
       <div className="border border-border rounded-lg px-4 py-3 flex flex-col gap-1">
         <p className="text-xs text-muted-foreground">You&apos;re donating</p>
         <p className="text-xl font-bold">${amount.toFixed(2)} USDC</p>
@@ -303,7 +277,7 @@ export function ConfirmModal({ bumicert, amount, anonymous, recipientWallet }: C
         >
           Pay ${amount.toFixed(2)}
         </Button>
-        <Button variant="ghost" onClick={handleBack} className="w-full">
+        <Button variant="outline" onClick={handleCancel} className="w-full">
           Cancel
         </Button>
       </ModalFooter>
