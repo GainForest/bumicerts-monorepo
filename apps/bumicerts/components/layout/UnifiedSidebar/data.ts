@@ -71,10 +71,6 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   {
-    kind: "separator",
-    id: "sep-1",
-  },
-  {
     kind: "section",
     id: "manage",
     label: "MANAGE",

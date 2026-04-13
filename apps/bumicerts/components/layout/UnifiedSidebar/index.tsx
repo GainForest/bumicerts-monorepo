@@ -1,12 +1,11 @@
 "use client";
 
-import { LayoutGroup, motion } from "framer-motion";
-import { useMemo } from "react";
+import { LayoutGroup } from "framer-motion";
 import { useAtprotoStore } from "@/components/stores/atproto";
 import { SidebarHeader } from "./SidebarHeader";
 import { NavSection } from "./NavSection";
 import { SocialFooter } from "./SocialFooter";
-import { NAV_ITEMS } from "./data";
+import { NAV_ITEMS, type NavSection as NavSectionType } from "./data";
 
 /**
  * UnifiedSidebar
@@ -24,69 +23,49 @@ export function UnifiedSidebar() {
   const auth = useAtprotoStore((s) => s.auth);
   const isAuthenticated = auth.status === "AUTHENTICATED";
 
-  // Compute indices for stagger animation delays
-  const itemsWithIndices = useMemo(() => {
-    const result: Array<{ item: typeof NAV_ITEMS[number]; index: number }> = [];
-    let currentIndex = 0;
-
-    for (const item of NAV_ITEMS) {
-      if (item.kind === "separator") {
-        result.push({ item, index: currentIndex });
-        currentIndex += 1;
-      } else if (item.kind === "section") {
-        result.push({ item, index: currentIndex });
-        currentIndex += 1 + item.items.length;
-      }
-    }
-
-    return result;
-  }, []);
+  // Split sections into EXPLORE (top) and MANAGE (bottom)
+  const exploreSection = NAV_ITEMS.find(
+    (item) => item.kind === "section" && item.id === "explore"
+  ) as NavSectionType | undefined;
+  const manageSection = NAV_ITEMS.find(
+    (item) => item.kind === "section" && item.id === "manage"
+  ) as NavSectionType | undefined;
 
   return (
-    <nav className="w-[240px] h-full flex flex-col justify-between p-4 border-r border-border bg-foreground/3 relative">
+    <nav className="w-[240px] h-full flex flex-col p-4 border-r border-border bg-foreground/3 relative">
       {/* Top section */}
       <div className="flex flex-col gap-1">
         {/* Header */}
         <SidebarHeader />
 
-        {/* Nav sections — data-driven */}
+        {/* EXPLORE section */}
         <LayoutGroup id="unified-sidebar-nav">
-          <div className="flex flex-col gap-0.5">
-            {itemsWithIndices.map(({ item, index }) => {
-              if (item.kind === "separator") {
-                return (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{
-                      duration: 0.3,
-                      delay: 0.05 * index,
-                    }}
-                    className="h-px bg-border/60 mx-1 my-2"
-                  />
-                );
-              }
-
-              if (item.kind === "section") {
-                return (
-                  <NavSection
-                    key={item.id}
-                    section={item}
-                    isAuthenticated={isAuthenticated}
-                    startIndex={index}
-                  />
-                );
-              }
-
-              return null;
-            })}
-          </div>
+          {exploreSection && (
+            <NavSection
+              section={exploreSection}
+              isAuthenticated={isAuthenticated}
+              startIndex={0}
+            />
+          )}
         </LayoutGroup>
       </div>
 
-      {/* Footer section */}
+      {/* Spacer */}
+      <div className="flex-1" />
+
+      {/* Bottom section */}
       <div className="flex flex-col gap-2">
+        {/* MANAGE section */}
+        <LayoutGroup id="unified-sidebar-nav-manage">
+          {manageSection && (
+            <NavSection
+              section={manageSection}
+              isAuthenticated={isAuthenticated}
+              startIndex={0}
+            />
+          )}
+        </LayoutGroup>
+
         <div className="h-px bg-border" />
         <SocialFooter />
       </div>

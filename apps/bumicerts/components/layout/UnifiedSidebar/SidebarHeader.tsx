@@ -4,9 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { PlusIcon } from "lucide-react";
 import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
 import { links } from "@/lib/links";
 import { useMobileNav } from "@/hooks/useMobileNav";
-import { cn } from "@/lib/utils";
 
 export function SidebarHeader() {
   const closeMobileNav = useMobileNav((s) => s.setOpen);
@@ -52,20 +52,11 @@ export function SidebarHeader() {
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.3, delay: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
       >
-        <Link href={links.bumicert.create} onClick={() => closeMobileNav(false)}>
-          <button
-            type="button"
-            className={cn(
-              "h-8 w-8 rounded-lg flex items-center justify-center",
-              "bg-primary text-primary-foreground",
-              "hover:bg-primary/90 transition-colors duration-150",
-              "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-            )}
-            aria-label="Create Bumicert"
-          >
-            <PlusIcon className="h-4 w-4" />
-          </button>
-        </Link>
+        <Button size="icon" asChild>
+          <Link href={links.bumicert.create} onClick={() => closeMobileNav(false)}>
+            <PlusIcon />
+          </Link>
+        </Button>
       </motion.div>
     </div>
   );

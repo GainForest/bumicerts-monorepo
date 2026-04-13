@@ -14,9 +14,9 @@ const SOCIAL_LINKS = [
 
 export function SocialFooter() {
   return (
-    <div className="flex flex-col gap-2">
-      {/* Social icons row */}
-      <div className="flex items-center justify-center gap-1 px-2">
+    <div className="flex items-center justify-between px-2">
+      {/* Social icons */}
+      <div className="flex items-center gap-1">
         {SOCIAL_LINKS.map((link) => (
           <Link
             key={link.href}
@@ -25,18 +25,18 @@ export function SocialFooter() {
             rel="noopener noreferrer"
             aria-label={link.label}
             className={cn(
-              "p-2 rounded-md",
+              "p-1.5 rounded-md",
               "text-muted-foreground hover:text-foreground hover:bg-muted/60",
               "transition-colors duration-150"
             )}
           >
-            <link.Icon className="h-4 w-4" />
+            <link.Icon className="h-3.5 w-3.5" />
           </Link>
         ))}
       </div>
 
       {/* Version + Theme toggle */}
-      <div className="flex items-center justify-between px-2">
+      <div className="flex items-center gap-2">
         <span className="text-[10px] text-muted-foreground/50">v0.2.0</span>
         <ThemeToggle />
       </div>
