@@ -1,6 +1,15 @@
 "use client";
 
 /**
+ * @deprecated Platform switching removed in favor of unified sidebar.
+ * Kept for reference only.
+ * See: Unified sidebar implementation (April 2026)
+ *
+ * The new unified sidebar no longer has a platform switcher dropdown.
+ * Instead, EXPLORE and MANAGE sections coexist in the same sidebar.
+ *
+ * ---
+ *
  * PlatformSwitcher — dropdown to switch between Marketplace and Upload platforms.
  *
  * Displays the current platform name with a chevron icon. Clicking opens a popover

@@ -1,6 +1,14 @@
 "use client";
 
 /**
+ * @deprecated Platform transition overlay no longer needed with unified sidebar.
+ * Kept for reference only.
+ * See: Unified sidebar implementation (April 2026)
+ *
+ * The unified sidebar no longer has platform switching animations.
+ *
+ * ---
+ *
  * SidebarTransitionOverlay
  *
  * Shown inside a sidebar for ~1 second when the user crosses the

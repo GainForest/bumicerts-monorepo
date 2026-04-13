@@ -1,3 +1,9 @@
+/**
+ * @deprecated Navigation data moved to `components/layout/UnifiedSidebar/data.ts`.
+ * Kept for reference only.
+ * See: Unified sidebar implementation (April 2026)
+ */
+
 import {
   CompassIcon,
   Building2Icon,

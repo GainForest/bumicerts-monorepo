@@ -1,3 +1,12 @@
+/**
+ * @deprecated This sidebar has been replaced by the unified sidebar at
+ * `components/layout/UnifiedSidebar/`. Kept for reference only.
+ * See: Unified sidebar implementation (April 2026)
+ *
+ * The new unified sidebar combines both marketplace and upload navigation
+ * into a single component with EXPLORE and MANAGE sections.
+ */
+
 "use client";
 
 import Link from "next/link";

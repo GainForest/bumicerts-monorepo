@@ -1,3 +1,9 @@
+/**
+ * @deprecated Navigation data moved to `components/layout/UnifiedSidebar/data.ts`.
+ * Kept for reference only.
+ * See: Unified sidebar implementation (April 2026)
+ */
+
 import { Building2Icon, MapPinIcon, MicIcon, TreePineIcon } from "lucide-react";
 import BumicertIcon from "@/icons/BumicertIcon";
 import { links } from "@/lib/links";
