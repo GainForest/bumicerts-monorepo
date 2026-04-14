@@ -34,7 +34,13 @@ import { clientEnv } from "@/lib/env/client";
 export function getPublicUrl(): string | undefined {
   // 1. Branch-specific URLs for preview deployments
   const deploymentBranch = serverEnv.VERCEL_GIT_COMMIT_REF;
+  console.log("Deployment Branch:", deploymentBranch);
   if (deploymentBranch) {
+    console.log(
+      "Check prod",
+      serverEnv.PRODUCTION_BRANCH_NAME,
+      serverEnv.PRODUCTION_URL,
+    );
     if (
       serverEnv.PRODUCTION_BRANCH_NAME &&
       deploymentBranch === serverEnv.PRODUCTION_BRANCH_NAME &&
@@ -43,6 +49,11 @@ export function getPublicUrl(): string | undefined {
       return serverEnv.PRODUCTION_URL.trim().replace(/\/$/, "");
     }
 
+    console.log(
+      "Check staging",
+      serverEnv.STAGING_BRANCH_NAME,
+      serverEnv.STAGING_URL,
+    );
     if (
       serverEnv.STAGING_BRANCH_NAME &&
       deploymentBranch === serverEnv.STAGING_BRANCH_NAME &&
@@ -51,12 +62,14 @@ export function getPublicUrl(): string | undefined {
       return serverEnv.STAGING_URL.trim().replace(/\/$/, "");
     }
 
+    console.log("Check other", serverEnv.VERCEL_URL);
     // For any other branch preview, use the raw Vercel URL
     if (serverEnv.VERCEL_URL) {
       return `https://${serverEnv.VERCEL_URL.trim()}`;
     }
   }
 
+  console.log("Nothing");
   // 2. Explicit override (local dev, ngrok, production custom domain, etc.)
   if (clientEnv.NEXT_PUBLIC_BASE_URL) {
     return clientEnv.NEXT_PUBLIC_BASE_URL.trim().replace(/\/$/, "");
@@ -85,11 +98,11 @@ export function requirePublicUrl(): string {
   if (!url) {
     throw new Error(
       "[bumicerts] Could not resolve the app's public base URL.\n" +
-      "Set one of the following in your environment:\n" +
-      "  • NEXT_PUBLIC_BASE_URL=http://127.0.0.1:3001  (local dev)\n" +
-      "  • NEXT_PUBLIC_BASE_URL=https://your-tunnel.ngrok.io  (local dev with tunnel)\n" +
-      "  • NEXT_PUBLIC_BASE_URL=https://alpha.fund.gainforest.app  (Vercel Production env var)\n" +
-      "On Vercel, VERCEL_PROJECT_PRODUCTION_URL and VERCEL_URL are auto-injected as fallbacks.",
+        "Set one of the following in your environment:\n" +
+        "  • NEXT_PUBLIC_BASE_URL=http://127.0.0.1:3001  (local dev)\n" +
+        "  • NEXT_PUBLIC_BASE_URL=https://your-tunnel.ngrok.io  (local dev with tunnel)\n" +
+        "  • NEXT_PUBLIC_BASE_URL=https://alpha.fund.gainforest.app  (Vercel Production env var)\n" +
+        "On Vercel, VERCEL_PROJECT_PRODUCTION_URL and VERCEL_URL are auto-injected as fallbacks.",
     );
   }
   return url;
@@ -114,7 +127,10 @@ export function getPublicUrlClient(): string {
   // 2. Vercel preview: use the preview URL (NEXT_PUBLIC_VERCEL_URL)
   //    Note: On preview, we want share links to use the preview URL so
   //    recipients can see the same preview deployment.
-  if (clientEnv.NEXT_PUBLIC_VERCEL_ENV === "preview" && clientEnv.NEXT_PUBLIC_VERCEL_URL) {
+  if (
+    clientEnv.NEXT_PUBLIC_VERCEL_ENV === "preview" &&
+    clientEnv.NEXT_PUBLIC_VERCEL_URL
+  ) {
     return `https://${clientEnv.NEXT_PUBLIC_VERCEL_URL.trim()}`;
   }
 
