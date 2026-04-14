@@ -1,6 +1,6 @@
 "use client";
 
-import { Download } from "lucide-react";
+import { Download, InfoIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Accordion,
@@ -19,6 +19,7 @@ type FieldDoc = {
   description: string;
   format: string;
   required?: boolean;
+  helperText?: string;
 };
 
 /**
@@ -84,16 +85,19 @@ const FIELD_DOCS: FieldDoc[] = [
     field: "photo_tree",
     description: "URL to a photo of the whole tree (Google Drive, etc.)",
     format: "URL",
+    helperText: "Must be publicly accessible — no sign-in required",
   },
   {
     field: "photo_leaf",
     description: "URL to a photo of the leaf. Subject part auto-detected.",
     format: "URL",
+    helperText: "Must be publicly accessible — no sign-in required",
   },
   {
     field: "photo_bark",
     description: "URL to a photo of the bark. Subject part auto-detected.",
     format: "URL",
+    helperText: "Must be publicly accessible — no sign-in required",
   },
 ];
 
@@ -146,7 +150,7 @@ export default function TreeDataGuide() {
               {FIELD_DOCS.map((doc) => (
                 <div
                   key={doc.field}
-                  className="grid grid-cols-[1fr_1.5fr_0.6fr] gap-0 px-4 py-2.5 items-center"
+                  className="grid grid-cols-[1fr_1.5fr_0.6fr] gap-0 px-4 py-2.5 items-start"
                 >
                   <span className="text-sm font-mono text-foreground">
                     {doc.field}
@@ -154,9 +158,15 @@ export default function TreeDataGuide() {
                       <span className="text-destructive ml-1">*</span>
                     )}
                   </span>
-                  <span className="text-sm text-muted-foreground">
-                    {doc.description}
-                  </span>
+                  <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+                    <span>{doc.description}</span>
+                    {doc.helperText && (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive">
+                        <InfoIcon className="size-3.5 shrink-0" />
+                        {doc.helperText}
+                      </span>
+                    )}
+                  </div>
                   <span className="text-sm text-muted-foreground">
                     {doc.format}
                   </span>
