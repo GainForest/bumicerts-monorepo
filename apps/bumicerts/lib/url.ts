@@ -87,3 +87,40 @@ export function requirePublicUrl(): string {
   }
   return url;
 }
+
+/**
+ * Client-safe version of getPublicUrl() that only uses NEXT_PUBLIC_* env vars.
+ *
+ * Safe to use in "use client" components. Uses the canonical public URL from
+ * environment variables instead of window.location.origin, ensuring share links
+ * always use the production domain even when accessed from preview/alpha URLs.
+ *
+ * Falls back to window.location.origin only if no env var is set (local dev).
+ */
+export function getPublicUrlClient(): string {
+  // 1. Explicit override (production custom domain, ngrok, etc.)
+  //    This is the canonical URL and should be used for all share links.
+  if (clientEnv.NEXT_PUBLIC_BASE_URL) {
+    return clientEnv.NEXT_PUBLIC_BASE_URL.trim().replace(/\/$/, "");
+  }
+
+  // 2. Vercel preview: use the preview URL (NEXT_PUBLIC_VERCEL_URL)
+  //    Note: On preview, we want share links to use the preview URL so
+  //    recipients can see the same preview deployment.
+  if (clientEnv.NEXT_PUBLIC_VERCEL_ENV === "preview" && clientEnv.NEXT_PUBLIC_VERCEL_URL) {
+    return `https://${clientEnv.NEXT_PUBLIC_VERCEL_URL.trim()}`;
+  }
+
+  // 3. Production: use NEXT_PUBLIC_VERCEL_URL if available
+  if (clientEnv.NEXT_PUBLIC_VERCEL_URL) {
+    return `https://${clientEnv.NEXT_PUBLIC_VERCEL_URL.trim()}`;
+  }
+
+  // 4. Fallback to window.location.origin (local dev without env vars)
+  if (typeof window !== "undefined") {
+    return window.location.origin;
+  }
+
+  // 5. Last resort: empty string (SSR without env vars — should not happen)
+  return "";
+}

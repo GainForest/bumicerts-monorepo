@@ -21,6 +21,7 @@ import {
   TrophyIcon,
 } from "lucide-react";
 import { links } from "@/lib/links";
+import { getPublicUrlClient } from "@/lib/url";
 import Link from "next/link";
 
 // Platform icons as inline SVGs to avoid dependency issues
@@ -86,7 +87,7 @@ export function ShareSuccess({
   const shareText = `I just donated $${amount.toFixed(2)} USDC to support ${orgText} on Bumicerts!`;
 
   // Base URL for sharing
-  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+  const baseUrl = getPublicUrlClient();
   const shareUrl =
     bumicertIds.length === 1
       ? `${baseUrl}${links.bumicert.view(bumicertIds[0])}`
@@ -119,7 +120,7 @@ export function ShareSuccess({
   // Copy link
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
+      await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
