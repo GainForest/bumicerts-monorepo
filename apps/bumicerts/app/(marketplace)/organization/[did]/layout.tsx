@@ -5,6 +5,7 @@ import { orgInfoToOrganizationData } from "@/lib/adapters";
 import { OrgHero } from "./_components/OrgHero";
 import { OrgTabBar } from "./_components/OrgTabBar";
 import { OrgSetupPage } from "./_components/OrgSetupPage";
+import { OrganizationLayoutClient } from "./_components/OrganizationLayoutClient";
 import ErrorPage from "@/components/error-page";
 import Container from "@/components/ui/container";
 
@@ -35,13 +36,15 @@ export default async function OrganizationLayout({
   if (error) {
     console.error("[OrganizationLayout] Error fetching org", did, error);
     return (
-      <Container className="pt-4">
-        <ErrorPage
-          title="Couldn't load this organization"
-          description="We had trouble fetching this organization's data. Please try again."
-          error={error}
-        />
-      </Container>
+      <OrganizationLayoutClient did={did}>
+        <Container className="pt-4">
+          <ErrorPage
+            title="Couldn't load this organization"
+            description="We had trouble fetching this organization's data. Please try again."
+            error={error}
+          />
+        </Container>
+      </OrganizationLayoutClient>
     );
   }
 
@@ -51,9 +54,11 @@ export default async function OrganizationLayout({
   // Own org but no profile yet — show setup prompt, no tabs
   if (!orgInfo && isOwner) {
     return (
-      <Container className="pt-4">
-        <OrgSetupPage did={did} />
-      </Container>
+      <OrganizationLayoutClient did={did}>
+        <Container className="pt-4">
+          <OrgSetupPage did={did} />
+        </Container>
+      </OrganizationLayoutClient>
     );
   }
 
@@ -62,17 +67,19 @@ export default async function OrganizationLayout({
   const organization = orgInfoToOrganizationData(orgInfo, 0);
 
   return (
-    <main className="w-full">
-      <Container className="pt-4 pb-8">
-        {/* Hero — persists across tab changes; animates only on first mount */}
-        <OrgHero organization={organization} showEditButton={isOwner} />
+    <OrganizationLayoutClient did={did}>
+      <main className="w-full">
+        <Container className="pt-4 pb-8">
+          {/* Hero — persists across tab changes; animates only on first mount */}
+          <OrgHero organization={organization} showEditButton={isOwner} />
 
-        {/* Tab bar — also persists, sliding indicator springs between tabs */}
-        <OrgTabBar did={organization.did} />
+          {/* Tab bar — also persists, sliding indicator springs between tabs */}
+          <OrgTabBar did={organization.did} />
 
-        {/* Content slot — swaps on tab change without remounting the hero */}
-        {children}
-      </Container>
-    </main>
+          {/* Content slot — swaps on tab change without remounting the hero */}
+          {children}
+        </Container>
+      </main>
+    </OrganizationLayoutClient>
   );
 }

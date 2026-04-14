@@ -82,7 +82,8 @@ const SecondaryContent = () => {
   const did = auth.user?.did ?? "";
 
   const { data: orgSingleData, isPlaceholderData: isOlderData } = indexerTrpc.organization.byDid.useQuery(
-    { did }
+    { did },
+    { enabled: !!did }
   );
 
   const org = orgSingleData?.org ?? null;

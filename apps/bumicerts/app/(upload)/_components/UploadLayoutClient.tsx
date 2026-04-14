@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { ModalProvider } from "@/components/ui/modal/context";
 import { HeaderProvider } from "@/app/(marketplace)/_components/Header/context";
 import { UploadHeader } from "./Header/UploadHeader";
@@ -23,7 +24,29 @@ interface UploadLayoutClientProps {
  *
  * Uses UploadHeader (no cart) instead of the marketplace Header.
  */
-function UploadLayoutInner({ children }: { children: React.ReactNode }) {
+function UploadLayoutInner({
+  children,
+  did,
+}: {
+  children: React.ReactNode;
+  did: string;
+}) {
+  useEffect(() => {
+    if (!did) return;
+
+    // Fire-and-forget: track the user's repo in the indexer when they enter upload
+    fetch("/api/indexer/trpc", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query: "mutation AddRepos($dids: [String!]!) { addRepos(dids: $dids) }",
+        variables: { dids: [did] },
+      }),
+    }).catch(() => {
+      // No-op: don't track if it failed or passed
+    });
+  }, [did]);
+
   return (
     <>
       {/* Desktop: sidebar + content */}
@@ -49,11 +72,14 @@ function UploadLayoutInner({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function UploadLayoutClient({ children }: UploadLayoutClientProps) {
+export function UploadLayoutClient({
+  children,
+  did,
+}: UploadLayoutClientProps) {
   return (
     <ModalProvider>
       <HeaderProvider>
-        <UploadLayoutInner>{children}</UploadLayoutInner>
+        <UploadLayoutInner did={did}>{children}</UploadLayoutInner>
       </HeaderProvider>
     </ModalProvider>
   );
