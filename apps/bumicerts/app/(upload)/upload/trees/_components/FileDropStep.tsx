@@ -2,30 +2,19 @@
 
 import { useRef, useState, useCallback } from "react";
 import { Upload, FileSpreadsheet } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useCsvParser } from "@/lib/upload/use-csv-parser";
+import { PARTNER_ESTABLISHMENT_MEANS_OPTIONS } from "@/lib/upload/establishment-means";
 import { detectKoboFormat } from "@/lib/upload/kobo-mapper";
 import { autoDetectMappings } from "@/lib/upload/column-mapper";
 import { links } from "@/lib/links";
 import { cn } from "@/lib/utils";
 import type { ColumnMapping } from "@/lib/upload/types";
 import TreeDataGuide from "./TreeDataGuide";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Establishment means options (full GBIF vocabulary)
-// ─────────────────────────────────────────────────────────────────────────────
-
-const ESTABLISHMENT_MEANS_OPTIONS = [
-  { value: "native", label: "Native" },
-  { value: "introduced", label: "Introduced" },
-  { value: "naturalised", label: "Naturalised" },
-  { value: "invasive", label: "Invasive" },
-  { value: "managed", label: "Managed" },
-  { value: "uncertain", label: "Uncertain" },
-] as const;
 
 type FileDropStepProps = {
   onFileAndMappings: (
@@ -271,18 +260,20 @@ export default function FileDropStep({ onFileAndMappings }: FileDropStepProps) {
         )}
       </div>
 
-      {/* Establishment means toggle pills */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium">
-          Establishment means{" "}
-          <span className="text-muted-foreground font-normal">(optional)</span>
-        </label>
-        <p className="text-xs text-muted-foreground">
-          How were these trees established at their locations? This applies to
-          all records in this upload.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {ESTABLISHMENT_MEANS_OPTIONS.map((option) => {
+      {/* Establishment means guidance */}
+      <div className="space-y-3">
+        <div className="space-y-1">
+          <label className="text-sm font-medium">
+            How were these trees established?{" "}
+            <span className="text-muted-foreground font-normal">(optional)</span>
+          </label>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Uses GBIF standards. Your data will be published on the GBIF
+            platform.
+          </p>
+        </div>
+        <div className="overflow-hidden rounded-xl border border-border">
+          {PARTNER_ESTABLISHMENT_MEANS_OPTIONS.map((option) => {
             const isSelected = establishmentMeans === option.value;
             return (
               <button
@@ -292,13 +283,36 @@ export default function FileDropStep({ onFileAndMappings }: FileDropStepProps) {
                   setEstablishmentMeans(isSelected ? null : option.value)
                 }
                 className={cn(
-                  "rounded-full border px-3.5 py-1.5 text-sm transition-colors",
+                  "flex w-full items-start gap-3 border-b border-border px-4 py-3 text-left transition-colors last:border-b-0",
                   isSelected
-                    ? "border-primary bg-primary/10 text-primary font-medium"
-                    : "border-border bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                    ? "bg-green-500/10"
+                    : "bg-background hover:bg-muted/30"
                 )}
               >
-                {option.label}
+                <span
+                  className={cn(
+                    "mt-1 flex size-4 shrink-0 rounded-full border transition-colors",
+                    isSelected
+                      ? "border-green-700 bg-green-700 dark:border-green-500 dark:bg-green-500"
+                      : "border-muted-foreground/40 bg-background"
+                  )}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="text-base font-medium text-foreground">
+                      {option.label}
+                    </span>
+                    <Badge
+                      variant="success"
+                      className="px-1.5 py-0.5 font-mono text-[10px] lowercase"
+                    >
+                      {option.gbifCodeLabel}
+                    </Badge>
+                  </span>
+                  <span className="mt-1 block text-sm leading-relaxed text-foreground">
+                    {option.description}
+                  </span>
+                </span>
               </button>
             );
           })}
