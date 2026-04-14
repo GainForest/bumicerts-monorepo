@@ -399,6 +399,13 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     () => getSelectableEstablishmentMeansOptions(occurrenceDraft.establishmentMeans),
     [occurrenceDraft.establishmentMeans]
   );
+  const selectedEstablishmentMeansOption = useMemo(
+    () =>
+      selectableEstablishmentMeansOptions.find(
+        (option) => option.value === occurrenceDraft.establishmentMeans
+      ) ?? null,
+    [occurrenceDraft.establishmentMeans, selectableEstablishmentMeansOptions]
+  );
   const [occurrenceError, setOccurrenceError] = useState<string | null>(null);
   const [measurementError, setMeasurementError] = useState<string | null>(null);
   const [optimisticOccurrenceRecords, setOptimisticOccurrenceRecords] = useState<
@@ -1474,7 +1481,9 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
                       }
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Not specified" />
+                        <SelectValue placeholder="Not specified">
+                          {selectedEstablishmentMeansOption?.label ?? "Not specified"}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value={ESTABLISHMENT_MEANS_SENTINEL}>
