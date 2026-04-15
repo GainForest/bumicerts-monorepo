@@ -27,7 +27,10 @@ const AuthWrapper = ({
     isPending: isPendingOrganizationInfo,
     error: organizationInfoError,
     isPlaceholderData: isOlderData,
-  } = indexerTrpc.organization.byDid.useQuery({ did: auth.user?.did ?? "" });
+  } = indexerTrpc.organization.byDid.useQuery(
+    { did: auth.user?.did ?? "" },
+    { enabled: !!auth.user?.did }
+  );
 
   const isLoadingOrganizationInfo = isPendingOrganizationInfo || isOlderData;
   const isAuthenticated = auth.status === "AUTHENTICATED";

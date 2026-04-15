@@ -9,6 +9,7 @@ import {
   ChevronLeftIcon,
   CirclePlusIcon,
   DatabaseIcon,
+  InfoIcon,
   Loader2,
   MapPin,
   RefreshCcw,
@@ -28,6 +29,11 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import Container from "@/components/ui/container";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useModal } from "@/components/ui/modal/context";
 import PhotoAttachModal, {
   type UploadedPhotoPayload,
@@ -45,6 +51,10 @@ import type {
 import { links } from "@/lib/links";
 import useMediaQuery from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
+import {
+  getSelectableEstablishmentMeansOptions,
+} from "@/lib/upload/establishment-means";
+import EstablishmentMeansInfoContent from "../../_components/EstablishmentMeansInfoContent";
 import { ManageConfirmModal } from "./ManageConfirmModal";
 import { TreesManageSkeleton } from "./TreesManageSkeleton";
 import {
@@ -97,15 +107,6 @@ const EMPTY_OCCURRENCE_DRAFT: TreeOccurrenceDraft = {
   habitat: "",
   establishmentMeans: "",
 };
-
-const ESTABLISHMENT_MEANS_OPTIONS = [
-  { value: "native", label: "Native" },
-  { value: "introduced", label: "Introduced" },
-  { value: "naturalised", label: "Naturalised" },
-  { value: "invasive", label: "Invasive" },
-  { value: "managed", label: "Managed" },
-  { value: "uncertain", label: "Uncertain" },
-] as const;
 
 const ESTABLISHMENT_MEANS_SENTINEL = "__none__";
 
@@ -315,16 +316,21 @@ function Field({
   label,
   children,
   required = false,
+  labelInfo,
 }: {
   label: string;
   children: React.ReactNode;
   required?: boolean;
+  labelInfo?: React.ReactNode;
 }) {
   return (
     <label className="flex flex-col gap-1.5 text-sm text-muted-foreground">
-      <span>
-        {label}
-        {required ? <span className="text-destructive ml-0.5">*</span> : null}
+      <span className="flex items-center gap-1.5">
+        <span>
+          {label}
+          {required ? <span className="text-destructive ml-0.5">*</span> : null}
+        </span>
+        {labelInfo}
       </span>
       {children}
     </label>
@@ -388,6 +394,18 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     useState<TreeMeasurementDraft>(EMPTY_MEASUREMENT_DRAFT);
   const [occurrenceFeedback, setOccurrenceFeedback] = useState<string | null>(null);
   const [measurementFeedback, setMeasurementFeedback] = useState<string | null>(null);
+
+  const selectableEstablishmentMeansOptions = useMemo(
+    () => getSelectableEstablishmentMeansOptions(occurrenceDraft.establishmentMeans),
+    [occurrenceDraft.establishmentMeans]
+  );
+  const selectedEstablishmentMeansOption = useMemo(
+    () =>
+      selectableEstablishmentMeansOptions.find(
+        (option) => option.value === occurrenceDraft.establishmentMeans
+      ) ?? null,
+    [occurrenceDraft.establishmentMeans, selectableEstablishmentMeansOptions]
+  );
   const [occurrenceError, setOccurrenceError] = useState<string | null>(null);
   const [measurementError, setMeasurementError] = useState<string | null>(null);
   const [optimisticOccurrenceRecords, setOptimisticOccurrenceRecords] = useState<
@@ -1432,7 +1450,27 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
                       rows={3}
                     />
                   </Field>
-                  <Field label="Establishment means">
+                  <Field
+                    label="Establishment means"
+                    labelInfo={(
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            className="h-5 w-5 rounded-full bg-transparent p-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
+                            aria-label="Show establishment means guidance"
+                          >
+                            <InfoIcon />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="start" className="w-72 p-3">
+                          <EstablishmentMeansInfoContent currentValue={occurrenceDraft.establishmentMeans} />
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                  >
                     <Select
                       value={occurrenceDraft.establishmentMeans || ESTABLISHMENT_MEANS_SENTINEL}
                       onValueChange={(value) =>
@@ -1443,15 +1481,22 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
                       }
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Not specified" />
+                        <SelectValue placeholder="Not specified">
+                          {selectedEstablishmentMeansOption?.label ?? "Not specified"}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value={ESTABLISHMENT_MEANS_SENTINEL}>
                           <span className="text-muted-foreground">Not specified</span>
                         </SelectItem>
-                        {ESTABLISHMENT_MEANS_OPTIONS.map((option) => (
+                        {selectableEstablishmentMeansOptions.map((option) => (
                           <SelectItem key={option.value} value={option.value}>
-                            {option.label}
+                            <div className="flex flex-col items-start gap-0.5">
+                              <span>{option.label}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {option.description}
+                              </span>
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>

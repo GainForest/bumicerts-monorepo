@@ -5,20 +5,12 @@
  * variables. Everywhere else must import from here.
  *
  * Priority (highest → lowest):
- *   1. VERCEL_URL (preview only)     — On preview deployments, ALWAYS use the raw
- *                                      deployment alias so OAuth redirects go back to
- *                                      the preview, not the production custom domain.
- *                                      This overrides NEXT_PUBLIC_BASE_URL intentionally.
- *   2. NEXT_PUBLIC_BASE_URL          — explicit override. Set this in:
- *                                       • .env.local for local dev (e.g. http://127.0.0.1:3001
- *                                         or an ngrok tunnel URL)
- *                                       • Vercel "Production" env vars to pin a specific
- *                                         custom domain (e.g. https://alpha.fund.gainforest.app)
- *   3. VERCEL_PROJECT_PRODUCTION_URL — Vercel system variable. The shortest production
- *                                      custom domain. Used for production deployments.
- *   4. VERCEL_URL                    — Vercel system variable. The raw deployment alias
- *                                      (e.g. bumicerts-r3f59v16y-gainforest.vercel.app).
- *                                      Last resort fallback.
+ *   1. Branch-specific URLs — for preview deployments, use production/staging
+ *      URLs when the deployed branch matches NEXT_PUBLIC_PRODUCTION_BRANCH_NAME
+ *      or NEXT_PUBLIC_STAGING_BRANCH_NAME.
+ *   2. VERCEL_URL — raw deployment alias for branch previews.
+ *   3. NEXT_PUBLIC_BASE_URL — explicit override for local dev/ngrok.
+ *   4. VERCEL_PROJECT_PRODUCTION_URL — custom domain in production.
  *
  * Why not derive the URL from the incoming request?
  *   The OAuth client (NodeOAuthClient) is initialised once at startup with a fixed
@@ -40,14 +32,29 @@ import { clientEnv } from "@/lib/env/client";
  * Strips trailing slashes. Never includes a path segment.
  */
 export function getPublicUrl(): string | undefined {
-  // 1. On Vercel preview deployments, ALWAYS use VERCEL_URL (the actual
-  //    preview deployment alias). This MUST come before the NEXT_PUBLIC_BASE_URL
-  //    check — otherwise a globally-set NEXT_PUBLIC_BASE_URL (e.g. set for
-  //    "All Environments" in the Vercel dashboard) would override the preview
-  //    URL. That causes OAuth redirect_uris to point to the production domain,
-  //    so after login the user is sent to production instead of the preview.
-  if (serverEnv.VERCEL_ENV === "preview" && serverEnv.VERCEL_URL) {
-    return `https://${serverEnv.VERCEL_URL.trim()}`;
+  // 1. Branch-specific URLs for preview deployments
+  const deploymentBranch = serverEnv.VERCEL_GIT_COMMIT_REF;
+  if (deploymentBranch) {
+    if (
+      clientEnv.NEXT_PUBLIC_PRODUCTION_BRANCH_NAME &&
+      deploymentBranch === clientEnv.NEXT_PUBLIC_PRODUCTION_BRANCH_NAME &&
+      clientEnv.NEXT_PUBLIC_PRODUCTION_URL
+    ) {
+      return clientEnv.NEXT_PUBLIC_PRODUCTION_URL.trim().replace(/\/$/, "");
+    }
+
+    if (
+      clientEnv.NEXT_PUBLIC_STAGING_BRANCH_NAME &&
+      deploymentBranch === clientEnv.NEXT_PUBLIC_STAGING_BRANCH_NAME &&
+      clientEnv.NEXT_PUBLIC_STAGING_URL
+    ) {
+      return clientEnv.NEXT_PUBLIC_STAGING_URL.trim().replace(/\/$/, "");
+    }
+
+    // For any other branch preview, use the raw Vercel URL
+    if (serverEnv.VERCEL_URL) {
+      return `https://${serverEnv.VERCEL_URL.trim()}`;
+    }
   }
 
   // 2. Explicit override (local dev, ngrok, production custom domain, etc.)
@@ -78,12 +85,52 @@ export function requirePublicUrl(): string {
   if (!url) {
     throw new Error(
       "[bumicerts] Could not resolve the app's public base URL.\n" +
-      "Set one of the following in your environment:\n" +
-      "  • NEXT_PUBLIC_BASE_URL=http://127.0.0.1:3001  (local dev)\n" +
-      "  • NEXT_PUBLIC_BASE_URL=https://your-tunnel.ngrok.io  (local dev with tunnel)\n" +
-      "  • NEXT_PUBLIC_BASE_URL=https://alpha.fund.gainforest.app  (Vercel Production env var)\n" +
-      "On Vercel, VERCEL_PROJECT_PRODUCTION_URL and VERCEL_URL are auto-injected as fallbacks.",
+        "Set one of the following in your environment:\n" +
+        "  • NEXT_PUBLIC_BASE_URL=http://127.0.0.1:3001  (local dev)\n" +
+        "  • NEXT_PUBLIC_BASE_URL=https://your-tunnel.ngrok.io  (local dev with tunnel)\n" +
+        "  • NEXT_PUBLIC_BASE_URL=https://alpha.fund.gainforest.app  (Vercel Production env var)\n" +
+        "On Vercel, VERCEL_PROJECT_PRODUCTION_URL and VERCEL_URL are auto-injected as fallbacks.",
     );
   }
   return url;
+}
+
+/**
+ * Client-safe version of getPublicUrl() that only uses NEXT_PUBLIC_* env vars.
+ *
+ * Safe to use in "use client" components. Uses the canonical public URL from
+ * environment variables instead of window.location.origin, ensuring share links
+ * always use the production domain even when accessed from preview/alpha URLs.
+ *
+ * Falls back to window.location.origin only if no env var is set (local dev).
+ */
+export function getPublicUrlClient(): string {
+  // 1. Explicit override (production custom domain, ngrok, etc.)
+  //    This is the canonical URL and should be used for all share links.
+  if (clientEnv.NEXT_PUBLIC_BASE_URL) {
+    return clientEnv.NEXT_PUBLIC_BASE_URL.trim().replace(/\/$/, "");
+  }
+
+  // 2. Vercel preview: use the preview URL (NEXT_PUBLIC_VERCEL_URL)
+  //    Note: On preview, we want share links to use the preview URL so
+  //    recipients can see the same preview deployment.
+  if (
+    clientEnv.NEXT_PUBLIC_VERCEL_ENV === "preview" &&
+    clientEnv.NEXT_PUBLIC_VERCEL_URL
+  ) {
+    return `https://${clientEnv.NEXT_PUBLIC_VERCEL_URL.trim()}`;
+  }
+
+  // 3. Production: use NEXT_PUBLIC_VERCEL_URL if available
+  if (clientEnv.NEXT_PUBLIC_VERCEL_URL) {
+    return `https://${clientEnv.NEXT_PUBLIC_VERCEL_URL.trim()}`;
+  }
+
+  // 4. Fallback to window.location.origin (local dev without env vars)
+  if (typeof window !== "undefined") {
+    return window.location.origin;
+  }
+
+  // 5. Last resort: empty string (SSR without env vars — should not happen)
+  return "";
 }

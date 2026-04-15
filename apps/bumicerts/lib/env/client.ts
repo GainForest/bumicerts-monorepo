@@ -33,6 +33,12 @@ export const clientEnv = createEnv({
       .optional(),
     NEXT_PUBLIC_VERCEL_URL: z.string().optional(),
 
+    // Branch-to-URL mappings for preview deployments
+    NEXT_PUBLIC_PRODUCTION_BRANCH_NAME: z.string().optional(),
+    NEXT_PUBLIC_STAGING_BRANCH_NAME: z.string().optional(),
+    NEXT_PUBLIC_PRODUCTION_URL: z.string().url().optional(),
+    NEXT_PUBLIC_STAGING_URL: z.string().url().optional(),
+
     // Facilitator DID — used to query funding receipts written by the facilitator
     NEXT_PUBLIC_FACILITATOR_DID: z.string().optional(),
 
@@ -56,6 +62,10 @@ export const clientEnv = createEnv({
     NEXT_PUBLIC_FACILITATOR_DID: process.env.NEXT_PUBLIC_FACILITATOR_DID,
     NEXT_PUBLIC_FACILITATOR_WALLET_ADDRESS: process.env.NEXT_PUBLIC_FACILITATOR_WALLET_ADDRESS,
     NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID,
+    NEXT_PUBLIC_PRODUCTION_BRANCH_NAME: process.env.NEXT_PUBLIC_PRODUCTION_BRANCH_NAME,
+    NEXT_PUBLIC_STAGING_BRANCH_NAME: process.env.NEXT_PUBLIC_STAGING_BRANCH_NAME,
+    NEXT_PUBLIC_PRODUCTION_URL: process.env.NEXT_PUBLIC_PRODUCTION_URL,
+    NEXT_PUBLIC_STAGING_URL: process.env.NEXT_PUBLIC_STAGING_URL,
   },
 
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,

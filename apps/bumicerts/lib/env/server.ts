@@ -25,6 +25,15 @@ export const serverEnv = createEnv({
     // Always the shortest production custom domain — e.g. alpha.fund.gainforest.app.
     // Set even on preview deployments. Use getPublicUrl() instead of reading this directly.
     VERCEL_PROJECT_PRODUCTION_URL: z.string().optional(),
+    // The git branch being deployed (e.g. "development", "main", "feature/xyz")
+    VERCEL_GIT_COMMIT_REF: z.string().optional(),
+
+    // Branch-to-URL mappings for preview deployments
+    // These control which URL to use based on the branch being deployed
+    PRODUCTION_BRANCH_NAME: z.string().optional(),
+    STAGING_BRANCH_NAME: z.string().optional(),
+    PRODUCTION_URL: z.string().url().optional(),
+    STAGING_URL: z.string().url().optional(),
 
     // ATProto OAuth
     ATPROTO_JWK_PRIVATE: z.string().min(1),
@@ -80,6 +89,11 @@ export const serverEnv = createEnv({
     VERCEL_ENV: process.env.VERCEL_ENV,
     VERCEL_URL: process.env.VERCEL_URL,
     VERCEL_PROJECT_PRODUCTION_URL: process.env.VERCEL_PROJECT_PRODUCTION_URL,
+    VERCEL_GIT_COMMIT_REF: process.env.VERCEL_GIT_COMMIT_REF,
+    PRODUCTION_BRANCH_NAME: process.env.PRODUCTION_BRANCH_NAME,
+    STAGING_BRANCH_NAME: process.env.STAGING_BRANCH_NAME,
+    PRODUCTION_URL: process.env.PRODUCTION_URL,
+    STAGING_URL: process.env.STAGING_URL,
     ATPROTO_JWK_PRIVATE: process.env.ATPROTO_JWK_PRIVATE,
     COOKIE_SECRET: process.env.COOKIE_SECRET,
     PDS_ADMIN_IDENTIFIER: process.env.PDS_ADMIN_IDENTIFIER,
