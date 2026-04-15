@@ -4,10 +4,10 @@ import { getOrgData, type GraphQLOrgInfoItem } from "./_data";
 import { orgInfoToOrganizationData } from "@/lib/adapters";
 import { OrgHero } from "./_components/OrgHero";
 import { OrgTabBar } from "./_components/OrgTabBar";
-import { OrgSetupPage } from "./_components/OrgSetupPage";
 import { OrganizationLayoutClient } from "./_components/OrganizationLayoutClient";
 import ErrorPage from "@/components/error-page";
 import Container from "@/components/ui/container";
+import { OrgSetupPrompt } from "./_components/OrgSetupPrompt";
 
 /**
  * Shared layout for all /organization/[did] sub-routes.
@@ -56,7 +56,7 @@ export default async function OrganizationLayout({
     return (
       <OrganizationLayoutClient did={did}>
         <Container className="pt-4">
-          <OrgSetupPage did={did} />
+          <OrgSetupPrompt did={did} />
         </Container>
       </OrganizationLayoutClient>
     );

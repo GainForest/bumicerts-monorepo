@@ -27,7 +27,7 @@ export function OrgSetupPrompt({ did }: OrgSetupPromptProps) {
         profile. This only takes a few minutes.
       </p>
       <Button asChild>
-        <Link href={links.organization.home(did)}>
+        <Link href={links.manage.home}>
           Set Up Organization
           <ArrowRightIcon />
         </Link>
