@@ -1,6 +1,6 @@
 "use client";
 
-import { CirclePlusIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, CirclePlusIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import {
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { SiteCard } from "./SiteCard";
 import { SitesSkeleton } from "./SitesSkeleton";
+import { useQueryState } from "nuqs";
+import { useRef, useState } from "react";
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -22,11 +24,57 @@ interface SitesClientProps {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+const PREVIEW_APP_BASE_URL = "https://polygons-gainforest.vercel.app";
+const generateSiteUrls = (did: string, rkey: string | null) => {
+  const atUri = rkey ? `at://${did}/app.certified.location/${rkey}` : null;
+  const previewUrl = atUri
+    ? `${PREVIEW_APP_BASE_URL}/view?certifiedLocationRecordUri=${encodeURIComponent(atUri)}`
+    : null;
+  return [atUri, previewUrl];
+};
+
 export function SitesClient({ did }: SitesClientProps) {
   const queryClient = useQueryClient();
   const { pushModal, show } = useModal();
 
-  const { data: sites, isLoading, error } = indexerTrpc.locations.list.useQuery({ did });
+  const [siteRkey, setSiteRkey] = useQueryState("rkey");
+
+  // We manage a state for iframe especially, so that we dont re-render the entire iframe on every rkey change.
+  const [siteIframeUrlState, setSiteIframeUrlState] = useState(
+    generateSiteUrls(did, siteRkey)[1],
+  );
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const handleChangeSiteRkey = (rkey: string) => {
+    setSiteRkey(rkey);
+    const [atUri, siteIframeUrl] = generateSiteUrls(did, rkey);
+    setSiteIframeUrlState((prev) => {
+      if (prev === null) return siteIframeUrl;
+      if (iframeRef.current) {
+        iframeRef.current.contentWindow?.postMessage(
+          {
+            type: "load-uri",
+            uri: atUri,
+          },
+          PREVIEW_APP_BASE_URL,
+        );
+      }
+      return prev;
+    });
+  };
+
+  const {
+    data: sites,
+    isLoading,
+    error,
+  } = indexerTrpc.locations.list.useQuery({ did });
+  const allSiteRkeys = sites
+    ?.map((site) => site.metadata?.rkey)
+    .filter((r) => typeof r === "string");
+  const currentSiteIndex = siteRkey
+    ? allSiteRkeys?.indexOf(siteRkey)
+    : undefined;
+  const safeCurrentSiteIndex =
+    currentSiteIndex === -1 ? undefined : currentSiteIndex;
 
   const handleAddSite = () => {
     pushModal(
@@ -34,7 +82,7 @@ export function SitesClient({ did }: SitesClientProps) {
         id: SiteEditorModalId,
         content: <SiteEditorModal initialData={null} />,
       },
-      true
+      true,
     );
     show();
   };
@@ -54,7 +102,6 @@ export function SitesClient({ did }: SitesClientProps) {
             variant="outline"
             size="sm"
             onClick={() => void queryClient.invalidateQueries()}
-
           >
             Retry
           </Button>
@@ -75,16 +122,47 @@ export function SitesClient({ did }: SitesClientProps) {
         >
           Sites
         </h1>
-        <Button
-          size="sm"
-          className="rounded-full"
-          onClick={handleAddSite}
-        >
+        <Button size="sm" className="rounded-full" onClick={handleAddSite}>
           <CirclePlusIcon />
           Add site
         </Button>
       </div>
 
+      {allSiteRkeys &&
+        safeCurrentSiteIndex !== undefined &&
+        siteIframeUrlState && (
+          <div className="w-full h-80 rounded-2xl overflow-hidden relative">
+            <iframe
+              className="h-full w-full"
+              src={siteIframeUrlState}
+              ref={iframeRef}
+            />
+            <div className="absolute inset-0 flex items-center justify-between p-4">
+              <Button
+                size={"icon"}
+                variant={"outline"}
+                disabled={safeCurrentSiteIndex <= 0}
+                onClick={() => {
+                  if (safeCurrentSiteIndex <= 0) return;
+                  handleChangeSiteRkey(allSiteRkeys[safeCurrentSiteIndex - 1]);
+                }}
+              >
+                <ChevronLeft />
+              </Button>
+              <Button
+                size={"icon"}
+                variant={"outline"}
+                disabled={safeCurrentSiteIndex > allSiteRkeys.length - 1}
+                onClick={() => {
+                  if (safeCurrentSiteIndex > allSiteRkeys.length - 1) return;
+                  handleChangeSiteRkey(allSiteRkeys[safeCurrentSiteIndex + 1]);
+                }}
+              >
+                <ChevronRight />
+              </Button>
+            </div>
+          </div>
+        )}
       {allSites.length === 0 ? (
         // Empty state
         <motion.div
@@ -111,13 +189,19 @@ export function SitesClient({ did }: SitesClientProps) {
         // Grid of site cards
         <AnimatePresence>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {allSites.map((site) => (
-              <SiteCard
-                key={site.metadata?.uri ?? site.metadata?.rkey}
-                site={site}
-                defaultSiteUri={null}
-              />
-            ))}
+            {allSites.map((site) => {
+              const rkey = site.metadata?.rkey;
+              if (!rkey) return;
+              return (
+                <SiteCard
+                  key={site.metadata?.uri ?? rkey}
+                  site={site}
+                  onChange={() => handleChangeSiteRkey(rkey)}
+                  defaultSiteUri={null}
+                  isPreviewing={rkey === siteRkey}
+                />
+              );
+            })}
           </div>
         </AnimatePresence>
       )}
