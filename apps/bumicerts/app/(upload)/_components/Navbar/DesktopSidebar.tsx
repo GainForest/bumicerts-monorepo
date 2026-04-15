@@ -3,7 +3,7 @@
  * `components/layout/UnifiedSidebar/`. Kept for reference only.
  * See: Unified sidebar implementation (April 2026)
  *
- * The new unified sidebar combines both marketplace and upload navigation
+ * The new unified sidebar combines both MARKETPLACE and MANAGE navigation
  * into a single component with EXPLORE and MANAGE sections.
  */
 
@@ -20,7 +20,7 @@ import {
 import { motion, LayoutGroup, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { UPLOAD_NAV_ITEMS } from "./data";
+import { MANAGE_NAV_ITEMS } from "./data";
 import { useSidebarTransition } from "@/hooks/useSidebarTransition";
 import { SidebarTransitionOverlay } from "@/components/ui/SidebarTransitionOverlay";
 import { useMobileNav } from "@/hooks/useMobileNav";
@@ -36,7 +36,7 @@ const FOOTER_LINKS = [
 
 function isNavItemActive(
   pathCheck: { equals?: string; startsWith?: string },
-  pathname: string
+  pathname: string,
 ): boolean {
   if (pathCheck.equals) return pathname === pathCheck.equals;
   if (pathCheck.startsWith) return pathname.startsWith(pathCheck.startsWith);
@@ -54,7 +54,12 @@ export function UploadDesktopSidebar() {
     <nav className="w-[240px] h-full flex flex-col justify-between p-4 border-r border-border bg-foreground/3 relative">
       {/* Platform transition overlay */}
       <AnimatePresence>
-        {switching && <SidebarTransitionOverlay targetPlatform={targetPlatform} isExiting={isExiting} />}
+        {switching && (
+          <SidebarTransitionOverlay
+            targetPlatform={targetPlatform}
+            isExiting={isExiting}
+          />
+        )}
       </AnimatePresence>
 
       {/* Top section */}
@@ -72,24 +77,36 @@ export function UploadDesktopSidebar() {
         {/* Nav links */}
         <LayoutGroup id="upload-sidebar-nav">
           <ul className="flex flex-col gap-0.5">
-            {UPLOAD_NAV_ITEMS.map((item, idx) => {
+            {MANAGE_NAV_ITEMS.map((item, idx) => {
               const isActive = isNavItemActive(item.pathCheck, pathname);
               return (
                 <motion.li
                   key={item.id}
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.3, delay: 0.05 * idx + 0.22, ease: [0.25, 0.1, 0.25, 1] }}
+                  transition={{
+                    duration: 0.3,
+                    delay: 0.05 * idx + 0.22,
+                    ease: [0.25, 0.1, 0.25, 1],
+                  }}
                 >
-                  <Link href={item.href} onClick={() => closeMobileNav(false)} className="block relative">
+                  <Link
+                    href={item.href}
+                    onClick={() => closeMobileNav(false)}
+                    className="block relative"
+                  >
                     <motion.div
                       whileHover={{ x: 2 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 400,
+                        damping: 30,
+                      }}
                       className={cn(
                         "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors duration-150 relative",
                         isActive
                           ? "bg-primary text-primary-foreground font-medium"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
                       )}
                     >
                       {isActive && (

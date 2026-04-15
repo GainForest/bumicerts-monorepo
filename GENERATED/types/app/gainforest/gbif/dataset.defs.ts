@@ -45,7 +45,7 @@ type Main = {
   /**
    * Blob reference to the DwC-A archive ZIP. Storing as a proper blob ref prevents PDS garbage collection.
    */
-  archiveBlob?: l.BlobRef
+  archiveBlob?: l.BlobRef | l.LegacyBlobRef
 
   /**
    * When the archive was last published to GBIF
@@ -77,7 +77,7 @@ const main = l.record<'tid', Main>(
     datasetTitle: l.optional(l.string({ maxGraphemes: 256 })),
     archiveBlobCid: l.optional(l.string({ maxGraphemes: 128 })),
     archiveBlob: l.optional(
-      l.blob({ accept: ['application/zip'], allowLegacy: false }),
+      l.blob({ accept: ['application/zip'], allowLegacy: true }),
     ),
     lastPublishedAt: l.optional(l.string({ format: 'datetime' })),
     lastCrawlFinishReason: l.optional(l.string({ maxGraphemes: 32 })),

@@ -1,7 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, XCircle, AlertTriangle, ChevronDown, ChevronRight, Loader2, Camera, ImageDown } from "lucide-react";
+import {
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+  Camera,
+  ImageDown,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc/client";
 import type { ValidatedRow } from "@/lib/upload/types";
@@ -67,7 +76,14 @@ type UploadStepProps = {
 // Component
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function UploadStep({ validRows, establishmentMeans, datasetName, datasetDescription, onBack, onComplete }: UploadStepProps) {
+export default function UploadStep({
+  validRows,
+  establishmentMeans,
+  datasetName,
+  datasetDescription,
+  onBack,
+  onComplete,
+}: UploadStepProps) {
   const createDataset = trpc.dwc.dataset.create.useMutation();
   const updateDataset = trpc.dwc.dataset.update.useMutation();
   const createOccurrence = trpc.dwc.occurrence.create.useMutation();
@@ -84,7 +100,7 @@ export default function UploadStep({ validRows, establishmentMeans, datasetName,
     currentRow: "",
   });
   const [rowStatuses, setRowStatuses] = useState<RowStatus[]>(
-    validRows.map(() => ({ state: "pending" as const }))
+    validRows.map(() => ({ state: "pending" as const })),
   );
   const [failedRowsOpen, setFailedRowsOpen] = useState(false);
 
@@ -99,7 +115,11 @@ export default function UploadStep({ validRows, establishmentMeans, datasetName,
       const row = validRows[i];
       if (!row?.photos) continue;
       for (const photo of row.photos) {
-        queue.push({ rowIndex: i, url: photo.url, subjectPart: photo.subjectPart });
+        queue.push({
+          rowIndex: i,
+          url: photo.url,
+          subjectPart: photo.subjectPart,
+        });
       }
     }
     return queue;
@@ -108,23 +128,30 @@ export default function UploadStep({ validRows, establishmentMeans, datasetName,
 
   const [photoFetchStarted, setPhotoFetchStarted] = useState(false);
   const [photoFetchDone, setPhotoFetchDone] = useState(false);
-  const [photoFetchStatuses, setPhotoFetchStatuses] = useState<Record<number, PhotoFetchStatus>>({});
-  const [photoFetchProgress, setPhotoFetchProgress] = useState<PhotoFetchProgress>({
-    current: 0,
-    total: photoFetchQueue.length,
-    successes: 0,
-    failures: 0,
-  });
+  const [photoFetchStatuses, setPhotoFetchStatuses] = useState<
+    Record<number, PhotoFetchStatus>
+  >({});
+  const [photoFetchProgress, setPhotoFetchProgress] =
+    useState<PhotoFetchProgress>({
+      current: 0,
+      total: photoFetchQueue.length,
+      successes: 0,
+      failures: 0,
+    });
 
   // Prevent double-run in StrictMode
   const uploadRef = useRef(false);
   const photoFetchRef = useRef(false);
 
   // ── Photo attachment ──────────────────────────────────────────────────────
-  const handleAddPhoto = (rowIndex: number, occurrenceUri: string, speciesName: string) => {
+  const handleAddPhoto = (
+    rowIndex: number,
+    occurrenceUri: string,
+    speciesName: string,
+  ) => {
     pushModal(
       {
-        id: MODAL_IDS.UPLOAD_PHOTO_ATTACH,
+        id: MODAL_IDS.MANAGE_PHOTO_ATTACH,
         content: (
           <PhotoAttachModal
             occurrenceUri={occurrenceUri}
@@ -151,7 +178,7 @@ export default function UploadStep({ validRows, establishmentMeans, datasetName,
           />
         ),
       },
-      true
+      true,
     );
     show();
   };
@@ -161,7 +188,7 @@ export default function UploadStep({ validRows, establishmentMeans, datasetName,
     if (validRows.length > 0 && !uploadStarted) {
       sessionStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ validRows, timestamp: Date.now() })
+        JSON.stringify({ validRows, timestamp: Date.now() }),
       );
     }
   }, [validRows, uploadStarted]);
@@ -183,7 +210,9 @@ export default function UploadStep({ validRows, establishmentMeans, datasetName,
       try {
         const dsResult = await createDataset.mutateAsync({
           name: datasetName,
-          ...(datasetDescription.length > 0 ? { description: datasetDescription } : {}),
+          ...(datasetDescription.length > 0
+            ? { description: datasetDescription }
+            : {}),
           ...(establishmentMeans ? { establishmentMeans } : {}),
         });
         datasetUri = dsResult.uri;
@@ -241,7 +270,11 @@ export default function UploadStep({ validRows, establishmentMeans, datasetName,
         successes += 1;
         setRowStatuses((prev) => {
           const next = [...prev];
-          next[i] = { state: "success", occurrenceUri: occResult.uri, photoCount: 0 };
+          next[i] = {
+            state: "success",
+            occurrenceUri: occResult.uri,
+            photoCount: 0,
+          };
           return next;
         });
       } catch (err) {
@@ -273,7 +306,16 @@ export default function UploadStep({ validRows, establishmentMeans, datasetName,
     }
 
     setUploadDone(true);
-  }, [validRows, createDataset, updateDataset, createOccurrence, createMeasurement, establishmentMeans, datasetName, datasetDescription]);
+  }, [
+    validRows,
+    createDataset,
+    updateDataset,
+    createOccurrence,
+    createMeasurement,
+    establishmentMeans,
+    datasetName,
+    datasetDescription,
+  ]);
 
   // Auto-start upload on mount (layout already enforces auth)
   useEffect(() => {
@@ -303,7 +345,10 @@ export default function UploadStep({ validRows, establishmentMeans, datasetName,
         failures += 1;
         setPhotoFetchStatuses((prev) => ({
           ...prev,
-          [rowIndex]: { state: "photo-error", error: "Occurrence upload failed; photo skipped." },
+          [rowIndex]: {
+            state: "photo-error",
+            error: "Occurrence upload failed; photo skipped.",
+          },
         }));
         setPhotoFetchProgress((prev) => ({
           ...prev,
@@ -386,7 +431,9 @@ export default function UploadStep({ validRows, establishmentMeans, datasetName,
   const allPhasesComplete = uploadDone && (!hasPhotoUrls || photoFetchDone);
   const photoFetchPercent =
     photoFetchProgress.total > 0
-      ? Math.round((photoFetchProgress.current / photoFetchProgress.total) * 100)
+      ? Math.round(
+          (photoFetchProgress.current / photoFetchProgress.total) * 100,
+        )
       : 0;
 
   const failedRows = rowStatuses
@@ -400,7 +447,8 @@ export default function UploadStep({ validRows, establishmentMeans, datasetName,
       <div>
         <h2 className="text-lg font-semibold">Saving your records</h2>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Saving {total} tree record{total !== 1 ? "s" : ""} to the GainForest network.
+          Saving {total} tree record{total !== 1 ? "s" : ""} to the GainForest
+          network.
         </p>
       </div>
 
@@ -413,7 +461,9 @@ export default function UploadStep({ validRows, establishmentMeans, datasetName,
                 ? `Uploading row ${current} of ${total}${currentRow ? ` — ${currentRow}` : ""}…`
                 : "Preparing upload…"}
             </span>
-            <span className="text-muted-foreground font-mono">{progressPercent}%</span>
+            <span className="text-muted-foreground font-mono">
+              {progressPercent}%
+            </span>
           </div>
           <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
             <div
@@ -432,7 +482,8 @@ export default function UploadStep({ validRows, establishmentMeans, datasetName,
         <div className="flex items-center gap-2 rounded-md border border-green-500/40 bg-green-500/10 p-3 text-sm text-green-600 dark:text-green-400">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
           <span>
-            Successfully uploaded {successes} tree record{successes !== 1 ? "s" : ""}.
+            Successfully uploaded {successes} tree record
+            {successes !== 1 ? "s" : ""}.
           </span>
         </div>
       )}
@@ -442,7 +493,8 @@ export default function UploadStep({ validRows, establishmentMeans, datasetName,
         <div className="flex items-center gap-2 rounded-md border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm text-yellow-600 dark:text-yellow-400">
           <AlertTriangle className="h-4 w-4 shrink-0" />
           <span>
-            {successes} record{successes !== 1 ? "s" : ""} uploaded, {failures} failed.
+            {successes} record{successes !== 1 ? "s" : ""} uploaded, {failures}{" "}
+            failed.
           </span>
         </div>
       )}
@@ -463,7 +515,8 @@ export default function UploadStep({ validRows, establishmentMeans, datasetName,
             <>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">
-                  Photo {photoFetchProgress.current} of {photoFetchProgress.total}
+                  Photo {photoFetchProgress.current} of{" "}
+                  {photoFetchProgress.total}
                 </span>
                 <span className="text-muted-foreground font-mono">
                   {photoFetchPercent}%
@@ -548,7 +601,10 @@ export default function UploadStep({ validRows, establishmentMeans, datasetName,
                     }
                     if (pfs?.state === "photo-error") {
                       return (
-                        <span className="text-xs text-yellow-500" title={pfs.error}>
+                        <span
+                          className="text-xs text-yellow-500"
+                          title={pfs.error}
+                        >
                           <AlertTriangle className="h-3 w-3" />
                         </span>
                       );
@@ -558,7 +614,9 @@ export default function UploadStep({ validRows, establishmentMeans, datasetName,
                   {/* Status icon */}
                   <span>
                     {status?.state === "pending" && (
-                      <span className="text-xs text-muted-foreground">Pending</span>
+                      <span className="text-xs text-muted-foreground">
+                        Pending
+                      </span>
                     )}
                     {status?.state === "uploading" && (
                       <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
@@ -576,7 +634,9 @@ export default function UploadStep({ validRows, establishmentMeans, datasetName,
                       variant="outline"
                       size="sm"
                       className="h-7 px-2 text-xs gap-1"
-                      onClick={() => handleAddPhoto(i, status.occurrenceUri, species)}
+                      onClick={() =>
+                        handleAddPhoto(i, status.occurrenceUri, species)
+                      }
                     >
                       <Camera className="h-3 w-3" />
                       Add Photo
@@ -616,10 +676,13 @@ export default function UploadStep({ validRows, establishmentMeans, datasetName,
                     className="text-xs border border-destructive/20 rounded-md p-2 space-y-0.5"
                   >
                     <p className="font-medium text-foreground">
-                      Row {index + 1} — {row?.occurrence.scientificName ?? "(no species)"}
+                      Row {index + 1} —{" "}
+                      {row?.occurrence.scientificName ?? "(no species)"}
                     </p>
                     <p className="text-destructive">
-                      {status.state === "error" ? status.error : "Unknown error"}
+                      {status.state === "error"
+                        ? status.error
+                        : "Unknown error"}
                     </p>
                   </li>
                 ))}
@@ -644,9 +707,7 @@ export default function UploadStep({ validRows, establishmentMeans, datasetName,
             <Button variant="outline" onClick={onComplete}>
               Upload More Data
             </Button>
-            <Button onClick={onComplete}>
-              Done
-            </Button>
+            <Button onClick={onComplete}>Done</Button>
           </div>
         )}
       </div>

@@ -10,7 +10,7 @@ interface OrgSetupPromptProps {
 }
 
 /**
- * Displayed when a user navigates to /upload but hasn't set up their
+ * Displayed when a user navigates to /manage but hasn't set up their
  * organization yet. Prompts them to complete org setup first.
  */
 export function OrgSetupPrompt({ did }: OrgSetupPromptProps) {

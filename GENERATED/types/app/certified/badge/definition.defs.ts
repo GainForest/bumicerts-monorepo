@@ -33,7 +33,7 @@ type Main = {
   /**
    * Icon representing the badge, stored as a blob for compact visual display.
    */
-  icon?: l.BlobRef
+  icon?: l.BlobRef | l.LegacyBlobRef
 
   /**
    * Optional short statement describing what the badge represents.
@@ -74,7 +74,7 @@ const main = l.record<'tid', Main>(
       l.blob({
         accept: ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'],
         maxSize: 1048576,
-        allowLegacy: false,
+        allowLegacy: true,
       }),
     ),
     description: l.optional(l.string({ maxLength: 5000, maxGraphemes: 500 })),

@@ -45,8 +45,8 @@ import CountrySelectorModal from "@/components/modals/country-selector";
 import { WebsiteEditorModal } from "../../_modals/WebsiteEditorModal";
 import { StartDateSelectorModal } from "../../_modals/StartDateSelectorModal";
 import { VisibilitySelectorModal } from "../../_modals/VisibilitySelectorModal";
-import { useUploadDashboardStore } from "../store";
-import { useUploadMode } from "../../_hooks/useUploadMode";
+import { useManageDashboardState } from "../store";
+import { useManageMode } from "../../_hooks/useUploadMode";
 import type { OrganizationData } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { BskyRichTextDisplay } from "@/components/ui/bsky-richtext-display";
@@ -138,11 +138,11 @@ interface EditableHeroProps {
 
 export function EditableHero({ organization }: EditableHeroProps) {
   const { pushModal, show } = useModal();
-  const [mode] = useUploadMode();
+  const [mode] = useManageMode();
   const isEditing = mode === "edit";
 
-  const edits = useUploadDashboardStore((s) => s.edits);
-  const setEdit = useUploadDashboardStore((s) => s.setEdit);
+  const edits = useManageDashboardState((s) => s.edits);
+  const setEdit = useManageDashboardState((s) => s.setEdit);
 
   // Resolved display values — edit buffer takes priority over server data
   const displayName = edits.displayName ?? organization.displayName;
@@ -202,7 +202,7 @@ export function EditableHero({ organization }: EditableHeroProps) {
   const openCoverEditor = () => {
     pushModal(
       {
-        id: MODAL_IDS.UPLOAD_IMAGE_EDITOR,
+        id: MODAL_IDS.MANAGE_IMAGE_EDITOR,
         content: (
           <ImageEditorModal
             target="cover"
@@ -218,7 +218,7 @@ export function EditableHero({ organization }: EditableHeroProps) {
   const openLogoEditor = () => {
     pushModal(
       {
-        id: MODAL_IDS.UPLOAD_IMAGE_EDITOR,
+        id: MODAL_IDS.MANAGE_IMAGE_EDITOR,
         content: (
           <ImageEditorModal
             target="logo"
@@ -234,7 +234,7 @@ export function EditableHero({ organization }: EditableHeroProps) {
   const openCountry = () => {
     pushModal(
       {
-        id: MODAL_IDS.UPLOAD_COUNTRY_SELECTOR,
+        id: MODAL_IDS.MANAGE_COUNTRY_SELECTOR,
         content: (
           <CountrySelectorModal
             initialCountryCode={country ?? ""}
@@ -250,7 +250,7 @@ export function EditableHero({ organization }: EditableHeroProps) {
   const openWebsite = () => {
     pushModal(
       {
-        id: MODAL_IDS.UPLOAD_WEBSITE_EDITOR,
+        id: MODAL_IDS.MANAGE_WEBSITE_EDITOR,
         content: (
           <WebsiteEditorModal
             currentUrl={website}
@@ -266,7 +266,7 @@ export function EditableHero({ organization }: EditableHeroProps) {
   const openStartDate = () => {
     pushModal(
       {
-        id: MODAL_IDS.UPLOAD_START_DATE_SELECTOR,
+        id: MODAL_IDS.MANAGE_START_DATE_SELECTOR,
         content: (
           <StartDateSelectorModal
             currentDate={startDate}
@@ -282,7 +282,7 @@ export function EditableHero({ organization }: EditableHeroProps) {
   const openVisibility = () => {
     pushModal(
       {
-        id: MODAL_IDS.UPLOAD_VISIBILITY_SELECTOR,
+        id: MODAL_IDS.MANAGE_VISIBILITY_SELECTOR,
         content: (
           <VisibilitySelectorModal
             current={visibility ?? "Public"}
@@ -533,12 +533,12 @@ export function EditableHero({ organization }: EditableHeroProps) {
 // ── EditBar ───────────────────────────────────────────────────────────────────
 
 export function EditBar() {
-  const [mode, setMode] = useUploadMode();
+  const [mode, setMode] = useManageMode();
   const isEditing = mode === "edit";
-  const isSaving = useUploadDashboardStore((s) => s.isSaving);
-  const saveError = useUploadDashboardStore((s) => s.saveError);
-  const hasChanges = useUploadDashboardStore((s) => s.hasChanges);
-  const cancelEditing = useUploadDashboardStore((s) => s.cancelEditing);
+  const isSaving = useManageDashboardState((s) => s.isSaving);
+  const saveError = useManageDashboardState((s) => s.saveError);
+  const hasChanges = useManageDashboardState((s) => s.hasChanges);
+  const cancelEditing = useManageDashboardState((s) => s.cancelEditing);
 
   if (!isEditing) return null;
 

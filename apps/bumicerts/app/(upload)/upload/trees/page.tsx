@@ -2,9 +2,9 @@ import { auth } from "@/lib/auth";
 import { TreeUploadWizard } from "./_components/TreeUploadWizard";
 
 /**
- * /upload/trees — Tree biodiversity upload wizard
+ * /manage/trees — Tree biodiversity upload wizard
  *
- * Auth is enforced by the (upload) layout. If somehow reached without
+ * Auth is enforced by the (MANAGE) layout. If somehow reached without
  * auth, render nothing — the layout's SignInPrompt covers this case.
  */
 export default async function TreesUploadPage() {

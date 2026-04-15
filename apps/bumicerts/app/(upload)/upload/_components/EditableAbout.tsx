@@ -2,8 +2,8 @@
 
 import { motion } from "framer-motion";
 import { FileTextIcon } from "lucide-react";
-import { useUploadDashboardStore } from "./store";
-import { useUploadMode } from "../_hooks/useUploadMode";
+import { useManageDashboardState } from "./store";
+import { useManageMode } from "../_hooks/useUploadMode";
 import type { OrganizationData } from "@/lib/types";
 import { LeafletRenderer } from "@/components/ui/leaflet-renderer";
 import { LeafletEditor } from "@/components/ui/leaflet-editor";
@@ -19,11 +19,11 @@ interface EditableAboutProps {
  * - Edit mode: WYSIWYG Leaflet editor that buffers changes in the store.
  */
 export function EditableAbout({ organization }: EditableAboutProps) {
-  const [mode] = useUploadMode();
+  const [mode] = useManageMode();
   const isEditing = mode === "edit";
 
-  const edits = useUploadDashboardStore((s) => s.edits);
-  const setEdit = useUploadDashboardStore((s) => s.setEdit);
+  const edits = useManageDashboardState((s) => s.edits);
+  const setEdit = useManageDashboardState((s) => s.setEdit);
 
   const longDescription = edits.longDescription ?? organization.longDescription;
   const hasContent = longDescription.blocks.length > 0;
@@ -62,10 +62,7 @@ export function EditableAbout({ organization }: EditableAboutProps) {
 
   return (
     <section className="py-6 md:py-8">
-      <LeafletRenderer
-        document={longDescription}
-        ownerDid={organization.did}
-      />
+      <LeafletRenderer document={longDescription} ownerDid={organization.did} />
     </section>
   );
 }

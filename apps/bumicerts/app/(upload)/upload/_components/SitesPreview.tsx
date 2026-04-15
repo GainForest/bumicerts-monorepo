@@ -23,7 +23,7 @@ export function SitesPreview() {
           </span>
         </div>
         <Link
-          href={links.upload.sites}
+          href={links.manage.sites}
           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
         >
           Manage all
@@ -38,7 +38,7 @@ export function SitesPreview() {
         transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
       >
         <Link
-          href={links.upload.sites}
+          href={links.manage.sites}
           className="group flex items-center gap-4 p-4 rounded-xl border border-border hover:border-primary/30 hover:bg-primary/[0.02] transition-all duration-300"
         >
           <div className="flex items-center justify-center h-10 w-10 rounded-full bg-primary/10 shrink-0">

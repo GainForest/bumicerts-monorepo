@@ -10,12 +10,12 @@
  *
  * ---
  *
- * PlatformSwitcher — dropdown to switch between Marketplace and Upload platforms.
+ * PlatformSwitcher — dropdown to switch between Marketplace and Manage platforms.
  *
  * Displays the current platform name with a chevron icon. Clicking opens a popover
  * with both platform options. Selecting one navigates to that platform.
  *
- * The Upload option requires authentication — shows a tooltip when unauthenticated.
+ * The Manage option requires authentication — shows a tooltip when unauthenticated.
  */
 
 import { useState } from "react";
@@ -23,7 +23,11 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ChevronDownIcon, CheckIcon, LockIcon } from "lucide-react";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
 import QuickTooltip from "@/components/ui/quick-tooltip";
 import { useAtprotoStore } from "@/components/stores/atproto";
 import { useMobileNav } from "@/hooks/useMobileNav";
@@ -41,7 +45,12 @@ interface PlatformOption {
 
 const PLATFORMS: PlatformOption[] = [
   { id: "marketplace", label: "Marketplace", href: links.home },
-  { id: "upload", label: "Upload", href: links.upload.home, requiresAuth: true },
+  {
+    id: "upload",
+    label: "Manage",
+    href: links.manage.home,
+    requiresAuth: true,
+  },
 ];
 
 interface PlatformSwitcherProps {
@@ -84,7 +93,13 @@ export function PlatformSwitcher({ currentPlatform }: PlatformSwitcherProps) {
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.1, type: "spring", stiffness: 300, damping: 20 }}
+            transition={{
+              duration: 0.5,
+              delay: 0.1,
+              type: "spring",
+              stiffness: 300,
+              damping: 20,
+            }}
             className="h-8 w-8 flex items-center justify-center shrink-0"
           >
             <Image
@@ -103,7 +118,7 @@ export function PlatformSwitcher({ currentPlatform }: PlatformSwitcherProps) {
               "font-serif text-xl font-bold tracking-tight inline-block transition-colors duration-200",
               currentPlatform === "marketplace"
                 ? "text-foreground group-hover:text-primary"
-                : "text-foreground/80"
+                : "text-foreground/80",
             )}
           >
             {currentOption?.label ?? "Bumicerts"}
@@ -113,17 +128,13 @@ export function PlatformSwitcher({ currentPlatform }: PlatformSwitcherProps) {
           <ChevronDownIcon
             className={cn(
               "h-4 w-4 text-muted-foreground transition-transform duration-200",
-              open && "rotate-180"
+              open && "rotate-180",
             )}
           />
         </button>
       </PopoverTrigger>
 
-      <PopoverContent
-        align="start"
-        sideOffset={8}
-        className="w-48 p-1"
-      >
+      <PopoverContent align="start" sideOffset={8} className="w-48 p-1">
         <div className="flex flex-col">
           {PLATFORMS.map((platform) => {
             const isSelected = platform.id === currentPlatform;
@@ -141,7 +152,7 @@ export function PlatformSwitcher({ currentPlatform }: PlatformSwitcherProps) {
                     ? "bg-primary/10 text-primary font-medium"
                     : isDisabled
                       ? "text-muted-foreground/50 cursor-not-allowed"
-                      : "text-foreground hover:bg-muted/60"
+                      : "text-foreground hover:bg-muted/60",
                 )}
               >
                 <span>{platform.label}</span>
@@ -152,7 +163,11 @@ export function PlatformSwitcher({ currentPlatform }: PlatformSwitcherProps) {
 
             if (isDisabled) {
               return (
-                <QuickTooltip key={platform.id} content="Sign in to access the Upload platform" asChild={false}>
+                <QuickTooltip
+                  key={platform.id}
+                  content="Sign in to access the Manage platform"
+                  asChild={false}
+                >
                   {item}
                 </QuickTooltip>
               );

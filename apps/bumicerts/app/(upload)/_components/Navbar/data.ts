@@ -19,40 +19,40 @@ export type NavItem = {
   pathCheck: { equals?: string; startsWith?: string };
 };
 
-export const UPLOAD_NAV_ITEMS: NavItem[] = [
+export const MANAGE_NAV_ITEMS: NavItem[] = [
   {
     id: "organization",
     text: "Organization",
     Icon: Building2Icon,
-    href: links.upload.home,
-    pathCheck: { equals: links.upload.home },
+    href: links.manage.home,
+    pathCheck: { equals: links.manage.home },
   },
   {
     id: "sites",
     text: "Sites",
     Icon: MapPinIcon,
-    href: links.upload.sites,
-    pathCheck: { startsWith: links.upload.sites },
+    href: links.manage.sites,
+    pathCheck: { startsWith: links.manage.sites },
   },
   {
     id: "audio",
     text: "Audio",
     Icon: MicIcon,
-    href: links.upload.audio,
-    pathCheck: { startsWith: links.upload.audio },
+    href: links.manage.audio,
+    pathCheck: { startsWith: links.manage.audio },
   },
   {
     id: "bumicerts",
     text: "Bumicerts",
     Icon: BumicertIcon,
-    href: links.upload.bumicerts,
-    pathCheck: { startsWith: links.upload.bumicerts },
+    href: links.manage.bumicerts,
+    pathCheck: { startsWith: links.manage.bumicerts },
   },
   {
     id: "trees",
     text: "Trees",
     Icon: TreePineIcon,
-    href: links.upload.trees,
-    pathCheck: { startsWith: links.upload.trees },
+    href: links.manage.trees,
+    pathCheck: { startsWith: links.manage.trees },
   },
 ];

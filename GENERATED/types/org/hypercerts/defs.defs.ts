@@ -36,7 +36,7 @@ type SmallBlob = {
   /**
    * Blob to external data (up to 10MB)
    */
-  blob: l.BlobRef
+  blob: l.BlobRef | l.LegacyBlobRef
 }
 
 export type { SmallBlob }
@@ -46,7 +46,7 @@ const smallBlob = l.typedObject<SmallBlob>(
   $nsid,
   'smallBlob',
   l.object({
-    blob: l.blob({ accept: ['*/*'], maxSize: 10485760, allowLegacy: false }),
+    blob: l.blob({ accept: ['*/*'], maxSize: 10485760, allowLegacy: true }),
   }),
 )
 
@@ -59,7 +59,7 @@ type LargeBlob = {
   /**
    * Blob to external data (up to 100MB)
    */
-  blob: l.BlobRef
+  blob: l.BlobRef | l.LegacyBlobRef
 }
 
 export type { LargeBlob }
@@ -69,7 +69,7 @@ const largeBlob = l.typedObject<LargeBlob>(
   $nsid,
   'largeBlob',
   l.object({
-    blob: l.blob({ accept: ['*/*'], maxSize: 104857600, allowLegacy: false }),
+    blob: l.blob({ accept: ['*/*'], maxSize: 104857600, allowLegacy: true }),
   }),
 )
 
@@ -82,7 +82,7 @@ type SmallImage = {
   /**
    * Image (up to 5MB)
    */
-  image: l.BlobRef
+  image: l.BlobRef | l.LegacyBlobRef
 }
 
 export type { SmallImage }
@@ -95,7 +95,7 @@ const smallImage = l.typedObject<SmallImage>(
     image: l.blob({
       accept: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
       maxSize: 5242880,
-      allowLegacy: false,
+      allowLegacy: true,
     }),
   }),
 )
@@ -109,7 +109,7 @@ type SmallVideo = {
   /**
    * Video (up to 20MB)
    */
-  video: l.BlobRef
+  video: l.BlobRef | l.LegacyBlobRef
 }
 
 export type { SmallVideo }
@@ -122,7 +122,7 @@ const smallVideo = l.typedObject<SmallVideo>(
     video: l.blob({
       accept: ['video/mp4', 'video/webm'],
       maxSize: 20971520,
-      allowLegacy: false,
+      allowLegacy: true,
     }),
   }),
 )
@@ -136,7 +136,7 @@ type LargeImage = {
   /**
    * Image (up to 10MB)
    */
-  image: l.BlobRef
+  image: l.BlobRef | l.LegacyBlobRef
 }
 
 export type { LargeImage }
@@ -149,7 +149,7 @@ const largeImage = l.typedObject<LargeImage>(
     image: l.blob({
       accept: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
       maxSize: 10485760,
-      allowLegacy: false,
+      allowLegacy: true,
     }),
   }),
 )

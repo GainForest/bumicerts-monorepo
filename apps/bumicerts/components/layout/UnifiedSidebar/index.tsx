@@ -10,7 +10,7 @@ import { NAV_ITEMS } from "./data";
 /**
  * UnifiedSidebar
  *
- * Single sidebar component shared between (marketplace) and (upload) route groups.
+ * Single sidebar component shared between (marketplace) and (manage) route groups.
  * Replaces the old separate DesktopSidebar components.
  *
  * Structure:

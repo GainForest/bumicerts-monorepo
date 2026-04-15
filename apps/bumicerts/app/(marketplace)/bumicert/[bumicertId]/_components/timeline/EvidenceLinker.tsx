@@ -9,7 +9,13 @@
  */
 
 import { useState } from "react";
-import { MicIcon, TreesIcon, MapPinIcon, ExternalLinkIcon, LinkIcon } from "lucide-react";
+import {
+  MicIcon,
+  TreesIcon,
+  MapPinIcon,
+  ExternalLinkIcon,
+  LinkIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LeafletEditor } from "@/components/ui/leaflet-editor";
@@ -34,9 +40,24 @@ const TABS: {
   icon: React.ComponentType<{ className?: string }>;
   manageHref: string;
 }[] = [
-  { id: "audio", label: "Audio", icon: MicIcon, manageHref: links.upload.audio },
-  { id: "trees", label: "Trees", icon: TreesIcon, manageHref: links.upload.trees },
-  { id: "sites", label: "Sites", icon: MapPinIcon, manageHref: links.upload.sites },
+  {
+    id: "audio",
+    label: "Audio",
+    icon: MicIcon,
+    manageHref: links.manage.audio,
+  },
+  {
+    id: "trees",
+    label: "Trees",
+    icon: TreesIcon,
+    manageHref: links.manage.trees,
+  },
+  {
+    id: "sites",
+    label: "Sites",
+    icon: MapPinIcon,
+    manageHref: links.manage.sites,
+  },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -83,12 +104,18 @@ function CheckRow({
           selected ? "bg-primary border-primary" : "border-muted-foreground/40"
         }`}
       >
-        {selected && <div className="h-2 w-2 rounded-[2px] bg-primary-foreground" />}
+        {selected && (
+          <div className="h-2 w-2 rounded-[2px] bg-primary-foreground" />
+        )}
       </div>
       <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-foreground truncate">{primary}</p>
-        {secondary && <p className="text-xs text-muted-foreground truncate">{secondary}</p>}
+        <p className="text-sm font-medium text-foreground truncate">
+          {primary}
+        </p>
+        {secondary && (
+          <p className="text-xs text-muted-foreground truncate">{secondary}</p>
+        )}
       </div>
     </button>
   );
@@ -110,7 +137,11 @@ function ListSkeleton() {
 
 function ListEmpty({ tab, manageHref }: { tab: TabId; manageHref: string }) {
   const label =
-    tab === "audio" ? "audio recordings" : tab === "trees" ? "tree occurrences" : "sites";
+    tab === "audio"
+      ? "audio recordings"
+      : tab === "trees"
+        ? "tree occurrences"
+        : "sites";
   return (
     <div className="flex flex-col items-center gap-2 py-6 text-center">
       <p className="text-xs text-muted-foreground">No {label} uploaded yet.</p>
@@ -148,26 +179,33 @@ export function EvidenceLinker({
 
   const [activeTab, setActiveTab] = useState<TabId>("audio");
   const [selectedUris, setSelectedUris] = useState<Set<string>>(new Set());
-  const [description, setDescription] = useState<LeafletLinearDocument>(EMPTY_DOC);
+  const [description, setDescription] =
+    useState<LeafletLinearDocument>(EMPTY_DOC);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successCount, setSuccessCount] = useState<number | null>(null);
 
   // ── Queries ────────────────────────────────────────────────────────────────
 
-  const { data: audioData, isLoading: audioLoading } = indexerTrpc.audio.list.useQuery({ did: organizationDid });
-  const { data: occurrenceData, isLoading: occurrenceLoading } = indexerTrpc.dwc.occurrences.useQuery({ did: organizationDid });
-  const { data: locationData, isLoading: locationLoading } = indexerTrpc.locations.list.useQuery({ did: organizationDid });
+  const { data: audioData, isLoading: audioLoading } =
+    indexerTrpc.audio.list.useQuery({ did: organizationDid });
+  const { data: occurrenceData, isLoading: occurrenceLoading } =
+    indexerTrpc.dwc.occurrences.useQuery({ did: organizationDid });
+  const { data: locationData, isLoading: locationLoading } =
+    indexerTrpc.locations.list.useQuery({ did: organizationDid });
 
   const audioItems: AudioRecordingItem[] = audioData ?? [];
   const occurrenceItems: OccurrenceItem[] = occurrenceData ?? [];
   const locationItems: CertifiedLocation[] = locationData ?? [];
 
-  const activeManageHref = TABS.find((t) => t.id === activeTab)?.manageHref ?? "";
+  const activeManageHref =
+    TABS.find((t) => t.id === activeTab)?.manageHref ?? "";
   const isLoading =
-    activeTab === "audio" ? audioLoading :
-    activeTab === "trees" ? occurrenceLoading :
-    locationLoading;
+    activeTab === "audio"
+      ? audioLoading
+      : activeTab === "trees"
+        ? occurrenceLoading
+        : locationLoading;
 
   // ── Selection ──────────────────────────────────────────────────────────────
 
@@ -191,9 +229,11 @@ export function EvidenceLinker({
 
   const createAttachment = trpc.context.attachment.create.useMutation();
 
-  const audioUriSet = new Set(audioItems.map((a) => a.metadata?.uri).filter(Boolean) as string[]);
+  const audioUriSet = new Set(
+    audioItems.map((a) => a.metadata?.uri).filter(Boolean) as string[],
+  );
   const occurrenceUriSet = new Set(
-    occurrenceItems.map((o) => o.metadata?.uri).filter(Boolean) as string[]
+    occurrenceItems.map((o) => o.metadata?.uri).filter(Boolean) as string[],
   );
 
   const handleLink = async () => {
@@ -214,7 +254,9 @@ export function EvidenceLinker({
         } else if (occurrenceUriSet.has(uri)) {
           const item = occurrenceItems.find((o) => o.metadata?.uri === uri);
           const species =
-            item?.record?.scientificName ?? item?.record?.vernacularName ?? "Occurrence";
+            item?.record?.scientificName ??
+            item?.record?.vernacularName ??
+            "Occurrence";
           title = `Tree: ${species}`;
           contentType = "occurrence";
         } else {
@@ -227,7 +269,11 @@ export function EvidenceLinker({
           title,
           contentType,
           subjects: [
-            { $type: "com.atproto.repo.strongRef", uri: activityUri, cid: activityCid },
+            {
+              $type: "com.atproto.repo.strongRef",
+              uri: activityUri,
+              cid: activityCid,
+            },
           ],
           content: [{ $type: "org.hypercerts.defs#uri", uri }],
           ...(hasDescription ? { description } : {}),
@@ -295,7 +341,14 @@ export function EvidenceLinker({
                   icon={MicIcon}
                   primary={item.record?.name ?? "Untitled recording"}
                   secondary={formatDate(
-                    (item.record?.metadata as Record<string, unknown> | null | undefined)?.["recordedAt"] as string ?? item.record?.createdAt ?? undefined
+                    ((
+                      item.record?.metadata as
+                        | Record<string, unknown>
+                        | null
+                        | undefined
+                    )?.["recordedAt"] as string) ??
+                      item.record?.createdAt ??
+                      undefined,
                   )}
                 />
               );
@@ -309,13 +362,17 @@ export function EvidenceLinker({
               const uri = item.metadata?.uri;
               if (!uri) return null;
               const species =
-                item.record?.scientificName ?? item.record?.vernacularName ?? "Unknown species";
+                item.record?.scientificName ??
+                item.record?.vernacularName ??
+                "Unknown species";
               const count = item.record?.individualCount;
               const date = formatDate(
-                item.record?.eventDate ?? item.record?.createdAt ?? undefined
+                item.record?.eventDate ?? item.record?.createdAt ?? undefined,
               );
               const secondary = [
-                count != null ? `${count} individual${count !== 1 ? "s" : ""}` : null,
+                count != null
+                  ? `${count} individual${count !== 1 ? "s" : ""}`
+                  : null,
                 date,
               ]
                 .filter(Boolean)
@@ -385,7 +442,8 @@ export function EvidenceLinker({
       {error && <p className="text-sm text-destructive">{error}</p>}
       {successCount !== null && (
         <p className="text-sm text-primary">
-          Linked {successCount} record{successCount !== 1 ? "s" : ""} successfully.
+          Linked {successCount} record{successCount !== 1 ? "s" : ""}{" "}
+          successfully.
         </p>
       )}
 
@@ -399,8 +457,8 @@ export function EvidenceLinker({
         {isSubmitting
           ? "Linking…"
           : selectedCount === 0
-          ? "Select records to link"
-          : `Link ${selectedCount} record${selectedCount !== 1 ? "s" : ""}`}
+            ? "Select records to link"
+            : `Link ${selectedCount} record${selectedCount !== 1 ? "s" : ""}`}
       </Button>
     </div>
   );

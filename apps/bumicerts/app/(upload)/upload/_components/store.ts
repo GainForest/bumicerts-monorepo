@@ -35,7 +35,7 @@ export type EditableFields = {
 
 // ─── Store state ─────────────────────────────────────────────────────────────
 
-type UploadDashboardState = {
+type ManageDashboardState = {
   /** Whether a save mutation is in flight. */
   isSaving: boolean;
   /** Error message from the last save attempt (null = no error). */
@@ -46,11 +46,14 @@ type UploadDashboardState = {
 
 // ─── Store actions ────────────────────────────────────────────────────────────
 
-type UploadDashboardActions = {
+type ManageDashboardActions = {
   /** Discard buffered edits (called on cancel). */
   cancelEditing: () => void;
   /** Update a single editable field. */
-  setEdit: <K extends keyof EditableFields>(key: K, value: EditableFields[K]) => void;
+  setEdit: <K extends keyof EditableFields>(
+    key: K,
+    value: EditableFields[K],
+  ) => void;
   /** True when at least one field has been modified. */
   hasChanges: () => boolean;
   /** Mark save as in-flight. */
@@ -82,8 +85,8 @@ const EMPTY_EDITS: EditableFields = {
 
 // ─── Store ───────────────────────────────────────────────────────────────────
 
-export const useUploadDashboardStore = create<
-  UploadDashboardState & UploadDashboardActions
+export const useManageDashboardState = create<
+  ManageDashboardState & ManageDashboardActions
 >((set, get) => ({
   // State
   isSaving: false,
@@ -91,8 +94,7 @@ export const useUploadDashboardStore = create<
   edits: { ...EMPTY_EDITS },
 
   // Actions
-  cancelEditing: () =>
-    set({ edits: { ...EMPTY_EDITS }, saveError: null }),
+  cancelEditing: () => set({ edits: { ...EMPTY_EDITS }, saveError: null }),
 
   setEdit: (key, value) =>
     set((state) => ({ edits: { ...state.edits, [key]: value } })),
@@ -100,7 +102,7 @@ export const useUploadDashboardStore = create<
   hasChanges: () => {
     const { edits } = get();
     return (Object.keys(edits) as (keyof EditableFields)[]).some(
-      (k) => edits[k] !== null
+      (k) => edits[k] !== null,
     );
   },
 

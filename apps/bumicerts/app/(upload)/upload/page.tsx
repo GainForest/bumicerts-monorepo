@@ -1,10 +1,10 @@
 import { auth } from "@/lib/auth";
-import { UploadDashboardClient } from "./_components/UploadDashboardClient";
+import { ManageDashboardClient } from "./_components/UploadDashboardClient";
 
 /**
- * /upload — Organisation profile page (view + edit modes)
+ * /manage — Organisation profile page (view + edit modes)
  *
- * Auth is enforced by the (upload) layout. Mode (?mode=edit) is managed
+ * Auth is enforced by the (MANAGE) layout. Mode (?mode=edit) is managed
  * entirely client-side via nuqs — no searchParams needed here.
  *
  * SSR/SEO is intentionally not required for this route.
@@ -17,5 +17,5 @@ export default async function UploadPage() {
   // the layout's SignInPrompt covers this case.
   if (!session.isLoggedIn) return null;
 
-  return <UploadDashboardClient did={session.did} />;
+  return <ManageDashboardClient did={session.did} />;
 }

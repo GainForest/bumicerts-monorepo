@@ -37,7 +37,7 @@ const SiteEditorModal = dynamic(
     import("@/components/global/modals/upload/site/editor").then((m) => ({
       default: m.SiteEditorModal,
     })),
-  { ssr: false }
+  { ssr: false },
 );
 
 const formatCoordinate = (coordinate: string) => {
@@ -61,21 +61,24 @@ const Step3 = () => {
   const addContributor = (name: string) => {
     const trimmed = name.trim();
     const alreadyExists = contributors.some(
-      (c) => c.name.trim().toLowerCase() === trimmed.toLowerCase()
+      (c) => c.name.trim().toLowerCase() === trimmed.toLowerCase(),
     );
     if (alreadyExists) return;
-    setFormValue("contributors", [...contributors, { id: crypto.randomUUID(), name: trimmed }]);
+    setFormValue("contributors", [
+      ...contributors,
+      { id: crypto.randomUUID(), name: trimmed },
+    ]);
   };
   const updateContributor = (id: string, name: string) => {
     setFormValue(
       "contributors",
-      contributors.map((c) => (c.id === id ? { ...c, name } : c))
+      contributors.map((c) => (c.id === id ? { ...c, name } : c)),
     );
   };
   const removeContributor = (id: string) => {
     setFormValue(
       "contributors",
-      contributors.filter((c) => c.id !== id)
+      contributors.filter((c) => c.id !== id),
     );
   };
 
@@ -88,7 +91,7 @@ const Step3 = () => {
         dialogWidth: "max-w-2xl",
         content: <SiteEditorModal initialData={null} />,
       },
-      true
+      true,
     );
     show();
   };
@@ -129,7 +132,7 @@ const Step3 = () => {
                 const trimmed = (val || newContributor).trim();
                 if (!trimmed) return;
                 const alreadyExists = contributors.some(
-                  (c) => c.name.trim().toLowerCase() === trimmed.toLowerCase()
+                  (c) => c.name.trim().toLowerCase() === trimmed.toLowerCase(),
                 );
                 if (!alreadyExists) {
                   addContributor(trimmed);
@@ -150,7 +153,6 @@ const Step3 = () => {
               ))}
             </div>
           </div>
-
         </FormField>
 
         <FormField
@@ -169,7 +171,7 @@ const Step3 = () => {
             {auth.user?.did && (
               <span className="text-sm text-muted-foreground">
                 <Link
-                  href={links.upload.sites}
+                  href={links.manage.sites}
                   className="flex items-center text-primary hover:underline"
                 >
                   Manage sites <ChevronRightIcon className="size-4" />
@@ -242,7 +244,7 @@ const Step3 = () => {
                               } else {
                                 setFormValue(
                                   "siteBoundaries",
-                                  siteBoundaries.filter((sb) => sb.uri !== uri)
+                                  siteBoundaries.filter((sb) => sb.uri !== uri),
                                 );
                               }
                             }}
@@ -251,8 +253,7 @@ const Step3 = () => {
                       );
                     })}
                   </div>
-                )
-                }
+                )}
               </>
             )}
           </div>
@@ -273,7 +274,7 @@ const Step3 = () => {
               onCheckedChange={(checked) =>
                 setFormValue(
                   "confirmPermissions",
-                  checked === "indeterminate" ? false : checked
+                  checked === "indeterminate" ? false : checked,
                 )
               }
             />
@@ -294,7 +295,7 @@ const Step3 = () => {
               onCheckedChange={(checked) =>
                 setFormValue(
                   "agreeTnc",
-                  checked === "indeterminate" ? false : checked
+                  checked === "indeterminate" ? false : checked,
                 )
               }
             />
@@ -333,7 +334,10 @@ const SiteItem = ({
     const loc = locationRef as Record<string, unknown>;
     const $type = loc["$type"] as string | undefined;
 
-    if ($type === "app.certified.location#string" || locationType === "coordinate-decimal") {
+    if (
+      $type === "app.certified.location#string" ||
+      locationType === "coordinate-decimal"
+    ) {
       // String variant — inline coordinate like "-15,30"
       const raw = loc["string"] as string | undefined;
       if (raw) {
@@ -371,7 +375,9 @@ const SiteItem = ({
   });
 
   // Build location validity from either GeoJSON metrics or inline coordinate
-  let locationValidity: { valid: true; area: number | null; lat: number; lon: number } | { valid: false };
+  let locationValidity:
+    | { valid: true; area: number | null; lat: number; lon: number }
+    | { valid: false };
 
   if (inlineCoordinate) {
     locationValidity = {
@@ -385,11 +391,11 @@ const SiteItem = ({
     locationValidity =
       metrics.areaHectares && metrics.centroid
         ? {
-          valid: true,
-          area: metrics.areaHectares,
-          lat: metrics.centroid.lat,
-          lon: metrics.centroid.lon,
-        }
+            valid: true,
+            area: metrics.areaHectares,
+            lat: metrics.centroid.lat,
+            lon: metrics.centroid.lon,
+          }
         : { valid: false };
   } else {
     locationValidity = { valid: false };
@@ -402,7 +408,7 @@ const SiteItem = ({
       size="sm"
       className={cn(
         "h-auto flex items-center justify-start px-4 pl-6 py-2 gap-3 overflow-hidden rounded-lg",
-        isSelected && "border-primary"
+        isSelected && "border-primary",
       )}
       onClick={() => onSelectChange(!isSelected)}
     >
@@ -414,7 +420,9 @@ const SiteItem = ({
         <CircleDashedIcon className="size-5 text-muted-foreground" />
       )}
       <div className="flex flex-col items-start justify-start">
-        <span className="text-base font-medium">{site.record?.name ?? "Unnamed Site"}</span>
+        <span className="text-base font-medium">
+          {site.record?.name ?? "Unnamed Site"}
+        </span>
         <div className="flex items-center gap-1">
           {locationValidity.valid ? (
             <>

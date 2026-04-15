@@ -1,5 +1,5 @@
-import { UploadDashboardSkeleton } from "./_components/UploadDashboardSkeleton";
+import { ManageDashboardSkeleton } from "./_components/UploadDashboardSkeleton";
 
 export default function Loading() {
-  return <UploadDashboardSkeleton />;
+  return <ManageDashboardSkeleton />;
 }

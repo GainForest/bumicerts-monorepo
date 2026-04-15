@@ -29,7 +29,7 @@ const AuthWrapper = ({
     isPlaceholderData: isOlderData,
   } = indexerTrpc.organization.byDid.useQuery(
     { did: auth.user?.did ?? "" },
-    { enabled: !!auth.user?.did }
+    { enabled: !!auth.user?.did },
   );
 
   const isLoadingOrganizationInfo = isPendingOrganizationInfo || isOlderData;
@@ -60,7 +60,7 @@ const AuthWrapper = ({
             isUnauthenticated ? (
               <AtprotoSignInButton />
             ) : (
-              <Link href={links.upload.home}>
+              <Link href={links.manage.home}>
                 <Button>
                   <BuildingIcon />
                   Manage my organization
@@ -92,7 +92,7 @@ const AuthWrapper = ({
         className={cn(
           "flex-1 z-5",
           isContentReady ? "" : "opacity-70 blur-lg pointer-events-none",
-          className
+          className,
         )}
       >
         {children}

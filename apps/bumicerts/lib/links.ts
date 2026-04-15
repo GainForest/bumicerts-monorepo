@@ -16,10 +16,11 @@ export const links = {
 
   /** Tab routes for an organization profile page. */
   organization: {
-    home:      (did: string) => `/organization/${encodeURIComponent(did)}`,
-    bumicerts: (did: string) => `/organization/${encodeURIComponent(did)}/bumicerts`,
+    home: (did: string) => `/organization/${encodeURIComponent(did)}`,
+    bumicerts: (did: string) =>
+      `/organization/${encodeURIComponent(did)}/bumicerts`,
   },
-  upload: {
+  manage: {
     home: "/upload",
     edit: "/upload?mode=edit",
     sites: "/upload/sites",
@@ -45,7 +46,8 @@ export const links = {
       return `/bumicert/${didOrId}`;
     },
     api: {
-      generateShortDescription: "/bumicert/create/api/generate-short-description",
+      generateShortDescription:
+        "/bumicert/create/api/generate-short-description",
     },
   },
   external: {

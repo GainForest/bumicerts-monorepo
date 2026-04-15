@@ -11,7 +11,13 @@
  */
 
 import { useState } from "react";
-import { MicIcon, TreesIcon, MapPinIcon, DatabaseIcon, ExternalLinkIcon } from "lucide-react";
+import {
+  MicIcon,
+  TreesIcon,
+  MapPinIcon,
+  DatabaseIcon,
+  ExternalLinkIcon,
+} from "lucide-react";
 import { useModal } from "@/components/ui/modal/context";
 import {
   ModalContent,
@@ -39,7 +45,11 @@ import type { LeafletLinearDocument } from "@gainforest/leaflet-react";
 
 type TabId = "audio" | "trees" | "sites" | "datasets";
 
-const TABS: { id: TabId; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+const TABS: {
+  id: TabId;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
   { id: "audio", label: "Audio", icon: MicIcon },
   { id: "trees", label: "Trees", icon: TreesIcon },
   { id: "sites", label: "Sites", icon: MapPinIcon },
@@ -50,7 +60,11 @@ const TABS: { id: TabId; label: string; icon: React.ComponentType<{ className?: 
 
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return "";
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 const EMPTY_DOC: LeafletLinearDocument = { blocks: [] };
@@ -67,8 +81,13 @@ function AudioRow({
   onToggle: () => void;
 }) {
   const title = item.record?.name ?? "Untitled recording";
-  const meta = item.record?.metadata as Record<string, unknown> | null | undefined;
-  const date = formatDate((meta?.["recordedAt"] as string) ?? item.record?.createdAt ?? undefined);
+  const meta = item.record?.metadata as
+    | Record<string, unknown>
+    | null
+    | undefined;
+  const date = formatDate(
+    (meta?.["recordedAt"] as string) ?? item.record?.createdAt ?? undefined,
+  );
   return (
     <button
       type="button"
@@ -79,8 +98,12 @@ function AudioRow({
           : "border-border hover:border-border/80 hover:bg-muted/30"
       }`}
     >
-      <div className={`h-4 w-4 rounded-sm border-2 shrink-0 flex items-center justify-center transition-colors ${selected ? "bg-primary border-primary" : "border-muted-foreground/40"}`}>
-        {selected && <div className="h-2 w-2 rounded-[2px] bg-primary-foreground" />}
+      <div
+        className={`h-4 w-4 rounded-sm border-2 shrink-0 flex items-center justify-center transition-colors ${selected ? "bg-primary border-primary" : "border-muted-foreground/40"}`}
+      >
+        {selected && (
+          <div className="h-2 w-2 rounded-[2px] bg-primary-foreground" />
+        )}
       </div>
       <MicIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
       <div className="flex-1 min-w-0">
@@ -100,9 +123,16 @@ function OccurrenceRow({
   selected: boolean;
   onToggle: () => void;
 }) {
-  const name = item.record?.scientificName ?? item.record?.vernacularName ?? "Unknown species";
+  const name =
+    item.record?.scientificName ??
+    item.record?.vernacularName ??
+    "Unknown species";
   const count = item.record?.individualCount;
-  const date = formatDate(item.record?.eventDate ?? item.record?.createdAt ?? item.metadata?.createdAt);
+  const date = formatDate(
+    item.record?.eventDate ??
+      item.record?.createdAt ??
+      item.metadata?.createdAt,
+  );
   return (
     <button
       type="button"
@@ -113,14 +143,25 @@ function OccurrenceRow({
           : "border-border hover:border-border/80 hover:bg-muted/30"
       }`}
     >
-      <div className={`h-4 w-4 rounded-sm border-2 shrink-0 flex items-center justify-center transition-colors ${selected ? "bg-primary border-primary" : "border-muted-foreground/40"}`}>
-        {selected && <div className="h-2 w-2 rounded-[2px] bg-primary-foreground" />}
+      <div
+        className={`h-4 w-4 rounded-sm border-2 shrink-0 flex items-center justify-center transition-colors ${selected ? "bg-primary border-primary" : "border-muted-foreground/40"}`}
+      >
+        {selected && (
+          <div className="h-2 w-2 rounded-[2px] bg-primary-foreground" />
+        )}
       </div>
       <TreesIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-foreground truncate italic">{name}</p>
+        <p className="text-sm font-medium text-foreground truncate italic">
+          {name}
+        </p>
         <p className="text-xs text-muted-foreground">
-          {[count != null ? `${count} individual${count !== 1 ? "s" : ""}` : null, date]
+          {[
+            count != null
+              ? `${count} individual${count !== 1 ? "s" : ""}`
+              : null,
+            date,
+          ]
             .filter(Boolean)
             .join(" · ")}
         </p>
@@ -150,13 +191,19 @@ function SiteRow({
           : "border-border hover:border-border/80 hover:bg-muted/30"
       }`}
     >
-      <div className={`h-4 w-4 rounded-sm border-2 shrink-0 flex items-center justify-center transition-colors ${selected ? "bg-primary border-primary" : "border-muted-foreground/40"}`}>
-        {selected && <div className="h-2 w-2 rounded-[2px] bg-primary-foreground" />}
+      <div
+        className={`h-4 w-4 rounded-sm border-2 shrink-0 flex items-center justify-center transition-colors ${selected ? "bg-primary border-primary" : "border-muted-foreground/40"}`}
+      >
+        {selected && (
+          <div className="h-2 w-2 rounded-[2px] bg-primary-foreground" />
+        )}
       </div>
       <MapPinIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-foreground truncate">{name}</p>
-        {type && <p className="text-xs text-muted-foreground capitalize">{type}</p>}
+        {type && (
+          <p className="text-xs text-muted-foreground capitalize">{type}</p>
+        )}
       </div>
     </button>
   );
@@ -184,14 +231,21 @@ function DatasetRow({
           : "border-border hover:border-border/80 hover:bg-muted/30"
       }`}
     >
-      <div className={`h-4 w-4 rounded-sm border-2 shrink-0 flex items-center justify-center transition-colors ${selected ? "bg-primary border-primary" : "border-muted-foreground/40"}`}>
-        {selected && <div className="h-2 w-2 rounded-[2px] bg-primary-foreground" />}
+      <div
+        className={`h-4 w-4 rounded-sm border-2 shrink-0 flex items-center justify-center transition-colors ${selected ? "bg-primary border-primary" : "border-muted-foreground/40"}`}
+      >
+        {selected && (
+          <div className="h-2 w-2 rounded-[2px] bg-primary-foreground" />
+        )}
       </div>
       <DatabaseIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-foreground truncate">{name}</p>
         <p className="text-xs text-muted-foreground">
-          {[count != null ? `${count} record${count !== 1 ? "s" : ""}` : null, date]
+          {[
+            count != null ? `${count} record${count !== 1 ? "s" : ""}` : null,
+            date,
+          ]
             .filter(Boolean)
             .join(" · ")}
         </p>
@@ -216,7 +270,13 @@ function ListSkeleton() {
 
 function EmptyState({ tab, manageHref }: { tab: TabId; manageHref: string }) {
   const label =
-    tab === "audio" ? "audio recordings" : tab === "trees" ? "tree occurrences" : tab === "datasets" ? "datasets" : "sites";
+    tab === "audio"
+      ? "audio recordings"
+      : tab === "trees"
+        ? "tree occurrences"
+        : tab === "datasets"
+          ? "datasets"
+          : "sites";
   return (
     <div className="flex flex-col items-center gap-3 py-8 text-center text-muted-foreground">
       <p className="text-sm">No {label} uploaded yet.</p>
@@ -263,16 +323,21 @@ export function EvidencePickerModal({
 
   const [activeTab, setActiveTab] = useState<TabId>("audio");
   const [selectedUris, setSelectedUris] = useState<Set<string>>(new Set());
-  const [description, setDescription] = useState<LeafletLinearDocument>(EMPTY_DOC);
+  const [description, setDescription] =
+    useState<LeafletLinearDocument>(EMPTY_DOC);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // ── Queries ──────────────────────────────────────────────────────────────
 
-  const { data: audioData, isLoading: audioLoading } = indexerTrpc.audio.list.useQuery({ did: organizationDid });
-  const { data: occurrenceData, isLoading: occurrenceLoading } = indexerTrpc.dwc.occurrences.useQuery({ did: organizationDid });
-  const { data: locationData, isLoading: locationLoading } = indexerTrpc.locations.list.useQuery({ did: organizationDid });
-  const { data: datasetData, isLoading: datasetLoading } = indexerTrpc.datasets.list.useQuery({ did: organizationDid });
+  const { data: audioData, isLoading: audioLoading } =
+    indexerTrpc.audio.list.useQuery({ did: organizationDid });
+  const { data: occurrenceData, isLoading: occurrenceLoading } =
+    indexerTrpc.dwc.occurrences.useQuery({ did: organizationDid });
+  const { data: locationData, isLoading: locationLoading } =
+    indexerTrpc.locations.list.useQuery({ did: organizationDid });
+  const { data: datasetData, isLoading: datasetLoading } =
+    indexerTrpc.datasets.list.useQuery({ did: organizationDid });
 
   const audioItems = audioData ?? [];
   const occurrenceItems = occurrenceData ?? [];
@@ -280,10 +345,13 @@ export function EvidencePickerModal({
   const datasetItems = datasetData ?? [];
 
   const isLoading =
-    activeTab === "audio" ? audioLoading :
-    activeTab === "trees" ? occurrenceLoading :
-    activeTab === "datasets" ? datasetLoading :
-    locationLoading;
+    activeTab === "audio"
+      ? audioLoading
+      : activeTab === "trees"
+        ? occurrenceLoading
+        : activeTab === "datasets"
+          ? datasetLoading
+          : locationLoading;
 
   // ── Selection helpers ─────────────────────────────────────────────────────
 
@@ -313,9 +381,15 @@ export function EvidencePickerModal({
     const hasDescription = description.blocks.length > 0;
 
     // Build title + contentType per URI based on which list it belongs to.
-    const audioUriSet = new Set(audioItems.map((a) => a.metadata?.uri).filter(Boolean));
-    const occurrenceUriSet = new Set(occurrenceItems.map((o) => o.metadata?.uri).filter(Boolean));
-    const datasetUriSet = new Set(datasetItems.map((d) => d.metadata?.uri).filter(Boolean));
+    const audioUriSet = new Set(
+      audioItems.map((a) => a.metadata?.uri).filter(Boolean),
+    );
+    const occurrenceUriSet = new Set(
+      occurrenceItems.map((o) => o.metadata?.uri).filter(Boolean),
+    );
+    const datasetUriSet = new Set(
+      datasetItems.map((d) => d.metadata?.uri).filter(Boolean),
+    );
 
     try {
       for (const uri of selectedUris) {
@@ -328,7 +402,10 @@ export function EvidencePickerModal({
           contentType = "audio";
         } else if (occurrenceUriSet.has(uri)) {
           const item = occurrenceItems.find((o) => o.metadata?.uri === uri);
-          const species = item?.record?.scientificName ?? item?.record?.vernacularName ?? "Occurrence";
+          const species =
+            item?.record?.scientificName ??
+            item?.record?.vernacularName ??
+            "Occurrence";
           title = `Tree: ${species}`;
           contentType = "occurrence";
         } else if (datasetUriSet.has(uri)) {
@@ -344,7 +421,13 @@ export function EvidencePickerModal({
         await createAttachment.mutateAsync({
           title,
           contentType,
-          subjects: [{ $type: "com.atproto.repo.strongRef", uri: activityUri, cid: activityCid }],
+          subjects: [
+            {
+              $type: "com.atproto.repo.strongRef",
+              uri: activityUri,
+              cid: activityCid,
+            },
+          ],
           content: [{ $type: "org.hypercerts.defs#uri", uri }],
           ...(hasDescription ? { description } : {}),
         });
@@ -367,10 +450,13 @@ export function EvidencePickerModal({
   // ── Manage links per tab ──────────────────────────────────────────────────
 
   const manageHref =
-    activeTab === "audio" ? links.upload.audio :
-    activeTab === "trees" ? links.upload.trees :
-    activeTab === "datasets" ? links.upload.trees :
-    links.upload.sites;
+    activeTab === "audio"
+      ? links.manage.audio
+      : activeTab === "trees"
+        ? links.manage.trees
+        : activeTab === "datasets"
+          ? links.manage.trees
+          : links.manage.sites;
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -516,10 +602,15 @@ export function EvidencePickerModal({
           {isSubmitting
             ? "Linking…"
             : selectedCount === 0
-            ? "Select records to link"
-            : `Link ${selectedCount} record${selectedCount !== 1 ? "s" : ""}`}
+              ? "Select records to link"
+              : `Link ${selectedCount} record${selectedCount !== 1 ? "s" : ""}`}
         </Button>
-        <Button variant="ghost" className="w-full" onClick={handleCancel} disabled={isSubmitting}>
+        <Button
+          variant="ghost"
+          className="w-full"
+          onClick={handleCancel}
+          disabled={isSubmitting}
+        >
           Cancel
         </Button>
       </ModalFooter>

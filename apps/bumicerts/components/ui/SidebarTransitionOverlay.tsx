@@ -12,7 +12,7 @@
  * SidebarTransitionOverlay
  *
  * Shown inside a sidebar for ~1 second when the user crosses the
- * marketplace ↔ upload boundary. Renders a centred column of:
+ * marketplace ↔ manage boundary. Renders a centred column of:
  *   - blurred radial circle that expands in, then contracts out
  *   - platform icon (animate-pulse)
  *   - "Switching to <Platform>" label
@@ -36,7 +36,7 @@ const PLATFORM_META: Record<
 > = {
   upload: {
     Icon: UploadCloudIcon,
-    label: "Upload",
+    label: "Manage",
   },
   marketplace: {
     Icon: StoreIcon,
@@ -60,7 +60,6 @@ export function SidebarTransitionOverlay({
       className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/80 backdrop-blur-sm z-10"
     >
       <div className="absolute inset-0 overflow-hidden">
-
         <motion.div
           className="absolute h-80 w-80 rounded-full bg-primary blur-3xl z-10 opacity-75"
           style={{ left: "50%", top: "50%", x: "-50%", y: "-50%" }}
@@ -71,8 +70,7 @@ export function SidebarTransitionOverlay({
       </div>
       <Icon className="h-8 w-8 text-primary-foreground animate-pulse relative z-12" />
       <p className="text-sm font-medium text-primary-foreground text-center tracking-wide relative z-20">
-        Switching to{" "}
-        <br />
+        Switching to <br />
         <motion.span
           layoutId="sidebar-platform-name"
           className="font-instrument text-lg inline-block"
