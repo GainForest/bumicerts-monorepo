@@ -2,14 +2,12 @@
 
 import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   LogOutIcon,
   BuildingIcon,
   ChevronDownIcon,
   UserIcon,
-  UploadCloudIcon,
-  StoreIcon,
 } from "lucide-react";
 import { useAtprotoStore } from "@/components/stores/atproto";
 import { logout } from "@/components/actions/oauth";
@@ -78,11 +76,8 @@ function AuthenticatedMenu({
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
-  const pathname = usePathname();
   const { setAuth } = useAtprotoStore();
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const isOnUpload = pathname.startsWith("/upload");
 
   const handleLogout = async () => {
     setOpen(false);
@@ -166,29 +161,6 @@ function AuthenticatedMenu({
                 <BuildingIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                 My Organization
               </Link>
-
-              {/* Platform switcher */}
-              <div className="h-px bg-border/60 my-1" />
-
-              {isOnUpload ? (
-                <Link
-                  href={links.root}
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors w-full text-left"
-                >
-                  <StoreIcon className="h-3.5 w-3.5 shrink-0" />
-                  Switch to Marketplace
-                </Link>
-              ) : (
-                <Link
-                  href={links.manage.home}
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors w-full text-left"
-                >
-                  <UploadCloudIcon className="h-3.5 w-3.5 shrink-0" />
-                  Switch to Upload
-                </Link>
-              )}
 
               <div className="h-px bg-border/60 my-1" />
 
