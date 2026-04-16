@@ -97,15 +97,15 @@ function MentionCard({ did, handle }: MentionCardProps) {
         </div>
       </div>
 
-      {/* View on Bluesky — always available */}
+      {/* View on Certified — always available */}
       <a
-        href={`https://bsky.app/profile/${did}`}
+        href={`https://certified.app/profile/${did}`}
         target="_blank"
         rel="noopener noreferrer"
         className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
       >
         <ExternalLinkIcon className="h-3 w-3 shrink-0" />
-        View on Bluesky
+        View on Certified
       </a>
 
       {/* View organization profile — only if indexed */}

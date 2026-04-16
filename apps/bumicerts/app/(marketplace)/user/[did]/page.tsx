@@ -126,7 +126,7 @@ export default async function UserProfilePage({
   }
 
   const displayName = profile.displayName ?? profile.handle;
-  const bskyUrl = `https://bsky.app/profile/${did}`;
+  const certifiedUrl = `https://certified.app/profile/${did}`;
 
   return (
     <Container className="max-w-5xl py-8">
@@ -158,15 +158,15 @@ export default async function UserProfilePage({
                 </p>
               )}
 
-              {/* Link to Bluesky */}
+              {/* Link to Certified */}
               <a
-                href={bskyUrl}
+                href={certifiedUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
               >
                 <ExternalLinkIcon className="h-3 w-3" />
-                View on Bluesky
+                View on Certified
               </a>
             </div>
 
