@@ -1,7 +1,15 @@
+import { clientEnv } from "@/lib/env/client";
+
 type DidDynamicLink = (did?: string) => string;
 const didCatcher = (callback: (did: string) => string): DidDynamicLink => {
   return (did) => (did === undefined ? "#" : callback(did));
 };
+
+const DEFAULT_GREEN_GLOBE_PREVIEW_BASE_URL = "https://gainforest.app";
+
+const GREEN_GLOBE_PREVIEW_BASE_URL =
+  clientEnv.NEXT_PUBLIC_GREEN_GLOBE_URL?.trim().replace(/\/$/, "") ??
+  DEFAULT_GREEN_GLOBE_PREVIEW_BASE_URL;
 
 export const links = {
   root: "/",
@@ -59,6 +67,24 @@ export const links = {
     github: "https://github.com/GainForest/bumicerts-monorepo",
     twitter: "https://www.x.com/GainForestNow",
     gainforest: "https://www.gainforest.earth",
+    greenGlobePreviewBase: GREEN_GLOBE_PREVIEW_BASE_URL,
+    greenGlobeTreePreview: (did: string, options?: {
+      treeUri?: string | null;
+      datasetRef?: string | null;
+    }) => {
+      const query = new URLSearchParams();
+
+      if (options?.treeUri) {
+        query.set("tree-uri", options.treeUri);
+      }
+      if (options?.datasetRef) {
+        query.set("dataset-ref", options.datasetRef);
+      }
+
+      const queryString = query.toString();
+      const basePath = `${GREEN_GLOBE_PREVIEW_BASE_URL}/embed/${encodeURIComponent(did)}`;
+      return queryString ? `${basePath}?${queryString}` : basePath;
+    },
     gbifPublisher:
       "https://www.gbif.org/publisher/c02486e8-eb54-4e94-81d8-1038cc58e208",
   },

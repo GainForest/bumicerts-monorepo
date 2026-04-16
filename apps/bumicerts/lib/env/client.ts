@@ -27,6 +27,9 @@ export const clientEnv = createEnv({
     // Base URL override (ngrok, custom domains, etc.)
     NEXT_PUBLIC_BASE_URL: z.string().url().optional(),
 
+    // Green Globe public app URL
+    NEXT_PUBLIC_GREEN_GLOBE_URL: z.string().url().optional(),
+
     // Vercel system (auto-injected)
     NEXT_PUBLIC_VERCEL_ENV: z
       .enum(["development", "preview", "production"])
@@ -51,6 +54,7 @@ export const clientEnv = createEnv({
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     NEXT_PUBLIC_EPDS_URL: process.env.NEXT_PUBLIC_EPDS_URL,
     NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL,
+    NEXT_PUBLIC_GREEN_GLOBE_URL: process.env.NEXT_PUBLIC_GREEN_GLOBE_URL,
     NEXT_PUBLIC_VERCEL_ENV: process.env.NEXT_PUBLIC_VERCEL_ENV,
     NEXT_PUBLIC_VERCEL_URL: process.env.NEXT_PUBLIC_VERCEL_URL,
     NEXT_PUBLIC_FACILITATOR_DID: process.env.NEXT_PUBLIC_FACILITATOR_DID,

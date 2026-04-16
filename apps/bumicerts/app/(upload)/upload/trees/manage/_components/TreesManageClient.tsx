@@ -55,6 +55,7 @@ import {
   getSelectableEstablishmentMeansOptions,
 } from "@/lib/upload/establishment-means";
 import EstablishmentMeansInfoContent from "../../_components/EstablishmentMeansInfoContent";
+import GreenGlobeTreePreviewCard from "./GreenGlobeTreePreviewCard";
 import { ManageConfirmModal } from "./ManageConfirmModal";
 import { TreesManageSkeleton } from "./TreesManageSkeleton";
 import {
@@ -1364,6 +1365,17 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
                   </div>
                 ) : null}
               </section>
+
+              {activeTree.occurrence.metadata?.uri ? (
+                <GreenGlobeTreePreviewCard
+                  did={did}
+                  treeUri={activeTree.occurrence.metadata.uri}
+                  datasetRef={typeof activeTree.occurrence.record?.datasetRef === "string"
+                    ? activeTree.occurrence.record.datasetRef
+                    : null}
+                  treeName={activeTree.occurrence.record?.scientificName ?? null}
+                />
+              ) : null}
 
               <SectionCard
                 title="Tree details"

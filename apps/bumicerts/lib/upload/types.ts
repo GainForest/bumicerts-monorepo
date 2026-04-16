@@ -23,6 +23,7 @@ export type OccurrenceInput = {
   kingdom?: string;
   establishmentMeans?: string;
   datasetRef?: string;
+  dynamicProperties?: string;
 };
 
 export type FloraMeasurementBundle = {

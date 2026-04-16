@@ -52,6 +52,7 @@ export const createDwcOccurrence = (
       projectRef,
       establishmentMeans,
       datasetRef,
+      dynamicProperties,
       rkey,
     } = input;
 
@@ -80,6 +81,7 @@ export const createDwcOccurrence = (
       ...(projectRef !== undefined ? { projectRef } : {}),
       ...(establishmentMeans !== undefined ? { establishmentMeans } : {}),
       ...(datasetRef !== undefined ? { datasetRef } : {}),
+      ...(dynamicProperties !== undefined ? { dynamicProperties } : {}),
       createdAt,
     };
 
