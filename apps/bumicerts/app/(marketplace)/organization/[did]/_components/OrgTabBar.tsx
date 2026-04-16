@@ -17,8 +17,18 @@ interface Tab {
 
 function buildTabs(did: string): Tab[] {
   return [
-    { label: "Home",      href: links.organization.home(did),      icon: HomeIcon,  exact: true  },
-    { label: "Bumicerts", href: links.organization.bumicerts(did), icon: BadgeIcon, exact: false },
+    {
+      label: "Home",
+      href: links.organization.home(did),
+      icon: HomeIcon,
+      exact: true,
+    },
+    {
+      label: "Bumicerts",
+      href: links.organization.bumicerts(did),
+      icon: BadgeIcon,
+      exact: false,
+    },
   ];
 }
 
@@ -51,19 +61,15 @@ export function OrgTabBar({ did }: OrgTabBarProps) {
                   "relative flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-colors duration-150 whitespace-nowrap select-none",
                   active
                     ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 <Icon className="h-3.5 w-3.5 shrink-0" />
                 {tab.label}
 
-                {/* Sliding underline — springs between tabs */}
+                {/* Underline to highlight the active tab */}
                 {active && (
-                  <motion.div
-                    layoutId="org-tab-indicator"
-                    className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground rounded-full"
-                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                  />
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground rounded-full" />
                 )}
               </Link>
             );

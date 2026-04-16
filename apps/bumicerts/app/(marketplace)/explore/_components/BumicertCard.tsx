@@ -98,13 +98,12 @@ export function BumicertCardVisual({
 
       {/* Header overlay */}
       <div className="absolute top-2 left-2 bg-background/70 rounded-full p-1 pr-3 backdrop-blur-lg shadow-lg flex items-center gap-1 min-w-0">
-        <div className="h-6 w-6 rounded-full bg-white border border-black/10 shadow-sm overflow-hidden shrink-0">
+        <div className="relative h-6 w-6 rounded-full bg-white border border-black/10 shadow-sm overflow-hidden shrink-0">
           {logoUrl ? (
             <Image
               src={logoUrl}
               alt={organizationName}
-              width={24}
-              height={24}
+              fill
               className="object-cover"
             />
           ) : (
