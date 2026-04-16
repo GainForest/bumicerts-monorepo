@@ -159,6 +159,15 @@ function AuthenticatedMenu({
             {/* Menu items */}
             <div className="p-1">
               <Link
+                href={links.user(did)}
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-foreground hover:bg-muted/60 transition-colors w-full text-left"
+              >
+                <UserIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                My Profile
+              </Link>
+
+              <Link
                 href={links.organization.home(did)}
                 onClick={() => setOpen(false)}
                 className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-foreground hover:bg-muted/60 transition-colors w-full text-left"
