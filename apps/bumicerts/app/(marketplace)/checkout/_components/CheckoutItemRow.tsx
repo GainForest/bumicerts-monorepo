@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Trash2Icon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,7 +24,32 @@ export function CheckoutItemRow({
 }: CheckoutItemRowProps) {
   // Track raw input string to allow typing decimals (e.g., "0.")
   // We control this locally and only sync back to parent on valid changes
+  const [prevAmount, setPrevAmount] = useState(amount);
   const [inputValue, setInputValue] = useState<string>(() => String(amount));
+
+  const updateInputValue = useCallback(
+    (stringValue: string) => {
+      const safeStringValue = stringValue
+        .replace(/[^0-9.]/g, "")
+        .replace(/(\..*)\./g, "$1");
+      setInputValue(safeStringValue);
+      if (safeStringValue && !safeStringValue.endsWith(".")) {
+        const parsed = parseFloat(safeStringValue);
+        if (!isNaN(parsed) && parsed >= 0) {
+          onAmountChange?.(parsed);
+        }
+      } else if (safeStringValue === "") {
+        onAmountChange?.(0);
+      }
+    },
+    [setInputValue, onAmountChange],
+  );
+
+  if (amount !== prevAmount) {
+    updateInputValue(amount.toString());
+    setPrevAmount(amount);
+  }
+
   return (
     <div className="flex items-center gap-4 py-4 border-b border-border/40 last:border-0">
       <div className="flex-1 min-w-0">
@@ -47,30 +72,12 @@ export function CheckoutItemRow({
             inputMode="decimal"
             value={inputValue}
             onChange={(e) => {
-              const val = e.target.value.replace(/[^0-9.]/g, "");
-              setInputValue(val);
-              
-              // Only call onAmountChange when we have a complete number
-              // Skip if ends with "." (user still typing decimals like "0." or "25.")
-              if (val && !val.endsWith(".")) {
-                const parsed = parseFloat(val);
-                if (!isNaN(parsed) && parsed >= 0) {
-                  onAmountChange(parsed);
-                }
-              } else if (val === "") {
-                onAmountChange(0);
-              }
-            }}
-            onBlur={() => {
-              // On blur, finalize the value and clean up formatting
-              const parsed = parseFloat(inputValue) || 0;
-              onAmountChange(parsed);
-              setInputValue(parsed === 0 ? "" : String(parsed));
+              updateInputValue(e.currentTarget.value);
             }}
             className={cn(
               "w-20 bg-transparent border border-border rounded-xl px-3 py-1.5",
               "text-sm font-medium text-right outline-none",
-              "transition-colors focus:border-primary/50"
+              "transition-colors focus:border-primary/50",
             )}
           />
         </div>

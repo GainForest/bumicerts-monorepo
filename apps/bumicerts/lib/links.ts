@@ -1,5 +1,3 @@
-import { params } from "@atproto/lex";
-
 type DidDynamicLink = (did?: string) => string;
 const didCatcher = (callback: (did: string) => string): DidDynamicLink => {
   return (did) => (did === undefined ? "#" : callback(did));
