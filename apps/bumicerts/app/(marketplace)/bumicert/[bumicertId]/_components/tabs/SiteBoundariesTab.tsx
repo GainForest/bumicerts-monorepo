@@ -29,7 +29,6 @@ interface SiteEntry {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const POLYGONS_VIEWER_URL = "https://polygons-gainforest.vercel.app/view";
-const POLYGONS_VIEWER_PARAMS = { showErrors: "true" };
 
 /**
  * Build the polygons viewer iframe URL from a location record AT URI.
@@ -37,7 +36,6 @@ const POLYGONS_VIEWER_PARAMS = { showErrors: "true" };
 function buildPolygonsViewerUrl(locationUri: string): string {
   const params = new URLSearchParams({
     certifiedLocationRecordUri: locationUri,
-    ...POLYGONS_VIEWER_PARAMS,
   });
   return `${POLYGONS_VIEWER_URL}?${params.toString()}`;
 }
