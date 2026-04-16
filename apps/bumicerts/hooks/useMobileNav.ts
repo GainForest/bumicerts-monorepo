@@ -5,7 +5,7 @@
  *
  * Tiny Zustand store that controls the floating mobile nav drawer open state.
  * Shared between:
- *   - Header / Manageheader  — hamburger button sets open=true
+ *   - Header / ManageHeader  — hamburger button sets open=true
  *   - DesktopSidebar / ManageDesktopSidebar — nav link clicks set open=false
  */
 
