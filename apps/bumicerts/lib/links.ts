@@ -88,6 +88,7 @@ export const links = {
     github: "https://github.com/GainForest/bumicerts-monorepo",
     twitter: "https://www.x.com/GainForestNow",
     gainforest: "https://www.gainforest.earth",
+    docs: "https://docs.fund.gainforest.app/",
     gbifPublisher:
       "https://www.gbif.org/publisher/c02486e8-eb54-4e94-81d8-1038cc58e208",
   },

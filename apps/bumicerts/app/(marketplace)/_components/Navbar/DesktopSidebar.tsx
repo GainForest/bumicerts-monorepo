@@ -20,6 +20,7 @@ import {
   ExternalLinkIcon,
   ChevronRightIcon,
   XIcon,
+  LeafIcon,
 } from "lucide-react";
 import { AnimatePresence, motion, LayoutGroup } from "framer-motion";
 import { useState, useEffect } from "react";
@@ -36,9 +37,10 @@ import { buildMarketplaceNavItems, type NavItem } from "./data";
 import { links } from "@/lib/links";
 
 const FOOTER_LINKS = [
-  { href: links.external.github, text: "GitHub", Icon: GithubIcon },
+  { href: links.external.gainforest, text: "GainForest", Icon: LeafIcon },
+  { href: links.external.docs, text: "Documentation", Icon: FileTextIcon },
   { href: links.external.twitter, text: "Twitter", Icon: TwitterIcon },
-  { href: links.external.gainforest, text: "GainForest", Icon: FileTextIcon },
+  { href: links.external.github, text: "GitHub", Icon: GithubIcon },
   // { href: "/changelog", text: "Changelog", Icon: FileTextIcon },
 ];
 

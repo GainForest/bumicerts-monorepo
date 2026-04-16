@@ -1,12 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
-import { GithubIcon, TwitterIcon, ExternalLinkIcon, LeafIcon } from "lucide-react";
+import { GithubIcon, TwitterIcon, ExternalLinkIcon, LeafIcon, FileTextIcon } from "lucide-react";
 import { links } from "@/lib/links";
 
 const FOOTER_LINKS = [
-  { href: links.external.github,     label: "GitHub",      Icon: GithubIcon,  external: true },
-  { href: links.external.twitter,    label: "Twitter",      Icon: TwitterIcon, external: true },
-  { href: links.external.gainforest, label: "GainForest",   Icon: LeafIcon,    external: true },
+  { href: links.external.gainforest, label: "GainForest",    Icon: LeafIcon,     external: true },
+  { href: links.external.docs,       label: "Documentation", Icon: FileTextIcon, external: true },
+  { href: links.external.twitter,    label: "Twitter",       Icon: TwitterIcon,  external: true },
+  { href: links.external.github,     label: "GitHub",        Icon: GithubIcon,   external: true },
   // { href: "/changelog", label: "Changelog", Icon: FileTextIcon, external: false },
 ];
 

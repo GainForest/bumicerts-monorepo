@@ -16,6 +16,7 @@ import {
   GithubIcon,
   TwitterIcon,
   FileTextIcon,
+  LeafIcon,
 } from "lucide-react";
 import { motion, LayoutGroup, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -28,9 +29,10 @@ import { PlatformSwitcher } from "@/components/ui/PlatformSwitcher";
 import { links } from "@/lib/links";
 
 const FOOTER_LINKS = [
-  { href: links.external.github, text: "GitHub", Icon: GithubIcon },
+  { href: links.external.gainforest, text: "GainForest", Icon: LeafIcon },
+  { href: links.external.docs, text: "Documentation", Icon: FileTextIcon },
   { href: links.external.twitter, text: "Twitter", Icon: TwitterIcon },
-  { href: links.external.gainforest, text: "GainForest", Icon: FileTextIcon },
+  { href: links.external.github, text: "GitHub", Icon: GithubIcon },
   // { href: "/changelog", text: "Changelog", Icon: FileTextIcon },
 ];
 
