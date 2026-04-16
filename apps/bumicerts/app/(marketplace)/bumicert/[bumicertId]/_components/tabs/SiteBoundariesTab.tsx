@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { MapPinIcon, Loader2Icon } from "lucide-react";
 import type { BumicertData } from "@/lib/types";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
+import { links } from "@/lib/links";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -24,20 +25,6 @@ interface SiteEntry {
   rkey: string;
   name: string | null;
   locationUri: string | null; // AT URI of the location record
-}
-
-// ── Constants ─────────────────────────────────────────────────────────────────
-
-const POLYGONS_VIEWER_URL = "https://polygons-gainforest.vercel.app/view";
-
-/**
- * Build the polygons viewer iframe URL from a location record AT URI.
- */
-function buildPolygonsViewerUrl(locationUri: string): string {
-  const params = new URLSearchParams({
-    certifiedLocationRecordUri: locationUri,
-  });
-  return `${POLYGONS_VIEWER_URL}?${params.toString()}`;
 }
 
 // ── Site list item ─────────────────────────────────────────────────────────────
@@ -81,11 +68,13 @@ function SiteListItem({
 export function SiteBoundariesTab({ bumicert }: { bumicert: BumicertData }) {
   const parsedRefs = bumicert.locationRefs
     .map((ref) => parseAtUri(ref.uri))
-    .filter((parsed): parsed is { did: string; rkey: string } => parsed !== null);
+    .filter(
+      (parsed): parsed is { did: string; rkey: string } => parsed !== null,
+    );
 
   // One query per linked location — fetched by exact did + rkey
   const locationResults = indexerTrpc.useQueries((t) =>
-    parsedRefs.map((ref) => t.locations.list({ did: ref.did, rkey: ref.rkey }))
+    parsedRefs.map((ref) => t.locations.list({ did: ref.did, rkey: ref.rkey })),
   );
 
   const isLoading = locationResults.some((r) => r.isLoading);
@@ -105,7 +94,13 @@ export function SiteBoundariesTab({ bumicert }: { bumicert: BumicertData }) {
   const activeRkey = activeSiteRkey ?? firstSite?.rkey ?? null;
   const activeSite = sites.find((s) => s.rkey === activeRkey) ?? firstSite;
   const iframeUrl = activeSite?.locationUri
-    ? buildPolygonsViewerUrl(activeSite.locationUri)
+    ? links.external.polygonsAppUrl({
+        mode: "view",
+        params: {
+          certifiedLocationRecordUri:
+            activeSite.locationUri as `at://did:plc:${string}/app.certified.location/${string}`,
+        },
+      })
     : null;
 
   return (

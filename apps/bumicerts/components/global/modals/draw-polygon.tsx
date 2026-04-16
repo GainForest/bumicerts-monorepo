@@ -10,6 +10,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeftIcon, Loader2Icon } from "lucide-react";
 import { useModal } from "@/components/ui/modal/context";
 import { VisuallyHidden } from "radix-ui";
+import { links } from "@/lib/links";
 
 export const DrawPolygonModalId = "draw-polygon";
 
@@ -109,7 +110,7 @@ const DrawPolygonModal = ({ onSubmit }: DrawPolygonModalProps) => {
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       // Verify origin for security
-      if (event.origin !== "https://polygons-gainforest.vercel.app") {
+      if (event.origin !== links.external.polygonsAppUrl()) {
         return;
       }
 
@@ -159,7 +160,7 @@ const DrawPolygonModal = ({ onSubmit }: DrawPolygonModalProps) => {
         )}
         <iframe
           ref={iframeRef}
-          src="https://polygons-gainforest.vercel.app/draw"
+          src={links.external.polygonsAppUrl({ mode: "draw" })}
           className="w-full h-[500px] overflow-hidden rounded-lg"
           title="Draw Polygon"
           onLoad={() => setIframeLoaded(true)}

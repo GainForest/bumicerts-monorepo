@@ -1,3 +1,5 @@
+import { params } from "@atproto/lex";
+
 type DidDynamicLink = (did?: string) => string;
 const didCatcher = (callback: (did: string) => string): DidDynamicLink => {
   return (did) => (did === undefined ? "#" : callback(did));
@@ -55,8 +57,28 @@ export const links = {
      * Legacy Gainforest map viewer with a GeoJSON shapefile loaded.
      * Pass the resolved blob URL as `shapefileUrl`.
      */
-    gainforestMapViewer: (shapefileUrl: string) =>
-      `https://legacy.gainforest.app/?shapefile=${encodeURIComponent(shapefileUrl)}&showUI=false`,
+    polygonsAppUrl: (
+      options?:
+        | {
+            mode: "view";
+            params: {
+              certifiedLocationRecordUri?: `at://did:plc:${string}/app.certified.location/${string}`;
+            };
+          }
+        | {
+            mode: "draw";
+          },
+    ) => {
+      const baseUrl = "https://polygons-gainforest.vercel.app";
+      if (options) {
+        const searchParams = new URLSearchParams(
+          "params" in options ? options.params : undefined,
+        );
+        const paramsString = searchParams.toString();
+        return `${baseUrl}/${options.mode}${paramsString === "" ? "" : `?${paramsString}`}`;
+      }
+      return baseUrl;
+    },
     basescan: (txHash: string) => `https://basescan.org/tx/${txHash}`,
     github: "https://github.com/GainForest/bumicerts-monorepo",
     twitter: "https://www.x.com/GainForestNow",
