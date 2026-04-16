@@ -190,10 +190,6 @@ export default async function UserProfilePage({
                     {new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" })}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Profile views</span>
-                  <span className="text-xs font-medium text-foreground">—</span>
-                </div>
               </div>
             </div>
           </div>
