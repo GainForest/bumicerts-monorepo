@@ -28,11 +28,12 @@ export function CheckoutItemRow({
   const [inputValue, setInputValue] = useState<string>(() => String(amount));
 
   const updateInputValue = useCallback(
-    (stringValue: string) => {
+    (stringValue: string, dispatchAmountChange = true) => {
       const safeStringValue = stringValue
         .replace(/[^0-9.]/g, "")
         .replace(/(\..*)\./g, "$1");
       setInputValue(safeStringValue);
+      if (!dispatchAmountChange) return;
       if (safeStringValue && !safeStringValue.endsWith(".")) {
         const parsed = parseFloat(safeStringValue);
         if (!isNaN(parsed) && parsed >= 0) {
@@ -46,7 +47,7 @@ export function CheckoutItemRow({
   );
 
   if (amount !== prevAmount) {
-    updateInputValue(amount.toString());
+    updateInputValue(amount.toString(), false);
     setPrevAmount(amount);
   }
 
