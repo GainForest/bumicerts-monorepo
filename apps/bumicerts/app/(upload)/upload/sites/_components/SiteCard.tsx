@@ -14,7 +14,11 @@ import { useQuery } from "@tanstack/react-query";
 import { trpc } from "@/lib/trpc/client";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { useModal } from "@/components/ui/modal/context";
-import { SiteEditorModal, SiteEditorModalId } from "@/components/global/modals/upload/site/editor";
+import {
+  SiteEditorModal,
+  SiteEditorModalId,
+} from "@/components/global/modals/upload/site/editor";
+import { getShapefilePreviewUrl } from "@/lib/shapefile";
 import type { CertifiedLocation } from "@/lib/graphql-dev/queries/locations";
 import { formatError } from "@/lib/utils/trpc-errors";
 import {
@@ -25,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 // ── Type helpers ───────────────────────────────────────────────────────────────
 
@@ -48,12 +53,16 @@ function extractLocationUrl(location: unknown): string | null {
 /** Extract inline coordinate from a string-variant location (e.g. "-15,30"). */
 function extractInlineCoordinate(
   location: unknown,
-  locationType: string | undefined
+  locationType: string | undefined,
 ): { lat: number; lon: number } | null {
   if (!location || typeof location !== "object") return null;
   const loc = location as Record<string, unknown>;
   const $type = loc["$type"] as string | undefined;
-  if ($type !== "app.certified.location#string" && locationType !== "coordinate-decimal") return null;
+  if (
+    $type !== "app.certified.location#string" &&
+    locationType !== "coordinate-decimal"
+  )
+    return null;
   const raw = loc["string"] as string | undefined;
   if (!raw) return null;
   const parts = raw.split(",").map((s) => parseFloat(s.trim()));
@@ -68,16 +77,29 @@ function extractInlineCoordinate(
 interface SiteCardProps {
   site: CertifiedLocation;
   defaultSiteUri: string | null;
+  onChange: () => void;
+  isPreviewing: boolean;
 }
 
-export function SiteCard({ site, defaultSiteUri }: SiteCardProps) {
+export function SiteCard({
+  site,
+  defaultSiteUri,
+  onChange,
+  isPreviewing,
+}: SiteCardProps) {
   const indexerUtils = indexerTrpc.useUtils();
   const { pushModal, show } = useModal();
   const [mutationError, setMutationError] = useState<string | null>(null);
 
   const locationUrl = extractLocationUrl(site.record?.location);
-  const inlineCoord = extractInlineCoordinate(site.record?.location, site.record?.locationType ?? undefined);
-  const isDefault = !!(site.metadata?.uri && site.metadata.uri === defaultSiteUri);
+  const inlineCoord = extractInlineCoordinate(
+    site.record?.location,
+    site.record?.locationType ?? undefined,
+  );
+  const previewUrl = locationUrl ? getShapefilePreviewUrl(locationUrl) : null;
+  const isDefault = !!(
+    site.metadata?.uri && site.metadata.uri === defaultSiteUri
+  );
 
   // Fetch GeoJSON to compute metrics.
   // The blob may be a Feature, FeatureCollection, or bare Geometry — accept any.
@@ -94,7 +116,9 @@ export function SiteCard({ site, defaultSiteUri }: SiteCardProps) {
   // Simple area + centroid from GeoJSON or inline coordinate
   const metrics = inlineCoord
     ? { area: 0, lat: inlineCoord.lat, lon: inlineCoord.lon }
-    : geoJson ? computeSimpleMetrics(geoJson) : null;
+    : geoJson
+      ? computeSimpleMetrics(geoJson)
+      : null;
 
   // Mutations
   const { mutate: setDefault, isPending: isSettingDefault } =
@@ -135,7 +159,9 @@ export function SiteCard({ site, defaultSiteUri }: SiteCardProps) {
                     value: {
                       name: site.record?.name ?? undefined,
                       description: site.record?.description ?? undefined,
-                      location: site.record?.location as SiteEditorLocation | undefined,
+                      location: site.record?.location as
+                        | SiteEditorLocation
+                        | undefined,
                     },
                   }
                 : null
@@ -143,7 +169,7 @@ export function SiteCard({ site, defaultSiteUri }: SiteCardProps) {
           />
         ),
       },
-      true
+      true,
     );
     show();
   };
@@ -164,11 +190,24 @@ export function SiteCard({ site, defaultSiteUri }: SiteCardProps) {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
-      className="rounded-xl border border-border overflow-hidden bg-background hover:border-primary/30 hover:shadow-md transition-all duration-300"
+      className={cn(
+        "flex flex-col rounded-xl border overflow-hidden bg-background hover:border-primary/30 hover:shadow-md transition-all duration-300",
+        isPreviewing ? "border-primary!" : "border-border",
+      )}
     >
       {/* Header with default badge */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-        <div className="flex-1" />
+        {previewUrl ? (
+          <Button
+            size={"xs"}
+            onClick={onChange}
+            variant={isPreviewing ? "default" : "ghost"}
+          >
+            {isPreviewing ? "Previewing" : "Preview"}
+          </Button>
+        ) : (
+          <span className="text-xs text-muted-foreground">No preview</span>
+        )}
 
         <div className="flex items-center gap-1.5">
           {isDefault && (
@@ -180,7 +219,12 @@ export function SiteCard({ site, defaultSiteUri }: SiteCardProps) {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" disabled={disableActions}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                disabled={disableActions}
+              >
                 {disableActions ? (
                   <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
                 ) : (
@@ -215,11 +259,8 @@ export function SiteCard({ site, defaultSiteUri }: SiteCardProps) {
       </div>
 
       {/* Card body */}
-      <div className="px-3 py-2.5">
-        <h3
-          className="font-medium text-base leading-snug"
-          style={{ fontFamily: "var(--font-garamond-var)" }}
-        >
+      <div className="px-3 py-2.5 flex-1 flex flex-col justify-between">
+        <h3 className="font-medium text-base leading-snug line-clamp-3">
           {site.record?.name ?? "Unnamed site"}
         </h3>
 
@@ -264,7 +305,7 @@ export function SiteCard({ site, defaultSiteUri }: SiteCardProps) {
  * so we must handle both.
  */
 function computeSimpleMetrics(
-  geoJson: GeoJSON.GeoJSON
+  geoJson: GeoJSON.GeoJSON,
 ): { area: number; lat: number; lon: number } | "Invalid" | null {
   try {
     // Normalise to a flat array of features for uniform processing.
@@ -276,7 +317,13 @@ function computeSimpleMetrics(
         return [geoJson];
       }
       // Bare geometry — wrap in a synthetic feature
-      return [{ type: "Feature" as const, geometry: geoJson as GeoJSON.Geometry, properties: {} }];
+      return [
+        {
+          type: "Feature" as const,
+          geometry: geoJson as GeoJSON.Geometry,
+          properties: {},
+        },
+      ];
     })();
 
     let totalArea = 0;

@@ -3,7 +3,10 @@
 import { motion } from "framer-motion";
 import { BadgeIcon } from "lucide-react";
 import Link from "next/link";
-import { BumicertCardVisual, cardVariants } from "@/app/(marketplace)/explore/_components/BumicertCard";
+import {
+  BumicertCardVisual,
+  cardVariants,
+} from "@/app/(marketplace)/explore/_components/BumicertCard";
 import type { BumicertData } from "@/lib/types";
 import { links } from "@/lib/links";
 
@@ -34,7 +37,10 @@ export function OrgBumicertsGrid({ bumicerts }: OrgBumicertsGridProps) {
         </div>
         <p
           className="text-lg text-foreground/60 max-w-sm"
-          style={{ fontFamily: "var(--font-instrument-serif-var)", fontStyle: "italic" }}
+          style={{
+            fontFamily: "var(--font-instrument-serif-var)",
+            fontStyle: "italic",
+          }}
         >
           This organization hasn&apos;t published any Bumicerts yet.
         </p>
@@ -44,19 +50,6 @@ export function OrgBumicertsGrid({ bumicerts }: OrgBumicertsGridProps) {
 
   return (
     <section className="py-6">
-      {/* Count */}
-      <div className="flex items-baseline gap-2 mb-6">
-        <span
-          className="text-4xl font-light text-primary/[0.2]"
-          style={{ fontFamily: "var(--font-garamond-var)" }}
-        >
-          {bumicerts.length}
-        </span>
-        <span className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
-          {bumicerts.length === 1 ? "bumicert" : "bumicerts"}
-        </span>
-      </div>
-
       <motion.div
         variants={containerVariants}
         initial="hidden"
