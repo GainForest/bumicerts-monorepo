@@ -43,6 +43,11 @@ export async function generateMetadata({
   const pageUrl = `${requirePublicUrl()}/bumicert/${encodeURIComponent(id)}`;
   const description = bumicert.shortDescription || extractTextFromLinearDocument(bumicert.description).slice(0, 160);
 
+  const baseUrl = requirePublicUrl();
+  const ogImage = bumicert.coverImageUrl
+    ? { url: bumicert.coverImageUrl, width: 1200, height: 630, alt: bumicert.title }
+    : { url: `${baseUrl}/opengraph-image.png`, width: 1200, height: 630, alt: "Bumicerts" };
+
   return {
     title: `${bumicert.title} — Bumicerts`,
     description,
@@ -53,14 +58,13 @@ export async function generateMetadata({
       url: pageUrl,
       siteName: "Bumicerts",
       type: "article",
-      ...(bumicert.coverImageUrl
-        ? { images: [{ url: bumicert.coverImageUrl, width: 1200, height: 630, alt: bumicert.title }] }
-        : {}),
+      images: [ogImage],
     },
     twitter: {
-      card: bumicert.coverImageUrl ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title: bumicert.title,
       description,
+      images: [ogImage.url],
     },
   };
 }
