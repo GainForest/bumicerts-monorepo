@@ -14,6 +14,7 @@ import { useState } from "react";
 import { useModal } from "@/components/ui/modal/context";
 import {
   ModalContent,
+  ModalDescription,
   ModalHeader,
   ModalTitle,
 } from "@/components/ui/modal/modal";
@@ -38,7 +39,10 @@ function formatAddress(address: string | null | undefined): string {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }
 
-function isWalletValid(link: EvmLink, facilitatorAddress: string | undefined): boolean {
+function isWalletValid(
+  link: EvmLink,
+  facilitatorAddress: string | undefined,
+): boolean {
   const valid = link.specialMetadata?.valid === true;
   if (!valid) return false;
   if (!facilitatorAddress) return true;
@@ -67,18 +71,23 @@ function WalletRow({
   return (
     <div className="flex items-center gap-3 py-3 border-b border-border last:border-0">
       <div className="shrink-0">
-        {valid
-          ? <CheckCircle2Icon className="size-4 text-primary" />
-          : <AlertTriangleIcon className="size-4 text-destructive" />
-        }
+        {valid ? (
+          <CheckCircle2Icon className="size-4 text-primary" />
+        ) : (
+          <AlertTriangleIcon className="size-4 text-destructive" />
+        )}
       </div>
       <div className="flex flex-col flex-1 min-w-0">
         <span className="text-sm font-mono text-foreground leading-tight">
           {formatAddress(address)}
         </span>
-        <span className={`text-xs leading-tight ${hasLabel ? "text-muted-foreground" : "text-muted-foreground/50 italic"}`}>
+        <span
+          className={`text-xs leading-tight ${hasLabel ? "text-muted-foreground" : "text-muted-foreground/50 italic"}`}
+        >
           {hasLabel ? link.record?.name : "No label"}
-          {!valid && <span className="text-destructive ml-1">· Unverified</span>}
+          {!valid && (
+            <span className="text-destructive ml-1">· Unverified</span>
+          )}
         </span>
       </div>
       <div className="flex items-center gap-0.5 shrink-0">
@@ -166,7 +175,9 @@ export function ManageWalletsModal({
           name={link.record?.name}
           onBack={() => popModal()}
           onDeleted={() => {
-            setLinks((prev) => prev.filter((l) => l.metadata?.rkey !== link.metadata?.rkey));
+            setLinks((prev) =>
+              prev.filter((l) => l.metadata?.rkey !== link.metadata?.rkey),
+            );
             invalidate();
             popModal();
           }}
@@ -179,11 +190,14 @@ export function ManageWalletsModal({
     <ModalContent dismissible={false}>
       <ModalHeader backAction={handleBack}>
         <ModalTitle>Linked Wallets</ModalTitle>
+        <ModalDescription>Manage your linked wallets</ModalDescription>
       </ModalHeader>
 
       <div className="pt-1">
         {links.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-6 text-center">No linked wallets.</p>
+          <p className="text-sm text-muted-foreground py-6 text-center">
+            No linked wallets.
+          </p>
         ) : (
           <div>
             {links.map((link) => (

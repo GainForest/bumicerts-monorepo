@@ -36,19 +36,23 @@ import {
 
 const CountrySelectorModal = dynamic(
   () => import("@/components/modals/country-selector"),
-  { ssr: false }
+  { ssr: false },
 );
 const ImageEditorModal = dynamic(
   () =>
     import("@/components/modals/image-editor").then((m) => ({
       default: m.ImageEditorModal,
     })),
-  { ssr: false }
+  { ssr: false },
 );
 import { format, parseISO } from "date-fns";
 import { links } from "@/lib/links";
 import Image from "next/image";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import QuickTooltip from "@/components/ui/quick-tooltip";
 
 type BrandInfo = {
@@ -125,7 +129,7 @@ export function StepOrgDetails() {
       if (!response.ok) return null;
 
       const blob = await response.blob();
-      const extension = logoUrl.split('.').pop()?.split('?')[0] || 'png';
+      const extension = logoUrl.split(".").pop()?.split("?")[0] || "png";
       const mimeType = blob.type || `image/${extension}`;
       return new File([blob], `logo.${extension}`, { type: mimeType });
     } catch {
@@ -135,73 +139,76 @@ export function StepOrgDetails() {
   };
 
   // Manual BrandFetch trigger
-  const handleFetchBrandInfo = useCallback(async (isAutoFetch = false) => {
-    const currentDomain = extractDomain(data.website);
-    if (!currentDomain) {
-      if (!isAutoFetch) {
-        setError("Please enter a valid website URL first");
+  const handleFetchBrandInfo = useCallback(
+    async (isAutoFetch = false) => {
+      const currentDomain = extractDomain(data.website);
+      if (!currentDomain) {
+        if (!isAutoFetch) {
+          setError("Please enter a valid website URL first");
+        }
+        return;
       }
-      return;
-    }
 
-    setIsFetchingBrandInfo(true);
-    setError(null);
+      setIsFetchingBrandInfo(true);
+      setError(null);
 
-    try {
-      const response = await fetch(links.api.onboarding.fetchBrandInfo, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ domain: currentDomain }),
-      });
+      try {
+        const response = await fetch(links.api.onboarding.fetchBrandInfo, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ domain: currentDomain }),
+        });
 
-      const brandInfo: BrandInfo = await response.json();
+        const brandInfo: BrandInfo = await response.json();
 
-      if (brandInfo.found) {
-        const updates: Partial<typeof data> = {};
+        if (brandInfo.found) {
+          const updates: Partial<typeof data> = {};
 
-        // Always update fields with BrandFetch data (overwrite existing values)
-        if (brandInfo.name) {
-          updates.organizationName = brandInfo.name;
-        }
-
-        if (brandInfo.description) {
-          updates.longDescription = brandInfo.description;
-        }
-
-        // Fill country if countryCode is valid
-        if (brandInfo.countryCode && brandInfo.countryCode in countries) {
-          updates.country = brandInfo.countryCode;
-        }
-
-        // Fill start date from foundedYear
-        if (brandInfo.foundedYear) {
-          updates.startDate = `${brandInfo.foundedYear}-01-01`;
-        }
-
-        // Fetch and set logo if logoUrl is available
-        if (brandInfo.logoUrl) {
-          const logoFile = await fetchLogoAsFile(brandInfo.logoUrl);
-          if (logoFile) {
-            updates.logo = logoFile;
+          // Always update fields with BrandFetch data (overwrite existing values)
+          if (brandInfo.name) {
+            updates.organizationName = brandInfo.name;
           }
+
+          if (brandInfo.description) {
+            updates.longDescription = brandInfo.description;
+          }
+
+          // Fill country if countryCode is valid
+          if (brandInfo.countryCode && brandInfo.countryCode in countries) {
+            updates.country = brandInfo.countryCode;
+          }
+
+          // Fill start date from foundedYear
+          if (brandInfo.foundedYear) {
+            updates.startDate = `${brandInfo.foundedYear}-01-01`;
+          }
+
+          // Fetch and set logo if logoUrl is available
+          if (brandInfo.logoUrl) {
+            const logoFile = await fetchLogoAsFile(brandInfo.logoUrl);
+            if (logoFile) {
+              updates.logo = logoFile;
+            }
+          }
+
+          // Always record the fetched website, even if no fields were updated,
+          // so re-mounting doesn't trigger another fetch for the same domain.
+          updateData({ ...updates, lastBrandfetchedWebsite: data.website });
+
+          setBrandInfoFetched(true);
+        } else if (!isAutoFetch) {
+          setError("Could not find information for this website");
         }
-
-        // Always record the fetched website, even if no fields were updated,
-        // so re-mounting doesn't trigger another fetch for the same domain.
-        updateData({ ...updates, lastBrandfetchedWebsite: data.website });
-
-        setBrandInfoFetched(true);
-      } else if (!isAutoFetch) {
-        setError("Could not find information for this website");
+      } catch {
+        if (!isAutoFetch) {
+          setError("Failed to fetch website information");
+        }
+      } finally {
+        setIsFetchingBrandInfo(false);
       }
-    } catch {
-      if (!isAutoFetch) {
-        setError("Failed to fetch website information");
-      }
-    } finally {
-      setIsFetchingBrandInfo(false);
-    }
-  }, [data.website, setError, updateData]);
+    },
+    [data.website, setError, updateData],
+  );
 
   // On mount only: auto-fetch brand info if the current website differs from
   // the last website we successfully brandfetched. This prevents re-fetching
@@ -234,18 +241,25 @@ export function StepOrgDetails() {
             organizationName: data.organizationName,
             country: data.country,
           }),
-        }
+        },
       );
 
       const result = await response.json();
 
       // Update store with generated data (ensure objectives is never empty)
-      const objectives: Objective[] = (result.objectives && result.objectives.length > 0)
-        ? result.objectives
-        : ["Other"];
+      const objectives: Objective[] =
+        result.objectives && result.objectives.length > 0
+          ? result.objectives
+          : ["Other"];
 
-      const updates: { shortDescription: string; objectives: Objective[]; handle: string } = {
-        shortDescription: result.shortDescription || `${data.organizationName} is an environmental organization working towards sustainability.`,
+      const updates: {
+        shortDescription: string;
+        objectives: Objective[];
+        handle: string;
+      } = {
+        shortDescription:
+          result.shortDescription ||
+          `${data.organizationName} is an environmental organization working towards sustainability.`,
         objectives,
         handle: generateHandle(data.organizationName, data.country),
       };
@@ -278,7 +292,7 @@ export function StepOrgDetails() {
           />
         ),
       },
-      true
+      true,
     );
     show();
   };
@@ -298,7 +312,7 @@ export function StepOrgDetails() {
           />
         ),
       },
-      true
+      true,
     );
     show();
   };
@@ -347,7 +361,9 @@ export function StepOrgDetails() {
       <div className="flex flex-col items-center gap-4">
         {/* Header */}
         <div className="text-center space-y-1">
-          <h1 className="text-2xl font-serif font-bold">Organization Details</h1>
+          <h1 className="text-2xl font-serif font-bold">
+            Organization Details
+          </h1>
           <p className="text-sm text-muted-foreground">
             Tell us more about your organization.
           </p>
@@ -358,7 +374,6 @@ export function StepOrgDetails() {
 
         <div className="flex flex-col gap-1.5 w-full">
           <div className="flex items-center gap-2">
-
             <InputGroup>
               <InputGroupAddon>
                 <GlobeIcon />
@@ -374,11 +389,14 @@ export function StepOrgDetails() {
                 className={cn(
                   "h-9 text-sm",
                   websiteError &&
-                  "border-destructive focus-visible:ring-destructive/50"
+                    "border-destructive focus-visible:ring-destructive/50",
                 )}
               />
             </InputGroup>
-            <QuickTooltip asChild content={"Auto-fill based on your organization's website"}>
+            <QuickTooltip
+              asChild
+              content={"Auto-fill based on your organization's website"}
+            >
               <Button
                 variant="secondary"
                 onClick={() => handleFetchBrandInfo(false)}
@@ -388,7 +406,8 @@ export function StepOrgDetails() {
                   <Loader2Icon className="animate-spin" />
                 ) : (
                   <SparklesIcon className="fill-current" />
-                )} Generate
+                )}{" "}
+                Generate
               </Button>
             </QuickTooltip>
           </div>
@@ -398,31 +417,33 @@ export function StepOrgDetails() {
         </div>
 
         {/* Form */}
-        <div
-          className={cn("w-full relative")}
-        >
-          {
-            isFetchingBrandInfo && (
-              <motion.div
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-                animate={{
-                  rotate: isFetchingBrandInfo ? [0, 360] : 0,
-                }}
-                transition={{
-                  rotate: {
-                    duration: 2,
-                    ease: "easeInOut",
-                    repeat: isFetchingBrandInfo ? Infinity : 0,
-                  },
-                }}
-              >
-                <SparkleIcon
-                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-16 text-primary animate-pulse fill-current" />
-              </motion.div>
-            )}
+        <div className={cn("w-full relative")}>
+          {isFetchingBrandInfo && (
+            <motion.div
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+              animate={{
+                rotate: isFetchingBrandInfo ? [0, 360] : 0,
+              }}
+              transition={{
+                rotate: {
+                  duration: 2,
+                  ease: "easeInOut",
+                  repeat: isFetchingBrandInfo ? Infinity : 0,
+                },
+              }}
+            >
+              <SparkleIcon className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-16 text-primary animate-pulse fill-current" />
+            </motion.div>
+          )}
 
           {/* Content */}
-          <div className={cn("flex flex-col gap-3 w-full mt-2", isFetchingBrandInfo && "animate-pulse blur-xs pointer-events-none")}>
+          <div
+            className={cn(
+              "flex flex-col gap-3 w-full mt-2",
+              isFetchingBrandInfo &&
+                "animate-pulse blur-xs pointer-events-none",
+            )}
+          >
             {/* Logo and Organization Name row */}
             <div className="flex gap-3 items-stretch">
               {/* Logo upload - left side */}
@@ -483,7 +504,9 @@ export function StepOrgDetails() {
                     type="text"
                     placeholder="e.g., Green Forest Initiative"
                     value={data.organizationName}
-                    onChange={(e) => updateData({ organizationName: e.target.value })}
+                    onChange={(e) =>
+                      updateData({ organizationName: e.target.value })
+                    }
                     className="h-9 text-sm"
                   />
                 </InputGroup>
@@ -546,6 +569,7 @@ export function StepOrgDetails() {
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
+                        captionLayout="dropdown"
                         mode="single"
                         selected={selectedDate}
                         onSelect={(date) =>
@@ -568,7 +592,9 @@ export function StepOrgDetails() {
                 id="long-description"
                 placeholder="Describe your organization's mission and impact..."
                 value={data.longDescription}
-                onChange={(e) => updateData({ longDescription: e.target.value })}
+                onChange={(e) =>
+                  updateData({ longDescription: e.target.value })
+                }
                 rows={2}
                 className="resize-y text-sm"
               />
@@ -577,7 +603,7 @@ export function StepOrgDetails() {
                   "absolute right-0 -top-5 text-xs",
                   data.longDescription.length < 50
                     ? "text-destructive"
-                    : "text-muted-foreground"
+                    : "text-muted-foreground",
                 )}
               >
                 {data.longDescription.length}/50+
@@ -585,7 +611,8 @@ export function StepOrgDetails() {
             </div>
             {brandInfoFetched && (
               <p className="text-xs text-muted-foreground">
-                Review and edit this AI-generated description to accurately represent your organisation before continuing.
+                Review and edit this AI-generated description to accurately
+                represent your organization before continuing.
               </p>
             )}
 
@@ -607,7 +634,10 @@ export function StepOrgDetails() {
             <ArrowLeftIcon className="mr-2" />
             Back
           </Button>
-          <Button onClick={handleContinue} disabled={!canContinue || isGenerating}>
+          <Button
+            onClick={handleContinue}
+            disabled={!canContinue || isGenerating}
+          >
             {isGenerating ? (
               <>
                 <Loader2Icon className="mr-2 animate-spin" />

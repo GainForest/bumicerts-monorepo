@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ClockIcon, FileTextIcon, ExternalLinkIcon, Trash2Icon, AlertTriangleIcon } from "lucide-react";
+import {
+  ClockIcon,
+  FileTextIcon,
+  ExternalLinkIcon,
+  Trash2Icon,
+  AlertTriangleIcon,
+} from "lucide-react";
 import type { AttachmentItem } from "@/lib/graphql-dev/queries/attachments";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -16,7 +22,10 @@ import Image from "next/image";
 
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return "";
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function contentTypeLabel(raw: string | null | undefined): string {
@@ -77,7 +86,7 @@ function TimelineEmpty() {
       <ClockIcon className="h-9 w-9 opacity-30" />
       <p className="text-sm font-medium">No evidence uploaded yet</p>
       <p className="text-xs max-w-xs leading-relaxed">
-        Evidence reports, audits, and field notes published by this organisation
+        Evidence reports, audits, and field notes published by this organization
         will appear here.
       </p>
     </div>
@@ -94,7 +103,13 @@ interface DeleteConfirmProps {
   error: string | null;
 }
 
-function DeleteConfirm({ title, onConfirm, onCancel, isDeleting, error }: DeleteConfirmProps) {
+function DeleteConfirm({
+  title,
+  onConfirm,
+  onCancel,
+  isDeleting,
+  error,
+}: DeleteConfirmProps) {
   return (
     <AnimatePresence>
       <motion.div
@@ -199,7 +214,11 @@ function TimelineEntry({ item, isLast, index, isOwner }: EntryProps) {
       className="flex gap-4"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay: index * 0.07, ease: [0.25, 0.1, 0.25, 1] }}
+      transition={{
+        duration: 0.35,
+        delay: index * 0.07,
+        ease: [0.25, 0.1, 0.25, 1],
+      }}
     >
       {/* Spine */}
       <div className="flex flex-col items-center w-8 shrink-0">
@@ -215,7 +234,9 @@ function TimelineEntry({ item, isLast, index, isOwner }: EntryProps) {
             <span className="text-[10px] uppercase tracking-[0.08em] text-foreground/60 bg-muted/60 border border-border/50 rounded-full px-2.5 py-1 font-medium">
               {label}
             </span>
-            {date && <span className="text-xs text-muted-foreground">{date}</span>}
+            {date && (
+              <span className="text-xs text-muted-foreground">{date}</span>
+            )}
             {isOwner && rkey && (
               <button
                 type="button"
@@ -241,7 +262,9 @@ function TimelineEntry({ item, isLast, index, isOwner }: EntryProps) {
 
           {/* Short description */}
           {description && (
-            <p className="text-sm text-muted-foreground leading-relaxed mb-3">{description}</p>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+              {description}
+            </p>
           )}
 
           {/* Content links */}
@@ -268,7 +291,13 @@ function TimelineEntry({ item, isLast, index, isOwner }: EntryProps) {
           <div className="flex items-center gap-2">
             {logoUri ? (
               <div className="relative h-5 w-5 rounded-full overflow-hidden border border-border shrink-0">
-                <Image src={logoUri} alt={orgName ?? ""} fill className="object-cover" sizes="20px" />
+                <Image
+                  src={logoUri}
+                  alt={orgName ?? ""}
+                  fill
+                  className="object-cover"
+                  sizes="20px"
+                />
               </div>
             ) : (
               <div className="h-5 w-5 rounded-full bg-muted border border-border flex items-center justify-center shrink-0">
@@ -277,7 +306,9 @@ function TimelineEntry({ item, isLast, index, isOwner }: EntryProps) {
                 </span>
               </div>
             )}
-            {orgName && <span className="text-xs text-muted-foreground">{orgName}</span>}
+            {orgName && (
+              <span className="text-xs text-muted-foreground">{orgName}</span>
+            )}
           </div>
 
           {/* Inline delete confirm */}
@@ -316,10 +347,14 @@ export function TimelineTab({
   bumicertTitle,
   isOwner,
 }: TimelineTabProps) {
-  const { data, isLoading } = indexerTrpc.context.attachments.useQuery({ did: organizationDid });
+  const { data, isLoading } = indexerTrpc.context.attachments.useQuery({
+    did: organizationDid,
+  });
 
   const entries: AttachmentItem[] = (data ?? []).filter((item) =>
-    item.record?.subjects?.some((s: { uri?: string | null }) => s.uri === activityUri)
+    item.record?.subjects?.some(
+      (s: { uri?: string | null }) => s.uri === activityUri,
+    ),
   );
 
   return (
@@ -331,8 +366,9 @@ export function TimelineTab({
       className="py-1"
     >
       {/* Two-column layout: timeline left, linker right (owner only) */}
-      <div className={`grid grid-cols-1 gap-8 ${isOwner ? "lg:grid-cols-[1fr_320px]" : ""}`}>
-
+      <div
+        className={`grid grid-cols-1 gap-8 ${isOwner ? "lg:grid-cols-[1fr_320px]" : ""}`}
+      >
         {/* ── Left: timeline entries ─────────────────────────────────────── */}
         <div>
           <div className="flex items-center gap-2 mb-6">

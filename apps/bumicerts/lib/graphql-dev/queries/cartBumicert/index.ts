@@ -60,7 +60,7 @@ export type CartBumicertItem = {
   organizationDid: string;
   /** Display title */
   title: string;
-  /** Organisation display name */
+  /** Organization display name */
   organizationName: string;
   /**
    * Funding config fields needed to determine acceptability.

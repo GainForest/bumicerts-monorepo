@@ -50,7 +50,7 @@ export function EditableAbout({ organization }: EditableAboutProps) {
             content={longDescription}
             onChange={(doc) => setEdit("longDescription", doc)}
             ownerDid={organization.did}
-            placeholder="Tell the world about your organisation — its mission, history, and the work you do…"
+            placeholder="Tell the world about your organization — its mission, history, and the work you do…"
           />
         </div>
       </motion.section>

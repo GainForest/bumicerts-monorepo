@@ -33,7 +33,12 @@ import { formatError } from "@/lib/utils/trpc-errors";
 import { AddWalletModal } from "@/components/global/modals/wallet/add";
 import { ManageWalletsModal } from "@/components/global/modals/wallet/manage";
 import { MODAL_IDS } from "@/components/global/modals/ids";
-import { AlertTriangleIcon, ChevronDownIcon, PlusIcon, WalletIcon } from "lucide-react";
+import {
+  AlertTriangleIcon,
+  ChevronDownIcon,
+  PlusIcon,
+  WalletIcon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -43,14 +48,20 @@ function formatAddress(address: string | null | undefined): string {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }
 
-function isWalletTrusted(link: EvmLink, facilitatorAddress: string | undefined): boolean {
+function isWalletTrusted(
+  link: EvmLink,
+  facilitatorAddress: string | undefined,
+): boolean {
   if (!facilitatorAddress) return true;
   const pa = link.record?.platformAttestation?.platformAddress;
   if (!pa) return false;
   return pa.toLowerCase() === facilitatorAddress.toLowerCase();
 }
 
-function walletLabel(link: EvmLink, facilitatorAddress: string | undefined): string {
+function walletLabel(
+  link: EvmLink,
+  facilitatorAddress: string | undefined,
+): string {
   const addr = formatAddress(link.record?.address);
   const name = link.record?.name;
   const trusted = isWalletTrusted(link, facilitatorAddress);
@@ -82,7 +93,7 @@ function StyledSelect({
           "h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs",
           "focus-visible:outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
           "appearance-none pr-8 dark:bg-input/30",
-          !value && "text-muted-foreground"
+          !value && "text-muted-foreground",
         )}
       >
         {placeholder && <option value="">{placeholder}</option>}
@@ -100,10 +111,10 @@ function StyledSelect({
 // ── Status options ────────────────────────────────────────────────────────────
 
 const STATUS_OPTIONS = [
-  { value: "open",        label: "Open" },
+  { value: "open", label: "Open" },
   { value: "coming-soon", label: "Coming Soon" },
-  { value: "paused",      label: "Paused" },
-  { value: "closed",      label: "Closed" },
+  { value: "paused", label: "Paused" },
+  { value: "closed", label: "Closed" },
 ] as const;
 
 type StatusValue = (typeof STATUS_OPTIONS)[number]["value"];
@@ -134,15 +145,21 @@ export function FundingConfigModal({
   // ── Form state ─────────────────────────────────────────────────────────────
 
   const [selectedWalletUri, setSelectedWalletUri] = useState<string>(
-    existingConfig?.receivingWallet?.uri ?? ""
+    existingConfig?.receivingWallet?.uri ?? "",
   );
   const [status, setStatus] = useState<StatusValue>(
-    (existingConfig?.status as StatusValue) ?? "open"
+    (existingConfig?.status as StatusValue) ?? "open",
   );
   const [goalInUSD, setGoalInUSD] = useState(existingConfig?.goalInUSD ?? "");
-  const [minDonationInUSD, setMinDonationInUSD] = useState(existingConfig?.minDonationInUSD ?? "");
-  const [maxDonationInUSD, setMaxDonationInUSD] = useState(existingConfig?.maxDonationInUSD ?? "");
-  const [allowOversell, setAllowOversell] = useState(existingConfig?.allowOversell ?? true);
+  const [minDonationInUSD, setMinDonationInUSD] = useState(
+    existingConfig?.minDonationInUSD ?? "",
+  );
+  const [maxDonationInUSD, setMaxDonationInUSD] = useState(
+    existingConfig?.maxDonationInUSD ?? "",
+  );
+  const [allowOversell, setAllowOversell] = useState(
+    existingConfig?.allowOversell ?? true,
+  );
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -153,7 +170,8 @@ export function FundingConfigModal({
   useEffect(() => {
     if (!selectedWalletUri && evmLinks.length > 0) {
       const trusted = evmLinks.find(
-        (l) => l.specialMetadata?.valid && isWalletTrusted(l, facilitatorAddress)
+        (l) =>
+          l.specialMetadata?.valid && isWalletTrusted(l, facilitatorAddress),
       );
       const first = trusted ?? evmLinks[0];
       const uri = first?.metadata?.uri;
@@ -226,9 +244,13 @@ export function FundingConfigModal({
         },
         status,
         updatedAt: new Date().toISOString(),
-        ...(goalInUSD.trim()        ? { goalInUSD: goalInUSD.trim() }               : {}),
-        ...(minDonationInUSD.trim() ? { minDonationInUSD: minDonationInUSD.trim() } : {}),
-        ...(maxDonationInUSD.trim() ? { maxDonationInUSD: maxDonationInUSD.trim() } : {}),
+        ...(goalInUSD.trim() ? { goalInUSD: goalInUSD.trim() } : {}),
+        ...(minDonationInUSD.trim()
+          ? { minDonationInUSD: minDonationInUSD.trim() }
+          : {}),
+        ...(maxDonationInUSD.trim()
+          ? { maxDonationInUSD: maxDonationInUSD.trim() }
+          : {}),
         allowOversell,
       });
 
@@ -243,10 +265,13 @@ export function FundingConfigModal({
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  const selectedLink = evmLinks.find((l) => l.metadata?.uri === selectedWalletUri);
+  const selectedLink = evmLinks.find(
+    (l) => l.metadata?.uri === selectedWalletUri,
+  );
   const selectedLinkInvalid =
     selectedLink &&
-    (!selectedLink.specialMetadata?.valid || !isWalletTrusted(selectedLink, facilitatorAddress));
+    (!selectedLink.specialMetadata?.valid ||
+      !isWalletTrusted(selectedLink, facilitatorAddress));
 
   const walletOptions = evmLinks.map((link) => ({
     value: link.metadata?.uri ?? "",
@@ -260,7 +285,6 @@ export function FundingConfigModal({
       </ModalHeader>
 
       <div className="flex flex-col gap-4 pt-1">
-
         {/* ── Receiving Wallet ─────────────────────────────────────────────── */}
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
@@ -327,7 +351,9 @@ export function FundingConfigModal({
           <StyledSelect
             value={status}
             onChange={(v) => setStatus(v as StatusValue)}
-            options={STATUS_OPTIONS as unknown as { value: string; label: string }[]}
+            options={
+              STATUS_OPTIONS as unknown as { value: string; label: string }[]
+            }
           />
         </div>
 
@@ -339,16 +365,21 @@ export function FundingConfigModal({
             </AccordionTrigger>
             <AccordionContent>
               <div className="flex flex-col gap-3 pt-1">
-
                 <div className="flex flex-col gap-1">
-                  <Label className="text-xs text-muted-foreground font-normal">Funding goal (USD)</Label>
+                  <Label className="text-xs text-muted-foreground font-normal">
+                    Funding goal (USD)
+                  </Label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none select-none">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none select-none">
+                      $
+                    </span>
                     <Input
                       inputMode="decimal"
                       placeholder="No goal"
                       value={goalInUSD}
-                      onChange={(e) => setGoalInUSD(e.target.value.replace(/[^0-9.]/g, ""))}
+                      onChange={(e) =>
+                        setGoalInUSD(e.target.value.replace(/[^0-9.]/g, ""))
+                      }
                       className="pl-6"
                     />
                   </div>
@@ -356,27 +387,43 @@ export function FundingConfigModal({
 
                 <div className="grid grid-cols-2 gap-2">
                   <div className="flex flex-col gap-1">
-                    <Label className="text-xs text-muted-foreground font-normal">Min donation</Label>
+                    <Label className="text-xs text-muted-foreground font-normal">
+                      Min donation
+                    </Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none select-none">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none select-none">
+                        $
+                      </span>
                       <Input
                         inputMode="decimal"
                         placeholder="None"
                         value={minDonationInUSD}
-                        onChange={(e) => setMinDonationInUSD(e.target.value.replace(/[^0-9.]/g, ""))}
+                        onChange={(e) =>
+                          setMinDonationInUSD(
+                            e.target.value.replace(/[^0-9.]/g, ""),
+                          )
+                        }
                         className="pl-6"
                       />
                     </div>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="text-xs text-muted-foreground font-normal">Max donation</Label>
+                    <Label className="text-xs text-muted-foreground font-normal">
+                      Max donation
+                    </Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none select-none">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none select-none">
+                        $
+                      </span>
                       <Input
                         inputMode="decimal"
                         placeholder="None"
                         value={maxDonationInUSD}
-                        onChange={(e) => setMaxDonationInUSD(e.target.value.replace(/[^0-9.]/g, ""))}
+                        onChange={(e) =>
+                          setMaxDonationInUSD(
+                            e.target.value.replace(/[^0-9.]/g, ""),
+                          )
+                        }
                         className="pl-6"
                       />
                     </div>
@@ -388,17 +435,16 @@ export function FundingConfigModal({
                     checked={allowOversell}
                     onCheckedChange={(c) => setAllowOversell(c === true)}
                   />
-                  <span className="text-sm text-muted-foreground">Accept donations over goal</span>
+                  <span className="text-sm text-muted-foreground">
+                    Accept donations over goal
+                  </span>
                 </label>
-
               </div>
             </AccordionContent>
           </AccordionItem>
         </Accordion>
 
-        {saveError && (
-          <p className="text-sm text-destructive">{saveError}</p>
-        )}
+        {saveError && <p className="text-sm text-destructive">{saveError}</p>}
       </div>
 
       <ModalFooter className="flex flex-col gap-2">
@@ -409,7 +455,7 @@ export function FundingConfigModal({
         >
           {isSaving ? "Saving…" : "Save"}
         </Button>
-        <Button variant="ghost" onClick={handleClose} className="w-full">
+        <Button variant="outline" onClick={handleClose} className="w-full">
           Cancel
         </Button>
       </ModalFooter>

@@ -2,7 +2,7 @@
  * Geographic aggregation utilities.
  *
  * Derives country-level platform stats from the org-DID -> country-code map.
- * Counts ALL organisations registered on the platform, regardless of whether
+ * Counts ALL organizations registered on the platform, regardless of whether
  * they have received donations — matching ecocertain's "Geographic Reach"
  * which counted all projects with GeoJSON.
  */
@@ -28,8 +28,8 @@ export interface GeoStats {
 /**
  * Computes geographic platform stats from the full org country map.
  *
- * Every organisation with a known country is counted once, grouped by country
- * code, and ranked by organisation count descending.
+ * Every organization with a known country is counted once, grouped by country
+ * code, and ranked by organization count descending.
  *
  * @param orgCountryMap  Map of org DID -> ISO 3166-1 alpha-2 country code
  * @param limit          Maximum number of top countries to return (default 5)
@@ -41,7 +41,10 @@ export function computeGeoStats(
   const countryOrgCounts = new Map<string, number>();
 
   for (const countryCode of orgCountryMap.values()) {
-    countryOrgCounts.set(countryCode, (countryOrgCounts.get(countryCode) ?? 0) + 1);
+    countryOrgCounts.set(
+      countryCode,
+      (countryOrgCounts.get(countryCode) ?? 0) + 1,
+    );
   }
 
   const topCountries: CountryRow[] = Array.from(countryOrgCounts.entries())

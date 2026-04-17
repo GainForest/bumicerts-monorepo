@@ -19,7 +19,7 @@ interface BumicertsPreviewProps {
 }
 
 /**
- * Compact 2-card preview of the organisation's bumicerts.
+ * Compact 2-card preview of the organization's bumicerts.
  * Fetches the first 2 activities and renders them as mini cards.
  * "View all" links to the bumicerts management page.
  */

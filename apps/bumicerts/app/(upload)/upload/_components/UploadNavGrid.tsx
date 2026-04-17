@@ -41,7 +41,7 @@ const NAV_CARDS: NavCard[] = [
     id: "edit",
     label: "Edit Profile",
     description:
-      "Update your organisation name, description, logo, and cover image.",
+      "Update your organization name, description, logo, and cover image.",
     href: links.manage.edit,
     Icon: PencilIcon,
   },

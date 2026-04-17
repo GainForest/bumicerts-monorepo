@@ -7,8 +7,11 @@ import { MODAL_IDS } from "@/components/global/modals/ids";
 import dynamic from "next/dynamic";
 
 const AuthModal = dynamic(
-  () => import("@/components/auth/AuthModal").then((m) => ({ default: m.AuthModal })),
-  { ssr: false }
+  () =>
+    import("@/components/auth/AuthModal").then((m) => ({
+      default: m.AuthModal,
+    })),
+  { ssr: false },
 );
 
 export function SignInPrompt() {
@@ -45,7 +48,8 @@ export function SignInPrompt() {
               Sign in to continue
             </h1>
             <p className="text-sm text-muted-foreground leading-relaxed text-balance">
-              You need to be signed in to manage your organisation&apos;s content.
+              You need to be signed in to manage your organization&apos;s
+              content.
             </p>
           </div>
 

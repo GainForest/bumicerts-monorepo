@@ -14,7 +14,7 @@ export default function UploadError({
     <Container className="pt-4">
       <ErrorPage
         title="Something went wrong"
-        description="We had trouble loading your organisation's data. Please try again."
+        description="We had trouble loading your organization's data. Please try again."
         error={error}
         showRefreshButton
         showHomeButton={false}

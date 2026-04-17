@@ -16,10 +16,10 @@ When("the user clicks the edit button", async function (this: AppWorld) {
   const page = getPage(this);
 
   // The Edit button is actually a Link (renders as <a> tag), not a button
-  // It has aria-label="Edit organisation profile"
+  // It has aria-label="Edit organization profile"
   // There may be multiple (mobile/desktop), so we click the first visible one
   const editButton = page
-    .locator('a[aria-label="Edit organisation profile"]')
+    .locator('a[aria-label="Edit organization profile"]')
     .first();
   await editButton.click();
 

@@ -38,7 +38,10 @@ import { links } from "@/lib/links";
 
 // ── Validity helper ────────────────────────────────────────────────────────────
 
-function isLinkValid(link: EvmLink, facilitatorAddress: string | undefined): boolean {
+function isLinkValid(
+  link: EvmLink,
+  facilitatorAddress: string | undefined,
+): boolean {
   if (link.specialMetadata?.valid !== true) return false;
   if (!facilitatorAddress) return true;
   const pa = link.record?.platformAttestation?.platformAddress;
@@ -49,7 +52,7 @@ function isLinkValid(link: EvmLink, facilitatorAddress: string | undefined): boo
 function isDonationOpen(
   item: CartBumicertItem,
   evmLinks: EvmLink[],
-  facilitatorAddress: string | undefined
+  facilitatorAddress: string | undefined,
 ): boolean {
   if (!item.fundingConfig) return false;
   const walletUri = item.fundingConfig.receivingWallet?.uri;
@@ -81,15 +84,19 @@ function CartItemRow({
   const href = `/bumicert/${encodeURIComponent(item.id)}`;
 
   return (
-    <div className={cn(
-      "grid grid-cols-[1fr_auto] items-center gap-3 py-3 border-b border-border/60 last:border-0",
-      unavailable && "opacity-50"
-    )}>
+    <div
+      className={cn(
+        "grid grid-cols-[1fr_auto] items-center gap-3 py-3 border-b border-border/60 last:border-0",
+        unavailable && "opacity-50",
+      )}
+    >
       <div className="min-w-0">
-        <p className={cn(
-          "text-sm font-medium leading-tight truncate",
-          unavailable ? "text-muted-foreground" : "text-foreground"
-        )}>
+        <p
+          className={cn(
+            "text-sm font-medium leading-tight truncate",
+            unavailable ? "text-muted-foreground" : "text-foreground",
+          )}
+        >
           {item.title || "Untitled"}
         </p>
         <p className="text-xs text-muted-foreground truncate mt-0.5">
@@ -149,12 +156,14 @@ function CartItemLoader({
   onRemove: () => void;
   onResolved: (id: string, resolved: ResolvedCartItem | null) => void;
 }) {
-  const { data: item, isLoading: itemLoading } = indexerTrpc.claim.activity.get.useQuery({ id }, { retry: false });
+  const { data: item, isLoading: itemLoading } =
+    indexerTrpc.claim.activity.get.useQuery({ id }, { retry: false });
   const ownerDid = item?.organizationDid ?? "";
-  const { data: evmLinks = [], isLoading: linksLoading } = indexerTrpc.link.evm.list.useQuery(
-    { did: ownerDid },
-    { enabled: !!ownerDid, retry: false }
-  );
+  const { data: evmLinks = [], isLoading: linksLoading } =
+    indexerTrpc.link.evm.list.useQuery(
+      { did: ownerDid },
+      { enabled: !!ownerDid, retry: false },
+    );
 
   const isLoading = itemLoading || (!!ownerDid && linksLoading);
 
@@ -166,20 +175,14 @@ function CartItemLoader({
     }
     const isOpen = isDonationOpen(item, evmLinks, facilitatorAddress);
     onResolved(id, { id, item, isOpen });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading, id, item, evmLinks, facilitatorAddress]);
 
   if (isLoading) return <CartItemSkeleton />;
   if (!item) return null;
 
   const isOpen = isDonationOpen(item, evmLinks, facilitatorAddress);
-  return (
-    <CartItemRow
-      item={item}
-      unavailable={!isOpen}
-      onRemove={onRemove}
-    />
-  );
+  return <CartItemRow item={item} unavailable={!isOpen} onRemove={onRemove} />;
 }
 
 // ── Empty state ───────────────────────────────────────────────────────────────
@@ -191,7 +194,9 @@ function EmptyState() {
         <ShoppingCartIcon className="size-6 text-muted-foreground" />
       </div>
       <div className="space-y-1">
-        <p className="text-sm font-medium text-foreground">Your cart is empty</p>
+        <p className="text-sm font-medium text-foreground">
+          Your cart is empty
+        </p>
         <p className="text-xs text-muted-foreground">
           Add bumicerts you&apos;d like to donate to later.
         </p>
@@ -212,18 +217,23 @@ export function CartModal() {
   const { stack, hide, popModal } = useModal();
 
   // Track resolved items for checkout button state
-  const [resolvedItems, setResolvedItems] = useState<Record<string, ResolvedCartItem | null>>({});
+  const [resolvedItems, setResolvedItems] = useState<
+    Record<string, ResolvedCartItem | null>
+  >({});
   const allResolved = items.every((id) => id in resolvedItems);
   const openItemsCount = allResolved
     ? Object.values(resolvedItems).filter((r) => r?.isOpen).length
     : 0;
 
-  const handleResolved = useCallback((id: string, data: ResolvedCartItem | null) => {
-    setResolvedItems((prev) => {
-      if (prev[id] === data) return prev;
-      return { ...prev, [id]: data };
-    });
-  }, []);
+  const handleResolved = useCallback(
+    (id: string, data: ResolvedCartItem | null) => {
+      setResolvedItems((prev) => {
+        if (prev[id] === data) return prev;
+        return { ...prev, [id]: data };
+      });
+    },
+    [],
+  );
 
   const handleClose = () => {
     if (stack.length === 1) {
@@ -240,9 +250,7 @@ export function CartModal() {
 
   return (
     <ModalContent dismissible={false} className="max-w-md">
-      <ModalHeader
-        backAction={stack.length > 1 ? handleClose : undefined}
-      >
+      <ModalHeader backAction={stack.length > 1 ? handleClose : undefined}>
         <ModalTitle>Your Cart</ModalTitle>
         <ModalDescription>
           Bumicerts you&apos;ve saved to donate to later.
@@ -266,16 +274,19 @@ export function CartModal() {
         <ModalFooter className="flex flex-col gap-2">
           <Button asChild className="w-full" disabled={openItemsCount === 0}>
             <Link href={links.checkout} onClick={handleCheckout}>
-              Checkout{openItemsCount > 0 ? ` (${openItemsCount} item${openItemsCount > 1 ? "s" : ""})` : ""}
+              Checkout
+              {openItemsCount > 0
+                ? ` (${openItemsCount} item${openItemsCount > 1 ? "s" : ""})`
+                : ""}
             </Link>
           </Button>
-          <Button variant="ghost" onClick={handleClose} className="w-full">
+          <Button variant="outline" onClick={handleClose} className="w-full">
             Cancel
           </Button>
         </ModalFooter>
       ) : (
         <ModalFooter>
-          <Button variant="ghost" onClick={handleClose} className="w-full">
+          <Button variant="outline" onClick={handleClose} className="w-full">
             Close
           </Button>
         </ModalFooter>
@@ -297,15 +308,20 @@ function CartListWithCallback({
   onRemove: (id: string) => void;
   onResolved: (id: string, data: ResolvedCartItem | null) => void;
 }) {
-  const [resolved, setResolved] = useState<Record<string, ResolvedCartItem | null>>({});
+  const [resolved, setResolved] = useState<
+    Record<string, ResolvedCartItem | null>
+  >({});
 
-  const handleResolved = useCallback((id: string, data: ResolvedCartItem | null) => {
-    setResolved((prev) => {
-      if (prev[id] === data) return prev;
-      return { ...prev, [id]: data };
-    });
-    onResolved(id, data);
-  }, [onResolved]);
+  const handleResolved = useCallback(
+    (id: string, data: ResolvedCartItem | null) => {
+      setResolved((prev) => {
+        if (prev[id] === data) return prev;
+        return { ...prev, [id]: data };
+      });
+      onResolved(id, data);
+    },
+    [onResolved],
+  );
 
   const allResolved = ids.every((id) => id in resolved);
 

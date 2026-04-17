@@ -62,7 +62,7 @@ export function ImageEditorModal({ target, onConfirm }: ImageEditorModalProps) {
       </div>
 
       <ModalFooter className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={handleClose}>
+        <Button variant="outline" onClick={handleClose}>
           Cancel
         </Button>
         <Button onClick={handleConfirm} disabled={!file}>

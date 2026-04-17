@@ -13,9 +13,13 @@ import {
   ModalHeader,
   ModalTitle,
   ModalDescription,
+  ModalFooter,
 } from "@/components/ui/modal/modal";
 import { trpc } from "@/lib/trpc/client";
 import { formatError } from "@/lib/utils/trpc-errors";
+import { ChevronRight, Trash2Icon } from "lucide-react";
+import Image from "next/image";
+import { blo } from "blo";
 
 interface DeleteWalletModalProps {
   rkey: string;
@@ -42,7 +46,9 @@ export function DeleteWalletModal({
 
   const deleteEvm = trpc.link.evm.delete.useMutation();
 
-  const label = name ? `${name} (${formatAddress(address)})` : formatAddress(address);
+  const label = name
+    ? `${name} (${formatAddress(address)})`
+    : formatAddress(address);
 
   const handleBack = () => {
     if (stack.length === 1) {
@@ -69,14 +75,38 @@ export function DeleteWalletModal({
     <ModalContent dismissible={false}>
       <ModalHeader backAction={isDeleting ? undefined : handleBack}>
         <ModalTitle>Remove Wallet</ModalTitle>
-        <ModalDescription>
-          Remove <span className="font-medium text-foreground">{label}</span> from
-          your linked wallets? This can&apos;t be undone.
-        </ModalDescription>
+        <ModalDescription>Confirm your choice</ModalDescription>
       </ModalHeader>
 
-      <div className="flex flex-col gap-2 pt-2">
-        {error && <p className="text-sm text-destructive">{error}</p>}
+      <p className="mt-6 text-center text-pretty">
+        You are about to remove{" "}
+        <span className="font-medium text-foreground">&quot;{name}&quot;</span>{" "}
+        from your linked wallets.
+      </p>
+      <div className="bg-muted/50 rounded-2xl p-4 mt-4 grid grid-cols-[1fr_2rem_1fr] overflow-hidden">
+        <div className="flex flex-col items-center justify-center">
+          <Image
+            height={32}
+            width={32}
+            alt={name ?? address}
+            src={blo(address as `0x${string}`)}
+            className="rounded-full border-2 drop-shadow-sm"
+          />
+          <span className="font-medium text-sm mt-2 bg-muted px-1 py-0.5 rounded-md">
+            {formatAddress(address)}
+          </span>
+        </div>
+        <div className="flex items-center justify-center">
+          <ChevronRight className="size-6 text-destructive opacity-50" />
+        </div>
+        <div className="flex items-center justify-center relative">
+          <div className="absolute h-10 w-10 rounded-full blur-xl bg-destructive/70 "></div>
+          <Trash2Icon className="text-destructive size-8" />
+        </div>
+      </div>
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      <ModalFooter>
         <Button
           variant="destructive"
           className="w-full"
@@ -85,10 +115,15 @@ export function DeleteWalletModal({
         >
           {isDeleting ? "Removing…" : "Remove Wallet"}
         </Button>
-        <Button variant="ghost" className="w-full" onClick={handleBack} disabled={isDeleting}>
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={handleBack}
+          disabled={isDeleting}
+        >
           Cancel
         </Button>
-      </div>
+      </ModalFooter>
     </ModalContent>
   );
 }

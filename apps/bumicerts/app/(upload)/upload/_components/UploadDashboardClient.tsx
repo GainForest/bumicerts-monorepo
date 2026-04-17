@@ -365,8 +365,8 @@ export function ManageDashboardClient({ did }: ManageDashboardClientProps) {
     return (
       <Container className="pt-4">
         <ErrorPage
-          title="Couldn't load your organisation"
-          description="We had trouble fetching your organisation data. Please try refreshing."
+          title="Couldn't load your organization"
+          description="We had trouble fetching your organization data. Please try refreshing."
           error={error}
           showRefreshButton
           showHomeButton={false}

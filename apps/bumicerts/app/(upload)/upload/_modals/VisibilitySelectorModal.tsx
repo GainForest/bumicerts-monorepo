@@ -27,7 +27,7 @@ const OPTIONS: VisibilityOption[] = [
     value: "Public",
     label: "Public",
     description:
-      "Visible to everyone. Appears in organisation listings and search results.",
+      "Visible to everyone. Appears in organization listings and search results.",
     Icon: GlobeIcon,
   },
   {
@@ -68,9 +68,9 @@ export function VisibilitySelectorModal({
   return (
     <ModalContent>
       <ModalHeader backAction={stack.length > 1 ? handleClose : undefined}>
-        <ModalTitle>Organisation visibility</ModalTitle>
-        <ModalDescription className="sr-only">
-          Choose who can discover your organisation.
+        <ModalTitle>Discoverability</ModalTitle>
+        <ModalDescription>
+          Choose who can discover your organization.
         </ModalDescription>
       </ModalHeader>
 
@@ -84,20 +84,22 @@ export function VisibilitySelectorModal({
               "flex items-start gap-3 w-full px-4 py-3 rounded-xl border text-left transition-colors cursor-pointer",
               selected === opt.value
                 ? "border-primary/40 bg-primary/5"
-                : "border-border hover:bg-muted/60"
+                : "border-border hover:bg-muted/60",
             )}
           >
             <opt.Icon
               className={cn(
                 "h-4 w-4 mt-0.5 shrink-0",
-                selected === opt.value ? "text-primary" : "text-muted-foreground"
+                selected === opt.value
+                  ? "text-primary"
+                  : "text-muted-foreground",
               )}
             />
             <div className="flex-1 min-w-0">
               <p
                 className={cn(
                   "text-sm font-medium",
-                  selected === opt.value ? "text-primary" : "text-foreground"
+                  selected === opt.value ? "text-primary" : "text-foreground",
                 )}
               >
                 {opt.label}
@@ -114,7 +116,7 @@ export function VisibilitySelectorModal({
       </div>
 
       <ModalFooter className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={handleClose}>
+        <Button variant="outline" onClick={handleClose}>
           Cancel
         </Button>
         <Button onClick={handleConfirm}>Save</Button>

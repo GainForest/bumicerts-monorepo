@@ -167,7 +167,7 @@ export function OrgHero({
           <Link
             href={links.manage.edit}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground border border-primary/20 shadow-lg transition-colors"
-            aria-label="Edit organisation profile"
+            aria-label="Edit organization profile"
           >
             <PencilIcon className="h-3.5 w-3.5 shrink-0" />
             <span className="text-xs font-medium">Edit</span>

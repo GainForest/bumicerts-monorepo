@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { ManageDashboardClient } from "./_components/UploadDashboardClient";
 
 /**
- * /manage — Organisation profile page (view + edit modes)
+ * /manage — Organization profile page (view + edit modes)
  *
  * Auth is enforced by the (MANAGE) layout. Mode (?mode=edit) is managed
  * entirely client-side via nuqs — no searchParams needed here.

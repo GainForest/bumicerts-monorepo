@@ -22,7 +22,7 @@ export const ModalHeader = ({
       className={cn(
         "mb-2",
         backAction ? "flex items-center gap-3" : "",
-        backAction ? props.className : ""
+        backAction ? props.className : "",
       )}
     >
       {backAction ? (
@@ -50,7 +50,7 @@ export const ModalTitle = ({ ...props }: ModalDivProps) => {
   return (
     <h1
       {...props}
-      className={cn("font-serif text-lg font-semibold", props.className)}
+      className={cn("font-instrument italic text-2xl", props.className)}
       data-modal-title
     />
   );
@@ -97,7 +97,7 @@ export const ModalContent = ({
   return (
     <>
       {dismissible && (
-        <DialogClose className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-0 right-0 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4">
+        <DialogClose className="ring-offset-background focus:ring-ring bg-secondary data-[state=open]:text-muted-foreground absolute top-0 right-0 rounded-full p-1 opacity-100 transition-all hover:brightness-95 dark:hover:brightness-105 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4">
           <XIcon />
           <span className="sr-only">Close</span>
         </DialogClose>

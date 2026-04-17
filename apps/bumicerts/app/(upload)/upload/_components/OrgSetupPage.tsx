@@ -578,6 +578,7 @@ export function OrgSetupPage({ did }: { did: string }) {
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
+                        captionLayout="dropdown"
                         mode="single"
                         selected={selectedDate}
                         onSelect={(date) =>
@@ -623,7 +624,7 @@ export function OrgSetupPage({ did }: { did: string }) {
               {brandInfoFetched && (
                 <p className="text-xs text-muted-foreground mt-1.5">
                   Review and edit this AI-generated description to accurately
-                  represent your organisation before continuing.
+                  represent your organization before continuing.
                 </p>
               )}
             </div>

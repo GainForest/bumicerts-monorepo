@@ -606,7 +606,7 @@ export function EvidencePickerModal({
               : `Link ${selectedCount} record${selectedCount !== 1 ? "s" : ""}`}
         </Button>
         <Button
-          variant="ghost"
+          variant="outline"
           className="w-full"
           onClick={handleCancel}
           disabled={isSubmitting}
