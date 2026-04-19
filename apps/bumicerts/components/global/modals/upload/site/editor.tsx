@@ -98,7 +98,27 @@ export const SiteEditorModal = ({ initialData }: SiteEditorModalProps) => {
     isPending: isAdding,
     error: addError,
   } = trpc.certified.location.create.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Optimistically prepend the new location so it appears immediately
+      // in the site-selection list without waiting for the indexer.
+      if (did && data) {
+        const localBlobUrl = shapefile ? URL.createObjectURL(shapefile) : null;
+        indexerUtils.locations.list.setData({ did }, (old) => {
+          const newLocation = {
+            metadata: { did, uri: data.uri, rkey: data.rkey, cid: data.cid },
+            record: {
+              name: data.record?.name ?? null,
+              description: data.record?.description ?? null,
+              location: localBlobUrl
+                ? { $type: "org.hypercerts.defs#uri" as const, uri: localBlobUrl }
+                : (data.record?.location ?? null),
+              locationType: data.record?.locationType ?? null,
+            },
+          };
+          return old ? [newLocation, ...old] : [newLocation];
+        });
+      }
+      // Still invalidate so the cache is eventually replaced by fully indexed data.
       void indexerUtils.locations.list.invalidate();
       setIsCompleted(true);
     },
@@ -116,7 +136,33 @@ export const SiteEditorModal = ({ initialData }: SiteEditorModalProps) => {
     isPending: isUpdating,
     error: updateError,
   } = trpc.certified.location.update.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Optimistically update the cached location so edits appear immediately.
+      if (did && data) {
+        const localBlobUrl = shapefile ? URL.createObjectURL(shapefile) : null;
+        indexerUtils.locations.list.setData({ did }, (old) => {
+          if (!old) return old;
+          return old.map((loc) => {
+            if (loc?.metadata?.uri === data.uri) {
+              return {
+                ...loc,
+                metadata: { ...loc.metadata, cid: data.cid },
+                record: {
+                  ...loc.record,
+                  name: data.record?.name ?? loc.record?.name,
+                  description: data.record?.description ?? loc.record?.description,
+                  location: localBlobUrl
+                    ? { $type: "org.hypercerts.defs#uri" as const, uri: localBlobUrl }
+                    : (data.record?.location ?? loc.record?.location),
+                  locationType: data.record?.locationType ?? loc.record?.locationType,
+                },
+              };
+            }
+            return loc;
+          });
+        });
+      }
+      // Still invalidate so the cache is eventually replaced by fully indexed data.
       void indexerUtils.locations.list.invalidate();
       setIsCompleted(true);
     },
