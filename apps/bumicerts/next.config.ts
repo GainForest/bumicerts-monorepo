@@ -2,12 +2,26 @@ import "./lib/env/server"; // Validate server env vars at build time
 import "./lib/env/client"; // Validate client env vars at build time
 
 import type { NextConfig } from "next";
+import { links } from "./lib/links";
 
 const nextConfig: NextConfig = {
   reactStrictMode: false,
   skipProxyUrlNormalize: true,
 
-
+  async redirects() {
+    return [
+      {
+        source: "/upload/trees/manage",
+        destination: links.manage.trees,
+        permanent: true,
+      },
+      {
+        source: "/upload/trees/upload",
+        destination: links.manage.treesUpload,
+        permanent: true,
+      },
+    ];
+  },
 
   // Compile workspace packages from TypeScript source directly.
   // Without this, Turbopack would look for dist/ which is gitignored.

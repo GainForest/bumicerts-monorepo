@@ -1,8 +1,8 @@
 import { auth } from "@/lib/auth";
-import { TreesManageClient } from "./manage/_components/TreesManageClient";
+import { TreesPageClient } from "./_components/TreesPageClient";
 
 /**
- * /upload/trees — Tree manager
+ * /upload/trees — Tree manager by default, upload wizard in `?mode=upload`
  *
  * Auth is enforced by the (MANAGE) layout. If somehow reached without
  * auth, render nothing — the layout's SignInPrompt covers this case.
@@ -10,5 +10,5 @@ import { TreesManageClient } from "./manage/_components/TreesManageClient";
 export default async function TreesPage() {
   const session = await auth.session.getSession();
   if (!session.isLoggedIn) return null;
-  return <TreesManageClient did={session.did} />;
+  return <TreesPageClient did={session.did} />;
 }
