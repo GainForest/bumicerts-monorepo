@@ -52,7 +52,7 @@ import { links } from "@/lib/links";
 import useMediaQuery from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 import { getSelectableEstablishmentMeansOptions } from "@/lib/upload/establishment-means";
-import EstablishmentMeansInfoContent from "../../_components/EstablishmentMeansInfoContent";
+import EstablishmentMeansInfoContent from "./EstablishmentMeansInfoContent";
 import {
   buildDatasetLandingCards,
   DatasetLandingSection,
@@ -364,7 +364,7 @@ function EmptyState() {
         measurements, and photos in one place.
       </p>
       <Button asChild>
-        <Link href={links.manage.trees}>
+        <Link href={links.manage.treesUpload}>
           <CirclePlusIcon />
           Upload tree data
         </Link>
@@ -1336,7 +1336,7 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
             <Link href={links.manage.home}>Back to upload</Link>
           </Button>
           <Button asChild>
-            <Link href={links.manage.trees}>
+            <Link href={links.manage.treesUpload}>
               <CirclePlusIcon />
               Upload more trees
             </Link>

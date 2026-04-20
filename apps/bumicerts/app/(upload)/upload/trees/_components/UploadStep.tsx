@@ -446,7 +446,7 @@ export default function UploadStep({
         )
       : 0;
   const hasUploadedTrees = successes > 0;
-  const treeManagerHref = links.manage.treesManageFiltered({
+  const treeManagerHref = links.manage.treesFiltered({
     dataset: uploadedDatasetUri,
   });
   const treeManagerLabel = uploadedDatasetUri

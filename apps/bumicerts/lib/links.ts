@@ -1,4 +1,4 @@
-import { clientEnv } from "@/lib/env/client";
+import { clientEnv } from "./env/client";
 
 type DidDynamicLink = (did?: string) => string;
 const didCatcher = (callback: (did: string) => string): DidDynamicLink => {
@@ -35,8 +35,8 @@ export const links = {
     audio: "/upload/audio",
     bumicerts: "/upload/bumicerts",
     trees: "/upload/trees",
-    treesManage: "/upload/trees/manage",
-    treesManageFiltered: (options?: {
+    treesUpload: "/upload/trees?mode=upload",
+    treesFiltered: (options?: {
       dataset?: string | null;
     }) => {
       const searchParams = new URLSearchParams();
@@ -46,7 +46,7 @@ export const links = {
       }
 
       const queryString = searchParams.toString();
-      return `/upload/trees/manage${queryString ? `?${queryString}` : ""}`;
+      return `/upload/trees${queryString ? `?${queryString}` : ""}`;
     },
   },
   user: didCatcher((did) => `/user/${did}`),
