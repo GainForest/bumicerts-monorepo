@@ -52,7 +52,7 @@ import { links } from "@/lib/links";
 import useMediaQuery from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 import { getSelectableEstablishmentMeansOptions } from "@/lib/upload/establishment-means";
-import EstablishmentMeansInfoContent from "../../_components/EstablishmentMeansInfoContent";
+import EstablishmentMeansInfoContent from "./EstablishmentMeansInfoContent";
 import GreenGlobeTreePreviewCard from "./GreenGlobeTreePreviewCard";
 import { ManageConfirmModal } from "./ManageConfirmModal";
 import { TreesManageSkeleton } from "./TreesManageSkeleton";

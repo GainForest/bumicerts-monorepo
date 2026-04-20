@@ -2,7 +2,7 @@
 
 import { TreeUploadWizard } from "./TreeUploadWizard";
 import { useTreesMode } from "../_hooks/useTreesMode";
-import { TreesManageClient } from "../manage/_components/TreesManageClient";
+import { TreesManageClient } from "./TreesManageClient";
 
 type TreesPageClientProps = {
   did: string;
