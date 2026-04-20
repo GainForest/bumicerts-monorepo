@@ -33,7 +33,7 @@ export const PARTNER_ESTABLISHMENT_MEANS_OPTIONS = [
     value: "naturalised",
     label: "They regenerated naturally",
     description:
-      "Trees arrived from elsewhere and now self-seed and sustain without human help.",
+      "Trees that arrived from elsewhere and have established a self-sustaining population.",
     gbifCodeLabel: "naturalised",
   },
   {
