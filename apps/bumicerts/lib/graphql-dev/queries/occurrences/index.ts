@@ -1,30 +1,26 @@
 /**
  * Occurrences query module.
  *
- * Fetches `app.gainforest.dwc.occurrence` records authored by a given DID.
- * Used in the evidence picker to let org owners link tree/species occurrence
- * records as evidence on a bumicert.
+ * Fetches all `app.gainforest.dwc.occurrence` records authored by a given DID.
+ * Used in the evidence picker and Tree Manager to read full tree/species lists.
  *
  * Leaf: queries.occurrences
- *
- * Schema shape:
- *   gainforest.dwc.occurrence(where: { did: $did }) {
- *     data { metadata { ... } record { scientificName, eventDate, ... } }
- *   }
  */
 
 import { graphqlClient } from "@/lib/graphql-dev/client";
-import { graphql } from "@/lib/graphql-dev/tada";
-import type { ResultOf } from "@/lib/graphql-dev/tada";
 import type { QueryModule } from "@/lib/graphql-dev/create-query";
 
-// ── Document ──────────────────────────────────────────────────────────────────
-
-const byDidDocument = graphql(`
-  query OccurrencesByDid($did: String!) {
+const document = /* GraphQL */ `
+  query OccurrencesByDid($did: String!, $limit: Int, $cursor: String) {
     gainforest {
       dwc {
-        occurrence(where: { did: $did }, order: DESC, sortBy: CREATED_AT) {
+        occurrence(
+          where: { did: $did }
+          limit: $limit
+          cursor: $cursor
+          order: DESC
+          sortBy: CREATED_AT
+        ) {
           data {
             metadata {
               did
@@ -53,37 +49,107 @@ const byDidDocument = graphql(`
               createdAt
             }
           }
+          pageInfo {
+            endCursor
+            hasNextPage
+            count
+          }
         }
       }
     }
   }
-`);
+`;
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+export type OccurrenceItem = {
+  metadata: {
+    did: string;
+    uri: string;
+    rkey: string;
+    cid: string;
+    createdAt: string | null;
+  };
+  record: {
+    scientificName: string | null;
+    vernacularName: string | null;
+    individualCount: number | null;
+    eventDate: string | null;
+    decimalLatitude: string | null;
+    decimalLongitude: string | null;
+    recordedBy: string | null;
+    country: string | null;
+    countryCode: string | null;
+    stateProvince: string | null;
+    locality: string | null;
+    occurrenceRemarks: string | null;
+    habitat: string | null;
+    basisOfRecord: string | null;
+    establishmentMeans: string | null;
+    datasetRef: string | null;
+    createdAt: string | null;
+  };
+};
 
-type _Result = ResultOf<typeof byDidDocument>;
-type _DataArr = NonNullable<
-  NonNullable<NonNullable<_Result["gainforest"]>["dwc"]>["occurrence"]
->["data"];
-export type OccurrenceItem = NonNullable<_DataArr>[number];
+type PageInfo = {
+  endCursor: string | null;
+  hasNextPage: boolean;
+  count: number;
+};
+
+type OccurrenceResponse = {
+  gainforest?: {
+    dwc?: {
+      occurrence?: {
+        data?: OccurrenceItem[] | null;
+        pageInfo?: PageInfo | null;
+      } | null;
+    } | null;
+  } | null;
+};
 
 export type Params = { did: string };
 export type Result = OccurrenceItem[];
 
-// ── Fetch ─────────────────────────────────────────────────────────────────────
+const PAGE_SIZE = 200;
+const MAX_PAGES = 50;
 
 export async function fetch(params: Params): Promise<Result> {
-  const res = await graphqlClient.request(byDidDocument, { did: params.did });
-  return (res.gainforest?.dwc?.occurrence?.data ?? []) as Result;
-}
+  const allOccurrences: OccurrenceItem[] = [];
+  let cursor: string | undefined;
 
-// ── Default options ───────────────────────────────────────────────────────────
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const res = await graphqlClient.request<OccurrenceResponse>(document, {
+      did: params.did,
+      limit: PAGE_SIZE,
+      cursor,
+    });
+
+    const occurrence = res.gainforest?.dwc?.occurrence;
+    if (occurrence?.data) {
+      allOccurrences.push(...occurrence.data);
+    }
+
+    const pageInfo = occurrence?.pageInfo;
+    if (pageInfo?.hasNextPage && pageInfo.endCursor) {
+      if (page === MAX_PAGES - 1) {
+        console.warn(
+          `Occurrences query hit pagination safety cap for ${params.did}; results may be truncated.`,
+        );
+        break;
+      }
+
+      cursor = pageInfo.endCursor;
+      continue;
+    }
+
+    break;
+  }
+
+  return allOccurrences;
+}
 
 export const defaultOptions = {
   staleTime: 60 * 1_000,
 } satisfies QueryModule<Params, Result>["defaultOptions"];
-
-// ── Enabled ───────────────────────────────────────────────────────────────────
 
 export function enabled(params: Params): boolean {
   return !!params.did;

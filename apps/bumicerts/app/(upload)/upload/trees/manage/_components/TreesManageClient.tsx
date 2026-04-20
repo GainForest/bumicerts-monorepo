@@ -53,6 +53,11 @@ import useMediaQuery from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 import { getSelectableEstablishmentMeansOptions } from "@/lib/upload/establishment-means";
 import EstablishmentMeansInfoContent from "../../_components/EstablishmentMeansInfoContent";
+import {
+  buildDatasetLandingCards,
+  DatasetLandingSection,
+  UNGROUPED_DATASET_FILTER,
+} from "./DatasetLandingSection";
 import GreenGlobeTreePreviewCard from "./GreenGlobeTreePreviewCard";
 import { ManageConfirmModal } from "./ManageConfirmModal";
 import { TreesManageSkeleton } from "./TreesManageSkeleton";
@@ -377,10 +382,15 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     "q",
     parseAsString.withDefault(""),
   );
+  const [datasetSearchQuery, setDatasetSearchQuery] = useQueryState(
+    "dataset-q",
+    parseAsString.withDefault(""),
+  );
   const [selectedTreeRkey, setSelectedTreeRkey] = useQueryState(
     "tree",
     parseAsString.withDefault(""),
   );
+  const [managerView, setManagerView] = useQueryState("view", parseAsString);
   const [datasetFilter, setDatasetFilter] = useQueryState(
     "dataset",
     parseAsString,
@@ -448,10 +458,14 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
 
   const isLoading =
     occurrencesQuery.isLoading ||
+    datasetsQuery.isLoading ||
     measurementsQuery.isLoading ||
     multimediaQuery.isLoading;
   const queryError =
-    occurrencesQuery.error ?? measurementsQuery.error ?? multimediaQuery.error;
+    datasetsQuery.error ??
+    occurrencesQuery.error ??
+    measurementsQuery.error ??
+    multimediaQuery.error;
 
   const mergedOccurrences = useMemo(() => {
     return (occurrencesQuery.data ?? []).flatMap((item) => {
@@ -578,15 +592,41 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     return map;
   }, [datasetItems]);
 
-  const filteredTrees = useMemo(() => {
-    // Apply dataset filter first
+  const datasetCards = useMemo(
+    () => buildDatasetLandingCards(datasetItems, treeItems),
+    [datasetItems, treeItems],
+  );
+  const showDatasetLanding =
+    managerView !== "trees" && !datasetFilter && datasetCards.length > 0;
+  const filteredDatasetCards = useMemo(() => {
+    const query = datasetSearchQuery.trim().toLowerCase();
+
+    if (!query) {
+      return datasetCards;
+    }
+
+    return datasetCards.filter((card) => card.searchText.includes(query));
+  }, [datasetCards, datasetSearchQuery]);
+
+  const datasetScopedTrees = useMemo(() => {
     let trees = treeItems;
-    if (datasetFilter) {
+    if (datasetFilter === UNGROUPED_DATASET_FILTER) {
+      trees = trees.filter((item) => {
+        const ref = item.occurrence.record?.datasetRef;
+        return typeof ref !== "string" || ref.length === 0;
+      });
+    } else if (datasetFilter) {
       trees = trees.filter((item) => {
         const ref = item.occurrence.record?.datasetRef;
         return typeof ref === "string" && ref === datasetFilter;
       });
     }
+
+    return trees;
+  }, [datasetFilter, treeItems]);
+
+  const filteredTrees = useMemo(() => {
+    const trees = datasetScopedTrees;
 
     // Then apply search query
     const query = searchQuery.trim().toLowerCase();
@@ -625,7 +665,7 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
 
       return haystack.includes(query);
     });
-  }, [searchQuery, treeItems, datasetFilter, datasetLookup]);
+  }, [datasetLookup, datasetScopedTrees, searchQuery]);
 
   const selectedTree = useMemo(() => {
     if (!selectedTreeRkey) {
@@ -639,11 +679,49 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     );
   }, [selectedTreeRkey, treeItems]);
 
-  const activeTree = isDesktop
-    ? (selectedTree ?? filteredTrees[0] ?? null)
-    : selectedTree;
+  const activeTree = showDatasetLanding
+    ? null
+    : isDesktop
+      ? (selectedTree ?? filteredTrees[0] ?? null)
+      : selectedTree;
 
   useEffect(() => {
+    if (!datasetFilter || isLoading) {
+      return;
+    }
+
+    const isKnownDataset = datasetCards.some((card) => card.id === datasetFilter);
+    if (isKnownDataset) {
+      return;
+    }
+
+    void Promise.all([
+      setManagerView(null),
+      setDatasetFilter(null),
+      setSelectedTreeRkey(null),
+    ]);
+  }, [
+    datasetCards,
+    datasetFilter,
+    isLoading,
+    setManagerView,
+    setDatasetFilter,
+    setSelectedTreeRkey,
+  ]);
+
+  useEffect(() => {
+    if (!showDatasetLanding || !selectedTreeRkey) {
+      return;
+    }
+
+    void setSelectedTreeRkey(null);
+  }, [selectedTreeRkey, setSelectedTreeRkey, showDatasetLanding]);
+
+  useEffect(() => {
+    if (showDatasetLanding) {
+      return;
+    }
+
     const firstVisibleRkey = getSelectedRkey(filteredTrees[0] ?? null);
     const isSelectionVisible = Boolean(
       selectedTreeRkey &&
@@ -667,7 +745,13 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     if (selectedTreeRkey && !isSelectionVisible) {
       void setSelectedTreeRkey(null);
     }
-  }, [filteredTrees, isDesktop, selectedTreeRkey, setSelectedTreeRkey]);
+  }, [
+    filteredTrees,
+    isDesktop,
+    selectedTreeRkey,
+    setSelectedTreeRkey,
+    showDatasetLanding,
+  ]);
 
   const activeTreeResetKey = activeTree?.occurrence.metadata?.rkey ?? null;
 
@@ -802,11 +886,52 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
 
   const handleRetry = async () => {
     await Promise.all([
+      datasetsQuery.refetch(),
       occurrencesQuery.refetch(),
       measurementsQuery.refetch(),
       multimediaQuery.refetch(),
     ]);
   };
+
+  const handleOpenDataset = useCallback(
+    (nextDatasetFilter: string) => {
+      void Promise.all([
+        setDatasetFilter(nextDatasetFilter),
+        setSearchQuery(null),
+        setSelectedTreeRkey(null),
+      ]);
+    },
+    [setDatasetFilter, setSearchQuery, setSelectedTreeRkey],
+  );
+
+  const handleReturnToDatasets = useCallback(() => {
+    void Promise.all([
+      setManagerView(null),
+      setDatasetFilter(null),
+      setSearchQuery(null),
+      setSelectedTreeRkey(null),
+    ]);
+  }, [setManagerView, setDatasetFilter, setSearchQuery, setSelectedTreeRkey]);
+
+  const handleDatasetFilterChange = useCallback(
+    (value: string) => {
+      if (value === "__all__") {
+        void Promise.all([
+          setManagerView("trees"),
+          setDatasetFilter(null),
+          setSelectedTreeRkey(null),
+        ]);
+        return;
+      }
+
+      void Promise.all([
+        setManagerView("trees"),
+        setDatasetFilter(value),
+        setSelectedTreeRkey(null),
+      ]);
+    },
+    [setManagerView, setDatasetFilter, setSelectedTreeRkey],
+  );
 
   const handleOccurrenceFieldChange = (
     field: OccurrenceField,
@@ -1146,6 +1271,17 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     Boolean(activeTree?.occurrence.metadata?.rkey) &&
     (activeTree?.photos.length ?? 0) === 0 &&
     (activeTree?.measurements.length ?? 0) === 0;
+  const searchPlaceholder = showDatasetLanding
+    ? "Search by dataset, location, or status"
+    : "Search by species, locality, recorder, or date";
+  const searchQueryTrimmed = searchQuery.trim();
+  const activeSearchQuery = showDatasetLanding ? datasetSearchQuery : searchQuery;
+  const activeSearchSetter = showDatasetLanding
+    ? setDatasetSearchQuery
+    : setSearchQuery;
+  const counterLabel = showDatasetLanding
+    ? `${filteredDatasetCards.length} of ${datasetCards.length} dataset${datasetCards.length === 1 ? "" : "s"}`
+    : `${filteredTrees.length} of ${datasetScopedTrees.length} tree record${datasetScopedTrees.length === 1 ? "" : "s"}`;
 
   if (isLoading) {
     return <TreesManageSkeleton />;
@@ -1166,7 +1302,8 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
               Couldn&apos;t load tree records
             </h1>
             <p className="text-sm text-muted-foreground">
-              We had trouble loading your trees, measurements, or linked photos.
+              We had trouble loading your datasets, trees, measurements, or
+              linked photos.
             </p>
           </div>
           <Button variant="outline" onClick={() => void handleRetry()}>
@@ -1207,25 +1344,34 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
         </div>
       </div>
 
+      {!showDatasetLanding && datasetCards.length > 0 ? (
+        <Button
+          variant="ghost"
+          className="-ml-2 w-fit"
+          onClick={handleReturnToDatasets}
+        >
+          <ChevronLeftIcon />
+          Back to datasets
+        </Button>
+      ) : null}
+
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-2 w-full lg:flex-row lg:items-center lg:max-w-2xl">
           <div className="relative w-full lg:max-w-sm">
             <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              value={searchQuery}
+              value={activeSearchQuery}
               onChange={(event) =>
-                void setSearchQuery(event.target.value || null)
+                void activeSearchSetter(event.target.value || null)
               }
-              placeholder="Search by species, locality, recorder, or date"
+              placeholder={searchPlaceholder}
               className="pl-9"
             />
           </div>
-          {datasetItems.length > 0 && (
+          {!showDatasetLanding && datasetCards.length > 0 && (
             <Select
               value={datasetFilter ?? "__all__"}
-              onValueChange={(value) =>
-                void setDatasetFilter(value === "__all__" ? null : value)
-              }
+              onValueChange={handleDatasetFilterChange}
             >
               <SelectTrigger className="w-full lg:w-56 shrink-0">
                 <div className="flex items-center gap-1.5 truncate">
@@ -1235,14 +1381,11 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all__">All datasets</SelectItem>
-                {datasetItems.map((ds) => {
-                  const uri = ds.metadata?.uri;
-                  if (!uri) return null;
-                  const count = ds.record?.recordCount;
+                {datasetCards.map((datasetCard) => {
                   return (
-                    <SelectItem key={uri} value={uri}>
-                      {ds.record?.name ?? "Unnamed"}
-                      {count != null ? ` (${count})` : ""}
+                    <SelectItem key={datasetCard.id} value={datasetCard.id}>
+                      {datasetCard.name}
+                      {` (${datasetCard.treeCount})`}
                     </SelectItem>
                   );
                 })}
@@ -1251,27 +1394,68 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
           )}
         </div>
         <p className="text-sm text-muted-foreground shrink-0">
-          {filteredTrees.length} of {treeItems.length} tree record
-          {treeItems.length === 1 ? "" : "s"}
+          {counterLabel}
         </p>
       </div>
 
-      {treeItems.length === 0 ? (
+      {datasetCards.length === 0 && treeItems.length === 0 ? (
         <EmptyState />
+      ) : showDatasetLanding ? (
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-3">
+            <InfoIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">
+              Click a dataset to review or edit its trees
+            </p>
+          </div>
+
+          {filteredDatasetCards.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-56 gap-3 rounded-2xl border border-dashed border-border text-center px-6">
+              <p
+                className="text-2xl text-muted-foreground"
+                style={{ fontFamily: "var(--font-garamond-var)" }}
+              >
+                No datasets match your search
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Try a different dataset name, location, or status.
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => void setDatasetSearchQuery(null)}
+              >
+                Clear search
+              </Button>
+            </div>
+          ) : (
+            <DatasetLandingSection
+              datasetCards={filteredDatasetCards}
+              onOpen={handleOpenDataset}
+            />
+          )}
+        </div>
       ) : filteredTrees.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-56 gap-3 rounded-2xl border border-dashed border-border text-center px-6">
           <p
             className="text-2xl text-muted-foreground"
             style={{ fontFamily: "var(--font-garamond-var)" }}
           >
-            No trees match your search
+            {searchQueryTrimmed ? "No trees match your search" : "No trees in this dataset yet"}
           </p>
           <p className="text-sm text-muted-foreground">
-            Try a different species name, locality, or recorder.
+            {searchQueryTrimmed
+              ? "Try a different species name, locality, or recorder."
+              : "This dataset is ready, but there are no tree records to review yet."}
           </p>
-          <Button variant="outline" onClick={() => void setSearchQuery(null)}>
-            Clear search
-          </Button>
+          {searchQueryTrimmed ? (
+            <Button variant="outline" onClick={() => void setSearchQuery(null)}>
+              Clear search
+            </Button>
+          ) : (
+            <Button variant="outline" onClick={handleReturnToDatasets}>
+              Back to datasets
+            </Button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">

@@ -1,9 +1,9 @@
 /**
  * Measurements query module.
  *
- * Fetches `app.gainforest.dwc.measurement` records authored by a given DID.
- * Uses the new bundled measurement shape when supported, but gracefully falls
- * back to the legacy per-measurement schema while migration is in progress.
+ * Fetches all `app.gainforest.dwc.measurement` records authored by a given DID.
+ * Uses the bundled measurement shape when supported, but gracefully falls back
+ * to the legacy per-measurement schema while migration is in progress.
  *
  * Leaf: queries.measurements
  */
@@ -13,10 +13,16 @@ import { graphqlClient } from "@/lib/graphql-dev/client";
 import type { QueryModule } from "@/lib/graphql-dev/create-query";
 
 const bundledDocument = /* GraphQL */ `
-  query MeasurementsByDidBundled($did: String!) {
+  query MeasurementsByDidBundled($did: String!, $limit: Int, $cursor: String) {
     gainforest {
       dwc {
-        measurement(where: { did: $did }, order: DESC, sortBy: CREATED_AT) {
+        measurement(
+          where: { did: $did }
+          limit: $limit
+          cursor: $cursor
+          order: DESC
+          sortBy: CREATED_AT
+        ) {
           data {
             metadata {
               did
@@ -36,6 +42,11 @@ const bundledDocument = /* GraphQL */ `
               createdAt
             }
           }
+          pageInfo {
+            endCursor
+            hasNextPage
+            count
+          }
         }
       }
     }
@@ -43,10 +54,16 @@ const bundledDocument = /* GraphQL */ `
 `;
 
 const legacyDocument = /* GraphQL */ `
-  query MeasurementsByDidLegacy($did: String!) {
+  query MeasurementsByDidLegacy($did: String!, $limit: Int, $cursor: String) {
     gainforest {
       dwc {
-        measurement(where: { did: $did }, order: DESC, sortBy: CREATED_AT) {
+        measurement(
+          where: { did: $did }
+          limit: $limit
+          cursor: $cursor
+          order: DESC
+          sortBy: CREATED_AT
+        ) {
           data {
             metadata {
               did
@@ -64,6 +81,11 @@ const legacyDocument = /* GraphQL */ `
               measurementRemarks
               createdAt
             }
+          }
+          pageInfo {
+            endCursor
+            hasNextPage
+            count
           }
         }
       }
@@ -94,6 +116,39 @@ type MeasurementRecord = {
   schemaVersion: "bundled" | "legacy";
 };
 
+type PageInfo = {
+  endCursor: string | null;
+  hasNextPage: boolean;
+  count: number;
+};
+
+type BundledMeasurementPageItem = {
+  metadata: MeasurementMetadata;
+  record: {
+    occurrenceRef: string | null;
+    result: unknown | null;
+    measuredBy: string | null;
+    measuredByID: string | null;
+    measurementDate: string | null;
+    measurementMethod: string | null;
+    measurementRemarks: string | null;
+    createdAt: string | null;
+  };
+};
+
+type LegacyMeasurementPageItem = {
+  metadata: MeasurementMetadata;
+  record: {
+    occurrenceRef: string | null;
+    measurementType: string | null;
+    measurementValue: string | null;
+    measurementUnit: string | null;
+    measurementMethod: string | null;
+    measurementRemarks: string | null;
+    createdAt: string | null;
+  };
+};
+
 export type MeasurementItem = {
   metadata: MeasurementMetadata;
   record: MeasurementRecord;
@@ -103,19 +158,8 @@ type BundledResponse = {
   gainforest?: {
     dwc?: {
       measurement?: {
-        data?: Array<{
-          metadata: MeasurementMetadata;
-          record: {
-            occurrenceRef: string | null;
-            result: unknown | null;
-            measuredBy: string | null;
-            measuredByID: string | null;
-            measurementDate: string | null;
-            measurementMethod: string | null;
-            measurementRemarks: string | null;
-            createdAt: string | null;
-          };
-        }> | null;
+        data?: BundledMeasurementPageItem[] | null;
+        pageInfo?: PageInfo | null;
       } | null;
     } | null;
   } | null;
@@ -125,18 +169,8 @@ type LegacyResponse = {
   gainforest?: {
     dwc?: {
       measurement?: {
-        data?: Array<{
-          metadata: MeasurementMetadata;
-          record: {
-            occurrenceRef: string | null;
-            measurementType: string | null;
-            measurementValue: string | null;
-            measurementUnit: string | null;
-            measurementMethod: string | null;
-            measurementRemarks: string | null;
-            createdAt: string | null;
-          };
-        }> | null;
+        data?: LegacyMeasurementPageItem[] | null;
+        pageInfo?: PageInfo | null;
       } | null;
     } | null;
   } | null;
@@ -144,6 +178,9 @@ type LegacyResponse = {
 
 export type Params = { did: string };
 export type Result = MeasurementItem[];
+
+const PAGE_SIZE = 200;
+const MAX_PAGES = 50;
 
 let hasWarnedLegacyMeasurementSchema = false;
 
@@ -170,57 +207,115 @@ function isUnsupportedBundledMeasurementQuery(error: unknown): boolean {
   );
 }
 
-function normalizeBundled(response: BundledResponse): Result {
-  return (
-    response.gainforest?.dwc?.measurement?.data?.map((item) => ({
-      metadata: item.metadata,
-      record: {
-        occurrenceRef: item.record.occurrenceRef,
-        result: item.record.result,
-        measuredBy: item.record.measuredBy,
-        measuredByID: item.record.measuredByID,
-        measurementDate: item.record.measurementDate,
-        measurementMethod: item.record.measurementMethod,
-        measurementRemarks: item.record.measurementRemarks,
-        createdAt: item.record.createdAt,
-        legacyMeasurementType: null,
-        legacyMeasurementValue: null,
-        legacyMeasurementUnit: null,
-        schemaVersion: "bundled",
-      },
-    })) ?? []
-  );
+function normalizeBundledItems(items: BundledMeasurementPageItem[]): Result {
+  return items.map((item) => ({
+    metadata: item.metadata,
+    record: {
+      occurrenceRef: item.record.occurrenceRef,
+      result: item.record.result,
+      measuredBy: item.record.measuredBy,
+      measuredByID: item.record.measuredByID,
+      measurementDate: item.record.measurementDate,
+      measurementMethod: item.record.measurementMethod,
+      measurementRemarks: item.record.measurementRemarks,
+      createdAt: item.record.createdAt,
+      legacyMeasurementType: null,
+      legacyMeasurementValue: null,
+      legacyMeasurementUnit: null,
+      schemaVersion: "bundled",
+    },
+  }));
 }
 
-function normalizeLegacy(response: LegacyResponse): Result {
-  return (
-    response.gainforest?.dwc?.measurement?.data?.map((item) => ({
-      metadata: item.metadata,
-      record: {
-        occurrenceRef: item.record.occurrenceRef,
-        result: null,
-        measuredBy: null,
-        measuredByID: null,
-        measurementDate: null,
-        measurementMethod: item.record.measurementMethod,
-        measurementRemarks: item.record.measurementRemarks,
-        createdAt: item.record.createdAt,
-        legacyMeasurementType: item.record.measurementType,
-        legacyMeasurementValue: item.record.measurementValue,
-        legacyMeasurementUnit: item.record.measurementUnit,
-        schemaVersion: "legacy",
-      },
-    })) ?? []
-  );
+function normalizeLegacyItems(items: LegacyMeasurementPageItem[]): Result {
+  return items.map((item) => ({
+    metadata: item.metadata,
+    record: {
+      occurrenceRef: item.record.occurrenceRef,
+      result: null,
+      measuredBy: null,
+      measuredByID: null,
+      measurementDate: null,
+      measurementMethod: item.record.measurementMethod,
+      measurementRemarks: item.record.measurementRemarks,
+      createdAt: item.record.createdAt,
+      legacyMeasurementType: item.record.measurementType,
+      legacyMeasurementValue: item.record.measurementValue,
+      legacyMeasurementUnit: item.record.measurementUnit,
+      schemaVersion: "legacy",
+    },
+  }));
+}
+
+async function fetchBundledMeasurements(params: Params): Promise<Result> {
+  const allMeasurements: MeasurementItem[] = [];
+  let cursor: string | undefined;
+
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const response = await graphqlClient.request<BundledResponse>(bundledDocument, {
+      did: params.did,
+      limit: PAGE_SIZE,
+      cursor,
+    });
+
+    const measurement = response.gainforest?.dwc?.measurement;
+    allMeasurements.push(...normalizeBundledItems(measurement?.data ?? []));
+
+    const pageInfo = measurement?.pageInfo;
+    if (pageInfo?.hasNextPage && pageInfo.endCursor) {
+      if (page === MAX_PAGES - 1) {
+        console.warn(
+          `Bundled measurements query hit pagination safety cap for ${params.did}; results may be truncated.`,
+        );
+        break;
+      }
+
+      cursor = pageInfo.endCursor;
+      continue;
+    }
+
+    break;
+  }
+
+  return allMeasurements;
+}
+
+async function fetchLegacyMeasurements(params: Params): Promise<Result> {
+  const allMeasurements: MeasurementItem[] = [];
+  let cursor: string | undefined;
+
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const response = await graphqlClient.request<LegacyResponse>(legacyDocument, {
+      did: params.did,
+      limit: PAGE_SIZE,
+      cursor,
+    });
+
+    const measurement = response.gainforest?.dwc?.measurement;
+    allMeasurements.push(...normalizeLegacyItems(measurement?.data ?? []));
+
+    const pageInfo = measurement?.pageInfo;
+    if (pageInfo?.hasNextPage && pageInfo.endCursor) {
+      if (page === MAX_PAGES - 1) {
+        console.warn(
+          `Legacy measurements query hit pagination safety cap for ${params.did}; results may be truncated.`,
+        );
+        break;
+      }
+
+      cursor = pageInfo.endCursor;
+      continue;
+    }
+
+    break;
+  }
+
+  return allMeasurements;
 }
 
 export async function fetch(params: Params): Promise<Result> {
   try {
-    const response = await graphqlClient.request<BundledResponse>(
-      bundledDocument,
-      { did: params.did }
-    );
-    return normalizeBundled(response);
+    return await fetchBundledMeasurements(params);
   } catch (error) {
     if (!isUnsupportedBundledMeasurementQuery(error)) {
       throw error;
@@ -232,16 +327,11 @@ export async function fetch(params: Params): Promise<Result> {
     ) {
       hasWarnedLegacyMeasurementSchema = true;
       console.warn(
-        "Indexer schema still exposes legacy dwc.measurement fields; falling back to legacy measurement reads."
+        "Indexer schema still exposes legacy dwc.measurement fields; falling back to legacy measurement reads.",
       );
     }
 
-    const legacyResponse = await graphqlClient.request<LegacyResponse>(
-      legacyDocument,
-      { did: params.did }
-    );
-
-    return normalizeLegacy(legacyResponse);
+    return fetchLegacyMeasurements(params);
   }
 }
 
