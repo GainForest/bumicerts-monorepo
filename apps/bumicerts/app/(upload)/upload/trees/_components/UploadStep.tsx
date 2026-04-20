@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CheckCircle2,
@@ -10,8 +11,10 @@ import {
   Loader2,
   Camera,
   ImageDown,
+  DatabaseIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { links } from "@/lib/links";
 import { trpc } from "@/lib/trpc/client";
 import type { ValidatedRow } from "@/lib/upload/types";
 import { occurrenceInputToCreateInput } from "@/lib/upload/occurrence-adapter";
@@ -93,6 +96,9 @@ export default function UploadStep({
 
   const [uploadStarted, setUploadStarted] = useState(false);
   const [uploadDone, setUploadDone] = useState(false);
+  const [uploadedDatasetUri, setUploadedDatasetUri] = useState<string | null>(
+    null,
+  );
   const [progress, setProgress] = useState<UploadProgress>({
     current: 0,
     total: validRows.length,
@@ -199,6 +205,7 @@ export default function UploadStep({
     if (uploadRef.current) return;
     uploadRef.current = true;
     setUploadStarted(true);
+    setUploadedDatasetUri(null);
 
     // Clear sessionStorage once upload begins (state is no longer "pending")
     sessionStorage.removeItem(STORAGE_KEY);
@@ -218,6 +225,7 @@ export default function UploadStep({
         });
         datasetUri = dsResult.uri;
         datasetRkey = dsResult.rkey;
+        setUploadedDatasetUri(dsResult.uri);
       } catch {
         // Dataset creation failed — continue without datasetRef
         // (occurrences will still be created, just ungrouped)
@@ -437,6 +445,13 @@ export default function UploadStep({
           (photoFetchProgress.current / photoFetchProgress.total) * 100,
         )
       : 0;
+  const hasUploadedTrees = successes > 0;
+  const treeManagerHref = links.manage.treesManageFiltered({
+    dataset: uploadedDatasetUri,
+  });
+  const treeManagerLabel = uploadedDatasetUri
+    ? "View dataset in tree manager"
+    : "View trees in tree manager";
 
   const failedRows = rowStatuses
     .map((status, i) => ({ status, row: validRows[i], index: i }))
@@ -709,7 +724,16 @@ export default function UploadStep({
             <Button variant="outline" onClick={onComplete}>
               Upload More Data
             </Button>
-            <Button onClick={onComplete}>Done</Button>
+            {hasUploadedTrees ? (
+              <Button asChild>
+                <Link href={treeManagerHref}>
+                  <DatabaseIcon />
+                  {treeManagerLabel}
+                </Link>
+              </Button>
+            ) : (
+              <Button onClick={onComplete}>Done</Button>
+            )}
           </div>
         )}
       </div>

@@ -36,6 +36,18 @@ export const links = {
     bumicerts: "/upload/bumicerts",
     trees: "/upload/trees",
     treesManage: "/upload/trees/manage",
+    treesManageFiltered: (options?: {
+      dataset?: string | null;
+    }) => {
+      const searchParams = new URLSearchParams();
+
+      if (options?.dataset) {
+        searchParams.set("dataset", options.dataset);
+      }
+
+      const queryString = searchParams.toString();
+      return `/upload/trees/manage${queryString ? `?${queryString}` : ""}`;
+    },
   },
   user: didCatcher((did) => `/user/${did}`),
   explore: "/explore",

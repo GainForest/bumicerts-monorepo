@@ -381,7 +381,10 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     "tree",
     parseAsString.withDefault(""),
   );
-  const [datasetFilter, setDatasetFilter] = useState<string | null>(null);
+  const [datasetFilter, setDatasetFilter] = useQueryState(
+    "dataset",
+    parseAsString,
+  );
 
   const occurrencesQuery = indexerTrpc.dwc.occurrences.useQuery({ did });
   const measurementsQuery = indexerTrpc.dwc.measurements.useQuery({ did });
@@ -1221,7 +1224,7 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
             <Select
               value={datasetFilter ?? "__all__"}
               onValueChange={(value) =>
-                setDatasetFilter(value === "__all__" ? null : value)
+                void setDatasetFilter(value === "__all__" ? null : value)
               }
             >
               <SelectTrigger className="w-full lg:w-56 shrink-0">
