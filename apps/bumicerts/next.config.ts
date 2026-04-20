@@ -7,8 +7,6 @@ const nextConfig: NextConfig = {
   reactStrictMode: false,
   skipProxyUrlNormalize: true,
 
-
-
   // Compile workspace packages from TypeScript source directly.
   // Without this, Turbopack would look for dist/ which is gitignored.
   transpilePackages: [
@@ -21,7 +19,6 @@ const nextConfig: NextConfig = {
   ],
 
   images: {
-    unoptimized: process.env.NODE_ENV === "development",
     remotePatterns: [
       {
         protocol: "https",
@@ -42,9 +39,12 @@ const nextConfig: NextConfig = {
       // multiformats is ESM-only; @atproto/lexicon's CJS dist tries to
       // require() it. Alias subpaths to their ESM dist so Turbopack handles it.
       "multiformats/cid": "../../node_modules/multiformats/dist/src/cid.js",
-      "multiformats/bases/base58": "../../node_modules/multiformats/dist/src/bases/base58.js",
-      "multiformats/hashes/digest": "../../node_modules/multiformats/dist/src/hashes/digest.js",
-      "multiformats/hashes/hasher": "../../node_modules/multiformats/dist/src/hashes/hasher.js",
+      "multiformats/bases/base58":
+        "../../node_modules/multiformats/dist/src/bases/base58.js",
+      "multiformats/hashes/digest":
+        "../../node_modules/multiformats/dist/src/hashes/digest.js",
+      "multiformats/hashes/hasher":
+        "../../node_modules/multiformats/dist/src/hashes/hasher.js",
     },
   },
 };

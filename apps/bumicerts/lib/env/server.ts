@@ -15,9 +15,7 @@ export const serverEnv = createEnv({
       .default("development"),
 
     // Vercel system (server-side, auto-injected)
-    VERCEL_ENV: z
-      .enum(["development", "preview", "production"])
-      .optional(),
+    VERCEL_ENV: z.enum(["development", "preview", "production"]).optional(),
     // Raw deployment alias — e.g. bumicerts-r3f59v16y-gainforest.vercel.app
     // Never the custom domain. Use getPublicUrl() from lib/url.ts instead of
     // reading this directly.
@@ -80,6 +78,12 @@ export const serverEnv = createEnv({
 
     // Base network RPC
     BASE_RPC_URL: z.string().url().default("https://mainnet.base.org"),
+
+    // Auth credentials for signing in a PDS account for operations
+    // like, uploading images on user's behalf for leaflet editors
+    UPLOADER_HANDLE: z.string().min(1),
+    UPLOADER_PASSWORD: z.string().min(1),
+    UPLOADER_DID: z.string().min(1),
   },
 
   client: {},
@@ -118,6 +122,9 @@ export const serverEnv = createEnv({
     FACILITATOR_PASSWORD: process.env.FACILITATOR_PASSWORD,
     FACILITATOR_PRIVATE_KEY: process.env.FACILITATOR_PRIVATE_KEY,
     BASE_RPC_URL: process.env.BASE_RPC_URL,
+    UPLOADER_HANDLE: process.env.UPLOADER_HANDLE,
+    UPLOADER_PASSWORD: process.env.UPLOADER_PASSWORD,
+    UPLOADER_DID: process.env.UPLOADER_DID,
   },
 
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,

@@ -36,9 +36,7 @@ export const links = {
     bumicerts: "/upload/bumicerts",
     trees: "/upload/trees",
     treesManage: "/upload/trees/manage",
-    treesManageFiltered: (options?: {
-      dataset?: string | null;
-    }) => {
+    treesManageFiltered: (options?: { dataset?: string | null }) => {
       const searchParams = new URLSearchParams();
 
       if (options?.dataset) {
@@ -136,6 +134,11 @@ export const links = {
     treeDataTemplate: "/templates/tree-data-template.csv",
   },
   api: {
+    atproto: {
+      upload: {
+        image: "/api/atproto/upload/image",
+      },
+    },
     onboarding: {
       sendVerificationCode: "/onboarding/api/send-verification-code",
       verifyEmailCode: "/onboarding/api/verify-email-code",

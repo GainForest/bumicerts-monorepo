@@ -1,6 +1,7 @@
 import { createHmac } from "crypto";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { serverEnv as env } from "@/lib/env/server";
+import { maxGeneratorDuration } from "framer-motion";
 
 /**
  * Hash an identifier (email/IP) with HMAC-SHA256 to avoid storing PII in the rate_limits table.
@@ -33,12 +34,11 @@ interface RateLimitResult {
 export async function checkRateLimit(
   identifier: string,
   endpoint: string,
-  config: RateLimitConfig
+  config: RateLimitConfig,
 ): Promise<RateLimitResult> {
   const supabase = getSupabaseAdmin();
   const failOpen =
-    env.RATE_LIMIT_FAIL_OPEN === "true" ||
-    env.NODE_ENV !== "production";
+    env.RATE_LIMIT_FAIL_OPEN === "true" || env.NODE_ENV !== "production";
 
   const windowStart = new Date(Date.now() - config.windowMs);
   const hashedIdentifier = hashIdentifier(identifier);
@@ -83,7 +83,7 @@ export async function checkRateLimit(
  */
 export async function recordRateLimitAttempt(
   identifier: string,
-  endpoint: string
+  endpoint: string,
 ): Promise<void> {
   const supabase = getSupabaseAdmin();
   const hashedIdentifier = hashIdentifier(identifier);
@@ -144,5 +144,8 @@ export const RATE_LIMITS = {
   },
   generateShortDescription: {
     byIp: { windowMs: 60 * 60 * 1000, maxAttempts: 15 },
+  },
+  uploadImage: {
+    byIp: { windowMs: 5 * 60 * 60, maxAttempts: 15 }, // 5 per 10 min per IP
   },
 } as const;

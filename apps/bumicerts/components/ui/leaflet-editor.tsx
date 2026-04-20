@@ -25,12 +25,15 @@ import type { LeafletEditorProps } from "@gainforest/leaflet-react/editor";
 import { buildBlobUrl } from "@gainforest/leaflet-react/utils";
 import type { LeafletLinearDocument } from "@gainforest/leaflet-react";
 import { useCallback } from "react";
+import { links } from "@/lib/links";
 
 // The PDS host for gainforest-hosted users.
 const DEFAULT_PDS_HOST = "https://bsky.network";
 
-interface BumicertsLeafletEditorProps
-  extends Omit<LeafletEditorProps, "resolveImageUrl" | "onImageUpload" | "enableImageUpload"> {
+interface BumicertsLeafletEditorProps extends Omit<
+  LeafletEditorProps,
+  "resolveImageUrl" | "onImageUpload" | "enableImageUpload"
+> {
   content?: LeafletLinearDocument;
   onChange: (content: LeafletLinearDocument) => void;
   /**
@@ -57,18 +60,30 @@ export function LeafletEditor({
 }: BumicertsLeafletEditorProps) {
   const resolveImageUrl = useCallback(
     (cid: string): string => buildBlobUrl(pdsHost, ownerDid, cid),
-    [pdsHost, ownerDid]
+    [pdsHost, ownerDid],
   );
+
+  const onImageUpload = async (image: File) => {
+    const formData = new FormData();
+    formData.append("file", image);
+    const data = await fetch(links.api.atproto.upload.image, {
+      method: "POST",
+      body: formData,
+    });
+    const response = await data.json();
+    return response as {
+      cid: string;
+      uri: string;
+    };
+  };
 
   return (
     <LeafletEditorBase
       content={content}
       onChange={onChange}
       resolveImageUrl={resolveImageUrl}
-      enableImageUpload={false}
-      onImageUpload={async () => {
-        throw new Error("Image upload is temporarily disabled.");
-      }}
+      enableImageUpload={true}
+      onImageUpload={onImageUpload}
       placeholder={placeholder}
       className={className}
     />
