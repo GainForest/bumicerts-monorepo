@@ -15,59 +15,36 @@ import { links } from "@/lib/links";
 import { getPublicUrlClient } from "@/lib/url";
 import Link from "next/link";
 import {
+  ArrowRightIcon,
+  ArrowUpRightIcon,
+  BadgeCheck,
   CheckIcon,
+  CompassIcon,
   CopyIcon,
   ExternalLinkIcon,
+  Share2,
   TrophyIcon,
 } from "lucide-react";
-
-// Platform icons as inline SVGs
-function XIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-    </svg>
-  );
-}
-
-function BlueskyIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 600 530"
-      fill="currentColor"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="m135.72 44.03c66.496 49.921 138.02 151.14 164.28 205.46 26.262-54.316 97.782-155.54 164.28-205.46 47.98-36.021 125.72-63.892 125.72 24.795 0 17.712-10.155 148.79-16.111 170.07-20.703 73.984-96.144 92.854-163.25 81.433 117.3 19.964 147.14 86.092 82.697 152.22-122.39 125.59-175.91-31.511-189.63-71.766-2.514-7.3797-3.6904-10.832-3.7077-7.8964-0.0174-2.9357-1.1937 0.51669-3.7077 7.8964-13.714 40.255-67.233 197.36-189.63 71.766-64.444-66.128-34.605-132.26 82.697-152.22-67.108 11.421-142.55-7.4491-163.25-81.433-5.9562-21.282-16.111-152.36-16.111-170.07 0-88.687 77.742-60.816 125.72-24.795z" />
-    </svg>
-  );
-}
+import XIcon from "@/icons/XIcon";
+import BlueskyIcon from "@/icons/BlueskyIcon";
+import TelegramIcon from "@/icons/TelegramIcon";
+import { useCopy } from "@/hooks/use-copy";
+import { Separator } from "@/components/ui/separator";
 
 interface SuccessModalProps {
-  amount:           number;
+  amount: number;
   organizationName: string;
-  transactionHash:  string;
-  isAuthenticated:  boolean;
-  anonymous:        boolean;
-  bumicertId?:      string;
+  transactionHash: string;
+  bumicertId: string;
 }
 
 export function SuccessModal({
   amount,
   organizationName,
   transactionHash,
-  isAuthenticated,
-  anonymous,
   bumicertId,
 }: SuccessModalProps) {
   const { hide, clear } = useModal();
-  const router = useRouter();
-  const [copied, setCopied] = useState(false);
 
   const baseScanUrl = `https://basescan.org/tx/${transactionHash}`;
 
@@ -76,175 +53,117 @@ export function SuccessModal({
     clear();
   };
 
-  const handleNavigate = async (href: string) => {
-    await hide();
-    clear();
-    router.push(href);
-  };
-
   // Share functionality
   const baseUrl = getPublicUrlClient();
-  const shareUrl = bumicertId
-    ? `${baseUrl}${links.bumicert.view(bumicertId)}`
-    : `${baseUrl}${links.leaderboard}`;
-  const shareText = bumicertId
-    ? `I just donated $${amount.toFixed(2)} to this bumicert: ${shareUrl}`
-    : `I just donated $${amount.toFixed(2)} on Bumicerts!`;
+  const shareUrl = `${baseUrl}${links.bumicert.view(bumicertId)}`;
 
-  const handleShareX = () => {
-    // If bumicertId exists, shareText already includes the URL
-    if (bumicertId) {
-      const text = encodeURIComponent(shareText);
-      window.open(
-        `https://twitter.com/intent/tweet?text=${text}`,
-        "_blank",
-        "noopener,noreferrer"
-      );
-    } else {
-      const text = encodeURIComponent(shareText);
-      const url = encodeURIComponent(shareUrl);
-      window.open(
-        `https://twitter.com/intent/tweet?text=${text}&url=${url}`,
-        "_blank",
-        "noopener,noreferrer"
-      );
-    }
-  };
+  const shareText = `I just donated $${amount.toFixed(2)} to this bumicert: ${shareUrl}`;
+  const encodedShareText = encodeURIComponent(shareText);
 
-  const handleShareBluesky = () => {
-    // For Bluesky, always include URL in text (even if already in shareText for bumicerts)
-    const text = bumicertId
-      ? encodeURIComponent(shareText)
-      : encodeURIComponent(`${shareText} ${shareUrl}`);
-    window.open(
-      `https://bsky.app/intent/compose?text=${text}`,
-      "_blank",
-      "noopener,noreferrer"
-    );
-  };
+  const shareXUrl = `https://x.com/intent/tweet?text=${encodedShareText}`;
+  const shareBlueskyUrl = `https://bsky.app/intent/compose?text=${encodedShareText}`;
+  const shareTelegramUrl = `tg://msg?=${encodedShareText}`;
 
-  const handleCopyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      console.error("Failed to copy to clipboard");
-    }
-  };
+  const { copy, isCopied } = useCopy();
 
   return (
     <ModalContent dismissible={false}>
       <ModalHeader>
-        <ModalTitle>Donation Complete! 🎉</ModalTitle>
+        <ModalTitle className="sr-only">Donation Successful</ModalTitle>
         <ModalDescription className="sr-only">
           Your donation was successful.
         </ModalDescription>
       </ModalHeader>
 
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-1">
         {/* Success message */}
         <div className="flex flex-col items-center gap-4 py-2 text-center">
           <div className="relative flex items-center justify-center">
-            <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center animate-pulse">
-              <span className="text-3xl">✓</span>
-            </div>
+            <div className="absolute inset-0 rounded-full blur-xl bg-primary animate-pulse"></div>
+            <BadgeCheck className="size-12 text-primary" />
           </div>
 
           <div className="flex flex-col gap-1">
-            <p className="font-semibold text-lg">Thank you for your support!</p>
-            <p className="text-sm text-muted-foreground">
-              ${amount.toFixed(2)} USDC donated to {organizationName}
+            <p className="font-instrument italic font-medium text-4xl text-primary">
+              Thank you!
+            </p>
+            <p className="font-medium text-muted-foreground mt-2 text-pretty">
+              Your donation of&nbsp;
+              <span className="text-foreground text-nowrap">
+                {amount.toFixed(2)} USDC
+              </span>
+              &nbsp;to&nbsp;
+              <span className="text-foreground">{organizationName}</span>
+              &nbsp;was successful.
             </p>
           </div>
-
-          {isAuthenticated && !anonymous && (
-            <p className="text-xs text-muted-foreground">
-              This donation is linked to your Bumicerts identity.
-            </p>
-          )}
-        </div>
-
-        {/* Share options */}
-        <div className="flex flex-col gap-3">
-          <p className="text-sm font-medium text-center">Share your impact</p>
-
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-              onClick={handleShareX}
-            >
-              <XIcon className="size-4" />
-              Share on X
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-              onClick={handleShareBluesky}
-            >
-              <BlueskyIcon className="size-4" />
-              Bluesky
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-              onClick={handleCopyLink}
-            >
-              {copied ? (
-                <>
-                  <CheckIcon className="size-4 text-green-600" />
-                  Copied!
-                </>
-              ) : (
-                <>
-                  <CopyIcon className="size-4" />
-                  Copy link
-                </>
-              )}
-            </Button>
-
-            <Button variant="outline" size="sm" asChild>
-              <a
-                href={baseScanUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2"
-              >
-                <ExternalLinkIcon className="size-4" />
-                View tx
-              </a>
-            </Button>
-          </div>
-        </div>
-
-        {/* Navigation links */}
-        <div className="flex flex-col gap-1 pt-2 border-t border-border">
-          {bumicertId && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full justify-start"
-              onClick={() => handleNavigate(links.bumicert.view(bumicertId))}
-            >
-              View bumicert →
-            </Button>
-          )}
-
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full justify-start flex items-center gap-2"
-            onClick={() => handleNavigate(links.leaderboard)}
-          >
-            <TrophyIcon />
-            View leaderboard →
+          <Button variant={"secondary"} asChild>
+            <Link href={baseScanUrl} target="_blank">
+              View Transaction Receipt <ArrowUpRightIcon />
+            </Link>
           </Button>
+        </div>
+
+        <div className="rounded-3xl p-3 pt-2 w-full bg-muted flex flex-col gap-2">
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <Share2 className="size-3.5" />
+            <span className="text-sm">Share this with others</span>
+          </div>
+          <div className="grid grid-cols-4 gap-1">
+            <Button className="bg-black w-full" asChild>
+              <Link href={shareXUrl} target="_blank">
+                <XIcon className="text-white" />
+              </Link>
+            </Button>
+            <Button className="bg-blue-600 w-full" asChild>
+              <Link href={shareBlueskyUrl} target="_blank">
+                <BlueskyIcon className="text-white" />
+              </Link>
+            </Button>
+            <Button className="bg-blue-500 w-full" asChild>
+              <Link href={shareTelegramUrl} target="_blank">
+                <TelegramIcon className="text-white" />
+              </Link>
+            </Button>
+            <Button onClick={() => copy(shareText)}>
+              {isCopied ? <CheckIcon /> : <CopyIcon />}
+            </Button>
+          </div>
+        </div>
+
+        <Separator className="my-2 opacity-0" />
+
+        <div className="rounded-2xl w-full flex flex-col gap-2">
+          <div className="flex items-center px-3 gap-1.5 text-muted-foreground">
+            <CompassIcon className="size-3.5" />
+            <span className="text-sm">What next?</span>
+          </div>
+          <div className="min-w-full w-0 overflow-x-auto">
+            <div className="flex items-center gap-1">
+              <Button
+                variant={"secondary"}
+                className="flex flex-col items-start rounded-2xl h-16 flex-1"
+                onClick={handleDone}
+                asChild
+              >
+                <Link href={links.leaderboard}>
+                  <TrophyIcon className="opacity-40" />
+                  <span>See Leaderboard</span>
+                </Link>
+              </Button>
+              <Button
+                variant={"secondary"}
+                className="flex flex-col items-start rounded-2xl h-16"
+                onClick={handleDone}
+                asChild
+              >
+                <Link href={links.explore}>
+                  <CompassIcon className="opacity-40" />
+                  <span>Explore more Bumicerts</span>
+                </Link>
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 
