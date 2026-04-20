@@ -450,8 +450,8 @@ export default function UploadStep({
     dataset: uploadedDatasetUri,
   });
   const treeManagerLabel = uploadedDatasetUri
-    ? "View dataset in tree manager"
-    : "View trees in tree manager";
+    ? "View Dataset in Tree Manager"
+    : "View Trees in Tree Manager";
 
   const failedRows = rowStatuses
     .map((status, i) => ({ status, row: validRows[i], index: i }))
