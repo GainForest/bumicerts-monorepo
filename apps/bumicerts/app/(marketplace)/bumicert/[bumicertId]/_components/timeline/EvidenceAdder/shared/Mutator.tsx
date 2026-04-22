@@ -5,11 +5,12 @@ import { BumicertsLeafletEditorProps } from "@/components/ui/leaflet-editor";
 import { trpc } from "@/lib/trpc/client";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { formatError } from "@/lib/utils/trpc-errors";
-import { ArrowRight, ArrowRightIcon } from "lucide-react";
+import { ArrowRightIcon } from "lucide-react";
 import { useState } from "react";
 
 export type AttachmentData = {
   title: string;
+  contentType: string;
   description?: BumicertsLeafletEditorProps["content"];
   contents: Array<string | File>;
   subjectInfo: {
@@ -34,9 +35,10 @@ const Mutator = ({
   const createAttachment = trpc.context.attachment.create.useMutation();
   const [errorMessage, setErrorMessage] = useState<string>();
 
-  const { title, description, contents, subjectInfo } = data;
+  const { title, contentType, description, contents, subjectInfo } = data;
 
   const mutate = async () => {
+    if (contents.length === 0) return;
     setErrorMessage(undefined);
     setIsSubmitting(true);
     const hasDescription = description && description.blocks.length > 0;
@@ -44,6 +46,7 @@ const Mutator = ({
     try {
       await createAttachment.mutateAsync({
         title,
+        contentType,
         subjects: [
           {
             $type: "com.atproto.repo.strongRef",
@@ -78,7 +81,11 @@ const Mutator = ({
       )}
 
       {/* Submit */}
-      <Button onClick={mutate} disabled={isSubmitting} className="w-full">
+      <Button
+        onClick={mutate}
+        disabled={isSubmitting || data.contents.length === 0}
+        className="w-full"
+      >
         {isSubmitting
           ? "Linking…"
           : data.contents.length === 0

@@ -2,42 +2,26 @@
 
 /**
  * EvidenceLinker — inline sticky panel (owner only) that lets an org
- * link existing records (audio, tree occurrences, sites) as evidence on
+ * link existing records (audio, tree occurrences, sites, files) as evidence on
  * a bumicert by creating org.hypercerts.context.attachment records.
  *
  * Lives in the right column of the full-width timeline tab. No modal involved.
  */
 
 import { useState } from "react";
-import {
-  MicIcon,
-  TreesIcon,
-  MapPinIcon,
-  ExternalLinkIcon,
-  LinkIcon,
-  FileIcon,
-  ChevronLeft,
-} from "lucide-react";
+import { MicIcon, TreesIcon, MapPinIcon, FileIcon, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { LeafletEditor } from "@/components/ui/leaflet-editor";
-import { useAtprotoStore } from "@/components/stores/atproto";
 import type { AudioRecordingItem } from "@/lib/graphql-dev/queries/audio";
 import type { OccurrenceItem } from "@/lib/graphql-dev/queries/occurrences";
 import type { CertifiedLocation } from "@/lib/graphql-dev/queries/locations";
-import { trpc } from "@/lib/trpc/client";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
-import { formatError } from "@/lib/utils/trpc-errors";
 import { links } from "@/lib/links";
-import Link from "next/link";
 import type { LeafletLinearDocument } from "@gainforest/leaflet-react";
-import FileInput from "@/components/ui/FileInput";
 import AudioViewer from "./AudioViewer";
 import TreeViewer from "./TreeViewer";
 import { ListSkeleton } from "./shared/RecordList";
 import SiteViewer from "./SiteViewer";
-import ManageOption from "./shared/ManageOption";
-import Mutator from "./shared/Mutator";
+import FileViewer from "./FileViewer";
 
 // ── Tab types ─────────────────────────────────────────────────────────────────
 
@@ -105,6 +89,7 @@ export function EvidenceLinker({
   organizationDid,
 }: EvidenceLinkerProps) {
   const [activeTab, setActiveTab] = useState<TabId>();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [description, setDescription] =
     useState<LeafletLinearDocument>(EMPTY_DOC);
 
@@ -158,6 +143,7 @@ export function EvidenceLinker({
           variant={"secondary"}
           size={"icon-sm"}
           className="shadow-none"
+          disabled={isSubmitting}
           onClick={() => {
             setActiveTab(undefined);
           }}
@@ -181,6 +167,8 @@ export function EvidenceLinker({
               data={audioItems}
               description={description}
               setDescription={setDescription}
+              isSubmitting={isSubmitting}
+              setIsSubmitting={setIsSubmitting}
               activityCid={activityCid}
               activityUri={activityUri}
             />
@@ -191,6 +179,8 @@ export function EvidenceLinker({
               data={occurrenceItems}
               description={description}
               setDescription={setDescription}
+              isSubmitting={isSubmitting}
+              setIsSubmitting={setIsSubmitting}
               activityCid={activityCid}
               activityUri={activityUri}
             />
@@ -201,17 +191,21 @@ export function EvidenceLinker({
               data={locationItems}
               description={description}
               setDescription={setDescription}
+              isSubmitting={isSubmitting}
+              setIsSubmitting={setIsSubmitting}
               activityCid={activityCid}
               activityUri={activityUri}
             />
           </LoadingWrapper>
         ) : (
-          <div className="w-full">
-            <span className="bg-muted text-destructive text-sm rounded-xl flex items-center justify-center text-center w-full px-2 py-1">
-              Coming soon
-            </span>
-            <FileInput className="mt-1" />
-          </div>
+          <FileViewer
+            description={description}
+            setDescription={setDescription}
+            isSubmitting={isSubmitting}
+            setIsSubmitting={setIsSubmitting}
+            activityCid={activityCid}
+            activityUri={activityUri}
+          />
         )}
       </div>
     </div>

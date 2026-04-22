@@ -1,6 +1,6 @@
 import { CertifiedLocation } from "@/lib/graphql-dev/queries";
 import CheckRow from "./shared/CheckRow";
-import React, { useState } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import { MapPinIcon } from "lucide-react";
 import { ListEmpty, ListLayout } from "./shared/RecordList";
 import ManageOption from "./shared/ManageOption";
@@ -12,10 +12,29 @@ const SiteViewer = ({
   data,
   description,
   setDescription,
+  isSubmitting,
+  setIsSubmitting,
   ...props
-}: { data: CertifiedLocation[] } & OptionalNoteProps & SubjectInfo) => {
-  const [prevData, setPrevData] = useState(data);
+}: {
+  data: CertifiedLocation[];
+  isSubmitting: boolean;
+  setIsSubmitting: Dispatch<SetStateAction<boolean>>;
+} & OptionalNoteProps &
+  SubjectInfo) => {
   const [selectedUris, setSelectedUris] = useState<Set<string>>(new Set());
+
+  const availableUris = new Set<string>();
+  data.forEach((item) => {
+    const uri = item.metadata?.uri;
+    if (uri) {
+      availableUris.add(uri);
+    }
+  });
+
+  const selectedContents = Array.from(selectedUris).filter((uri) =>
+    availableUris.has(uri),
+  );
+
   const toggle = (uri: string) => {
     setSelectedUris((prev) => {
       const next = new Set(prev);
@@ -28,36 +47,23 @@ const SiteViewer = ({
     });
   };
 
-  if (data !== prevData) {
-    const newSet = new Set<string>();
-    data.forEach((item) => {
-      const uri = item.metadata?.uri;
-      if (!uri) return;
-      if (selectedUris.has(uri)) {
-        newSet.add(uri);
-      }
-    });
-    setSelectedUris(newSet);
-    setPrevData(data);
-  }
-  const [isSubmitting, setSubmitting] = useState(false);
-
   if (data.length === 0) {
     return <ListEmpty tabId="sites" />;
   }
 
   const computedMutationData: AttachmentData = {
     title: "Sites",
+    contentType: "location",
     description,
     subjectInfo: {
       uri: props.activityUri,
       cid: props.activityCid,
     },
-    contents: Array.from(selectedUris),
+    contents: selectedContents,
   };
 
   return (
-    <React.Fragment>
+    <>
       <ListLayout>
         {data.map((item) => {
           const uri = item.metadata?.uri;
@@ -84,13 +90,13 @@ const SiteViewer = ({
       <Mutator
         data={computedMutationData}
         isSubmitting={isSubmitting}
-        setIsSubmitting={setSubmitting}
+        setIsSubmitting={setIsSubmitting}
         onSuccess={() => {
           setDescription({ blocks: [] });
           setSelectedUris(new Set());
         }}
       />
-    </React.Fragment>
+    </>
   );
 };
 
