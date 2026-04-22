@@ -9,6 +9,7 @@ export const EVIDENCE_CONTENT_TYPE_REGISTRY = [
   { value: "dataset", label: "Dataset", filePickerEligible: true },
   { value: "certificate", label: "Certificate", filePickerEligible: true },
   { value: "audio", label: "Audio", filePickerEligible: true },
+  { value: "other", label: "Other", filePickerEligible: true },
   { value: "occurrence", label: "Tree", filePickerEligible: false },
   { value: "location", label: "Site", filePickerEligible: false },
 ] as const;
