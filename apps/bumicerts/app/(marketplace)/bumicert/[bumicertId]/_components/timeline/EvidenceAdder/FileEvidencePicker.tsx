@@ -4,7 +4,13 @@ import { ListLayout } from "./shared/RecordList";
 import OptionalNote from "./shared/OptionalNote";
 import Mutator, { type AttachmentData } from "./shared/Mutator";
 import type { ViewerSharedProps } from "./shared/evidenceTypes";
-import { getEvidenceAttachmentDefaults } from "./shared/evidenceRegistry";
+import {
+  FileEvidenceContentTypeSelect,
+  getDefaultFileContentType,
+  getFileContentTypeLabel,
+  type KnownEvidenceContentType,
+  toKnownFileContentType,
+} from "./shared/FileEvidenceContentTypeSelect";
 
 const BROAD_SUPPORTED_FILE_TYPES = [
   "image/*",
@@ -37,7 +43,8 @@ const FileEvidencePicker = ({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [filePickerValue, setFilePickerValue] = useState<File | null>(null);
   const [filePickerKey, setFilePickerKey] = useState(0);
-  const fileAttachmentDefaults = getEvidenceAttachmentDefaults("files");
+  const [selectedContentType, setSelectedContentType] =
+    useState<KnownEvidenceContentType>(getDefaultFileContentType);
 
   const appendFile = (file: File) => {
     setSelectedFiles((prev) => {
@@ -61,8 +68,8 @@ const FileEvidencePicker = ({
   };
 
   const computedMutationData: AttachmentData = {
-    title: fileAttachmentDefaults.title,
-    contentType: fileAttachmentDefaults.contentType,
+    title: getFileContentTypeLabel(selectedContentType),
+    contentType: selectedContentType,
     description,
     subjectInfo: {
       uri: props.activityUri,
@@ -74,6 +81,14 @@ const FileEvidencePicker = ({
   return (
     <>
       <div className="flex flex-col gap-2">
+        <FileEvidenceContentTypeSelect
+          value={selectedContentType}
+          onValueChange={(value) =>
+            setSelectedContentType(toKnownFileContentType(value))
+          }
+          disabled={isSubmitting}
+        />
+
         <FileInput
           key={filePickerKey}
           placeholder="Add a file as evidence"
