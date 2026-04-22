@@ -15,18 +15,11 @@ import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc/client";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { formatError } from "@/lib/utils/trpc-errors";
+import { formatDate } from "@/lib/utils/date";
 import { EvidenceAdder } from "../timeline/EvidenceAdder";
 import Image from "next/image";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatDate(iso: string | null | undefined): string {
-  if (!iso) return "";
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    year: "numeric",
-  });
-}
 
 function contentTypeLabel(raw: string | null | undefined): string {
   if (!raw) return "Attachment";
@@ -170,7 +163,10 @@ function TimelineEntry({ item, isLast, index, isOwner }: EntryProps) {
   const indexerUtils = indexerTrpc.useUtils();
   const deleteAttachment = trpc.context.attachment.delete.useMutation();
 
-  const date = formatDate(record?.createdAt ?? metadata?.createdAt);
+  const date = formatDate(record?.createdAt ?? metadata?.createdAt, {
+    month: "short",
+    year: "numeric",
+  });
   const label = contentTypeLabel(record?.contentType);
   const title = record?.title ?? "Untitled";
   const description = record?.shortDescription;

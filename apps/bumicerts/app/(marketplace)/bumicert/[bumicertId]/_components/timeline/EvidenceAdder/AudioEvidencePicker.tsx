@@ -1,16 +1,8 @@
 import type { AudioRecordingItem } from "@/lib/graphql-dev/queries";
+import { formatDate } from "@/lib/utils/date";
 import UriEvidencePicker from "./shared/UriEvidenceViewer";
 import type { ViewerSharedProps } from "./shared/evidenceTypes";
 import { getManagedEvidenceTabConfig } from "./shared/evidenceRegistry";
-
-function formatDate(iso: string | null | undefined): string {
-  if (!iso) return "";
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 const AudioEvidencePicker = ({
   data,
@@ -31,6 +23,11 @@ const AudioEvidencePicker = ({
       getSecondary={(item) =>
         formatDate(
           getRecordedAt(item.record?.metadata) ?? item.record?.createdAt,
+          {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          },
         )
       }
       {...props}

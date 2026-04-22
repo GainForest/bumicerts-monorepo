@@ -1,16 +1,8 @@
 import type { OccurrenceItem } from "@/lib/graphql-dev/queries";
+import { formatDate } from "@/lib/utils/date";
 import UriEvidencePicker from "./shared/UriEvidenceViewer";
 import type { ViewerSharedProps } from "./shared/evidenceTypes";
 import { getManagedEvidenceTabConfig } from "./shared/evidenceRegistry";
-
-function formatDate(iso: string | null | undefined): string {
-  if (!iso) return "";
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 const TreeEvidencePicker = ({
   data,
@@ -36,6 +28,11 @@ const TreeEvidencePicker = ({
         const count = item.record?.individualCount;
         const date = formatDate(
           item.record?.eventDate ?? item.record?.createdAt,
+          {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          },
         );
         const secondary = [
           count != null ? `${count} individual${count !== 1 ? "s" : ""}` : null,
