@@ -81,6 +81,12 @@ type PhotoFetchProgress = {
 
 export const STORAGE_KEY = "upload-trees-pending";
 const SESSION_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const REFRESH_WARNING_MESSAGE =
+  "The upload finished, but some views may take a moment to refresh.";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
 
 function getInitialPhotoFetchStatus(): PhotoFetchStatus {
   return {
@@ -260,8 +266,12 @@ export default function UploadStep({
     }
   }, [datasetSelection, did, establishmentMeans, uploadStarted, validRows]);
 
+  const setRefreshWarning = useCallback(() => {
+    setDatasetUpdateWarning((prev) => prev ?? REFRESH_WARNING_MESSAGE);
+  }, []);
+
   const invalidateTreeQueries = useCallback(async () => {
-    await Promise.all([
+    const results = await Promise.allSettled([
       indexerUtils.datasets.list.invalidate({ did }),
       indexerUtils.dwc.occurrences.invalidate({ did }),
       indexerUtils.dwc.measurements.invalidate({ did }),
@@ -269,7 +279,11 @@ export default function UploadStep({
         queryKey: uploadTreeDatasetsQueryKey(did),
       }),
     ]);
-  }, [did, indexerUtils, queryClient]);
+
+    if (results.some((result) => result.status === "rejected")) {
+      setRefreshWarning();
+    }
+  }, [did, indexerUtils, queryClient, setRefreshWarning]);
 
   // ── Upload logic ──────────────────────────────────────────────────────────
   const runUpload = useCallback(async () => {
@@ -644,9 +658,11 @@ export default function UploadStep({
     setPhotoFetchDone(true);
 
     if (successes > 0) {
-      await indexerUtils.multimedia.list.invalidate({ did });
+      await indexerUtils.multimedia.list.invalidate({ did }).catch(() => {
+        setRefreshWarning();
+      });
     }
-  }, [did, indexerUtils, photoFetchQueue, rowStatuses]);
+  }, [did, indexerUtils, photoFetchQueue, rowStatuses, setRefreshWarning]);
 
   // Auto-start photo fetch after Phase 1 completes
   useEffect(() => {
@@ -1014,6 +1030,25 @@ type PendingUploadData = {
   timestamp: number;
 };
 
+type PendingUploadCandidate = {
+  ownerDid: string;
+  validRows: ValidatedRow[];
+  establishmentMeans?: unknown;
+  datasetSelection?: unknown;
+  timestamp: number;
+};
+
+function isPendingUploadCandidate(
+  value: unknown,
+): value is PendingUploadCandidate {
+  return (
+    isRecord(value) &&
+    typeof value.ownerDid === "string" &&
+    Array.isArray(value.validRows) &&
+    typeof value.timestamp === "number"
+  );
+}
+
 /**
  * Reads pending upload data from sessionStorage.
  * Returns the data if it exists and is less than 10 minutes old, otherwise null.
@@ -1022,12 +1057,8 @@ export function readPendingUpload(ownerDid: string): PendingUploadData | null {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<PendingUploadData>;
-    if (
-      typeof parsed.timestamp !== "number" ||
-      !Array.isArray(parsed.validRows) ||
-      typeof parsed.ownerDid !== "string"
-    ) {
+    const parsed: unknown = JSON.parse(raw);
+    if (!isPendingUploadCandidate(parsed)) {
       clearPendingUpload();
       return null;
     }
