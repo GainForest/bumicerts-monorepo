@@ -1,15 +1,13 @@
 import type { AudioRecordingItem } from "@/lib/graphql-dev/queries";
 import { formatDate } from "@/lib/utils/date";
 import UriEvidencePicker from "./shared/UriEvidenceViewer";
-import type { ViewerSharedProps } from "./shared/evidenceTypes";
 import { getManagedEvidenceTabConfig } from "./shared/evidenceRegistry";
 
 const AudioEvidencePicker = ({
   data,
-  ...props
 }: {
   data: AudioRecordingItem[];
-} & ViewerSharedProps) => {
+}) => {
   const tabConfig = getManagedEvidenceTabConfig("audio");
 
   return (
@@ -30,7 +28,6 @@ const AudioEvidencePicker = ({
           },
         )
       }
-      {...props}
     />
   );
 };

@@ -8,14 +8,12 @@
  * Lives in the right column of the full-width timeline tab. No modal involved.
  */
 
-import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { AudioRecordingItem } from "@/lib/graphql-dev/queries/audio";
 import type { OccurrenceItem } from "@/lib/graphql-dev/queries/occurrences";
 import type { CertifiedLocation } from "@/lib/graphql-dev/queries/locations";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
-import type { LeafletLinearDocument } from "@gainforest/leaflet-react";
 import AudioEvidencePicker from "./AudioEvidencePicker";
 import TreeEvidencePicker from "./TreeEvidencePicker";
 import SiteEvidencePicker from "./SiteEvidencePicker";
@@ -24,8 +22,11 @@ import { ListSkeleton } from "./shared/RecordList";
 import {
   EVIDENCE_TABS,
   getEvidenceTabLabel,
-  type EvidenceTabId,
 } from "./shared/evidenceRegistry";
+import {
+  EvidenceAdderStoreProvider,
+  useEvidenceAdderStore,
+} from "./shared/evidenceAdderStore";
 
 const LoadingWrapper = ({
   isLoading,
@@ -38,8 +39,6 @@ const LoadingWrapper = ({
   return children;
 };
 
-const EMPTY_DOC: LeafletLinearDocument = { blocks: [] };
-
 interface EvidenceAdderProps {
   activityUri: string;
   activityCid: string;
@@ -50,13 +49,20 @@ interface EvidenceAdderProps {
 // ── Main ──────────────────────────────────────────────────────────────────────
 export function EvidenceAdder({
   activityUri,
-  activityCid,
   organizationDid,
+  activityCid,
 }: EvidenceAdderProps) {
-  const [activeTab, setActiveTab] = useState<EvidenceTabId>();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [description, setDescription] =
-    useState<LeafletLinearDocument>(EMPTY_DOC);
+  return (
+    <EvidenceAdderStoreProvider activityUri={activityUri} activityCid={activityCid}>
+      <EvidenceAdderContent organizationDid={organizationDid} />
+    </EvidenceAdderStoreProvider>
+  );
+}
+
+function EvidenceAdderContent({ organizationDid }: { organizationDid: string }) {
+  const activeTab = useEvidenceAdderStore((state) => state.activeTab);
+  const setActiveTab = useEvidenceAdderStore((state) => state.setActiveTab);
+  const isSubmitting = useEvidenceAdderStore((state) => state.isSubmitting);
 
   // ── Queries ────────────────────────────────────────────────────────────────
 
@@ -130,47 +136,22 @@ export function EvidenceAdder({
           <LoadingWrapper isLoading={audioLoading}>
             <AudioEvidencePicker
               data={audioItems}
-              description={description}
-              setDescription={setDescription}
-              isSubmitting={isSubmitting}
-              setIsSubmitting={setIsSubmitting}
-              activityCid={activityCid}
-              activityUri={activityUri}
             />
           </LoadingWrapper>
         ) : activeTab === "trees" ? (
           <LoadingWrapper isLoading={occurrenceLoading}>
             <TreeEvidencePicker
               data={occurrenceItems}
-              description={description}
-              setDescription={setDescription}
-              isSubmitting={isSubmitting}
-              setIsSubmitting={setIsSubmitting}
-              activityCid={activityCid}
-              activityUri={activityUri}
             />
           </LoadingWrapper>
         ) : activeTab === "sites" ? (
           <LoadingWrapper isLoading={locationLoading}>
             <SiteEvidencePicker
               data={locationItems}
-              description={description}
-              setDescription={setDescription}
-              isSubmitting={isSubmitting}
-              setIsSubmitting={setIsSubmitting}
-              activityCid={activityCid}
-              activityUri={activityUri}
             />
           </LoadingWrapper>
         ) : (
-          <FileEvidencePicker
-            description={description}
-            setDescription={setDescription}
-            isSubmitting={isSubmitting}
-            setIsSubmitting={setIsSubmitting}
-            activityCid={activityCid}
-            activityUri={activityUri}
-          />
+          <FileEvidencePicker />
         )}
       </div>
     </div>

@@ -1,13 +1,13 @@
-import type { ViewerSharedProps } from "./evidenceTypes";
 import { ListEmpty, ListLayout } from "./RecordList";
 import CheckRow from "./CheckRow";
 import ManageOption from "./ManageOption";
 import OptionalNote from "./OptionalNote";
 import Mutator, { type AttachmentData } from "./Mutator";
 import { type ManagedEvidenceTabId } from "./evidenceRegistry";
+import { useEvidenceAdderStore } from "./evidenceAdderStore";
 import { useUriSelection } from "./useUriSelection";
 
-type UriEvidencePickerProps<TItem> = ViewerSharedProps & {
+type UriEvidencePickerProps<TItem> = {
   data: TItem[];
   tabId: ManagedEvidenceTabId;
   icon: React.ComponentType<{ className?: string }>;
@@ -33,13 +33,14 @@ function UriEvidencePicker<TItem>({
   getUri,
   getPrimary,
   getSecondary,
-  description,
-  setDescription,
-  isSubmitting,
-  setIsSubmitting,
-  activityUri,
-  activityCid,
 }: UriEvidencePickerProps<TItem>) {
+  const description = useEvidenceAdderStore((state) => state.description);
+  const resetDescription = useEvidenceAdderStore(
+    (state) => state.resetDescription,
+  );
+  const isSubmitting = useEvidenceAdderStore((state) => state.isSubmitting);
+  const activityUri = useEvidenceAdderStore((state) => state.activityUri);
+  const activityCid = useEvidenceAdderStore((state) => state.activityCid);
   const rows: RowData<TItem>[] = data.flatMap((item) => {
     const uri = getUri(item);
     if (!uri) {
@@ -83,17 +84,11 @@ function UriEvidencePicker<TItem>({
         ))}
       </ListLayout>
       <ManageOption type={tabId} />
-      <OptionalNote
-        description={description}
-        setDescription={setDescription}
-        disabled={isSubmitting}
-      />
+      <OptionalNote disabled={isSubmitting} />
       <Mutator
         data={computedMutationData}
-        isSubmitting={isSubmitting}
-        setIsSubmitting={setIsSubmitting}
         onSuccess={() => {
-          setDescription({ blocks: [] });
+          resetDescription();
           resetSelection();
         }}
       />

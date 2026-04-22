@@ -3,19 +3,13 @@ import { TimelineEntry } from "./TimelineEntry";
 
 interface TimelineEntryListProps {
   entries: AttachmentItem[];
-  isOwner: boolean;
 }
 
-export function TimelineEntryList({ entries, isOwner }: TimelineEntryListProps) {
+export function TimelineEntryList({ entries }: TimelineEntryListProps) {
   return (
     <div className="flex flex-col gap-0">
       {entries.map((item, index) => (
-        <TimelineEntry
-          key={item.metadata?.uri ?? index}
-          item={item}
-          index={index}
-          isOwner={isOwner}
-        />
+        <TimelineEntry key={item.metadata?.uri ?? index} item={item} index={index} />
       ))}
     </div>
   );

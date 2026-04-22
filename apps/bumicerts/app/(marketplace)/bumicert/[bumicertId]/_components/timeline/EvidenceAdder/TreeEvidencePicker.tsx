@@ -1,15 +1,13 @@
 import type { OccurrenceItem } from "@/lib/graphql-dev/queries";
 import { formatDate } from "@/lib/utils/date";
 import UriEvidencePicker from "./shared/UriEvidenceViewer";
-import type { ViewerSharedProps } from "./shared/evidenceTypes";
 import { getManagedEvidenceTabConfig } from "./shared/evidenceRegistry";
 
 const TreeEvidencePicker = ({
   data,
-  ...props
 }: {
   data: OccurrenceItem[];
-} & ViewerSharedProps) => {
+}) => {
   const tabConfig = getManagedEvidenceTabConfig("trees");
 
   return (
@@ -42,7 +40,6 @@ const TreeEvidencePicker = ({
           .join(" · ");
         return secondary || undefined;
       }}
-      {...props}
     />
   );
 };

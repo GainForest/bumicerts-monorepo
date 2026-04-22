@@ -3,7 +3,7 @@ import FileInput from "@/components/ui/FileInput";
 import { ListLayout } from "./shared/RecordList";
 import OptionalNote from "./shared/OptionalNote";
 import Mutator, { type AttachmentData } from "./shared/Mutator";
-import type { ViewerSharedProps } from "./shared/evidenceTypes";
+import { useEvidenceAdderStore } from "./shared/evidenceAdderStore";
 import {
   FileEvidenceContentTypeSelect,
   getDefaultFileContentType,
@@ -33,13 +33,14 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
-const FileEvidencePicker = ({
-  description,
-  setDescription,
-  isSubmitting,
-  setIsSubmitting,
-  ...props
-}: ViewerSharedProps) => {
+const FileEvidencePicker = () => {
+  const description = useEvidenceAdderStore((state) => state.description);
+  const resetDescription = useEvidenceAdderStore(
+    (state) => state.resetDescription,
+  );
+  const isSubmitting = useEvidenceAdderStore((state) => state.isSubmitting);
+  const activityUri = useEvidenceAdderStore((state) => state.activityUri);
+  const activityCid = useEvidenceAdderStore((state) => state.activityCid);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [filePickerValue, setFilePickerValue] = useState<File | null>(null);
   const [filePickerKey, setFilePickerKey] = useState(0);
@@ -72,8 +73,8 @@ const FileEvidencePicker = ({
     contentType: selectedContentType,
     description,
     subjectInfo: {
-      uri: props.activityUri,
-      cid: props.activityCid,
+      uri: activityUri,
+      cid: activityCid,
     },
     contents: selectedFiles,
   };
@@ -146,17 +147,11 @@ const FileEvidencePicker = ({
         )}
       </div>
 
-      <OptionalNote
-        description={description}
-        setDescription={setDescription}
-        disabled={isSubmitting}
-      />
+      <OptionalNote disabled={isSubmitting} />
       <Mutator
         data={computedMutationData}
-        isSubmitting={isSubmitting}
-        setIsSubmitting={setIsSubmitting}
         onSuccess={() => {
-          setDescription({ blocks: [] });
+          resetDescription();
           setSelectedFiles([]);
         }}
       />

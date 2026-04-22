@@ -7,6 +7,7 @@ import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { formatError } from "@/lib/utils/trpc-errors";
 import { ArrowRightIcon } from "lucide-react";
 import { useState } from "react";
+import { useEvidenceAdderStore } from "./evidenceAdderStore";
 
 export type AttachmentData = {
   title: string;
@@ -21,15 +22,15 @@ export type AttachmentData = {
 
 const Mutator = ({
   data,
-  isSubmitting,
-  setIsSubmitting,
   onSuccess,
 }: {
   data: AttachmentData;
-  isSubmitting: boolean;
-  setIsSubmitting: React.Dispatch<React.SetStateAction<boolean>>;
   onSuccess?: () => void;
 }) => {
+  const isSubmitting = useEvidenceAdderStore((state) => state.isSubmitting);
+  const setIsSubmitting = useEvidenceAdderStore(
+    (state) => state.setIsSubmitting,
+  );
   const indexerUtils = indexerTrpc.useUtils();
 
   const createAttachment = trpc.context.attachment.create.useMutation();

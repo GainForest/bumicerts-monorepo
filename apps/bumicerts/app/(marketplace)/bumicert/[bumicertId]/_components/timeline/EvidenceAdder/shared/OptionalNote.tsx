@@ -1,23 +1,16 @@
 "use client";
 
 import { useAtprotoStore } from "@/components/stores/atproto";
-import {
-  BumicertsLeafletEditorProps,
-  LeafletEditor,
-} from "@/components/ui/leaflet-editor";
-
-export type OptionalNoteProps = {
-  description: BumicertsLeafletEditorProps["content"];
-  setDescription: BumicertsLeafletEditorProps["onChange"];
-};
+import { LeafletEditor } from "@/components/ui/leaflet-editor";
+import { useEvidenceAdderStore } from "./evidenceAdderStore";
 
 const OptionalNote = ({
-  description,
-  setDescription,
   disabled,
-}: OptionalNoteProps & {
+}: {
   disabled?: boolean;
 }) => {
+  const description = useEvidenceAdderStore((state) => state.description);
+  const setDescription = useEvidenceAdderStore((state) => state.setDescription);
   const auth = useAtprotoStore((state) => state.auth);
   const ownerDid = auth.user?.did;
 

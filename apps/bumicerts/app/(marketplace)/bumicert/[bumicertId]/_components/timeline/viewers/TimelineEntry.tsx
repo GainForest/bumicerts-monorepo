@@ -17,17 +17,18 @@ import { TimelineFeedHeader } from "./shared/TimelineFeedHeader";
 import { TimelineOptionalNote } from "./shared/TimelineOptionalNote";
 import { TimelinePreviewPanel } from "./shared/TimelinePreviewPanel";
 import { TimelineTileRow } from "./shared/TimelineTileRow";
+import { useTimelineViewerStore } from "./shared/timelineViewerStore";
 
 interface TimelineEntryProps {
   item: AttachmentItem;
   index: number;
-  isOwner: boolean;
 }
 
-export function TimelineEntry({ item, index, isOwner }: TimelineEntryProps) {
+export function TimelineEntry({ item, index }: TimelineEntryProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const isOwner = useTimelineViewerStore((state) => state.isOwner);
   const { references } = useResolvedAttachmentReferences(item.record?.content);
   const entryId = item.metadata?.uri ?? `${item.metadata?.rkey ?? "entry"}-${index}`;
   const tiles = useMemo(
@@ -44,7 +45,12 @@ export function TimelineEntry({ item, index, isOwner }: TimelineEntryProps) {
   const tileCount = tiles.length;
   const noun = getFeedNoun(contentLabel, tileCount);
   const previewTiles = useMemo(() => tiles.filter((tile) => tile.preview), [tiles]);
-  const [selectedTileId, setSelectedTileId] = useState<string | null>(null);
+  const selectedTileId = useTimelineViewerStore(
+    (state) => state.selectedPreviewTileByEntryId[entryId] ?? null,
+  );
+  const setSelectedPreviewTile = useTimelineViewerStore(
+    (state) => state.setSelectedPreviewTile,
+  );
   const activeTileId =
     selectedTileId && previewTiles.some((tile) => tile.id === selectedTileId)
       ? selectedTileId
@@ -124,7 +130,7 @@ export function TimelineEntry({ item, index, isOwner }: TimelineEntryProps) {
               tiles={previewTiles}
               activeTileId={activeTileId}
               onTileClick={(tile) => {
-                setSelectedTileId(tile.id);
+                setSelectedPreviewTile(entryId, tile.id);
               }}
             />
           </div>
