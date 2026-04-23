@@ -472,13 +472,14 @@ async function updateDatasetRecordCount(options: {
 
   for (let attempt = 0; attempt < MAX_DATASET_COUNT_ATTEMPTS; attempt += 1) {
     const currentRecordResponse = await resolveDatasetRecord(agent, datasetRkey);
-    const currentRecordCount =
-      currentRecordResponse.record.recordCount ??
-      (await countDatasetOccurrences({
-        agent,
-        datasetUri: currentRecordResponse.uri,
-      }));
-    const nextRecordCount = currentRecordCount + incrementBy;
+    const storedRecordCount = currentRecordResponse.record.recordCount;
+    const nextRecordCount =
+      storedRecordCount != null
+        ? storedRecordCount + incrementBy
+        : await countDatasetOccurrences({
+            agent,
+            datasetUri: currentRecordResponse.uri,
+          });
 
     let nextRecord;
     try {
