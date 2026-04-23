@@ -107,6 +107,14 @@ export const links = {
     github: "https://github.com/GainForest/bumicerts-monorepo",
     twitter: "https://www.x.com/GainForestNow",
     gainforest: "https://www.gainforest.earth",
+    share: {
+      x: (text: string) =>
+        `https://x.com/intent/tweet?text=${encodeURIComponent(text)}`,
+      bluesky: (text: string) =>
+        `https://bsky.app/intent/compose?text=${encodeURIComponent(text)}`,
+      telegram: (text: string) =>
+        `tg://msg?text=${encodeURIComponent(text)}`,
+    },
     greenGlobePreviewBase: GREEN_GLOBE_PREVIEW_BASE_URL,
     greenGlobeTreePreview: (
       did: string,

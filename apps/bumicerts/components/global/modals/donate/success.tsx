@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useModal } from "@/components/ui/modal/context";
 import {
   ModalContent,
@@ -15,13 +13,11 @@ import { links } from "@/lib/links";
 import { getPublicUrlClient } from "@/lib/url";
 import Link from "next/link";
 import {
-  ArrowRightIcon,
   ArrowUpRightIcon,
   BadgeCheck,
   CheckIcon,
   CompassIcon,
   CopyIcon,
-  ExternalLinkIcon,
   Share2,
   TrophyIcon,
 } from "lucide-react";
@@ -58,11 +54,10 @@ export function SuccessModal({
   const shareUrl = `${baseUrl}${links.bumicert.view(bumicertId)}`;
 
   const shareText = `I just donated $${amount.toFixed(2)} to this bumicert: ${shareUrl}`;
-  const encodedShareText = encodeURIComponent(shareText);
 
-  const shareXUrl = `https://x.com/intent/tweet?text=${encodedShareText}`;
-  const shareBlueskyUrl = `https://bsky.app/intent/compose?text=${encodedShareText}`;
-  const shareTelegramUrl = `tg://msg?=${encodedShareText}`;
+  const shareXUrl = links.external.share.x(shareText);
+  const shareBlueskyUrl = links.external.share.bluesky(shareText);
+  const shareTelegramUrl = links.external.share.telegram(shareText);
 
   const { copy, isCopied } = useCopy();
 
@@ -110,22 +105,26 @@ export function SuccessModal({
             <span className="text-sm">Share this with others</span>
           </div>
           <div className="grid grid-cols-4 gap-1">
-            <Button className="bg-black w-full" asChild>
+            <Button variant={"outline"} className="shadow-none" asChild>
               <Link href={shareXUrl} target="_blank">
-                <XIcon className="text-white" />
+                <XIcon className="text-black dark:text-white" />
               </Link>
             </Button>
-            <Button className="bg-blue-600 w-full" asChild>
+            <Button variant={"outline"} className="shadow-none" asChild>
               <Link href={shareBlueskyUrl} target="_blank">
-                <BlueskyIcon className="text-white" />
+                <BlueskyIcon className="text-blue-600" />
               </Link>
             </Button>
-            <Button className="bg-blue-500 w-full" asChild>
+            <Button variant={"outline"} className="shadow-none" asChild>
               <Link href={shareTelegramUrl} target="_blank">
-                <TelegramIcon className="text-white" />
+                <TelegramIcon className="text-blue-500" />
               </Link>
             </Button>
-            <Button onClick={() => copy(shareText)}>
+            <Button
+              variant={"outline"}
+              className="shadow-none"
+              onClick={() => copy(shareText)}
+            >
               {isCopied ? <CheckIcon /> : <CopyIcon />}
             </Button>
           </div>

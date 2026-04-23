@@ -7,41 +7,12 @@ import { AuthButton } from "@/components/auth/AuthButton";
 import { CartButton } from "@/components/cart/CartButton";
 import { MenuIcon } from "lucide-react";
 import { useMobileNav } from "@/hooks/useMobileNav";
-import { useModal } from "@/components/ui/modal/context";
-import { MODAL_IDS } from "@/components/global/modals/ids";
-import { SuccessModal } from "@/components/global/modals/donate/success";
-import { useEffect } from "react";
 
 export function Header() {
   const leftContent = useHeaderSlots((s) => s.leftContent);
   const rightContent = useHeaderSlots((s) => s.rightContent);
   const subHeaderContent = useHeaderSlots((s) => s.subHeaderContent);
   const setMobileNavOpen = useMobileNav((s) => s.setOpen);
-
-  // const { show, pushModal } = useModal();
-  // const handlePush = () => {
-  //   pushModal(
-  //     {
-  //       id: MODAL_IDS.DONATE_SUCCESS,
-  //       content: (
-  //         <SuccessModal
-  //           {...{
-  //             amount: 10,
-  //             organizationName: "Satyam",
-  //             transactionHash: "abcd",
-  //             bumicertId: "abcd-efg",
-  //           }}
-  //         />
-  //       ),
-  //     },
-  //     true,
-  //   );
-  //   show();
-  // };
-
-  // useEffect(() => {
-  //   handlePush();
-  // }, []);
 
   return (
     <div className="sticky top-0 z-30" data-header>

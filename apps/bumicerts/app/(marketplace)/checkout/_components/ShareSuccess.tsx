@@ -12,7 +12,6 @@
  * - View leaderboard
  */
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   ArrowUpRightIcon,
@@ -20,7 +19,6 @@ import {
   CheckIcon,
   CompassIcon,
   CopyIcon,
-  ExternalLinkIcon,
   Share2,
   TrophyIcon,
 } from "lucide-react";
@@ -30,9 +28,8 @@ import Link from "next/link";
 import BlueskyIcon from "@/icons/BlueskyIcon";
 import XIcon from "@/icons/XIcon";
 import TelegramIcon from "@/icons/TelegramIcon";
-import { Separator } from "@/components/ui/separator";
 import { useCopy } from "@/hooks/use-copy";
-import { CheckoutItem, CheckoutResult } from "./hooks/useCheckoutFlow";
+import { CheckoutResult } from "./hooks/useCheckoutFlow";
 import { UserChip } from "@/components/ui/user-chip";
 import { cn } from "@/lib/utils";
 
@@ -59,17 +56,24 @@ export function ShareSuccess({
   const totalAmountFormatted = parseFloat(checkoutResults.totalAmount).toFixed(
     2,
   );
+  const successfulResults = checkoutResults.results.filter(
+    (result) => result.success,
+  );
+  const successfulItemCount =
+    checkoutResults.successCount > 0
+      ? checkoutResults.successCount
+      : successfulResults.length;
+  const bumicertLabel = successfulItemCount === 1 ? "Bumicert" : "Bumicerts";
 
   // Share functionality
   const baseUrl = getPublicUrlClient();
   const shareUrl = `${baseUrl}${links.explore}`;
 
-  const shareText = `I just donated $${totalAmountFormatted} to multiple Bumicerts. Explore bumicerts on ${shareUrl}`;
-  const encodedShareText = encodeURIComponent(shareText);
+  const shareText = `I just donated $${totalAmountFormatted} to ${successfulItemCount} ${bumicertLabel}. Explore bumicerts on ${shareUrl}`;
 
-  const shareXUrl = `https://x.com/intent/tweet?text=${encodedShareText}`;
-  const shareBlueskyUrl = `https://bsky.app/intent/compose?text=${encodedShareText}`;
-  const shareTelegramUrl = `tg://msg?=${encodedShareText}`;
+  const shareXUrl = links.external.share.x(shareText);
+  const shareBlueskyUrl = links.external.share.bluesky(shareText);
+  const shareTelegramUrl = links.external.share.telegram(shareText);
 
   const { copy, isCopied } = useCopy();
 
@@ -96,67 +100,79 @@ export function ShareSuccess({
         </div>
       </div>
 
-      <table className="border border-border rounded-xl overflow-hidden my-6">
-        <thead className="bg-muted">
-          <tr>
-            <th className="font-medium py-2 text-sm">Creator</th>
-            <th className="font-medium py-2 text-sm">Bumicert</th>
-            <th className="font-medium py-2 text-sm">Transaction Hash</th>
-            <th className="font-medium py-2 text-sm">Amount (USDC)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {checkoutResults.results.map((r, idx) => {
-            const isOddItem = idx % 2;
-            return (
-              <tr
-                key={r.transactionHash}
-                className={cn(isOddItem && "bg-muted/60")}
+      <div className="overflow-x-auto my-6">
+        <table className="w-full min-w-[720px] border border-border rounded-xl overflow-hidden">
+          <thead className="bg-muted">
+            <tr>
+              <th scope="col" className="font-medium py-2 text-sm">
+                Creator
+              </th>
+              <th scope="col" className="font-medium py-2 text-sm">
+                Bumicert
+              </th>
+              <th scope="col" className="font-medium py-2 text-sm">
+                Transaction Hash
+              </th>
+              <th scope="col" className="font-medium py-2 text-sm">
+                Amount (USDC)
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {successfulResults.map((r, idx) => {
+              const isOddItem = idx % 2;
+              return (
+                <tr
+                  key={`${r.orgDid}-${r.activityUri}-${r.transactionHash}`}
+                  className={cn(isOddItem && "bg-muted/60")}
+                >
+                  <td>
+                    {<UserChip did={r.orgDid} textClassName="text-base" />}
+                  </td>
+                  <td className="py-1 text-center">
+                    <Button variant={"secondary"} asChild>
+                      <Link
+                        href={links.bumicert.view(
+                          `${r.orgDid}-${r.activityUri.split("/").at(-1)}`,
+                        )}
+                      >
+                        View
+                      </Link>
+                    </Button>
+                  </td>
+                  <td className="text-center align-middle">
+                    <span className="mr-2 font-mono">
+                      {r.transactionHash.slice(0, 6)}...
+                      {r.transactionHash.slice(-6)}
+                    </span>
+                    <CopyButton copyText={r.transactionHash} />
+                    <Button variant={"link"} size={"icon-sm"} asChild>
+                      <Link href={r.receiptUri ?? "#"} target="_blank">
+                        <ArrowUpRightIcon />
+                      </Link>
+                    </Button>
+                  </td>
+                  <td className="text-right font-medium px-3">
+                    {parseFloat(r.amount).toFixed(2)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot className="bg-muted">
+            <tr>
+              <td
+                colSpan={2}
+                className="text-sm text-muted-foreground px-2 font-semibold"
               >
-                <td>{<UserChip did={r.orgDid} textClassName="text-base" />}</td>
-                <td className="py-1 text-center">
-                  <Button variant={"secondary"} asChild>
-                    <Link
-                      href={links.bumicert.view(
-                        `${r.orgDid}-${r.activityUri.split("/").at(-1)}`,
-                      )}
-                    >
-                      View
-                    </Link>
-                  </Button>
-                </td>
-                <td className="text-center align-middle">
-                  <span className="mr-2">
-                    {r.transactionHash.slice(0, 6)}...
-                    {r.transactionHash.slice(-6)}
-                  </span>
-                  <CopyButton copyText={r.transactionHash} />
-                  <Button variant={"link"} size={"icon-sm"} asChild>
-                    <Link href={r.receiptUri ?? "#"} target="_blank">
-                      <ArrowUpRightIcon />
-                    </Link>
-                  </Button>
-                </td>
-                <td className="text-right font-medium px-3">
-                  {parseFloat(r.amount).toFixed(2)}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-        <tfoot className="bg-muted">
-          <tr>
-            <td
-              colSpan={2}
-              className="text-sm text-muted-foreground px-2 font-semibold"
-            >
-              Total Amount Donated (USDC)
-            </td>
-            <td></td>
-            <td className="text-right px-3">{totalAmountFormatted}</td>
-          </tr>
-        </tfoot>
-      </table>
+                Total Amount Donated (USDC)
+              </td>
+              <td></td>
+              <td className="text-right px-3">{totalAmountFormatted}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
 
       <div className="w-full flex flex-col items-center justify-center ">
         <div className="flex items-center px-3 gap-1.5 text-muted-foreground">
@@ -164,22 +180,22 @@ export function ShareSuccess({
           <span className="text-sm">Share this with others</span>
         </div>
         <div className="flex items-center justify-center gap-1 flex-wrap mt-2">
-          <Button className="bg-black" asChild>
+          <Button variant={"secondary"} asChild>
             <Link href={shareXUrl} target="_blank">
-              <XIcon className="text-white" /> X (Twitter)
+              <XIcon className="text-black dark:text-white" /> X (Twitter)
             </Link>
           </Button>
-          <Button className="bg-blue-600" asChild>
+          <Button variant={"secondary"} asChild>
             <Link href={shareBlueskyUrl} target="_blank">
-              <BlueskyIcon className="text-white" /> Bluesky
+              <BlueskyIcon className="text-blue-600" /> Bluesky
             </Link>
           </Button>
-          <Button className="bg-blue-500" asChild>
+          <Button variant={"secondary"} asChild>
             <Link href={shareTelegramUrl} target="_blank">
-              <TelegramIcon className="text-white" /> Telegram
+              <TelegramIcon className="text-blue-500" /> Telegram
             </Link>
           </Button>
-          <Button onClick={() => copy(shareText)}>
+          <Button variant={"secondary"} onClick={() => copy(shareText)}>
             {isCopied ? <CheckIcon /> : <CopyIcon />} Copy
           </Button>
         </div>
