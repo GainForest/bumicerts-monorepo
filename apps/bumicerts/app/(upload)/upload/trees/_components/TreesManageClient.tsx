@@ -360,7 +360,7 @@ function EmptyState() {
         No trees uploaded yet
       </p>
       <p className="text-sm text-muted-foreground max-w-md">
-        Upload your first tree CSV or Kobo export to start managing occurrences,
+        Upload your first tree CSV file to start managing occurrences,
         measurements, and photos in one place.
       </p>
       <Button asChild>

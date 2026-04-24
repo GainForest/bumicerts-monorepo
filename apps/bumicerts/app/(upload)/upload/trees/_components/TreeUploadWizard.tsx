@@ -223,7 +223,7 @@ export function TreeUploadWizard({ did }: TreeUploadWizardProps) {
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Upload Tree Data</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Upload tree biodiversity records from a CSV or KoboToolbox export.
+          Upload tree biodiversity records from a CSV or TSV file.
         </p>
       </div>
 
