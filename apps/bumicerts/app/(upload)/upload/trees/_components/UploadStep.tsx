@@ -36,6 +36,7 @@ import {
   isUploadDatasetSelection,
   type UploadDatasetSelection,
 } from "./upload-dataset-selection";
+import { TreeUploadCompleteModal } from "./TreeUploadCompleteModal";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -221,6 +222,7 @@ export default function UploadStep({
   // Prevent double-run in StrictMode
   const uploadRef = useRef(false);
   const photoFetchRef = useRef(false);
+  const completionModalShownRef = useRef(false);
 
   const resolvedExistingDataset =
     datasetSelection.mode === "existing"
@@ -916,6 +918,54 @@ export default function UploadStep({
   const treeManagerLabel = uploadedDatasetUri
     ? "View Dataset in Tree Manager"
     : "View Trees in Tree Manager";
+
+  useEffect(() => {
+    if (
+      !allPhasesComplete ||
+      uploadFatalError ||
+      !hasUploadedTrees ||
+      completionModalShownRef.current
+    ) {
+      return;
+    }
+
+    completionModalShownRef.current = true;
+
+    pushModal(
+      {
+        id: MODAL_IDS.UPLOAD_TREES_COMPLETE,
+        content: (
+          <TreeUploadCompleteModal
+            totalCount={total}
+            savedCount={persistedCount}
+            partialCount={partials}
+            failedCount={failures}
+            photoFailureCount={photoFetchProgress.failures}
+            treeManagerHref={treeManagerHref}
+            treeManagerLabel={treeManagerLabel}
+            onUploadMore={onComplete}
+          />
+        ),
+        dialogWidth: "max-w-md",
+      },
+      true,
+    );
+    void show();
+  }, [
+    allPhasesComplete,
+    failures,
+    hasUploadedTrees,
+    onComplete,
+    partials,
+    persistedCount,
+    photoFetchProgress.failures,
+    pushModal,
+    show,
+    total,
+    treeManagerHref,
+    treeManagerLabel,
+    uploadFatalError,
+  ]);
 
   useEffect(() => {
     if (!isUploadInProgress) {
