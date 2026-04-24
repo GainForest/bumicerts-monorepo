@@ -353,7 +353,7 @@ export default function FileDropStep({
             </div>
             <div>
               <span className="block font-medium text-foreground">
-                {detectedFormat?.isKobo ? "KoboToolbox" : "Generic CSV"}
+                {detectedFormat?.isKobo ? "Auto-mapped CSV" : "Generic CSV"}
               </span>
               <span>format</span>
             </div>
