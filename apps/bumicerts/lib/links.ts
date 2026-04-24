@@ -139,6 +139,11 @@ export const links = {
     treeDataTemplate: "/templates/tree-data-template.csv",
   },
   api: {
+    upload: {
+      trees: {
+        datasets: "/api/upload/trees/datasets",
+      },
+    },
     onboarding: {
       sendVerificationCode: "/onboarding/api/send-verification-code",
       verifyEmailCode: "/onboarding/api/verify-email-code",

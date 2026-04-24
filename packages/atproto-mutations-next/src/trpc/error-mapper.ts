@@ -42,6 +42,9 @@ function toUserMessage(tag: string, message: string, issues?: ValidationIssue[])
   if (tag.includes("Unauthorized") || tag.includes("SessionExpired")) {
     return "Your session has expired. Please sign in again.";
   }
+  if (tag.includes("Unavailable")) {
+    return message || "This action cannot be completed right now.";
+  }
   if (tag.includes("IsDefault")) {
     return "This action cannot be completed right now.";
   }
@@ -92,6 +95,11 @@ export function mapEffectErrorToTRPC(error: unknown): TRPCError {
     // Auth errors
     if (tag.includes("Unauthorized") || tag.includes("SessionExpired")) {
       return new TRPCError({ code: "UNAUTHORIZED", message: userMessage, cause: actualError });
+    }
+
+    // Resource unavailable / no longer valid
+    if (tag.includes("Unavailable")) {
+      return new TRPCError({ code: "PRECONDITION_FAILED", message: userMessage, cause: actualError });
     }
 
     // Is default (can't delete)

@@ -12,7 +12,7 @@ export function TreesPageClient({ did }: TreesPageClientProps) {
   const [mode] = useTreesMode();
 
   return mode === "upload" ? (
-    <TreeUploadWizard />
+    <TreeUploadWizard did={did} />
   ) : (
     <TreesManageClient did={did} />
   );
