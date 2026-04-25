@@ -177,10 +177,10 @@ export default function ColumnMappingStep({
             <p className="text-yellow-700/90 dark:text-yellow-300/90">
               {skippedColumnCount} source column
               {skippedColumnCount !== 1 ? "s are" : " is"} marked to be
-              skipped and will not be uploaded. Yellow rows are source columns
-              currently treated as optional/skipped; required target fields that
-              still need manual input appear in the red warning above when any
-              remain.
+              skipped and will not be uploaded. Rows with a yellow left border
+              are source columns currently treated as optional/skipped; required
+              target fields that still need manual input appear in the red
+              warning above when any remain.
             </p>
           </div>
         </div>
