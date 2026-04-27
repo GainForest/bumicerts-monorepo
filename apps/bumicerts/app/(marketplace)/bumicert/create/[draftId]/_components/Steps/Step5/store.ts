@@ -25,6 +25,7 @@ type Step5StoreActions = {
   setCreatedBumicertResponse: (response: CreateBumicertResponse | null) => void;
   setPublishedPreview: (preview: PublishedBumicertPreview | null) => void;
   resetSuccessState: () => void;
+  resetAll: () => void;
 };
 
 export const useStep5Store = create<Step5StoreState & Step5StoreActions>(
@@ -38,6 +39,12 @@ export const useStep5Store = create<Step5StoreState & Step5StoreActions>(
     setPublishedPreview: (preview) => set({ publishedPreview: preview }),
     resetSuccessState: () =>
       set({
+        createdBumicertResponse: null,
+        publishedPreview: null,
+      }),
+    resetAll: () =>
+      set({
+        overallStatus: "idle",
         createdBumicertResponse: null,
         publishedPreview: null,
       }),

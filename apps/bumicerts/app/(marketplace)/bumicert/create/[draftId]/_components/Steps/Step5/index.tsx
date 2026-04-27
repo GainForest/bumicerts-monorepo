@@ -30,7 +30,7 @@ import {
   toStrongRefs,
 } from "@/lib/mutations-utils";
 import { queryKeys } from "@/lib/query-keys"; // drafts key only
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   trackBumicertPublished,
@@ -150,6 +150,7 @@ const ProgressItem = ({
 const Step5 = () => {
   const auth = useAtprotoStore((state) => state.auth);
   const pathname = usePathname();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const authStatus =
     auth.status === "RESUMING"
@@ -174,8 +175,9 @@ const Step5 = () => {
   const publishedPreview = useStep5Store((state) => state.publishedPreview);
   const setPublishedPreview = useStep5Store((state) => state.setPublishedPreview);
   const resetSuccessState = useStep5Store((state) => state.resetSuccessState);
+  const resetStep5Store = useStep5Store((state) => state.resetAll);
   const resetFormStore = useFormStore((state) => state.reset);
-  const { setCurrentStepIndex } = useNewBumicertStore();
+  const { setCurrentStepIndex, reset: resetWizardStore } = useNewBumicertStore();
 
   const [createBumicertError, setCreateBumicertError] = useState<string | null>(
     null,
@@ -402,6 +404,13 @@ const Step5 = () => {
     show();
   };
 
+  const handleCreateAnotherBumicert = () => {
+    resetFormStore();
+    resetWizardStore();
+    resetStep5Store();
+    router.push(links.bumicert.create);
+  };
+
   return (
     <div>
       {createBumicertStatus !== "success" && (
@@ -537,6 +546,14 @@ const Step5 = () => {
                     Share Feedback
                     <ArrowUpRightIcon className="ml-auto" />
                   </a>
+                </Button>
+
+                <Button
+                  variant="secondary"
+                  className="w-full md:w-fit"
+                  onClick={handleCreateAnotherBumicert}
+                >
+                  Create another bumicert
                 </Button>
               </div>
             </div>
