@@ -97,6 +97,7 @@ export function SiteCard({
     site.record?.locationType ?? undefined,
   );
   const previewUrl = locationUrl ? getShapefilePreviewUrl(locationUrl) : null;
+  const isPreviewable = !!previewUrl;
   const isDefault = !!(
     site.metadata?.uri && site.metadata.uri === defaultSiteUri
   );
@@ -185,26 +186,41 @@ export function SiteCard({
     deleteSite({ rkey });
   };
 
+  const handleCardClick = () => {
+    if (!isPreviewable || isPreviewing) return;
+    onChange();
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
+      role={isPreviewable ? "button" : undefined}
+      tabIndex={isPreviewable ? 0 : undefined}
+      onClick={handleCardClick}
+      onKeyDown={(event) => {
+        if (!isPreviewable) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          handleCardClick();
+        }
+      }}
       className={cn(
-        "flex flex-col rounded-xl border overflow-hidden bg-background hover:border-primary/30 hover:shadow-md transition-all duration-300",
+        "flex flex-col rounded-xl border overflow-hidden bg-background transition-all duration-300",
+        isPreviewable &&
+          "cursor-pointer hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
         isPreviewing ? "border-primary!" : "border-border",
       )}
     >
       {/* Header with default badge */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-        {previewUrl ? (
-          <Button
-            size={"xs"}
-            onClick={onChange}
-            variant={isPreviewing ? "default" : "ghost"}
-          >
-            {isPreviewing ? "Previewing" : "Preview"}
-          </Button>
+        {isPreviewing ? (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-medium">
+            Previewing
+          </span>
+        ) : isPreviewable ? (
+          <span className="text-xs text-muted-foreground">Click to preview</span>
         ) : (
           <span className="text-xs text-muted-foreground">No preview</span>
         )}
@@ -224,6 +240,7 @@ export function SiteCard({
                 size="sm"
                 className="h-7 w-7 p-0"
                 disabled={disableActions}
+                onClick={(event) => event.stopPropagation()}
               >
                 {disableActions ? (
                   <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
@@ -233,12 +250,21 @@ export function SiteCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleEdit} disabled={disableActions}>
+              <DropdownMenuItem
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleEdit();
+                }}
+                disabled={disableActions}
+              >
                 <PencilIcon className="h-3.5 w-3.5 mr-2" />
                 Edit
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={handleSetDefault}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleSetDefault();
+                }}
                 disabled={isDefault || disableActions}
               >
                 <BadgeCheckIcon className="h-3.5 w-3.5 mr-2" />
@@ -247,7 +273,10 @@ export function SiteCard({
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"
-                onClick={handleDelete}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleDelete();
+                }}
                 disabled={isDefault || disableActions}
               >
                 <Trash2Icon className="h-3.5 w-3.5 mr-2" />

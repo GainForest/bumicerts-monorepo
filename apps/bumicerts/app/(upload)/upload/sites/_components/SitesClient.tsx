@@ -137,10 +137,11 @@ export function SitesClient({ did }: SitesClientProps) {
               src={siteIframeUrlState}
               ref={iframeRef}
             />
-            <div className="absolute inset-0 flex items-center justify-between p-4">
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-between p-4">
               <Button
                 size={"icon"}
                 variant={"outline"}
+                className="pointer-events-auto"
                 disabled={safeCurrentSiteIndex <= 0}
                 onClick={() => {
                   if (safeCurrentSiteIndex <= 0) return;
@@ -152,6 +153,7 @@ export function SitesClient({ did }: SitesClientProps) {
               <Button
                 size={"icon"}
                 variant={"outline"}
+                className="pointer-events-auto"
                 disabled={safeCurrentSiteIndex >= allSiteRkeys.length - 1}
                 onClick={() => {
                   if (safeCurrentSiteIndex >= allSiteRkeys.length - 1) return;
