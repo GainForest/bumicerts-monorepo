@@ -36,6 +36,8 @@ import { useModal } from "@/components/ui/modal/context";
 import useNewBumicertStore from "../../../store";
 import { MODAL_IDS } from "@/components/global/modals/ids";
 import { FundingConfigModal } from "@/components/global/modals/funding/config";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
+import { BumicertCardVisual } from "@/app/(marketplace)/explore/_components/BumicertCard";
 import {
   BUMICERT_COVER_IMAGE_MAX_SIZE_BYTES,
   BUMICERT_COVER_IMAGE_MAX_SIZE_MB,
@@ -143,6 +145,14 @@ interface CreateBumicertResponse {
   cid: string;
 }
 
+interface PublishedBumicertPreview {
+  coverImage: File;
+  title: string;
+  objectives: string[];
+  organizationName: string;
+  logoUrl: string | null;
+}
+
 const Step5 = () => {
   const auth = useAtprotoStore((state) => state.auth);
   const pathname = usePathname();
@@ -173,6 +183,16 @@ const Step5 = () => {
     setIsBumicertCreationMutationInFlight,
   ] = useState(false);
   const [hasClickedPublish, setHasClickedPublish] = useState(false);
+  const [publishedPreview, setPublishedPreview] =
+    useState<PublishedBumicertPreview | null>(null);
+
+  const { data: orgData } = indexerTrpc.organization.byDid.useQuery(
+    { did: auth.user?.did ?? "" },
+    { enabled: !!auth.user?.did }
+  );
+
+  const organizationName = orgData?.org?.record?.displayName ?? "";
+  const organizationLogoUrl = orgData?.org?.record?.logo?.uri ?? null;
 
   const { pushModal, show } = useModal();
 
@@ -300,6 +320,13 @@ const Step5 = () => {
       // sending to the PDS, these are runtime-compatible. We cast through the
       // generated LinearDocument type at this boundary.
       const descriptionForMutation = step2FormValues.description as unknown as LinearDocument;
+      setPublishedPreview({
+        coverImage: step1FormValues.coverImage,
+        title: step1FormValues.projectName,
+        objectives: [...step1FormValues.workType],
+        organizationName,
+        logoUrl: organizationLogoUrl,
+      });
       setHasClickedPublish(true);
       createBumicert({
         title: step1FormValues.projectName,
@@ -442,6 +469,19 @@ const Step5 = () => {
             <span className="mt-1 text-center">
               Your bumicert was published successfully!
             </span>
+
+            {publishedPreview && (
+              <div className="mt-4 w-full max-w-xs aspect-3/4">
+                <BumicertCardVisual
+                  logoUrl={publishedPreview.logoUrl}
+                  coverImage={publishedPreview.coverImage}
+                  title={publishedPreview.title}
+                  organizationName={publishedPreview.organizationName}
+                  objectives={publishedPreview.objectives}
+                  className="h-full"
+                />
+              </div>
+            )}
 
             {/* Action buttons */}
             <div className="mt-4 flex flex-col gap-2 w-full max-w-xs">

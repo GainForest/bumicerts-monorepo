@@ -17,12 +17,16 @@ const BumicertPreviewCard = () => {
   const auth = useAtprotoStore((state) => state.auth);
   const { show, pushModal } = useModal();
   const {
-    data: orgLogoData,
+    data: orgData,
     isPending: isPendingOrganizationInfo,
     isPlaceholderData: isOlderData,
-  } = indexerTrpc.organization.logo.useQuery({ did: auth.user?.did ?? "" });
+  } = indexerTrpc.organization.byDid.useQuery(
+    { did: auth.user?.did ?? "" },
+    { enabled: !!auth.user?.did }
+  );
 
-  const logoFromData = isOlderData ? undefined : orgLogoData;
+  const logoFromData = isOlderData ? undefined : (orgData?.org?.record?.logo?.uri ?? null);
+  const organizationName = orgData?.org?.record?.displayName ?? "";
   const logoUrl = logoFromData ?? null;
 
   const isLoadingOrganizationInfo = isPendingOrganizationInfo || isOlderData;
@@ -37,7 +41,7 @@ const BumicertPreviewCard = () => {
       </div>
 
       <div className="bg-background p-3 rounded-xl flex-1 flex flex-col gap-3">
-        {!logoFromData && (
+        {!logoUrl && (
           <div className="w-full flex items-start gap-2 border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 rounded-lg p-2 relative">
             <button
               type="button"
@@ -64,14 +68,15 @@ const BumicertPreviewCard = () => {
 
         {isBumicertArtReady ? (
           // Full-width card — max-w keeps it readable on very wide panels
-          <div className="w-full max-w-sm mx-auto">
-            <BumicertCardVisual
-              logoUrl={logoUrl}
-              coverImage={coverImage}
-              title={title}
-              organizationName=""
-              objectives={objectives}
-            />
+          <div className="w-full max-w-sm mx-auto aspect-3/4">
+              <BumicertCardVisual
+                logoUrl={logoUrl}
+                coverImage={coverImage}
+                title={title}
+                organizationName={organizationName}
+                objectives={objectives}
+                className="h-full"
+              />
           </div>
         ) : isLoadingOrganizationInfo ? (
           <div className="flex-1 flex flex-col items-center justify-center py-8">

@@ -9,6 +9,9 @@ import {
 
 type TRPCAppError = TRPCClientError<AppRouter>;
 
+const BUMICERT_PAYLOAD_LIMIT_MESSAGE =
+  "Your request payload is too large. Please use a cover image that is 4MB or smaller (JPG, PNG, or WebP).";
+
 function isNonJsonRequestEntityError(message: string): boolean {
   const normalized = message.toLowerCase();
 
@@ -118,7 +121,7 @@ export function getFormattedErrors(
 export function formatError(error: unknown): string {
   if (!isTRPCError(error)) {
     if (error instanceof Error && isNonJsonRequestEntityError(error.message)) {
-      return "Your request payload is too large. Please use a cover image that is 5MB or smaller (JPG, PNG, or WebP).";
+      return BUMICERT_PAYLOAD_LIMIT_MESSAGE;
     }
     if (error instanceof Error && error.message.trim()) return error.message;
     if (typeof error === "string" && error.trim()) return error;
@@ -126,7 +129,7 @@ export function formatError(error: unknown): string {
   }
 
   if (isNonJsonRequestEntityError(error.message)) {
-    return "Your request payload is too large. Please use a cover image that is 5MB or smaller (JPG, PNG, or WebP).";
+    return BUMICERT_PAYLOAD_LIMIT_MESSAGE;
   }
 
   const userMessage = (error.data as Record<string, unknown> | undefined)?.userMessage;
@@ -142,15 +145,15 @@ export function formatError(error: unknown): string {
     case "CONFLICT":
       return "This resource already exists";
     case "BAD_REQUEST":
-      return error.message || "Invalid input provided";
+      return error.message ?? "Invalid input provided";
     case "UNAUTHORIZED":
       return "Please sign in to continue";
     case "PRECONDITION_FAILED":
-      return error.message || "Cannot complete this action";
+      return error.message ?? "Cannot complete this action";
     case "INTERNAL_SERVER_ERROR":
       return "Something went wrong. Please try again.";
 
     default:
-      return error.message || "An error occurred";
+      return error.message ?? "An error occurred";
   }
 }

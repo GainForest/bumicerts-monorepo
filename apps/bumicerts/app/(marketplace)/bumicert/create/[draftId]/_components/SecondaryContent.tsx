@@ -131,17 +131,19 @@ const SecondaryContent = () => {
             >
               {step1Progress === 100 ? (
                 <div className="w-full flex items-center justify-center">
-                  <BumicertCardVisual
-                    logoUrl={logoUrl}
-                    coverImage={
-                      step1FormValues.coverImage ??
-                      EMPTY_COVER_IMAGE
-                    }
-                    title={step1FormValues.projectName}
-                    organizationName={organizationName}
-                    objectives={step1FormValues.workType}
-                    className="max-w-2xs"
-                  />
+                  <div className="w-full max-w-2xs aspect-3/4">
+                    <BumicertCardVisual
+                      logoUrl={logoUrl}
+                      coverImage={
+                        step1FormValues.coverImage ??
+                        EMPTY_COVER_IMAGE
+                      }
+                      title={step1FormValues.projectName}
+                      organizationName={organizationName}
+                      objectives={step1FormValues.workType}
+                      className="h-full"
+                    />
+                  </div>
                 </div>
               ) : (
                 <div className="w-full flex items-center justify-center p-4">
