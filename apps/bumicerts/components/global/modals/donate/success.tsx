@@ -32,6 +32,7 @@ interface SuccessModalProps {
   organizationName: string;
   transactionHash: string;
   bumicertId: string;
+  donorRecordedAs: "did" | "wallet";
 }
 
 export function SuccessModal({
@@ -39,6 +40,7 @@ export function SuccessModal({
   organizationName,
   transactionHash,
   bumicertId,
+  donorRecordedAs,
 }: SuccessModalProps) {
   const { hide, clear } = useModal();
 
@@ -90,6 +92,11 @@ export function SuccessModal({
               &nbsp;to&nbsp;
               <span className="text-foreground">{organizationName}</span>
               &nbsp;was successful.
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {donorRecordedAs === "did"
+                ? "Recorded with your Bumicerts profile."
+                : "Recorded as anonymous."}
             </p>
           </div>
           <Button variant={"secondary"} asChild>

@@ -98,9 +98,30 @@ type AttestationQueryResult = {
   };
 };
 
+type HexAddress = `0x${string}`;
+type DidIdentifier = `did:${string}:${string}`;
+
+type ReceiptSender =
+  | { $type: "org.hypercerts.funding.receipt#text"; value: string }
+  | { $type: "app.certified.defs#did"; did: DidIdentifier };
+
+type ReceiptText = { $type: "org.hypercerts.funding.receipt#text"; value: string };
+
+function isHexAddress(value: string): value is HexAddress {
+  return /^0x[a-fA-F0-9]{40}$/.test(value);
+}
+
+function isDidIdentifier(value: string): value is DidIdentifier {
+  return /^did:[a-z0-9]+:.+$/i.test(value);
+}
+
+function isAtUriString(value: string): value is AtUriString {
+  return /^at:\/\/[^/]+\/[a-z0-9.]+\/.+$/i.test(value);
+}
+
 async function resolveRecipientWallet(
   orgDid: string
-): Promise<`0x${string}` | null> {
+): Promise<HexAddress | null> {
   try {
     const client = new GraphQLClient(clientEnv.NEXT_PUBLIC_INDEXER_URL, {
       headers: { "ngrok-skip-browser-warning": "true" },
@@ -110,8 +131,11 @@ async function resolveRecipientWallet(
       { did: orgDid }
     );
     const records = data?.bumicerts?.link?.evm?.data ?? [];
-    if (!records.length || !records[0].record.address) return null;
-    return records[0].record.address as `0x${string}`;
+    const resolvedAddress = records[0]?.record.address;
+    if (!resolvedAddress || !isHexAddress(resolvedAddress)) {
+      return null;
+    }
+    return resolvedAddress;
   } catch {
     return null;
   }
@@ -237,6 +261,29 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  if (body.anonymous !== undefined && typeof body.anonymous !== "boolean") {
+    return Response.json(
+      { error: "Please choose whether to donate anonymously." },
+      { status: 400 }
+    );
+  }
+
+  const donorChoseAnonymous = body.anonymous ?? true;
+  let donorDid: DidIdentifier | undefined;
+
+  if (!donorChoseAnonymous) {
+    if (!body.donorDid || !isDidIdentifier(body.donorDid)) {
+      return Response.json(
+        {
+          code: "NON_ANONYMOUS_DONATION_REQUIRES_DONOR_DID",
+          error: "We couldn’t link this donation to your profile. Please sign in again or donate anonymously.",
+        },
+        { status: 422 }
+      );
+    }
+    donorDid = body.donorDid;
+  }
+
   // Parse payment signature
   let payload: ReturnType<typeof parsePaymentSignature>;
   try {
@@ -252,13 +299,14 @@ export async function POST(req: NextRequest) {
   const { payload: { authorization, signature } } = payload;
 
   // Get facilitator wallet address
-  const facilitatorWallet = clientEnv.NEXT_PUBLIC_FACILITATOR_WALLET_ADDRESS;
-  if (!facilitatorWallet) {
+  const facilitatorWalletValue = clientEnv.NEXT_PUBLIC_FACILITATOR_WALLET_ADDRESS;
+  if (!facilitatorWalletValue || !isHexAddress(facilitatorWalletValue)) {
     return Response.json(
       { error: "Facilitator wallet address not configured" },
       { status: 500 }
     );
   }
+  const facilitatorWallet = facilitatorWalletValue;
 
   // Verify that the authorization is sending to the facilitator
   if (authorization.to.toLowerCase() !== facilitatorWallet.toLowerCase()) {
@@ -281,7 +329,7 @@ export async function POST(req: NextRequest) {
   // Resolve all recipient wallets first
   const resolvedItems: Array<{
     item: BatchItem;
-    wallet: `0x${string}` | null;
+    wallet: HexAddress | null;
   }> = await Promise.all(
     body.items.map(async (item) => ({
       item,
@@ -306,7 +354,7 @@ export async function POST(req: NextRequest) {
   try {
     const result = await executeTransferWithAuthorization({
       authorization,
-      signature: signature as `0x${string}`,
+      signature,
     });
     donorToFacilitatorHash = result.transactionHash;
   } catch (err) {
@@ -321,18 +369,16 @@ export async function POST(req: NextRequest) {
   const agentLayer = getFacilitatorLayer();
   const now = new Date().toISOString();
 
-  // Build `from` field:
-  // - For anonymous donors: store wallet address using Text type
-  // - For identified donors: wrap their DID as { $type, did }
-  // - If donorDid is missing but anonymous is false, log warning and fallback to wallet address
-  const fromValue = body.anonymous
-    ? { $type: "org.hypercerts.funding.receipt#text" as const, value: authorization.from }
-    : body.donorDid
-      ? { $type: "app.certified.defs#did" as const, did: body.donorDid as `did:${string}:${string}` }
-      : (() => {
-          console.warn("[fund/batch] donorDid missing but anonymous=false, falling back to wallet address");
-          return { $type: "org.hypercerts.funding.receipt#text" as const, value: authorization.from };
-        })();
+  const donorRecordedAs = donorChoseAnonymous ? "wallet" : "did";
+
+  const receiptSender: ReceiptSender = donorChoseAnonymous
+    ? { $type: "org.hypercerts.funding.receipt#text", value: authorization.from }
+    : (() => {
+        if (!donorDid) {
+          throw new Error("donorDid should be set for non-anonymous donation");
+        }
+        return { $type: "app.certified.defs#did", did: donorDid };
+      })();
 
   const currency = body.currency ?? "USDC";
   
@@ -370,12 +416,26 @@ export async function POST(req: NextRequest) {
 
   for (let index = 0; index < resolvedItems.length; index++) {
     const { item, wallet } = resolvedItems[index];
-    const recipientWallet = wallet as `0x${string}`;
+    if (!wallet) {
+      results.push({
+        activityUri: item.activityUri,
+        orgDid: item.orgDid,
+        amount: item.amount,
+        recipientWallet: "",
+        transactionHash: "",
+        receiptUri: null,
+        success: false,
+        error: "Recipient wallet is missing",
+      });
+      continue;
+    }
+
+    const recipientWallet = wallet;
     const amountNumber = parseFloat(item.amount);
 
     console.log(`[fund/batch] Processing item ${index + 1}/${resolvedItems.length} for ${item.activityUri}`);
 
-    let transactionHash: `0x${string}` = "0x" as `0x${string}`;
+    let transactionHash = "";
     let success = false;
     let error: string | undefined;
 
@@ -399,41 +459,46 @@ export async function POST(req: NextRequest) {
     if (success) {
       const notes = `${authorization.from} paid ${item.amount}${currency} using wallet`;
       
-      // Build `to` field: store recipient wallet address using Text type
-      // The org DID can be derived from the `for` field (activity AT-URI contains org DID)
-      const toValue = { $type: "org.hypercerts.funding.receipt#text" as const, value: recipientWallet };
+      const receiptRecipient: ReceiptText = {
+        $type: "org.hypercerts.funding.receipt#text",
+        value: recipientWallet,
+      };
       
       // Build `for` field with CID from prefetched map
       const activityCid = cidMap.get(item.activityUri);
       if (!activityCid) {
         console.error(`[fund/batch] Missing CID for ${item.activityUri}, skipping receipt`);
       } else {
-        const forValue = { uri: item.activityUri as AtUriString, cid: activityCid };
-        
-        console.log(`[fund/batch] Creating receipt for ${item.activityUri}...`);
-        const receiptEither = await Effect.runPromise(
-          mutations.funding.receipt.create({
-            from:           fromValue,
-            to:             toValue,
-            amount:         item.amount,
-            currency,
-            paymentRail:    "x402-usdc-base-batch",
-            paymentNetwork: "base",
-            transactionId:  transactionHash,
-            for:            forValue,
-            notes,
-            occurredAt:     now,
-          }).pipe(
-            Effect.provide(agentLayer),
-            Effect.either
-          )
-        );
-
-        if (receiptEither._tag === "Right") {
-          receiptUri = receiptEither.right.uri;
-          console.log(`[fund/batch] ✓ Receipt created: ${receiptUri}`);
+        if (!isAtUriString(item.activityUri)) {
+          console.error(`[fund/batch] Invalid activity URI for receipt: ${item.activityUri}`);
         } else {
-          console.error(`[fund/batch] ✗ Receipt creation failed for ${item.activityUri}:`, receiptEither.left);
+          const receiptSubject = { uri: item.activityUri, cid: activityCid };
+        
+          console.log(`[fund/batch] Creating receipt for ${item.activityUri}...`);
+          const receiptEither = await Effect.runPromise(
+            mutations.funding.receipt.create({
+              from:           receiptSender,
+              to:             receiptRecipient,
+              amount:         item.amount,
+              currency,
+              paymentRail:    "x402-usdc-base-batch",
+              paymentNetwork: "base",
+              transactionId:  transactionHash,
+              for:            receiptSubject,
+              notes,
+              occurredAt:     now,
+            }).pipe(
+              Effect.provide(agentLayer),
+              Effect.either
+            )
+          );
+
+          if (receiptEither._tag === "Right") {
+            receiptUri = receiptEither.right.uri;
+            console.log(`[fund/batch] ✓ Receipt created: ${receiptUri}`);
+          } else {
+            console.error(`[fund/batch] ✗ Receipt creation failed for ${item.activityUri}:`, receiptEither.left);
+          }
         }
       }
     }
@@ -458,6 +523,7 @@ export async function POST(req: NextRequest) {
     success:                 allSucceeded,
     donorToFacilitatorHash:  donorToFacilitatorHash,
     totalAmount:             body.totalAmount,
+    donorRecordedAs,
     itemCount:               results.length,
     successCount:            successCount,
     results:                 results,

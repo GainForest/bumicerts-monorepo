@@ -30,6 +30,7 @@ export type CheckoutItem = {
 export type CheckoutResult = {
   donorToFacilitatorHash: string;
   totalAmount: string;
+  donorRecordedAs: "did" | "wallet";
   itemCount: number;
   successCount: number;
   results: Array<{

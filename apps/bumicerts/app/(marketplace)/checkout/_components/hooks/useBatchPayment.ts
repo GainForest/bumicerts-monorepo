@@ -3,23 +3,108 @@
 import { useCallback } from "react";
 import { useSignTypedData } from "wagmi";
 import { clientEnv } from "@/lib/env/client";
-import { toUsdcUnits, EIP3009_TYPES } from "@/lib/facilitator/usdc";
+import { toUsdcUnits, EIP3009_TYPES, CHAIN_ID, USDC_CONTRACT } from "@/lib/facilitator/usdc";
 import type { CheckoutItem, CheckoutResult } from "./useCheckoutFlow";
 
 interface UseBatchPaymentParams {
   address: `0x${string}` | undefined;
   donorDid: string | undefined;
-  anonymous: boolean;
+  shouldStoreDonationAsAnonymous: boolean;
   onSigning: () => void;
   onProcessing: () => void;
   onSuccess: (result: CheckoutResult) => void;
   onError: (error: string) => void;
 }
 
+type HexAddress = `0x${string}`;
+
+function isHexAddress(value: string): value is HexAddress {
+  return /^0x[a-fA-F0-9]{40}$/.test(value);
+}
+
+function createNonce(): HexAddress {
+  const nonce = `0x${Array.from(crypto.getRandomValues(new Uint8Array(32)))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("")}`;
+
+  if (!isHexAddress(nonce)) {
+    throw new Error("Failed to create a valid nonce");
+  }
+
+  return nonce;
+}
+
+function parseCheckoutResult(value: unknown): CheckoutResult | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const donorToFacilitatorHash = Reflect.get(value, "donorToFacilitatorHash");
+  const totalAmount = Reflect.get(value, "totalAmount");
+  const donorRecordedAs = Reflect.get(value, "donorRecordedAs");
+  const itemCount = Reflect.get(value, "itemCount");
+  const successCount = Reflect.get(value, "successCount");
+  const results = Reflect.get(value, "results");
+
+  if (typeof donorToFacilitatorHash !== "string") return null;
+  if (typeof totalAmount !== "string") return null;
+  if (donorRecordedAs !== "did" && donorRecordedAs !== "wallet") return null;
+  if (typeof itemCount !== "number") return null;
+  if (typeof successCount !== "number") return null;
+  if (!Array.isArray(results)) return null;
+
+  return {
+    donorToFacilitatorHash,
+    totalAmount,
+    donorRecordedAs,
+    itemCount,
+    successCount,
+    results: results.map((entry) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        return {
+          activityUri: "",
+          orgDid: "",
+          amount: "0",
+          recipientWallet: "",
+          transactionHash: "",
+          receiptUri: null,
+          success: false,
+          error: "Invalid result entry",
+        };
+      }
+
+      const entryActivityUri = Reflect.get(entry, "activityUri");
+      const entryOrgDid = Reflect.get(entry, "orgDid");
+      const entryAmount = Reflect.get(entry, "amount");
+      const entryRecipientWallet = Reflect.get(entry, "recipientWallet");
+      const entryTransactionHash = Reflect.get(entry, "transactionHash");
+      const entryReceiptUri = Reflect.get(entry, "receiptUri");
+      const entrySuccess = Reflect.get(entry, "success");
+      const entryError = Reflect.get(entry, "error");
+
+      return {
+        activityUri: typeof entryActivityUri === "string" ? entryActivityUri : "",
+        orgDid: typeof entryOrgDid === "string" ? entryOrgDid : "",
+        amount: typeof entryAmount === "string" ? entryAmount : "0",
+        recipientWallet:
+          typeof entryRecipientWallet === "string" ? entryRecipientWallet : "",
+        transactionHash:
+          typeof entryTransactionHash === "string" ? entryTransactionHash : "",
+        receiptUri:
+          entryReceiptUri === null || typeof entryReceiptUri === "string"
+            ? entryReceiptUri
+            : null,
+        success: entrySuccess === true,
+        error: typeof entryError === "string" ? entryError : undefined,
+      };
+    }),
+  };
+}
+
 export function useBatchPayment({
   address,
   donorDid,
-  anonymous,
+  shouldStoreDonationAsAnonymous,
   onSigning,
   onProcessing,
   onSuccess,
@@ -35,30 +120,26 @@ export function useBatchPayment({
       }
 
       const facilitatorWallet = clientEnv.NEXT_PUBLIC_FACILITATOR_WALLET_ADDRESS;
-      if (!facilitatorWallet) {
+      if (!facilitatorWallet || !isHexAddress(facilitatorWallet)) {
         onError("Facilitator wallet not configured");
         return;
       }
 
-      // Build EIP-3009 typed data for transfer to facilitator
       const now = Math.floor(Date.now() / 1000);
-      const nonce = `0x${Array.from(crypto.getRandomValues(new Uint8Array(32)))
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("")}` as `0x${string}`;
+      const nonce = createNonce();
 
       const usdcAmount = toUsdcUnits(totalAmount);
 
       const domain = {
         name: "USD Coin",
         version: "2",
-        chainId: 8453,
-        verifyingContract:
-          "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as `0x${string}`,
+        chainId: CHAIN_ID,
+        verifyingContract: USDC_CONTRACT,
       };
 
       const message = {
         from: address,
-        to: facilitatorWallet as `0x${string}`,
+        to: facilitatorWallet,
         value: usdcAmount,
         validAfter: BigInt(0),
         validBefore: BigInt(now + 300),
@@ -91,7 +172,6 @@ export function useBatchPayment({
 
       onProcessing();
 
-      // Build request payload
       const sigPayload = {
         x402Version: 2,
         scheme: "exact",
@@ -108,8 +188,8 @@ export function useBatchPayment({
         })),
         totalAmount: String(totalAmount),
         currency: "USDC",
-        donorDid: anonymous ? undefined : donorDid,
-        anonymous,
+        donorDid: shouldStoreDonationAsAnonymous ? undefined : donorDid,
+        anonymous: shouldStoreDonationAsAnonymous,
       };
 
       try {
@@ -127,14 +207,18 @@ export function useBatchPayment({
           throw new Error(err.error ?? "Payment failed");
         }
 
-        const data = (await res.json()) as CheckoutResult;
+        const rawData = await res.json();
+        const data = parseCheckoutResult(rawData);
+        if (!data) {
+          throw new Error("Payment completed, but response was invalid.");
+        }
         onSuccess(data);
       } catch (err) {
         console.error("[useBatchPayment] Payment failed:", err);
         onError(err instanceof Error ? err.message : "Payment failed");
       }
     },
-    [address, donorDid, anonymous, onSigning, onProcessing, onSuccess, onError, signTypedDataAsync]
+    [address, donorDid, shouldStoreDonationAsAnonymous, onSigning, onProcessing, onSuccess, onError, signTypedDataAsync]
   );
 
   return { executeBatchPayment };

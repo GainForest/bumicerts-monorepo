@@ -16,21 +16,103 @@ import type { BumicertData } from "@/lib/types";
 import { MODAL_IDS } from "@/components/global/modals/ids";
 import { useUSDCBalance } from "./hooks/useUSDCBalance";
 import { SuccessModal } from "./success";
-import { toUsdcUnits, EIP3009_TYPES } from "@/lib/facilitator/usdc";
+import { toUsdcUnits, EIP3009_TYPES, CHAIN_ID, USDC_CONTRACT } from "@/lib/facilitator/usdc";
 
 type TxState = "idle" | "waiting-signature" | "processing" | "rejected";
 
 interface ConfirmModalProps {
   bumicert: BumicertData;
   amount: number;
-  anonymous: boolean;
+  donorChoseAnonymous: boolean;
   recipientWallet: string;
+}
+
+type HexAddress = `0x${string}`;
+type FundResponse = {
+  success: boolean;
+  transactionHash: string;
+  receiptUri: string | null;
+  donorRecordedAs: "did" | "wallet";
+};
+
+function isHexAddress(value: string): value is HexAddress {
+  return /^0x[a-fA-F0-9]{40}$/.test(value);
+}
+
+function createNonce(): HexAddress {
+  const nonce = `0x${Array.from(crypto.getRandomValues(new Uint8Array(32)))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("")}`;
+
+  if (!isHexAddress(nonce)) {
+    throw new Error("Failed to create a valid nonce");
+  }
+
+  return nonce;
+}
+
+function buildTypedData(params: {
+  senderWallet: HexAddress;
+  recipientWallet: HexAddress;
+  usdcAmount: bigint;
+}) {
+  const now = Math.floor(Date.now() / 1000);
+  const nonce = createNonce();
+
+  return {
+    domain: {
+      name: "USD Coin",
+      version: "2",
+      chainId: CHAIN_ID,
+      verifyingContract: USDC_CONTRACT,
+    },
+    types: EIP3009_TYPES,
+    message: {
+      from: params.senderWallet,
+      to: params.recipientWallet,
+      value: params.usdcAmount,
+      validAfter: BigInt(0),
+      validBefore: BigInt(now + 300),
+      nonce,
+    },
+    authorization: {
+      from: params.senderWallet,
+      to: params.recipientWallet,
+      value: params.usdcAmount.toString(),
+      validAfter: "0",
+      validBefore: String(now + 300),
+      nonce,
+    },
+  };
+}
+
+function parseFundResponse(value: unknown): FundResponse | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const success = Reflect.get(value, "success");
+  const transactionHash = Reflect.get(value, "transactionHash");
+  const receiptUri = Reflect.get(value, "receiptUri");
+  const donorRecordedAs = Reflect.get(value, "donorRecordedAs");
+
+  if (typeof success !== "boolean") return null;
+  if (typeof transactionHash !== "string") return null;
+  if (receiptUri !== null && typeof receiptUri !== "string") return null;
+  if (donorRecordedAs !== "did" && donorRecordedAs !== "wallet") return null;
+
+  return {
+    success,
+    transactionHash,
+    receiptUri,
+    donorRecordedAs,
+  };
 }
 
 export function ConfirmModal({
   bumicert,
   amount,
-  anonymous,
+  donorChoseAnonymous,
   recipientWallet,
 }: ConfirmModalProps) {
   const { pushModal, popModal, hide, clear } = useModal();
@@ -43,8 +125,8 @@ export function ConfirmModal({
 
   const { signTypedDataAsync } = useSignTypedData();
 
-  const isAuthenticated = auth.status === "AUTHENTICATED";
-  const donorDid = isAuthenticated ? (auth as { did?: string }).did : undefined;
+  const donorDid = auth.authenticated ? auth.user.did : undefined;
+  const storeDonationAsAnonymous = donorDid ? donorChoseAnonymous : true;
 
   const usdcAmount = toUsdcUnits(amount);
   const hasEnoughBalance = balance !== null && parseFloat(balance) >= amount;
@@ -58,58 +140,36 @@ export function ConfirmModal({
     clear();
   };
 
-  function buildTypedData(toWallet: `0x${string}`) {
-    const now = Math.floor(Date.now() / 1000);
-    const nonce = `0x${Array.from(crypto.getRandomValues(new Uint8Array(32)))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("")}` as `0x${string}`;
-
-    return {
-      domain: {
-        name: "USD Coin",
-        version: "2",
-        chainId: 8453,
-        verifyingContract:
-          "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as `0x${string}`,
-      },
-      types: EIP3009_TYPES,
-      primaryType: "TransferWithAuthorization" as const,
-      message: {
-        from: address as `0x${string}`,
-        to: toWallet,
-        value: usdcAmount,
-        validAfter: BigInt(0),
-        validBefore: BigInt(now + 300),
-        nonce,
-      },
-      authorization: {
-        from: address as string,
-        to: toWallet as string,
-        value: usdcAmount.toString(),
-        validAfter: "0",
-        validBefore: String(now + 300),
-        nonce,
-      },
-    };
-  }
-
   const handlePay = async () => {
-    if (!address) return;
+    if (!address) {
+      setErrorMsg("Please connect your wallet.");
+      setTxState("rejected");
+      return;
+    }
 
-    const { domain, types, primaryType, message, authorization } =
-      buildTypedData(recipientWallet as `0x${string}`);
+    if (!isHexAddress(recipientWallet)) {
+      setErrorMsg("Recipient wallet is invalid.");
+      setTxState("rejected");
+      return;
+    }
+
+    const { domain, types, message, authorization } = buildTypedData({
+      senderWallet: address,
+      recipientWallet,
+      usdcAmount,
+    });
 
     setTxState("waiting-signature");
     setErrorMsg(null);
 
     let signature: `0x${string}`;
     try {
-      signature = await signTypedDataAsync({
-        domain,
-        types,
-        primaryType,
-        message,
-      });
+        signature = await signTypedDataAsync({
+          domain,
+          types,
+          primaryType: "TransferWithAuthorization",
+          message,
+        });
     } catch {
       setTxState("rejected");
       return;
@@ -139,8 +199,8 @@ export function ConfirmModal({
           orgDid: bumicert.organizationDid,
           amount: String(amount),
           currency: "USDC",
-          donorDid,
-          anonymous,
+          donorDid: storeDonationAsAnonymous ? undefined : donorDid,
+          anonymous: storeDonationAsAnonymous,
         }),
       });
 
@@ -149,11 +209,11 @@ export function ConfirmModal({
         throw new Error(err.error || "Payment failed");
       }
 
-      const data = (await res.json()) as {
-        success: boolean;
-        transactionHash: string;
-        receiptUri: string | null;
-      };
+      const rawData = await res.json();
+      const data = parseFundResponse(rawData);
+      if (!data) {
+        throw new Error("Payment completed, but response was invalid.");
+      }
 
       pushModal({
         id: MODAL_IDS.DONATE_SUCCESS,
@@ -163,6 +223,7 @@ export function ConfirmModal({
             organizationName={bumicert.organizationName}
             transactionHash={data.transactionHash}
             bumicertId={`${bumicert.organizationDid}-${bumicert.rkey}`}
+            donorRecordedAs={data.donorRecordedAs}
           />
         ),
       });
