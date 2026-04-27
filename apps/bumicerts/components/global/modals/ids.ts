@@ -27,6 +27,9 @@ export const MODAL_IDS = {
   MANAGE_START_DATE_SELECTOR: "manage/start-date-selector",
   MANAGE_VISIBILITY_SELECTOR: "manage/visibility-selector",
   MANAGE_PHOTO_ATTACH: "manage/photo-attach",
+
+  // Upload flows
+  UPLOAD_TREES_COMPLETE: "upload/trees/complete",
 } as const;
 
 export type ModalId = (typeof MODAL_IDS)[keyof typeof MODAL_IDS];

@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
+  Clock,
   ChevronDown,
   ChevronRight,
   Loader2,
@@ -26,6 +27,7 @@ import { MODAL_IDS } from "@/components/global/modals/ids";
 import PhotoAttachModal from "@/components/global/modals/upload/photo-attachment";
 import { formatError, isErrorCode } from "@/lib/utils/trpc-errors";
 import { buildTreeDynamicProperties } from "@/lib/upload/tree-dynamic-properties";
+import { getUploadTimeEstimate } from "@/lib/upload/time-estimate";
 import {
   APPEND_EXISTING_DWC_DATASET_CLIENT_ROWS,
   toAppendExistingDatasetRows,
@@ -36,6 +38,7 @@ import {
   isUploadDatasetSelection,
   type UploadDatasetSelection,
 } from "./upload-dataset-selection";
+import { TreeUploadCompleteModal } from "./TreeUploadCompleteModal";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -165,11 +168,13 @@ export default function UploadStep({
 
   const [uploadStarted, setUploadStarted] = useState(false);
   const [uploadDone, setUploadDone] = useState(false);
+  const [uploadStartedAtMs, setUploadStartedAtMs] = useState<number | null>(null);
   const [uploadFatalError, setUploadFatalError] = useState<string | null>(null);
   const [datasetUpdateWarning, setDatasetUpdateWarning] = useState<string | null>(null);
   const [uploadedDatasetUri, setUploadedDatasetUri] = useState<string | null>(
     null,
   );
+  const [clockMs, setClockMs] = useState(() => Date.now());
   const [progress, setProgress] = useState<UploadProgress>({
     current: 0,
     total: validRows.length,
@@ -207,6 +212,9 @@ export default function UploadStep({
 
   const [photoFetchStarted, setPhotoFetchStarted] = useState(false);
   const [photoFetchDone, setPhotoFetchDone] = useState(false);
+  const [photoFetchStartedAtMs, setPhotoFetchStartedAtMs] = useState<
+    number | null
+  >(null);
   const [photoFetchStatuses, setPhotoFetchStatuses] = useState<
     Record<number, PhotoFetchStatus>
   >({});
@@ -221,6 +229,7 @@ export default function UploadStep({
   // Prevent double-run in StrictMode
   const uploadRef = useRef(false);
   const photoFetchRef = useRef(false);
+  const completionModalShownRef = useRef(false);
 
   const resolvedExistingDataset =
     datasetSelection.mode === "existing"
@@ -381,6 +390,10 @@ export default function UploadStep({
   const runUpload = useCallback(async () => {
     if (uploadRef.current) return;
     uploadRef.current = true;
+    const uploadStartMs = Date.now();
+    setClockMs(uploadStartMs);
+    setUploadStartedAtMs(null);
+    setPhotoFetchStartedAtMs(null);
     setUploadStarted(true);
     setUploadFatalError(null);
     setDatasetUpdateWarning(null);
@@ -408,10 +421,15 @@ export default function UploadStep({
         setUploadFatalError(
           "Couldn't create the new dataset for this upload. Please try again or continue without a dataset.",
         );
+        setClockMs(Date.now());
         setUploadDone(true);
         return;
       }
     } else if (datasetSelection.mode === "existing") {
+      const rowUploadStartMs = Date.now();
+      setClockMs(rowUploadStartMs);
+      setUploadStartedAtMs(rowUploadStartMs);
+
       const nextStatuses = validRows.map<RowStatus>(() => ({ state: "pending" }));
       let successes = 0;
       let partials = 0;
@@ -575,11 +593,16 @@ export default function UploadStep({
         await invalidateTreeQueries();
       }
 
+      setClockMs(Date.now());
       setUploadDone(true);
       return;
     }
 
     // ── Phase 1: Create occurrences + measurements ────────────────────────
+    const rowUploadStartMs = Date.now();
+    setClockMs(rowUploadStartMs);
+    setUploadStartedAtMs(rowUploadStartMs);
+
     let successes = 0;
     let partials = 0;
     let failures = 0;
@@ -720,6 +743,7 @@ export default function UploadStep({
       await invalidateTreeQueries();
     }
 
+    setClockMs(Date.now());
     setUploadDone(true);
   }, [
     appendExistingDataset,
@@ -748,6 +772,9 @@ export default function UploadStep({
   const runPhotoFetch = useCallback(async () => {
     if (photoFetchRef.current) return;
     photoFetchRef.current = true;
+    const photoFetchStartMs = Date.now();
+    setClockMs(photoFetchStartMs);
+    setPhotoFetchStartedAtMs(photoFetchStartMs);
     setPhotoFetchStarted(true);
 
     let successes = 0;
@@ -851,6 +878,7 @@ export default function UploadStep({
       }));
     }
 
+    setClockMs(Date.now());
     setPhotoFetchDone(true);
 
     if (successes > 0) {
@@ -863,11 +891,11 @@ export default function UploadStep({
   // Auto-start photo fetch after Phase 1 completes
   useEffect(() => {
     if (
-      uploadDone
-      && hasPhotoUrls
-      && progress.successes + progress.partials > 0
-      && !photoFetchStarted
-      && !uploadFatalError
+      uploadDone &&
+      hasPhotoUrls &&
+      progress.successes + progress.partials > 0 &&
+      !photoFetchStarted &&
+      !uploadFatalError
     ) {
       void runPhotoFetch();
     }
@@ -883,10 +911,19 @@ export default function UploadStep({
 
   // ── Derived values ────────────────────────────────────────────────────────
   const { current, total, successes, partials, failures, currentRow } = progress;
+  const completedRows = successes + partials + failures;
   const progressPercent = total > 0 ? Math.round((current / total) * 100) : 0;
-  const progressLabel = uploadStarted
+  const progressLabel = uploadStarted && current > 0
     ? `Uploading row ${current} of ${total}${currentRow ? ` — ${currentRow}` : ""}...`
     : "Preparing upload...";
+  const treeUploadTimeEstimate = getUploadTimeEstimate({
+    startedAtMs: uploadStartedAtMs,
+    nowMs: clockMs,
+    completedUnits: completedRows,
+    totalUnits: total,
+    isComplete: uploadDone,
+    unitLabel: "record",
+  });
   const selectedDatasetName =
     datasetSelection.mode === "new"
       ? datasetSelection.name
@@ -899,15 +936,28 @@ export default function UploadStep({
 
   // Phase 2 is complete when either there are no photo URLs, photo fetch is done,
   // or the upload stopped before any records were written.
+  const hasPhotoFetchWork = hasPhotoUrls && persistedCount > 0;
   const allPhasesComplete = uploadFatalError
     ? uploadDone
-    : uploadDone && (!hasPhotoUrls || photoFetchDone);
+    : uploadDone && (!hasPhotoFetchWork || photoFetchDone);
+  const isUploadInProgress = uploadStarted && !allPhasesComplete;
+  const showBackNavigation = !uploadDone;
   const photoFetchPercent =
     photoFetchProgress.total > 0
       ? Math.round(
           (photoFetchProgress.current / photoFetchProgress.total) * 100,
         )
       : 0;
+  const completedPhotoFetches =
+    photoFetchProgress.successes + photoFetchProgress.failures;
+  const photoFetchTimeEstimate = getUploadTimeEstimate({
+    startedAtMs: photoFetchStartedAtMs,
+    nowMs: clockMs,
+    completedUnits: completedPhotoFetches,
+    totalUnits: photoFetchProgress.total,
+    isComplete: photoFetchDone,
+    unitLabel: "photo URL",
+  });
   const hasUploadedTrees = persistedCount > 0;
   const treeManagerHref = links.manage.treesFiltered({
     dataset: uploadedDatasetUri,
@@ -915,6 +965,85 @@ export default function UploadStep({
   const treeManagerLabel = uploadedDatasetUri
     ? "View Dataset in Tree Manager"
     : "View Trees in Tree Manager";
+
+  useEffect(() => {
+    if (!isUploadInProgress) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setClockMs(Date.now());
+    }, 1_000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [isUploadInProgress]);
+
+  useEffect(() => {
+    if (
+      !allPhasesComplete ||
+      uploadFatalError ||
+      !hasUploadedTrees ||
+      completionModalShownRef.current
+    ) {
+      return;
+    }
+
+    completionModalShownRef.current = true;
+
+    pushModal(
+      {
+        id: MODAL_IDS.UPLOAD_TREES_COMPLETE,
+        content: (
+          <TreeUploadCompleteModal
+            totalCount={total}
+            savedCount={persistedCount}
+            partialCount={partials}
+            failedCount={failures}
+            photoFailureCount={photoFetchProgress.failures}
+            treeManagerHref={treeManagerHref}
+            treeManagerLabel={treeManagerLabel}
+            onUploadMore={onComplete}
+          />
+        ),
+        dialogWidth: "max-w-md",
+      },
+      true,
+    );
+    void show();
+  }, [
+    allPhasesComplete,
+    failures,
+    hasUploadedTrees,
+    onComplete,
+    partials,
+    persistedCount,
+    photoFetchProgress.failures,
+    pushModal,
+    show,
+    total,
+    treeManagerHref,
+    treeManagerLabel,
+    uploadFatalError,
+  ]);
+
+  useEffect(() => {
+    if (!isUploadInProgress) {
+      return;
+    }
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [isUploadInProgress]);
 
   const attentionRows = rowStatuses
     .map((status, i) => ({ status, row: validRows[i], index: i }))
@@ -939,15 +1068,32 @@ export default function UploadStep({
         ) : null}
       </div>
 
+      {isUploadInProgress ? (
+        <div className="flex items-start gap-3 rounded-md border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm text-yellow-700 dark:text-yellow-300">
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="font-medium">Do not refresh or close this page</p>
+            <p>
+              Keep this tab open until the upload completes. Refreshing now may
+              interrupt saving records or photos.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       {/* Progress bar */}
       {!uploadDone && (
         <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:justify-between">
             <span className="text-muted-foreground">
               {progressLabel}
             </span>
-            <span className="text-muted-foreground font-mono">
-              {progressPercent}%
+            <span className="flex flex-wrap items-center gap-3 text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+                {treeUploadTimeEstimate.label}
+              </span>
+              <span className="font-mono">{progressPercent}%</span>
             </span>
           </div>
           <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
@@ -956,11 +1102,14 @@ export default function UploadStep({
               style={{ width: `${progressPercent}%` }}
             />
           </div>
-          <p className="text-xs text-muted-foreground">
-            {successes} succeeded
-            {partials > 0 ? `, ${partials} need follow-up` : ""}
-            {`, ${failures} failed`}
-          </p>
+          <div className="flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+            <p>
+              {successes} succeeded
+              {partials > 0 ? `, ${partials} need follow-up` : ""}
+              {`, ${failures} failed`}
+            </p>
+            <p>{treeUploadTimeEstimate.description}</p>
+          </div>
         </div>
       )}
 
@@ -1002,7 +1151,7 @@ export default function UploadStep({
       ) : null}
 
       {/* Phase 2: Photo fetch progress */}
-      {uploadDone && hasPhotoUrls && !uploadFatalError && (
+      {uploadDone && hasPhotoFetchWork && !uploadFatalError && (
         <div className="space-y-2 rounded-lg border border-border p-4">
           <div className="flex items-center gap-2">
             <ImageDown className="h-4 w-4 text-muted-foreground" />
@@ -1015,13 +1164,17 @@ export default function UploadStep({
 
           {!photoFetchDone && (
             <>
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:justify-between">
                 <span className="text-muted-foreground">
                   Photo {photoFetchProgress.current} of{" "}
                   {photoFetchProgress.total}
                 </span>
-                <span className="text-muted-foreground font-mono">
-                  {photoFetchPercent}%
+                <span className="flex flex-wrap items-center gap-3 text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+                    {photoFetchTimeEstimate.label}
+                  </span>
+                  <span className="font-mono">{photoFetchPercent}%</span>
                 </span>
               </div>
               <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
@@ -1041,6 +1194,9 @@ export default function UploadStep({
             {" of "}
             {photoFetchProgress.total} photo URL
             {photoFetchProgress.total !== 1 ? "s" : ""}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {photoFetchTimeEstimate.description}
           </p>
 
           {photoFetchDone && photoFetchProgress.failures > 0 && (
@@ -1198,14 +1354,20 @@ export default function UploadStep({
       )}
 
       {/* Footer */}
-      <div className="flex items-center justify-between pt-2 border-t border-border">
-        <Button
-          variant="outline"
-          onClick={onBack}
-          disabled={uploadStarted && !allPhasesComplete}
-        >
-          {backLabel}
-        </Button>
+      <div
+        className={`flex items-center pt-2 border-t border-border ${
+          showBackNavigation ? "justify-between" : "justify-end"
+        }`}
+      >
+        {showBackNavigation ? (
+          <Button
+            variant="outline"
+            onClick={onBack}
+            disabled={uploadStarted && !allPhasesComplete}
+          >
+            {backLabel}
+          </Button>
+        ) : null}
 
         {allPhasesComplete && (
           <div className="flex gap-2">

@@ -24,6 +24,19 @@ type FieldDoc = {
   helperTone?: "default" | "destructive";
 };
 
+const TEMPLATE_DOWNLOADS = [
+  {
+    href: links.assets.treeDataBasicTemplate,
+    download: "tree-data-basic-template.csv",
+    label: "Download basic CSV",
+  },
+  {
+    href: links.assets.treeDataDetailedTemplate,
+    download: "tree-data-detailed-template.csv",
+    label: "Download detailed CSV",
+  },
+] as const;
+
 /**
  * Fields shown in the documentation table. Names match the CSV template
  * column headers (e.g. `height`, not the internal `totalHeight`).
@@ -34,11 +47,6 @@ const FIELD_DOCS: FieldDoc[] = [
     description: "Scientific name of the species",
     format: "Text",
     required: true,
-  },
-  {
-    field: "vernacularName",
-    description: "Common or local name",
-    format: "Text",
   },
   {
     field: "eventDate",
@@ -59,6 +67,11 @@ const FIELD_DOCS: FieldDoc[] = [
     required: true,
   },
   {
+    field: "vernacularName",
+    description: "Common or local name",
+    format: "Text",
+  },
+  {
     field: "recordedBy",
     description: "Name of recorder",
     format: "Text",
@@ -66,6 +79,21 @@ const FIELD_DOCS: FieldDoc[] = [
   {
     field: "locality",
     description: "Site or location name",
+    format: "Text",
+  },
+  {
+    field: "country",
+    description: "Country where the tree was recorded",
+    format: "Text",
+  },
+  {
+    field: "occurrenceRemarks",
+    description: "Notes or comments about the occurrence",
+    format: "Text",
+  },
+  {
+    field: "habitat",
+    description: "Habitat or vegetation type",
     format: "Text",
   },
   {
@@ -79,11 +107,14 @@ const FIELD_DOCS: FieldDoc[] = [
     format: "Number",
   },
   {
-    field: "establishmentMeans",
-    description: "How the tree was established (native, managed, etc.)",
-    format: "Enum",
-    helperText: "Upload uses simpler labels and maps them to GBIF codes automatically",
-    helperTone: "default",
+    field: "diameter",
+    description: "Basal or stem diameter in centimeters",
+    format: "Number",
+  },
+  {
+    field: "canopyCoverPercent",
+    description: "Canopy cover percentage",
+    format: "0-100",
   },
   {
     field: "photo_tree",
@@ -106,6 +137,13 @@ const FIELD_DOCS: FieldDoc[] = [
     helperText: "Must be publicly accessible — no sign-in required",
     helperTone: "destructive",
   },
+  {
+    field: "photo_url",
+    description: "Generic photo URL column. Multiple URLs may be separated with commas or semicolons.",
+    format: "URL(s)",
+    helperText: "Subject part is inferred from the column name; generic photos default to whole tree",
+    helperTone: "destructive",
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -117,7 +155,7 @@ export default function TreeDataGuide() {
     <Accordion type="single" collapsible className="rounded-lg border">
       <AccordionItem value="guide" className="border-b-0">
         <AccordionTrigger className="px-4 hover:no-underline">
-          New to tree data? See accepted fields and download the template
+          New to tree data? See accepted fields and download templates
         </AccordionTrigger>
 
         <AccordionContent className="px-4">
@@ -132,16 +170,17 @@ export default function TreeDataGuide() {
             use&nbsp;&mdash; just remove them before uploading.
           </p>
 
-          {/* Download template */}
-          <Button variant="outline" size="sm" className="mb-5" asChild>
-            <a
-              href={links.assets.treeDataTemplate}
-              download="tree-data-template.csv"
-            >
-              <Download />
-              Download template
-            </a>
-          </Button>
+          {/* Download templates */}
+          <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            {TEMPLATE_DOWNLOADS.map((template) => (
+              <Button key={template.download} variant="outline" size="sm" asChild>
+                <a href={template.href} download={template.download}>
+                  <Download />
+                  {template.label}
+                </a>
+              </Button>
+            ))}
+          </div>
 
           {/* Field reference table */}
           <div className="rounded-lg border overflow-hidden">

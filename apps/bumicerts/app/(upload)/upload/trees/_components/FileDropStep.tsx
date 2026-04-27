@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -399,7 +400,8 @@ export default function FileDropStep({
           <div className="space-y-3 rounded-xl border border-border bg-muted/20 p-4">
             <div className="space-y-1.5">
               <label htmlFor="dataset-name" className="text-sm font-medium">
-                Dataset name
+                Dataset name{" "}
+                <span className="text-muted-foreground font-normal">(recommended)</span>
               </label>
               <Input
                 id="dataset-name"
@@ -434,7 +436,28 @@ export default function FileDropStep({
             </div>
 
             {existingDatasetsQuery.isLoading ? (
-              <p className="text-sm text-muted-foreground">Loading your datasets...</p>
+              <div
+                className="space-y-4 rounded-lg border border-border bg-background/80 p-4"
+                role="status"
+                aria-live="polite"
+                aria-label="Loading your datasets"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-foreground">
+                      Loading your datasets…
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Finding datasets you can append this upload to.
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-2" aria-hidden="true">
+                  <Skeleton className="h-10 w-full rounded-md" />
+                  <Skeleton className="h-16 w-full rounded-lg" />
+                </div>
+              </div>
             ) : existingDatasetsQuery.error ? (
               <p className="text-sm text-destructive">
                 Couldn&apos;t load your existing datasets right now. You can still

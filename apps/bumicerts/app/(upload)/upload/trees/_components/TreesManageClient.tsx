@@ -596,6 +596,13 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     () => buildDatasetLandingCards(datasetItems, treeItems),
     [datasetItems, treeItems],
   );
+  const activeDatasetCard = datasetFilter
+    ? datasetCards.find((card) => card.id === datasetFilter) ?? null
+    : null;
+  const isPendingDatasetFilter =
+    Boolean(datasetFilter) &&
+    datasetFilter !== UNGROUPED_DATASET_FILTER &&
+    activeDatasetCard === null;
   const showDatasetLanding =
     managerView !== "trees" && !datasetFilter && datasetCards.length > 0;
   const filteredDatasetCards = useMemo(() => {
@@ -684,30 +691,6 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     : isDesktop
       ? (selectedTree ?? filteredTrees[0] ?? null)
       : selectedTree;
-
-  useEffect(() => {
-    if (!datasetFilter || isLoading) {
-      return;
-    }
-
-    const isKnownDataset = datasetCards.some((card) => card.id === datasetFilter);
-    if (isKnownDataset) {
-      return;
-    }
-
-    void Promise.all([
-      setManagerView(null),
-      setDatasetFilter(null),
-      setSelectedTreeRkey(null),
-    ]);
-  }, [
-    datasetCards,
-    datasetFilter,
-    isLoading,
-    setManagerView,
-    setDatasetFilter,
-    setSelectedTreeRkey,
-  ]);
 
   useEffect(() => {
     if (!showDatasetLanding || !selectedTreeRkey) {
@@ -1273,15 +1256,19 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     (activeTree?.measurements.length ?? 0) === 0;
   const searchPlaceholder = showDatasetLanding
     ? "Search by dataset, location, or status"
-    : "Search by species, locality, recorder, or date";
+    : isPendingDatasetFilter
+      ? "Dataset is still indexing"
+      : "Search by species, locality, recorder, or date";
   const searchQueryTrimmed = searchQuery.trim();
   const activeSearchQuery = showDatasetLanding ? datasetSearchQuery : searchQuery;
   const activeSearchSetter = showDatasetLanding
     ? setDatasetSearchQuery
     : setSearchQuery;
-  const counterLabel = showDatasetLanding
-    ? `${filteredDatasetCards.length} of ${datasetCards.length} dataset${datasetCards.length === 1 ? "" : "s"}`
-    : `${filteredTrees.length} of ${datasetScopedTrees.length} tree record${datasetScopedTrees.length === 1 ? "" : "s"}`;
+  const counterLabel = isPendingDatasetFilter
+    ? "Dataset still indexing"
+    : showDatasetLanding
+      ? `${filteredDatasetCards.length} of ${datasetCards.length} dataset${datasetCards.length === 1 ? "" : "s"}`
+      : `${filteredTrees.length} of ${datasetScopedTrees.length} tree record${datasetScopedTrees.length === 1 ? "" : "s"}`;
 
   if (isLoading) {
     return <TreesManageSkeleton />;
@@ -1381,6 +1368,11 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all__">All datasets</SelectItem>
+                {isPendingDatasetFilter && datasetFilter ? (
+                  <SelectItem value={datasetFilter}>
+                    Dataset still indexing…
+                  </SelectItem>
+                ) : null}
                 {datasetCards.map((datasetCard) => {
                   return (
                     <SelectItem key={datasetCard.id} value={datasetCard.id}>
@@ -1398,7 +1390,9 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
         </p>
       </div>
 
-      {datasetCards.length === 0 && treeItems.length === 0 ? (
+      {datasetCards.length === 0 &&
+      treeItems.length === 0 &&
+      !isPendingDatasetFilter ? (
         <EmptyState />
       ) : showDatasetLanding ? (
         <div className="space-y-4">
@@ -1440,14 +1434,32 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
             className="text-2xl text-muted-foreground"
             style={{ fontFamily: "var(--font-garamond-var)" }}
           >
-            {searchQueryTrimmed ? "No trees match your search" : "No trees in this dataset yet"}
+            {isPendingDatasetFilter
+              ? "Dataset is still indexing"
+              : searchQueryTrimmed
+                ? "No trees match your search"
+                : "No trees in this dataset yet"}
           </p>
           <p className="text-sm text-muted-foreground">
-            {searchQueryTrimmed
-              ? "Try a different species name, locality, or recorder."
-              : "This dataset is ready, but there are no tree records to review yet."}
+            {isPendingDatasetFilter
+              ? "We’re keeping this dataset view open while the indexer catches up. Try refreshing in a few seconds."
+              : searchQueryTrimmed
+                ? "Try a different species name, locality, or recorder."
+                : "This dataset is ready, but there are no tree records to review yet."}
           </p>
-          {searchQueryTrimmed ? (
+          {isPendingDatasetFilter ? (
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button variant="outline" onClick={() => void handleRetry()}>
+                <RefreshCcw />
+                Refresh
+              </Button>
+              {datasetCards.length > 0 ? (
+                <Button variant="ghost" onClick={handleReturnToDatasets}>
+                  Back to datasets
+                </Button>
+              ) : null}
+            </div>
+          ) : searchQueryTrimmed ? (
             <Button variant="outline" onClick={() => void setSearchQuery(null)}>
               Clear search
             </Button>
