@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { format, parseISO } from "date-fns";
@@ -113,8 +112,12 @@ type FormState = {
   logo: File | undefined;
 };
 
-export function OrgSetupPage({ did }: { did: string }) {
-  const router = useRouter();
+type OrgSetupPageProps = {
+  did: string;
+  onSetupSaved: () => Promise<boolean>;
+};
+
+export function OrgSetupPage({ did, onSetupSaved }: OrgSetupPageProps) {
   const { show, pushModal } = useModal();
 
   const [form, setForm] = useState<FormState>({
@@ -133,6 +136,9 @@ export function OrgSetupPage({ did }: { did: string }) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [countdown, setCountdown] = useState(3);
+  const [isFinalizing, setIsFinalizing] = useState(false);
+  const [redirectError, setRedirectError] = useState<string | null>(null);
+  const autoRedirectTriggeredRef = useRef(false);
 
   const upsertOrgInfo = trpc.organization.info.upsert.useMutation();
 
@@ -182,17 +188,37 @@ export function OrgSetupPage({ did }: { did: string }) {
     };
   }, [logoPreviewUrl]);
 
-  // ── Success countdown → refresh ──────────────────────────────────────────────
+  // ── Success countdown → redirect ─────────────────────────────────────────────
+
+  const triggerRedirect = useCallback(async () => {
+    setIsFinalizing(true);
+    setRedirectError(null);
+
+    const setupLoaded = await onSetupSaved();
+    if (!setupLoaded) {
+      setRedirectError(
+        "Saved successfully, but your dashboard is still processing. Please try continuing again.",
+      );
+    }
+
+    setIsFinalizing(false);
+  }, [onSetupSaved]);
 
   useEffect(() => {
     if (!saveSuccess) return;
-    if (countdown <= 0) {
-      router.refresh();
+
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+
+    if (autoRedirectTriggeredRef.current || isFinalizing) {
       return;
     }
-    const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [saveSuccess, countdown, router]);
+
+    autoRedirectTriggeredRef.current = true;
+    void triggerRedirect();
+  }, [saveSuccess, countdown, isFinalizing, triggerRedirect]);
 
   // ── BrandFetch ──────────────────────────────────────────────────────────────
 
@@ -235,7 +261,6 @@ export function OrgSetupPage({ did }: { did: string }) {
     } finally {
       setIsFetchingBrandInfo(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.website]);
 
   // ── Modals ──────────────────────────────────────────────────────────────────
@@ -351,6 +376,9 @@ export function OrgSetupPage({ did }: { did: string }) {
 
       // Step 5: Show success state with countdown, then refresh.
       setIsSubmitting(false);
+      setRedirectError(null);
+      autoRedirectTriggeredRef.current = false;
+      setCountdown(3);
       setSaveSuccess(true);
     } catch (caughtError) {
       console.error("Failed to save org info:", caughtError);
@@ -659,9 +687,36 @@ export function OrgSetupPage({ did }: { did: string }) {
         {/* Submit / Success */}
         <div className="w-full flex justify-center">
           {saveSuccess ? (
-            <div className="flex items-center gap-2 text-sm text-primary">
-              <Loader2Icon className="size-4 animate-spin" />
-              <span>Saved successfully! Refreshing in {countdown}…</span>
+            <div className="flex flex-col items-center gap-2 text-sm text-primary">
+              <div className="flex items-center gap-2">
+                <Loader2Icon className="size-4 animate-spin" />
+                <span>
+                  {countdown > 0
+                    ? `Saved successfully! Redirecting in ${countdown}…`
+                    : isFinalizing
+                      ? "Saved successfully! Taking you to your dashboard…"
+                      : "Saved successfully!"}
+                </span>
+              </div>
+
+              {redirectError && (
+                <>
+                  <p className="text-xs text-muted-foreground text-center max-w-xs">
+                    {redirectError}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      void triggerRedirect();
+                    }}
+                    disabled={isFinalizing}
+                  >
+                    {isFinalizing ? "Trying again…" : "Continue to dashboard"}
+                  </Button>
+                </>
+              )}
             </div>
           ) : (
             <Button

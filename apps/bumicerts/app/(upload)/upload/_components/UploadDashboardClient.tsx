@@ -65,6 +65,12 @@ interface ManageDashboardClientProps {
  * in the query cache is preserved until a matching refetch arrives.
  */
 const INVALIDATION_DELAY_MS = 5_000;
+const SETUP_REFETCH_INTERVAL_MS = 1_000;
+const SETUP_REFETCH_MAX_ATTEMPTS = 15;
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function normalizeLongDescriptionBlobRefs(
   doc: OrganizationData["longDescription"],
@@ -131,6 +137,7 @@ export function ManageDashboardClient({ did }: ManageDashboardClientProps) {
     data: orgData,
     isLoading,
     error,
+    refetch,
   } = indexerTrpc.organization.byDid.useQuery(
     { did },
     {
@@ -148,6 +155,21 @@ export function ManageDashboardClient({ did }: ManageDashboardClientProps) {
     },
   );
   const hasFetchedOrg = orgData?.org !== null && orgData?.org !== undefined;
+
+  const handleSetupSaved = useCallback(async (): Promise<boolean> => {
+    for (let attempt = 0; attempt < SETUP_REFETCH_MAX_ATTEMPTS; attempt += 1) {
+      const queryResult = await refetch();
+      if (queryResult.data?.org) {
+        return true;
+      }
+
+      if (attempt < SETUP_REFETCH_MAX_ATTEMPTS - 1) {
+        await wait(SETUP_REFETCH_INTERVAL_MS);
+      }
+    }
+
+    return false;
+  }, [refetch]);
 
   // Derive OrganizationData from the query cache — single source of truth.
   // No useEffect sync, no Zustand serverData. When setQueryData updates the
@@ -379,7 +401,7 @@ export function ManageDashboardClient({ did }: ManageDashboardClientProps) {
   if (!hasFetchedOrg && !serverData) {
     return (
       <Container className="pt-4">
-        <OrgSetupPage did={did} />
+        <OrgSetupPage did={did} onSetupSaved={handleSetupSaved} />
       </Container>
     );
   }
