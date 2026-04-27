@@ -246,13 +246,48 @@ function parseLinearDocument(raw: unknown): LeafletLinearDocument {
  * For display, always use <LeafletRenderer> instead.
  */
 export function extractTextFromLinearDocument(doc: LeafletLinearDocument): string {
+  const extractTextFromListItems = (value: unknown): string[] => {
+    if (!Array.isArray(value)) return [];
+
+    const result: string[] = [];
+
+    for (const item of value) {
+      if (!item || typeof item !== "object") continue;
+      const listItem = item as Record<string, unknown>;
+
+      const content = listItem["content"];
+      if (content && typeof content === "object") {
+        const contentObj = content as Record<string, unknown>;
+        const plaintext = contentObj["plaintext"];
+        if (typeof plaintext === "string" && plaintext.trim().length > 0) {
+          result.push(plaintext);
+        }
+      }
+
+      const nested = listItem["children"];
+      result.push(...extractTextFromListItems(nested));
+    }
+
+    return result;
+  };
+
   return doc.blocks
     .map((wrapper) => {
       const block = wrapper.block;
       if (!block || typeof block !== "object") return "";
-      if ("plaintext" in block && typeof block.plaintext === "string") {
-        return block.plaintext;
+
+      const blockObj = block as Record<string, unknown>;
+      const plaintext = blockObj["plaintext"];
+      if (typeof plaintext === "string") {
+        return plaintext;
       }
+
+      const blockType = blockObj["$type"];
+      if (blockType === "pub.leaflet.blocks.unorderedList") {
+        const childrenText = extractTextFromListItems(blockObj["children"]);
+        return childrenText.join("\n");
+      }
+
       return "";
     })
     .filter(Boolean)
