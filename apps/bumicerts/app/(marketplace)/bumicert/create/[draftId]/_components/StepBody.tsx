@@ -18,6 +18,7 @@ const StepBody = () => {
   const { viewport, openState } = useNavbarContext();
   const { currentStepIndex: currentStep } = useNewBumicertStore();
   const CurrentStepComponent = STEPS[currentStep].Component;
+  const showDesktopSidebar = viewport === "desktop" && currentStep !== 4;
   const params = useParams();
   const draftId = (params?.draftId as string) ?? "0";
   const previousStepRef = useRef<number | null>(null);
@@ -68,7 +69,7 @@ const StepBody = () => {
     <div
       className={cn(
         "grid gap-4 mt-4",
-        viewport === "desktop"
+        showDesktopSidebar
           ? openState.desktop
             ? "grid-cols-1 lg:grid-cols-[1fr_1px_296px]"
             : "grid-cols-[1fr_1px_296px]"
@@ -78,7 +79,7 @@ const StepBody = () => {
       <div className="flex flex-col">
         <CurrentStepComponent />
       </div>
-      {viewport === "desktop" && (
+      {showDesktopSidebar && (
         <>
           <div className="h-full border-l border-l-border"></div>
           <div className="flex flex-col items-center">

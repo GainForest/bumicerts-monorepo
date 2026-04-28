@@ -3,6 +3,11 @@ import { create } from "zustand";
 import { persist, createJSONStorage, StateStorage } from "zustand/middleware";
 import { LeafletLinearDocumentSchema } from "@gainforest/leaflet-react/schemas";
 import type { app } from "@gainforest/generated";
+import {
+  BUMICERT_COVER_IMAGE_MAX_SIZE_BYTES,
+  BUMICERT_COVER_IMAGE_MAX_SIZE_MB,
+  BUMICERT_COVER_IMAGE_SUPPORTED_TYPES,
+} from "./constants";
 
 // Constants for localStorage persistence
 // v2: description changed from string+facets (bsky-richtext) to LeafletLinearDocument
@@ -20,6 +25,15 @@ export const step1Schema = z.object({
     .refine((v) => v.size > 0, {
       message: "Required",
     })
+    .refine((v) => v.size <= BUMICERT_COVER_IMAGE_MAX_SIZE_BYTES, {
+      message: `Cover image must be ${BUMICERT_COVER_IMAGE_MAX_SIZE_MB}MB or smaller`,
+    })
+    .refine(
+      (v) => BUMICERT_COVER_IMAGE_SUPPORTED_TYPES.some((type) => type === v.type),
+      {
+        message: "Cover image must be JPG, PNG, or WebP",
+      }
+    )
     .describe("Cover Image"),
   workType: z.array(z.string()).min(1, "Required").describe("Work Type"),
   /**

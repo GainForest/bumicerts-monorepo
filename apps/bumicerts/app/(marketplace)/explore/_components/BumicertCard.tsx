@@ -56,7 +56,10 @@ export function BumicertCardVisual({
 
   return (
     <div
-      className={`relative rounded-2xl border border-border bg-card overflow-hidden w-full${className ? ` ${className}` : ""}`}
+      className={cn(
+        "relative rounded-2xl border border-border bg-card overflow-hidden w-full flex flex-col",
+        className,
+      )}
     >
       <div className="relative aspect-4/3 overflow-hidden z-0">
         {imageSrc ? (
@@ -65,19 +68,21 @@ export function BumicertCardVisual({
           <div className="absolute inset-0 bg-muted" />
         )}
       </div>
-      <div className="relative px-4 py-3 -mt-6 z-1">
+      <div className="relative px-4 py-3 -mt-6 z-1 flex-1 flex flex-col justify-between">
         <div className="absolute -top-2 left-0 right-0 h-8 bg-linear-to-b from-transparent via-background/65 to-background z-0"></div>
-        <h3
-          className="relative text-2xl font-semibold text-foreground leading-snug line-clamp-1 z-1"
-          style={{ fontFamily: "var(--font-garamond-var)" }}
-        >
-          {title}
-        </h3>
-        {description && (
-          <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed line-clamp-3">
-            {description}
-          </p>
-        )}
+        <div>
+          <h3
+            className="relative text-2xl font-semibold text-foreground leading-snug line-clamp-1 z-1"
+            style={{ fontFamily: "var(--font-garamond-var)" }}
+          >
+            {title}
+          </h3>
+          {description && (
+            <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed line-clamp-3">
+              {description}
+            </p>
+          )}
+        </div>
         {/* Objective chips */}
         <div className="w-full flex items-center gap-2 flex-wrap mt-4">
           {objectivesToDisplay.map((obj) => {

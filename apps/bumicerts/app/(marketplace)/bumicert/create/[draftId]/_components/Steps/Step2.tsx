@@ -31,10 +31,22 @@ const Step2 = () => {
   const ownerDid = auth.status === "AUTHENTICATED" ? auth.user.did : "";
 
   const [isGenerating, setIsGenerating] = useState(false);
+  const [shortDescriptionEditorKey, setShortDescriptionEditorKey] = useState(0);
+  const [editorText, setEditorText] = useState(shortDescription);
 
   useEffect(() => {
     updateErrorsAndCompletion();
   }, [shouldShowValidationErrors]);
+
+  useEffect(() => {
+    // Keep editor stable while typing (avoid remount on each keystroke),
+    // but remount when value changes from external sources (e.g. AI generate,
+    // hydration) so initialValue is refreshed.
+    if (shortDescription === editorText) return;
+
+    setEditorText(shortDescription);
+    setShortDescriptionEditorKey((prev) => prev + 1);
+  }, [shortDescription, editorText]);
 
   const handleGenerateShortDescription = async () => {
     const descriptionText = extractTextFromLinearDocument(description).trim();
@@ -108,9 +120,10 @@ const Step2 = () => {
         <div className="w-full relative">
           <div className="w-full rounded-md border border-border bg-background overflow-hidden pr-10">
             <BskyRichTextEditor
-              key={shortDescription}
+              key={shortDescriptionEditorKey}
               initialValue={{ text: shortDescription, facets: shortDescriptionFacets }}
               onChange={(text, facets) => {
+                setEditorText(text);
                 setFormValue("shortDescription", text);
                 setFormValue("shortDescriptionFacets", facets ?? []);
               }}

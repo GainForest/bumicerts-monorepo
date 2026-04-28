@@ -72,6 +72,7 @@ const SecondaryContent = () => {
     (state) => state.formCompletionPercentages
   );
   const step1FormValues = useFormStore((state) => state.formValues[0]);
+  const step2FormValues = useFormStore((state) => state.formValues[1]);
   const step1Progress = completionPercentages[0];
   const auth = useAtprotoStore((state) => state.auth);
 
@@ -81,14 +82,23 @@ const SecondaryContent = () => {
 
   const did = auth.user?.did ?? "";
 
-  const { data: orgSingleData, isPlaceholderData: isOlderData } = indexerTrpc.organization.byDid.useQuery(
+  const {
+    data: orgSingleData,
+    isPlaceholderData: isOlderData,
+    isPending: isPendingOrganizationInfo,
+  } = indexerTrpc.organization.byDid.useQuery(
     { did },
     { enabled: !!did }
   );
 
   const org = orgSingleData?.org ?? null;
   const logoUrl = isOlderData ? null : (org?.record?.logo?.uri ?? null);
-  const organizationName = org?.record?.displayName ?? "";
+  const organizationNameFromData = isOlderData
+    ? undefined
+    : org?.record?.displayName;
+  const organizationName =
+    organizationNameFromData ?? auth.user?.displayName ?? auth.user?.handle ?? "";
+  const isLoadingOrganizationInfo = isPendingOrganizationInfo || isOlderData;
 
   return (
     <div className="w-full min-h-full flex flex-col bg-muted/50 rounded-xl">
@@ -131,17 +141,30 @@ const SecondaryContent = () => {
             >
               {step1Progress === 100 ? (
                 <div className="w-full flex items-center justify-center">
-                  <BumicertCardVisual
-                    logoUrl={logoUrl}
-                    coverImage={
-                      step1FormValues.coverImage ??
-                      EMPTY_COVER_IMAGE
-                    }
-                    title={step1FormValues.projectName}
-                    organizationName={organizationName}
-                    objectives={step1FormValues.workType}
-                    className="max-w-2xs"
-                  />
+                  <div className="w-full max-w-2xs aspect-3/4">
+                    <BumicertCardVisual
+                      logoUrl={logoUrl}
+                      coverImage={
+                        step1FormValues.coverImage ??
+                        EMPTY_COVER_IMAGE
+                      }
+                      title={step1FormValues.projectName}
+                      description={
+                        step2FormValues.shortDescription.length > 0
+                          ? step2FormValues.shortDescription
+                          : undefined
+                      }
+                      organizationName={organizationName}
+                      objectives={step1FormValues.workType}
+                      className="h-full"
+                    />
+                  </div>
+                </div>
+              ) : isLoadingOrganizationInfo ? (
+                <div className="w-full flex items-center justify-center p-4">
+                  <span className="font-medium text-muted-foreground text-center text-pretty">
+                    Generating preview metadata...
+                  </span>
                 </div>
               ) : (
                 <div className="w-full flex items-center justify-center p-4">
