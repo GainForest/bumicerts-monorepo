@@ -48,7 +48,11 @@ import { restoreSession, getAuthenticatedAgent } from "./session/restore";
 import { createAuthorizeHandler } from "./handlers/routes";
 import { createCallbackHandler } from "./handlers/routes";
 import { createLogoutHandler } from "./handlers/routes";
-import { createClientMetadataHandler, createJwksHandler } from "./handlers/metadata";
+import {
+  createClientMetadataHandler,
+  createJwksHandler,
+  type EpdsHandleMode,
+} from "./handlers/metadata";
 import {
   createEpdsLoginHandler,
   createEpdsCallbackHandler,
@@ -132,6 +136,13 @@ export type AuthSetupConfig = {
     /** ePDS base URL (e.g. https://climateai.org). */
     url: string;
   };
+  /**
+   * Preferred ePDS handle mode for new account creation.
+   * - "picker-with-random": show picker with random option
+   * - "picker": show picker without random option
+   * - "random": skip picker and auto-assign a random handle
+   */
+  epdsHandleMode?: EpdsHandleMode;
 
   // ─── Optional: Redirect paths ────────────────────────────────────────────────
   /**
@@ -290,6 +301,7 @@ export function createAuthSetup(config: AuthSetupConfig): AuthSetup {
     cookieSecure,
     defaultPdsDomain,
     epds: epdsConfig,
+    epdsHandleMode,
     onCallback,
     onLogout,
     // Branding options
@@ -380,6 +392,7 @@ export function createAuthSetup(config: AuthSetupConfig): AuthSetup {
     emailSubjectTemplate,
     tosUri,
     policyUri,
+    epdsHandleMode,
   });
 
   const jwksHandler = createJwksHandler(privateKeyJwk);
