@@ -67,6 +67,9 @@ export function SitesClient({ did }: SitesClientProps) {
     isLoading,
     error,
   } = indexerTrpc.locations.list.useQuery({ did });
+  const { data: defaultSiteUri } = indexerTrpc.organization.defaultSite.useQuery({
+    did,
+  });
   const allSiteRkeys = sites
     ?.map((site) => site.metadata?.rkey)
     .filter((r) => typeof r === "string");
@@ -137,10 +140,11 @@ export function SitesClient({ did }: SitesClientProps) {
               src={siteIframeUrlState}
               ref={iframeRef}
             />
-            <div className="absolute inset-0 flex items-center justify-between p-4">
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-between p-4">
               <Button
                 size={"icon"}
                 variant={"outline"}
+                className="pointer-events-auto"
                 disabled={safeCurrentSiteIndex <= 0}
                 onClick={() => {
                   if (safeCurrentSiteIndex <= 0) return;
@@ -152,6 +156,7 @@ export function SitesClient({ did }: SitesClientProps) {
               <Button
                 size={"icon"}
                 variant={"outline"}
+                className="pointer-events-auto"
                 disabled={safeCurrentSiteIndex >= allSiteRkeys.length - 1}
                 onClick={() => {
                   if (safeCurrentSiteIndex >= allSiteRkeys.length - 1) return;
@@ -197,7 +202,7 @@ export function SitesClient({ did }: SitesClientProps) {
                   key={site.metadata?.uri ?? rkey}
                   site={site}
                   onChange={() => handleChangeSiteRkey(rkey)}
-                  defaultSiteUri={null}
+                  defaultSiteUri={defaultSiteUri ?? null}
                   isPreviewing={rkey === siteRkey}
                 />
               );

@@ -97,6 +97,7 @@ export function SiteCard({
     site.record?.locationType ?? undefined,
   );
   const previewUrl = locationUrl ? getShapefilePreviewUrl(locationUrl) : null;
+  const isPreviewable = !!previewUrl;
   const isDefault = !!(
     site.metadata?.uri && site.metadata.uri === defaultSiteUri
   );
@@ -125,7 +126,10 @@ export function SiteCard({
     trpc.organization.defaultSite.set.useMutation({
       onSuccess: () => {
         setMutationError(null);
-        void indexerUtils.locations.list.invalidate();
+        void Promise.all([
+          indexerUtils.locations.list.invalidate(),
+          indexerUtils.organization.defaultSite.invalidate(),
+        ]);
       },
       onError: (err) => {
         setMutationError(formatError(err));
@@ -185,111 +189,127 @@ export function SiteCard({
     deleteSite({ rkey });
   };
 
+  const handleCardClick = () => {
+    if (!isPreviewable || isPreviewing) return;
+    onChange();
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
       className={cn(
-        "flex flex-col rounded-xl border overflow-hidden bg-background hover:border-primary/30 hover:shadow-md transition-all duration-300",
+        "relative rounded-xl border overflow-hidden bg-background transition-all duration-300",
+        isPreviewable &&
+          "hover:border-primary/30 hover:shadow-md focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]",
         isPreviewing ? "border-primary!" : "border-border",
       )}
     >
-      {/* Header with default badge */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-        {previewUrl ? (
-          <Button
-            size={"xs"}
-            onClick={onChange}
-            variant={isPreviewing ? "default" : "ghost"}
-          >
-            {isPreviewing ? "Previewing" : "Preview"}
-          </Button>
-        ) : (
-          <span className="text-xs text-muted-foreground">No preview</span>
+      <button
+        onClick={handleCardClick}
+        className={cn(
+          "flex flex-col w-full",
+          isPreviewable &&
+            "cursor-pointer focus-visible:outline-none rounded-xl",
         )}
+      >
+        {/* Header with default badge */}
+        <div className="flex items-center justify-between gap-2 px-3 h-10 pr-11 border-b border-border">
+          {isPreviewing ? (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-medium">
+              Previewing
+            </span>
+          ) : isPreviewable ? (
+            <span className="text-xs text-muted-foreground">
+              Click to preview
+            </span>
+          ) : (
+            <span className="text-xs text-muted-foreground">No preview</span>
+          )}
 
-        <div className="flex items-center gap-1.5">
           {isDefault && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-medium">
               <BadgeCheckIcon className="h-3 w-3" />
               Default
             </span>
           )}
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 p-0"
-                disabled={disableActions}
-              >
-                {disableActions ? (
-                  <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <MoreVerticalIcon className="h-3.5 w-3.5" />
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleEdit} disabled={disableActions}>
-                <PencilIcon className="h-3.5 w-3.5 mr-2" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={handleSetDefault}
-                disabled={isDefault || disableActions}
-              >
-                <BadgeCheckIcon className="h-3.5 w-3.5 mr-2" />
-                {isDefault ? "Already default" : "Make default"}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={handleDelete}
-                disabled={isDefault || disableActions}
-              >
-                <Trash2Icon className="h-3.5 w-3.5 mr-2" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
-      </div>
 
-      {/* Card body */}
-      <div className="px-3 py-2.5 flex-1 flex flex-col justify-between">
-        <h3 className="font-medium text-base leading-snug line-clamp-3">
-          {site.record?.name ?? "Unnamed site"}
-        </h3>
+        {/* Card body */}
+        <div className="px-3 py-2.5 flex-1 flex flex-col w-full items-start justify-between text-left">
+          <h3 className="font-medium text-base leading-snug line-clamp-3">
+            {site.record?.name ?? "Unnamed site"}
+          </h3>
 
-        {isLoadingGeo && !inlineCoord ? (
-          <Loader2Icon className="h-3.5 w-3.5 animate-spin text-muted-foreground mt-1" />
-        ) : metrics ? (
-          typeof metrics === "string" ? (
-            <p className="text-xs text-destructive mt-1">{metrics}</p>
-          ) : (
-            <div className="flex items-center justify-between mt-1.5">
-              <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                <CrosshairIcon className="h-3 w-3 shrink-0" />
-                {metrics.lat.toFixed(2)}°, {metrics.lon.toFixed(2)}°
-              </span>
-              {metrics.area > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  {metrics.area.toFixed(1)} ha
+          {isLoadingGeo && !inlineCoord ? (
+            <Loader2Icon className="h-3.5 w-3.5 animate-spin text-muted-foreground mt-1" />
+          ) : metrics ? (
+            typeof metrics === "string" ? (
+              <p className="text-xs text-destructive mt-1">{metrics}</p>
+            ) : (
+              <div className="flex w-full items-center justify-between mt-1.5">
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <CrosshairIcon className="h-3 w-3 shrink-0" />
+                  {metrics.lat.toFixed(2)}°, {metrics.lon.toFixed(2)}°
                 </span>
-              )}
-            </div>
-          )
-        ) : null}
+                {metrics.area > 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    {metrics.area.toFixed(1)} ha
+                  </span>
+                )}
+              </div>
+            )
+          ) : null}
 
-        {/* Mutation error display */}
-        {mutationError && (
-          <div className="mt-2 p-2 bg-destructive/10 border border-destructive/20 rounded-md">
-            <p className="text-xs text-destructive">{mutationError}</p>
-          </div>
-        )}
+          {/* Mutation error display */}
+          {mutationError && (
+            <div className="mt-2 p-2 bg-destructive/10 border border-destructive/20 rounded-md">
+              <p className="text-xs text-destructive">{mutationError}</p>
+            </div>
+          )}
+        </div>
+      </button>
+
+      <div className="absolute top-1.5 right-1.5">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0"
+              disabled={disableActions}
+            >
+              {disableActions ? (
+                <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <MoreVerticalIcon className="h-3.5 w-3.5" />
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleEdit} disabled={disableActions}>
+              <PencilIcon className="h-3.5 w-3.5 mr-2" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={handleSetDefault}
+              disabled={isDefault || disableActions}
+            >
+              <BadgeCheckIcon className="h-3.5 w-3.5 mr-2" />
+              {isDefault ? "Already default" : "Make default"}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isDefault || disableActions}
+            >
+              <Trash2Icon className="h-3.5 w-3.5 mr-2" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </motion.div>
   );

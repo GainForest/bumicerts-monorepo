@@ -4,11 +4,13 @@
  * trpc.organization.info({ did })          → { org, activities }
  * trpc.organization.list({ limit?, cursor? }) → { data, pageInfo }
  * trpc.organization.logo({ did })          → string | null
+ * trpc.organization.defaultSite({ did })   → string | null
  */
 
 import { z } from "zod";
 import { queryRouter, publicQueryProcedure } from "./init";
 import * as orgModule from "@/lib/graphql-dev/queries/organization";
+import * as defaultSiteModule from "@/lib/graphql-dev/queries/organization/default-site";
 import * as logoModule from "@/lib/graphql-dev/queries/organization/logo";
 
 export const organizationRouter = queryRouter({
@@ -31,4 +33,9 @@ export const organizationRouter = queryRouter({
   logo: publicQueryProcedure
     .input(z.object({ did: z.string().min(1) }))
     .query(({ input }) => logoModule.fetch({ did: input.did })),
+
+  /** Default site AT-URI for a DID */
+  defaultSite: publicQueryProcedure
+    .input(z.object({ did: z.string().min(1) }))
+    .query(({ input }) => defaultSiteModule.fetch({ did: input.did })),
 });
