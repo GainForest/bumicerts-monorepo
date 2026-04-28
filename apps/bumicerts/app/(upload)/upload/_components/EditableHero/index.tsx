@@ -421,12 +421,16 @@ export function EditableHero({ organization }: EditableHeroProps) {
               <EditChip
                 onClick={openStartDate}
                 isEditing={isEditing}
-                isEmpty={sinceDate.state === "empty"}
+                isEmpty={
+                  isEditing
+                    ? sinceDate.state === "empty"
+                    : sinceDate.state !== "valid"
+                }
               >
                 <CalendarIcon className="h-3 w-3 shrink-0" />
                 {sinceDate.state === "valid"
                   ? `Since ${sinceLabel}`
-                  : sinceDate.state === "invalid"
+                  : isEditing && sinceDate.state === "invalid"
                     ? "Invalid Date"
                     : "Add start date"}
               </EditChip>
