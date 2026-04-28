@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/modal/modal";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { parseOrganizationDate } from "@/lib/date";
 
 interface StartDateSelectorModalProps {
   currentDate: string | null;
@@ -22,8 +23,11 @@ export function StartDateSelectorModal({
   onConfirm,
 }: StartDateSelectorModalProps) {
   const { hide, popModal, stack } = useModal();
+  const parsedCurrentDate = parseOrganizationDate(currentDate);
   const [selected, setSelected] = useState<Date | undefined>(
-    currentDate ? new Date(currentDate) : undefined,
+    parsedCurrentDate.state === "valid" && parsedCurrentDate.date
+      ? parsedCurrentDate.date
+      : undefined,
   );
 
   const handleClose = async () => {
