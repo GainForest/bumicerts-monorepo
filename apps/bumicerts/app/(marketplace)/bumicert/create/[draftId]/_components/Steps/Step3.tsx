@@ -125,7 +125,7 @@ const Step3 = () => {
     error: sitesFetchError,
   } = indexerTrpc.locations.list.useQuery({ did: auth.user?.did ?? "" });
 
-  const sites = sitesResponse as CertifiedLocation[] | undefined;
+  const sites = sitesResponse;
   const isSitesLoading = isSitesPending || isOlderSites;
 
   const selectedSitesSet = new Set(siteBoundaries.map((sb) => sb.uri));

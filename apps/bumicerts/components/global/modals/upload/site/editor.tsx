@@ -151,7 +151,9 @@ export const SiteEditorModal = ({
     setIsCompleted(true);
 
     setTimeout(() => {
-      void indexerUtils.locations.list.invalidate({ did });
+      void indexerUtils.locations.list
+        .invalidate({ did })
+        .finally(() => URL.revokeObjectURL(optimisticPreviewUrl));
     }, SITE_CREATE_INVALIDATION_DELAY_MS);
   };
 
