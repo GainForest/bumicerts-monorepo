@@ -71,7 +71,7 @@ There is no silent downgrade from non-anonymous to anonymous.
 
 ## 5) API contracts
 
-## 5.1 Single funding (`POST /api/fund`)
+### 5.1 Single funding (`POST /api/fund`)
 
 Request body (settlement mode):
 
@@ -99,7 +99,7 @@ Success response:
 
 `donorRecordedAs` is authoritative for UI messaging.
 
-## 5.2 Batch funding (`POST /api/fund/batch`)
+### 5.2 Batch funding (`POST /api/fund/batch`)
 
 Request body:
 

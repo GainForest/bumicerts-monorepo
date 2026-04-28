@@ -228,14 +228,14 @@ export async function POST(req: NextRequest) {
   } = {};
   try { body = await req.json(); } catch { /* ignore */ }
 
-  if (body.anonymous !== undefined && typeof body.anonymous !== "boolean") {
+  if (typeof body.anonymous !== "boolean") {
     return Response.json(
       { error: "Please choose whether to donate anonymously." },
       { status: 400 }
     );
   }
 
-  const donorChoseAnonymous = body.anonymous ?? true;
+  const donorChoseAnonymous = body.anonymous;
   let donorDid: DidIdentifier | undefined;
 
   if (!donorChoseAnonymous) {

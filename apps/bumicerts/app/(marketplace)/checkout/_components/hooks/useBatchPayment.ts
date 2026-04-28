@@ -22,12 +22,16 @@ function isHexAddress(value: string): value is HexAddress {
   return /^0x[a-fA-F0-9]{40}$/.test(value);
 }
 
+function isHexBytes32(value: string): value is HexAddress {
+  return /^0x[a-fA-F0-9]{64}$/.test(value);
+}
+
 function createNonce(): HexAddress {
   const nonce = `0x${Array.from(crypto.getRandomValues(new Uint8Array(32)))
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("")}`;
 
-  if (!isHexAddress(nonce)) {
+  if (!isHexBytes32(nonce)) {
     throw new Error("Failed to create a valid nonce");
   }
 
