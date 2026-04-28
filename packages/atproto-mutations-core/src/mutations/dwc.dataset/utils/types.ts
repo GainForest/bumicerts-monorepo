@@ -4,6 +4,7 @@ import type { CreateDwcOccurrenceInput } from "../../dwc.occurrence/utils/types"
 export type DwcDatasetRecord = Main;
 
 export const APPEND_EXISTING_DWC_DATASET_MAX_ROWS = 10;
+export const ATTACH_EXISTING_DWC_DATASET_MAX_OCCURRENCES = 25;
 
 export type CreateDwcDatasetInput = {
   name: string;
@@ -74,4 +75,43 @@ export type AppendExistingDwcDatasetResult = {
   datasetRkey: string;
   datasetBecameUnavailable: boolean;
   results: AppendExistingDwcDatasetRowResult[];
+};
+
+export type AttachExistingDwcDatasetOccurrencesInput = {
+  datasetRkey: string;
+  occurrenceRkeys: string[];
+};
+
+export type AttachExistingDwcDatasetOccurrenceResult =
+  | {
+      index: number;
+      rkey: string;
+      state: "success";
+      occurrenceUri: string;
+    }
+  | {
+      index: number;
+      rkey: string;
+      state: "skipped";
+      occurrenceUri?: string;
+      error: string;
+    }
+  | {
+      index: number;
+      rkey: string;
+      state: "error";
+      occurrenceUri?: string;
+      error: string;
+    };
+
+export type AttachExistingDwcDatasetOccurrencesResult = {
+  datasetUri: string;
+  datasetRkey: string;
+  attachedCount: number;
+  skippedCount: number;
+  errorCount: number;
+  datasetCountUpdated: boolean;
+  datasetBecameUnavailable: boolean;
+  datasetCountError?: string;
+  results: AttachExistingDwcDatasetOccurrenceResult[];
 };

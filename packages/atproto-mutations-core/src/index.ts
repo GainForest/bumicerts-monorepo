@@ -320,8 +320,14 @@ export type {
   AppendExistingDwcDatasetRowInput,
   AppendExistingDwcDatasetRowResult,
   AppendExistingDwcDatasetResult,
+  AttachExistingDwcDatasetOccurrencesInput,
+  AttachExistingDwcDatasetOccurrenceResult,
+  AttachExistingDwcDatasetOccurrencesResult,
 } from "./mutations/dwc.dataset/utils/types";
-export { APPEND_EXISTING_DWC_DATASET_MAX_ROWS } from "./mutations/dwc.dataset/utils/types";
+export {
+  APPEND_EXISTING_DWC_DATASET_MAX_ROWS,
+  ATTACH_EXISTING_DWC_DATASET_MAX_OCCURRENCES,
+} from "./mutations/dwc.dataset/utils/types";
 
 // dwc.occurrence
 export type {

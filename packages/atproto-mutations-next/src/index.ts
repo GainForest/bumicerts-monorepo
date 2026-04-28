@@ -165,9 +165,13 @@ export type {
   AppendExistingDwcDatasetRowInput,
   AppendExistingDwcDatasetRowResult,
   AppendExistingDwcDatasetResult,
+  AttachExistingDwcDatasetOccurrencesInput,
+  AttachExistingDwcDatasetOccurrenceResult,
+  AttachExistingDwcDatasetOccurrencesResult,
 } from "@gainforest/atproto-mutations-core";
 export {
   APPEND_EXISTING_DWC_DATASET_MAX_ROWS,
+  ATTACH_EXISTING_DWC_DATASET_MAX_OCCURRENCES,
   DwcDatasetValidationError,
   DwcDatasetNotFoundError,
   DwcDatasetUnavailableError,

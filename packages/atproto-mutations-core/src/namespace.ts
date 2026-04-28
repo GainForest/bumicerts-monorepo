@@ -100,6 +100,7 @@ import { createDwcDataset } from "./mutations/dwc.dataset/create";
 import { updateDwcDataset } from "./mutations/dwc.dataset/update";
 import { deleteDwcDataset } from "./mutations/dwc.dataset/delete";
 import { appendExistingDwcDataset } from "./mutations/dwc.dataset/appendExisting";
+import { attachExistingDwcDatasetOccurrences } from "./mutations/dwc.dataset/attachExistingOccurrences";
 
 // ---------------------------------------------------------------------------
 // dwc.occurrence
@@ -215,6 +216,7 @@ export const mutations = {
       create: createDwcDataset,
       update: updateDwcDataset,
       appendExisting: appendExistingDwcDataset,
+      attachExistingOccurrences: attachExistingDwcDatasetOccurrences,
       delete: deleteDwcDataset,
     },
     occurrence: {

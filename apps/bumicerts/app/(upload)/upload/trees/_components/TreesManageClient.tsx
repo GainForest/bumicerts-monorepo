@@ -17,6 +17,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
+import { ATTACH_EXISTING_DWC_DATASET_MAX_OCCURRENCES } from "@gainforest/atproto-mutations-next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -77,6 +78,7 @@ import {
   type TreeMeasurementDraft,
   type TreeOccurrenceDraft,
 } from "./tree-manager-utils";
+import AddToDatasetModal from "./AddToDatasetModal";
 
 type TreesManageClientProps = {
   did: string;
@@ -121,6 +123,8 @@ const EMPTY_MEASUREMENT_DRAFT: TreeMeasurementDraft = {
   canopyCoverPercent: "",
 };
 
+const ATTACH_INVALIDATION_DELAY_MS = 1_000;
+
 function normalizeDraftValue(value: string): string {
   return value.trim();
 }
@@ -163,6 +167,50 @@ function getOccurrenceUri(item: TreeManagerItem | null): string | null {
   return metadata?.uri ?? null;
 }
 
+function getDatasetIdentity(
+  dataset: DatasetItem,
+): { uri: string; rkey: string } | null {
+  const uri = dataset.metadata?.uri;
+  const rkey = dataset.metadata?.rkey;
+
+  if (typeof uri !== "string" || uri.length === 0) {
+    return null;
+  }
+
+  if (typeof rkey !== "string" || rkey.length === 0) {
+    return null;
+  }
+
+  return { uri, rkey };
+}
+
+function isUngroupedTree(item: TreeManagerItem): boolean {
+  const ref = item.occurrence.record?.datasetRef;
+  return typeof ref !== "string" || ref.length === 0;
+}
+
+function chunkStrings(values: string[], chunkSize: number): string[][] {
+  const chunks: string[][] = [];
+
+  for (let index = 0; index < values.length; index += chunkSize) {
+    chunks.push(values.slice(index, index + chunkSize));
+  }
+
+  return chunks;
+}
+
+function hashStrings(values: string[]): string {
+  let hash = 5381;
+
+  for (const value of values) {
+    for (let index = 0; index < value.length; index += 1) {
+      hash = (hash * 33 + value.charCodeAt(index)) % 4_294_967_295;
+    }
+  }
+
+  return hash.toString(36);
+}
+
 function revokeBlobUrl(url: string | null | undefined) {
   if (typeof url === "string" && url.startsWith("blob:")) {
     URL.revokeObjectURL(url);
@@ -188,7 +236,8 @@ function sameOccurrenceRecord(
     left.decimalLongitude === right.decimalLongitude &&
     left.occurrenceRemarks === right.occurrenceRemarks &&
     left.habitat === right.habitat &&
-    left.establishmentMeans === right.establishmentMeans
+    left.establishmentMeans === right.establishmentMeans &&
+    left.datasetRef === right.datasetRef
   );
 }
 
@@ -403,6 +452,8 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
 
   const updateOccurrence = trpc.dwc.occurrence.update.useMutation();
   const deleteOccurrence = trpc.dwc.occurrence.delete.useMutation();
+  const attachExistingOccurrences =
+    trpc.dwc.dataset.attachExistingOccurrences.useMutation();
   const createMeasurement = trpc.dwc.measurement.create.useMutation();
   const updateMeasurement = trpc.dwc.measurement.update.useMutation();
   const deleteMeasurement = trpc.dwc.measurement.delete.useMutation();
@@ -423,6 +474,9 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
   const [measurementFeedback, setMeasurementFeedback] = useState<string | null>(
     null,
   );
+  const [datasetAttachFeedback, setDatasetAttachFeedback] = useState<
+    string | null
+  >(null);
 
   const selectableEstablishmentMeansOptions = useMemo(
     () =>
@@ -576,10 +630,30 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     [mergedOccurrences, mergedMeasurements, mergedMultimedia],
   );
 
+  const treeByOccurrenceRkey = useMemo(() => {
+    const map = new Map<string, TreeManagerItem>();
+    for (const item of treeItems) {
+      const rkey = item.occurrence.metadata?.rkey;
+      if (typeof rkey === "string" && rkey.length > 0) {
+        map.set(rkey, item);
+      }
+    }
+    return map;
+  }, [treeItems]);
+
+  const ungroupedTrees = useMemo(
+    () => treeItems.filter(isUngroupedTree),
+    [treeItems],
+  );
+
   // Dataset lookup: URI → DatasetItem for display + filtering
   const datasetItems = useMemo(
     () => datasetsQuery.data ?? [],
     [datasetsQuery.data],
+  );
+  const attachableDatasets = useMemo(
+    () => datasetItems.filter((dataset) => getDatasetIdentity(dataset) !== null),
+    [datasetItems],
   );
   const datasetLookup = useMemo(() => {
     const map = new Map<string, DatasetItem>();
@@ -618,10 +692,7 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
   const datasetScopedTrees = useMemo(() => {
     let trees = treeItems;
     if (datasetFilter === UNGROUPED_DATASET_FILTER) {
-      trees = trees.filter((item) => {
-        const ref = item.occurrence.record?.datasetRef;
-        return typeof ref !== "string" || ref.length === 0;
-      });
+      trees = trees.filter(isUngroupedTree);
     } else if (datasetFilter) {
       trees = trees.filter((item) => {
         const ref = item.occurrence.record?.datasetRef;
@@ -861,6 +932,7 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
 
   const invalidateTreeQueries = useCallback(async () => {
     await Promise.all([
+      indexerUtils.datasets.list.invalidate(),
       indexerUtils.dwc.occurrences.invalidate(),
       indexerUtils.dwc.measurements.invalidate(),
       indexerUtils.multimedia.list.invalidate(),
@@ -914,6 +986,219 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
       ]);
     },
     [setManagerView, setDatasetFilter, setSelectedTreeRkey],
+  );
+
+  const handleAttachTreesToDataset = useCallback(
+    async (occurrenceRkeys: string[], dataset: DatasetItem) => {
+      const datasetIdentity = getDatasetIdentity(dataset);
+      if (!datasetIdentity) {
+        throw new Error("Choose a valid dataset before continuing.");
+      }
+
+      const uniqueRkeys = Array.from(
+        new Set(occurrenceRkeys.filter((rkey) => rkey.length > 0)),
+      );
+      if (uniqueRkeys.length === 0) {
+        throw new Error("No ungrouped trees are available to add.");
+      }
+
+      let attachedCount = 0;
+      let skippedCount = 0;
+      let errorCount = 0;
+      let unattemptedCount = 0;
+      let datasetCountWarning: string | null = null;
+      let fatalChunkError: string | null = null;
+      const successfulAttachmentRkeys: string[] = [];
+      let attachedDatasetUri: string | null = null;
+      const rkeyChunks = chunkStrings(
+        uniqueRkeys,
+        ATTACH_EXISTING_DWC_DATASET_MAX_OCCURRENCES,
+      );
+
+      for (const [chunkIndex, chunk] of rkeyChunks.entries()) {
+        let response;
+        try {
+          response = await attachExistingOccurrences.mutateAsync({
+            datasetRkey: datasetIdentity.rkey,
+            occurrenceRkeys: chunk,
+          });
+        } catch (error) {
+          errorCount += chunk.length;
+          unattemptedCount = rkeyChunks
+            .slice(chunkIndex + 1)
+            .reduce((count, remainingChunk) => count + remainingChunk.length, 0);
+          fatalChunkError = formatError(error);
+          break;
+        }
+
+        attachedCount += response.attachedCount;
+        skippedCount += response.skippedCount;
+        errorCount += response.errorCount;
+
+        if (!response.datasetCountUpdated) {
+          datasetCountWarning =
+            response.datasetCountError ??
+            "The trees were added, but the dataset tree count could not be updated yet.";
+        }
+
+        const successfulRkeys: string[] = [];
+        for (const result of response.results) {
+          if (result.state === "success") {
+            successfulRkeys.push(result.rkey);
+          }
+        }
+
+        if (successfulRkeys.length > 0) {
+          successfulAttachmentRkeys.push(...successfulRkeys);
+          attachedDatasetUri = response.datasetUri;
+        }
+      }
+
+      if (attachedCount === 0 && skippedCount === 0 && fatalChunkError) {
+        throw new Error(fatalChunkError);
+      }
+
+      const datasetName = dataset.record?.name ?? "selected dataset";
+      const feedbackParts: string[] = [];
+      if (attachedCount > 0) {
+        feedbackParts.push(
+          `Added ${attachedCount} tree${attachedCount === 1 ? "" : "s"} to ${datasetName}.`,
+        );
+      } else {
+        feedbackParts.push(`No trees were added to ${datasetName}.`);
+      }
+      if (skippedCount > 0) {
+        feedbackParts.push(
+          `${skippedCount} tree${skippedCount === 1 ? " was" : "s were"} already grouped and skipped.`,
+        );
+      }
+      if (errorCount > 0) {
+        feedbackParts.push(
+          `${errorCount} tree${errorCount === 1 ? "" : "s"} could not be added.`,
+        );
+      }
+      if (unattemptedCount > 0) {
+        feedbackParts.push(
+          `${unattemptedCount} tree${unattemptedCount === 1 ? " was" : "s were"} not attempted after the request failed.`,
+        );
+      }
+      if (datasetCountWarning) {
+        feedbackParts.push(datasetCountWarning);
+      }
+      if (fatalChunkError) {
+        feedbackParts.push(fatalChunkError);
+      }
+
+      const feedbackMessage = feedbackParts.join(" ");
+      const shouldReloadAfterBulkAttach =
+        attachedCount > 0 &&
+        datasetFilter === UNGROUPED_DATASET_FILTER &&
+        successfulAttachmentRkeys.length > 1;
+
+      return () => {
+        if (shouldReloadAfterBulkAttach) {
+          window.location.assign(links.manage.trees);
+          return;
+        }
+
+        const datasetUri = attachedDatasetUri;
+        if (successfulAttachmentRkeys.length > 0 && datasetUri) {
+          setOptimisticOccurrenceRecords((current) => {
+            let changed = false;
+            const next = { ...current };
+
+            for (const rkey of successfulAttachmentRkeys) {
+              const existing =
+                current[rkey] ??
+                treeByOccurrenceRkey.get(rkey)?.occurrence.record;
+              if (!existing) {
+                continue;
+              }
+
+              next[rkey] = {
+                ...existing,
+                datasetRef: datasetUri,
+              };
+              changed = true;
+            }
+
+            return changed ? next : current;
+          });
+        }
+
+        setDatasetAttachFeedback(feedbackMessage);
+
+        if (attachedCount > 0 && datasetFilter === UNGROUPED_DATASET_FILTER) {
+          void setSelectedTreeRkey(null);
+        }
+
+        if (attachedCount > 0 || skippedCount > 0 || errorCount > 0) {
+          window.setTimeout(() => {
+            void Promise.all([
+              indexerUtils.datasets.list.invalidate(),
+              indexerUtils.dwc.occurrences.invalidate(),
+            ]);
+          }, ATTACH_INVALIDATION_DELAY_MS);
+        }
+      };
+    },
+    [
+      attachExistingOccurrences,
+      datasetFilter,
+      indexerUtils,
+      setSelectedTreeRkey,
+      treeByOccurrenceRkey,
+    ],
+  );
+
+  const openAddToDatasetModal = useCallback(
+    (items: TreeManagerItem[]) => {
+      if (attachableDatasets.length === 0) {
+        setDatasetAttachFeedback(
+          "Create a dataset during tree upload before adding ungrouped trees to it.",
+        );
+        return;
+      }
+
+      const occurrenceRkeys = items.flatMap((item) => {
+        if (!isUngroupedTree(item)) {
+          return [];
+        }
+
+        const rkey = item.occurrence.metadata?.rkey;
+        return typeof rkey === "string" && rkey.length > 0 ? [rkey] : [];
+      });
+
+      if (occurrenceRkeys.length === 0) {
+        setDatasetAttachFeedback("No ungrouped trees are available to add.");
+        return;
+      }
+
+      setDatasetAttachFeedback(null);
+      const selectionHash = hashStrings(occurrenceRkeys);
+      pushModal(
+        {
+          id: `${MODAL_IDS.MANAGE_TREE_ADD_TO_DATASET}/${occurrenceRkeys.length}/${selectionHash}`,
+          content: (
+            <AddToDatasetModal
+              datasets={attachableDatasets}
+              treeCount={occurrenceRkeys.length}
+              onConfirm={(dataset) =>
+                handleAttachTreesToDataset(occurrenceRkeys, dataset)
+              }
+            />
+          ),
+        },
+        true,
+      );
+      void show();
+    },
+    [
+      attachableDatasets,
+      handleAttachTreesToDataset,
+      pushModal,
+      show,
+    ],
   );
 
   const handleOccurrenceFieldChange = (
@@ -1250,6 +1535,16 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     activeTree?.hasLegacyMeasurements ||
     activeTree?.hasUnsupportedMeasurements ||
     activeTree?.hasDuplicateBundledMeasurements;
+  const isViewingUngroupedDataset = datasetFilter === UNGROUPED_DATASET_FILTER;
+  const hasUngroupedDatasetCard = datasetCards.some(
+    (datasetCard) => datasetCard.id === UNGROUPED_DATASET_FILTER,
+  );
+  const canAttachActiveTreeToDataset =
+    Boolean(activeTree && isUngroupedTree(activeTree)) &&
+    Boolean(activeTree?.occurrence.metadata?.rkey) &&
+    attachableDatasets.length > 0;
+  const canBulkAttachUngroupedTrees =
+    ungroupedTrees.length > 0 && attachableDatasets.length > 0;
   const canDeleteTree =
     Boolean(activeTree?.occurrence.metadata?.rkey) &&
     (activeTree?.photos.length ?? 0) === 0 &&
@@ -1342,6 +1637,13 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
         </Button>
       ) : null}
 
+      {datasetAttachFeedback ? (
+        <div className="flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3">
+          <InfoIcon className="mt-0.5 size-4 shrink-0 text-primary" />
+          <p className="text-sm text-foreground">{datasetAttachFeedback}</p>
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-2 w-full lg:flex-row lg:items-center lg:max-w-2xl">
           <div className="relative w-full lg:max-w-sm">
@@ -1368,6 +1670,11 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all__">All datasets</SelectItem>
+                {isViewingUngroupedDataset && !hasUngroupedDatasetCard ? (
+                  <SelectItem value={UNGROUPED_DATASET_FILTER}>
+                    Ungrouped trees (0)
+                  </SelectItem>
+                ) : null}
                 {isPendingDatasetFilter && datasetFilter ? (
                   <SelectItem value={datasetFilter}>
                     Dataset still indexing…
@@ -1385,9 +1692,22 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
             </Select>
           )}
         </div>
-        <p className="text-sm text-muted-foreground shrink-0">
-          {counterLabel}
-        </p>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+          {!showDatasetLanding && isViewingUngroupedDataset && canBulkAttachUngroupedTrees ? (
+            <Button
+              variant="outline"
+              onClick={() => openAddToDatasetModal(ungroupedTrees)}
+              disabled={attachExistingOccurrences.isPending}
+              className="shrink-0"
+            >
+              <DatabaseIcon />
+              Add all ungrouped
+            </Button>
+          ) : null}
+          <p className="text-sm text-muted-foreground shrink-0 sm:text-right">
+            {counterLabel}
+          </p>
+        </div>
       </div>
 
       {datasetCards.length === 0 &&
@@ -1396,11 +1716,27 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
         <EmptyState />
       ) : showDatasetLanding ? (
         <div className="space-y-4">
-          <div className="flex items-start gap-3 rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-3">
-            <InfoIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              Click a dataset to review or edit its trees
-            </p>
+          <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <InfoIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                Click a dataset to review or edit its trees
+                {canBulkAttachUngroupedTrees
+                  ? `, or add ${ungroupedTrees.length} ungrouped tree${ungroupedTrees.length === 1 ? "" : "s"} to an existing dataset.`
+                  : "."}
+              </p>
+            </div>
+            {canBulkAttachUngroupedTrees ? (
+              <Button
+                variant="outline"
+                onClick={() => openAddToDatasetModal(ungroupedTrees)}
+                disabled={attachExistingOccurrences.isPending}
+                className="shrink-0"
+              >
+                <DatabaseIcon />
+                Add all ungrouped
+              </Button>
+            ) : null}
           </div>
 
           {filteredDatasetCards.length === 0 ? (
@@ -1626,6 +1962,16 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
                   </div>
 
                   <div className="flex flex-wrap gap-2 shrink-0">
+                    {canAttachActiveTreeToDataset ? (
+                      <Button
+                        variant="outline"
+                        onClick={() => openAddToDatasetModal([activeTree])}
+                        disabled={attachExistingOccurrences.isPending}
+                      >
+                        <DatabaseIcon />
+                        Add to dataset
+                      </Button>
+                    ) : null}
                     <Badge variant="outline">
                       {activeTree.photos.length} photos
                     </Badge>
