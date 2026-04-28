@@ -141,15 +141,16 @@ export function CheckoutClient() {
 
   const facilitatorAddress = clientEnv.NEXT_PUBLIC_FACILITATOR_WALLET_ADDRESS;
 
-  const isAuthenticated = auth.status === "AUTHENTICATED";
-  const donorDid = isAuthenticated ? (auth as { did?: string }).did : undefined;
+  const donorDid = auth.authenticated ? auth.user.did : undefined;
 
   // Items state
   const [checkoutItems, setCheckoutItems] = useState<CheckoutItem[]>([]);
   const [loadedIds, setLoadedIds] = useState<Set<string>>(new Set());
 
   // Anonymous checkbox
-  const [anonymous, setAnonymous] = useState(false);
+  const [donorChoseAnonymous, setDonorChoseAnonymous] = useState(false);
+
+  const shouldStoreDonationAsAnonymous = donorDid ? donorChoseAnonymous : true;
 
   // Checkout flow
   const { state, error, result, setState, setError, setResult, reset } =
@@ -159,7 +160,7 @@ export function CheckoutClient() {
   const { executeBatchPayment } = useBatchPayment({
     address,
     donorDid,
-    anonymous,
+    shouldStoreDonationAsAnonymous,
     onSigning: () => setState("signing"),
     onProcessing: () => setState("processing"),
     onSuccess: (r) => {
@@ -300,12 +301,12 @@ export function CheckoutClient() {
         )}
 
         {/* Anonymous checkbox */}
-        {isAuthenticated && checkoutItems.length > 0 && (
+        {auth.authenticated && checkoutItems.length > 0 && (
           <label className="flex items-start gap-3 cursor-pointer">
             <input
               type="checkbox"
-              checked={anonymous}
-              onChange={(e) => setAnonymous(e.target.checked)}
+              checked={donorChoseAnonymous}
+              onChange={(e) => setDonorChoseAnonymous(e.target.checked)}
               className="mt-1 size-4 rounded border-border"
             />
             <div>

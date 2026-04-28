@@ -1,17 +1,5 @@
 "use client";
 
-/**
- * ShareSuccess — post-donation sharing component.
- *
- * Shows share options after a successful donation:
- * - Share on X (Twitter)
- * - Share on Bluesky
- * - Copy link
- * - View transaction on BaseScan
- * - View bumicert donations
- * - View leaderboard
- */
-
 import { Button } from "@/components/ui/button";
 import {
   ArrowUpRightIcon,
@@ -29,7 +17,7 @@ import BlueskyIcon from "@/icons/BlueskyIcon";
 import XIcon from "@/icons/XIcon";
 import TelegramIcon from "@/icons/TelegramIcon";
 import { useCopy } from "@/hooks/use-copy";
-import { CheckoutResult } from "./hooks/useCheckoutFlow";
+import type { CheckoutResult } from "./hooks/useCheckoutFlow";
 import { UserChip } from "@/components/ui/user-chip";
 import { cn } from "@/lib/utils";
 
@@ -98,6 +86,11 @@ export function ShareSuccess({
               {totalAmountFormatted} USDC
             </span>
             &nbsp;was successful.
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {checkoutResults.donorRecordedAs === "did"
+              ? "Recorded with your Bumicerts profile."
+              : "Recorded as anonymous."}
           </p>
         </div>
       </div>

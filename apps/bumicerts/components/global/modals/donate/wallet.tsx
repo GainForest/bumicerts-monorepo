@@ -22,10 +22,10 @@ import { ConfirmModal } from "./confirm";
 interface WalletModalProps {
   bumicert: BumicertData;
   amount: number;
-  anonymous: boolean;
+  donorChoseAnonymous: boolean;
 }
 
-export function WalletModal({ bumicert, amount, anonymous }: WalletModalProps) {
+export function WalletModal({ bumicert, amount, donorChoseAnonymous }: WalletModalProps) {
   const { pushModal, popModal, hide, clear } = useModal();
   const { address, chainId, isConnected } = useAccount();
   const { openConnectModal } = useConnectModal();
@@ -64,12 +64,12 @@ export function WalletModal({ bumicert, amount, anonymous }: WalletModalProps) {
         <ConfirmModal
           bumicert={bumicert}
           amount={amount}
-          anonymous={anonymous}
+          donorChoseAnonymous={donorChoseAnonymous}
           recipientWallet={recipientStatus.address}
         />
       ),
     });
-  }, [mountedConnected, isConnected, isCorrectNetwork, isVerifying, recipientStatus, bumicert, amount, anonymous, pushModal]);
+  }, [mountedConnected, isConnected, isCorrectNetwork, isVerifying, recipientStatus, bumicert, amount, donorChoseAnonymous, pushModal]);
 
   // --- Not connected ---
   if (!isConnected) {
@@ -184,7 +184,7 @@ export function WalletModal({ bumicert, amount, anonymous }: WalletModalProps) {
         <ConfirmModal
           bumicert={bumicert}
           amount={amount}
-          anonymous={anonymous}
+          donorChoseAnonymous={donorChoseAnonymous}
           recipientWallet={recipientStatus.address}
         />
       ),

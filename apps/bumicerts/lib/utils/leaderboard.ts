@@ -14,7 +14,7 @@ import { extractDonor as extractDonorFromReceipt } from "./extract-donor";
  * USD-pegged currencies accepted by the platform.
  * All are treated as equivalent to USD for display purposes.
  */
-const USD_CURRENCIES = ["USD", "USDC"] as const;
+const USD_CURRENCIES: ReadonlyArray<string> = ["USD", "USDC"];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -71,9 +71,8 @@ function filterByPeriod(receipts: FundingReceiptItem[], period: Period): Funding
 /**
  * Aggregates funding receipts into a leaderboard result.
  *
- * Only USD-pegged currencies are counted. Donors are identified by DID (for
- * identified donors) or wallet address extracted from record.notes
- * (for anonymous donors).
+ * Only USD-pegged currencies are counted. Donors are identified from
+ * `record.from` as either DID-backed or wallet-backed donors.
  */
 export function aggregateToLeaderboard(
   receipts: FundingReceiptItem[],
@@ -87,7 +86,7 @@ export function aggregateToLeaderboard(
   // 2. Filter USD-pegged currencies only
   const usdOnly = filtered.filter((r) => {
     const currency = r.record?.currency?.toUpperCase();
-    return currency && (USD_CURRENCIES as readonly string[]).includes(currency);
+    return currency ? USD_CURRENCIES.includes(currency) : false;
   });
 
   // 3. Group by donor

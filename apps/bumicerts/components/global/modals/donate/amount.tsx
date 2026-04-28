@@ -72,7 +72,7 @@ export function AmountModal({ bumicert, fundingConfig }: AmountModalProps) {
   const initialAmount = presets.includes(DEFAULT_AMOUNT) ? DEFAULT_AMOUNT : presets[Math.floor(presets.length / 2)];
   const [amount, setAmount] = useState<number>(initialAmount);
   const [customInput, setCustomInput] = useState<string>(String(initialAmount));
-  const [anonymous, setAnonymous] = useState(false);
+  const [donorChoseAnonymous, setDonorChoseAnonymous] = useState(false);
 
   const handleCancel = async () => {
     await hide();
@@ -98,7 +98,7 @@ export function AmountModal({ bumicert, fundingConfig }: AmountModalProps) {
         <WalletModal
           bumicert={bumicert}
           amount={amount}
-          anonymous={anonymous}
+          donorChoseAnonymous={donorChoseAnonymous}
         />
       ),
     });
@@ -165,10 +165,10 @@ export function AmountModal({ bumicert, fundingConfig }: AmountModalProps) {
 
       {isAuthenticated && (
         <label className="flex items-center gap-3 cursor-pointer pt-4">
-          <Checkbox
-            checked={anonymous}
-            onCheckedChange={(checked) => setAnonymous(checked === true)}
-          />
+            <Checkbox
+              checked={donorChoseAnonymous}
+              onCheckedChange={(checked) => setDonorChoseAnonymous(checked === true)}
+            />
           <div className="flex-1">
             <span className="text-sm font-medium">Donate anonymously</span>
             <p className="text-xs text-muted-foreground mt-0.5">
