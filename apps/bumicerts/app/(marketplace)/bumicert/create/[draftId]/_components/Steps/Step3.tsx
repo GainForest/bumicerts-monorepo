@@ -19,7 +19,10 @@ import { useAtprotoStore } from "@/components/stores/atproto";
 import { useModal } from "@/components/ui/modal/context";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { SiteEditorModalId } from "@/components/global/modals/upload/site/editor";
+import {
+  SiteEditorModalId,
+  type CreatedSiteRef,
+} from "@/components/global/modals/upload/site/editor";
 import dynamic from "next/dynamic";
 import { computePolygonMetrics } from "@gainforest/atproto-mutations-next";
 import { useSuspenseQuery } from "@tanstack/react-query";
@@ -84,12 +87,31 @@ const Step3 = () => {
 
   const auth = useAtprotoStore((state) => state.auth);
   const { pushModal, show } = useModal();
+  const handleSiteCreated = React.useCallback(
+    (site: CreatedSiteRef) => {
+      if (siteBoundaries.some((siteBoundary) => siteBoundary.uri === site.uri)) {
+        return;
+      }
+
+      setFormValue("siteBoundaries", [
+        ...siteBoundaries,
+        { cid: site.cid, uri: site.uri },
+      ]);
+    },
+    [setFormValue, siteBoundaries],
+  );
+
   const onAddSite = () => {
     pushModal(
       {
         id: SiteEditorModalId,
         dialogWidth: "max-w-2xl",
-        content: <SiteEditorModal initialData={null} />,
+        content: (
+          <SiteEditorModal
+            initialData={null}
+            onCreated={handleSiteCreated}
+          />
+        ),
       },
       true,
     );
