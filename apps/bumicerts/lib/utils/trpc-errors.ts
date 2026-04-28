@@ -22,6 +22,42 @@ function isNonJsonRequestEntityError(message: string): boolean {
   );
 }
 
+function getNumericStatusCode(error: unknown): number | undefined {
+  if (!error || typeof error !== "object") return undefined;
+
+  const withDirectStatus = error as { status?: unknown; statusCode?: unknown };
+  if (typeof withDirectStatus.status === "number") return withDirectStatus.status;
+  if (typeof withDirectStatus.statusCode === "number") {
+    return withDirectStatus.statusCode;
+  }
+
+  const withData = error as {
+    data?: { httpStatus?: unknown; status?: unknown; statusCode?: unknown };
+  };
+  if (typeof withData.data?.httpStatus === "number") return withData.data.httpStatus;
+  if (typeof withData.data?.status === "number") return withData.data.status;
+  if (typeof withData.data?.statusCode === "number") {
+    return withData.data.statusCode;
+  }
+
+  return undefined;
+}
+
+function isPayloadTooLargeError(error: unknown): boolean {
+  const statusCode = getNumericStatusCode(error);
+  if (statusCode === 413) return true;
+
+  if (error instanceof Error) {
+    return isNonJsonRequestEntityError(error.message);
+  }
+
+  if (typeof error === "string") {
+    return isNonJsonRequestEntityError(error);
+  }
+
+  return false;
+}
+
 /**
  * Type guard for tRPC client errors.
  */
@@ -119,17 +155,14 @@ export function getFormattedErrors(
  * extracts it.
  */
 export function formatError(error: unknown): string {
+  if (isPayloadTooLargeError(error)) {
+    return BUMICERT_PAYLOAD_LIMIT_MESSAGE;
+  }
+
   if (!isTRPCError(error)) {
-    if (error instanceof Error && isNonJsonRequestEntityError(error.message)) {
-      return BUMICERT_PAYLOAD_LIMIT_MESSAGE;
-    }
     if (error instanceof Error && error.message.trim()) return error.message;
     if (typeof error === "string" && error.trim()) return error;
     return "An error occurred";
-  }
-
-  if (isNonJsonRequestEntityError(error.message)) {
-    return BUMICERT_PAYLOAD_LIMIT_MESSAGE;
   }
 
   const userMessage = (error.data as Record<string, unknown> | undefined)?.userMessage;
@@ -145,15 +178,15 @@ export function formatError(error: unknown): string {
     case "CONFLICT":
       return "This resource already exists";
     case "BAD_REQUEST":
-      return error.message ?? "Invalid input provided";
+      return error.message.trim() ? error.message : "Invalid input provided";
     case "UNAUTHORIZED":
       return "Please sign in to continue";
     case "PRECONDITION_FAILED":
-      return error.message ?? "Cannot complete this action";
+      return error.message.trim() ? error.message : "Cannot complete this action";
     case "INTERNAL_SERVER_ERROR":
       return "Something went wrong. Please try again.";
 
     default:
-      return error.message ?? "An error occurred";
+      return error.message.trim() ? error.message : "An error occurred";
   }
 }

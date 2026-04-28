@@ -82,14 +82,23 @@ const SecondaryContent = () => {
 
   const did = auth.user?.did ?? "";
 
-  const { data: orgSingleData, isPlaceholderData: isOlderData } = indexerTrpc.organization.byDid.useQuery(
+  const {
+    data: orgSingleData,
+    isPlaceholderData: isOlderData,
+    isPending: isPendingOrganizationInfo,
+  } = indexerTrpc.organization.byDid.useQuery(
     { did },
     { enabled: !!did }
   );
 
   const org = orgSingleData?.org ?? null;
   const logoUrl = isOlderData ? null : (org?.record?.logo?.uri ?? null);
-  const organizationName = org?.record?.displayName ?? "";
+  const organizationNameFromData = isOlderData
+    ? undefined
+    : org?.record?.displayName;
+  const organizationName =
+    organizationNameFromData ?? auth.user?.displayName ?? auth.user?.handle ?? "";
+  const isLoadingOrganizationInfo = isPendingOrganizationInfo || isOlderData;
 
   return (
     <div className="w-full min-h-full flex flex-col bg-muted/50 rounded-xl">
@@ -150,6 +159,12 @@ const SecondaryContent = () => {
                       className="h-full"
                     />
                   </div>
+                </div>
+              ) : isLoadingOrganizationInfo ? (
+                <div className="w-full flex items-center justify-center p-4">
+                  <span className="font-medium text-muted-foreground text-center text-pretty">
+                    Generating preview metadata...
+                  </span>
                 </div>
               ) : (
                 <div className="w-full flex items-center justify-center p-4">
