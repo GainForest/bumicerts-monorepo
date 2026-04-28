@@ -132,11 +132,20 @@ const Mutator = ({
         applyOptimisticUpdate();
         onSuccess?.();
 
-        await indexerUtils.context.attachments.invalidate();
-        applyOptimisticUpdate();
+        try {
+          await indexerUtils.context.attachments.invalidate({
+            did: organizationDid,
+          });
+          applyOptimisticUpdate();
+        } catch {
+          applyOptimisticUpdate();
+        }
       } else {
         onSuccess?.();
-        await indexerUtils.context.attachments.invalidate();
+
+        try {
+          await indexerUtils.context.attachments.invalidate();
+        } catch {}
       }
     } catch (e) {
       setErrorMessage(formatError(e));

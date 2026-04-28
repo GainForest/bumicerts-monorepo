@@ -66,6 +66,7 @@ export function TimelineEntry({ item, index }: TimelineEntryProps) {
   const indexerUtils = indexerTrpc.useUtils();
   const deleteAttachment = trpc.context.attachment.delete.useMutation();
   const rkey = item.metadata?.rkey;
+  const authorDid = item.metadata?.did;
 
   async function handleDelete() {
     if (!rkey) {
@@ -76,9 +77,25 @@ export function TimelineEntry({ item, index }: TimelineEntryProps) {
     setIsDeleting(true);
     try {
       await deleteAttachment.mutateAsync({ rkey });
-      await indexerUtils.context.attachments.invalidate();
+
+      if (authorDid) {
+        indexerUtils.context.attachments.setData({ did: authorDid }, (previous) =>
+          (previous ?? []).filter((entry) => entry.metadata?.rkey !== rkey),
+        );
+      }
+
+      setShowDeleteConfirm(false);
+
+      try {
+        if (authorDid) {
+          await indexerUtils.context.attachments.invalidate({ did: authorDid });
+        } else {
+          await indexerUtils.context.attachments.invalidate();
+        }
+      } catch {}
     } catch (error) {
       setDeleteError(formatError(error));
+    } finally {
       setIsDeleting(false);
     }
   }
