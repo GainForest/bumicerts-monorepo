@@ -274,17 +274,12 @@ export function extractTextFromLinearDocument(doc: LeafletLinearDocument): strin
   return doc.blocks
     .map((wrapper) => {
       const block = wrapper.block;
-      if (!block || typeof block !== "object") return "";
-
-      const blockObj = block as Record<string, unknown>;
-      const plaintext = blockObj["plaintext"];
-      if (typeof plaintext === "string") {
-        return plaintext;
+      if ("plaintext" in block && typeof block.plaintext === "string") {
+        return block.plaintext;
       }
 
-      const blockType = blockObj["$type"];
-      if (blockType === "pub.leaflet.blocks.unorderedList") {
-        const childrenText = extractTextFromListItems(blockObj["children"]);
+      if (block.$type === "pub.leaflet.blocks.unorderedList") {
+        const childrenText = extractTextFromListItems(block.children);
         return childrenText.join("\n");
       }
 
