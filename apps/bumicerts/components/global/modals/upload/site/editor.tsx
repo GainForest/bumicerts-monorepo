@@ -22,8 +22,18 @@ import DrawPolygonModal, {
 import { useAtprotoStore } from "@/components/stores/atproto";
 import { trpc } from "@/lib/trpc/client";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
+import {
+  buildOptimisticCertifiedLocation,
+  SITE_CREATE_INVALIDATION_DELAY_MS,
+} from "./optimistic-site";
 
 export const SiteEditorModalId = "site/editor";
+
+export type CreatedSiteRef = {
+  uri: string;
+  cid: string;
+  rkey: string;
+};
 
 /**
  * Site data type - represents a certified location record from the API.
@@ -50,9 +60,13 @@ type SiteData = {
 
 type SiteEditorModalProps = {
   initialData: SiteData | null;
+  onCreated?: (site: CreatedSiteRef) => void;
 };
 
-export const SiteEditorModal = ({ initialData }: SiteEditorModalProps) => {
+export const SiteEditorModal = ({
+  initialData,
+  onCreated,
+}: SiteEditorModalProps) => {
   const initialSite = initialData?.value;
   const initialName = initialSite?.name;
 
@@ -85,7 +99,7 @@ export const SiteEditorModal = ({ initialData }: SiteEditorModalProps) => {
   // For edit mode, shapefile is optional if we're keeping the existing one
   const hasShapefileInput = shapefile !== null;
   const disableSubmission =
-    !name.trim() || (mode === "add" && !hasShapefileInput);
+    !did || !name.trim() || (mode === "add" && !hasShapefileInput);
 
   const [isCompleted, setIsCompleted] = useState(false);
 
@@ -94,20 +108,53 @@ export const SiteEditorModal = ({ initialData }: SiteEditorModalProps) => {
 
   // Create mutation
   const {
-    mutate: _addMutation,
+    mutateAsync: addMutation,
     isPending: isAdding,
     error: addError,
-  } = trpc.certified.location.create.useMutation({
-    onSuccess: () => {
-      void indexerUtils.locations.list.invalidate();
-      setIsCompleted(true);
-    },
-  });
+  } = trpc.certified.location.create.useMutation();
 
   // Wrapper to handle async file serialization before calling the tRPC mutation
-  const handleAdd = async ({ name, shapefile }: { name: string; shapefile: File }) => {
+  const handleAdd = async ({
+    name,
+    shapefile,
+  }: {
+    name: string;
+    shapefile: File;
+  }) => {
+    if (!did) {
+      throw new Error("User is not authenticated");
+    }
+
     const shapefileData = await toSerializableFile(shapefile);
-    _addMutation({ name, shapefile: shapefileData });
+    const result = await addMutation({ name, shapefile: shapefileData });
+    const optimisticPreviewUrl = URL.createObjectURL(shapefile);
+
+    await indexerUtils.locations.list.cancel({ did });
+    indexerUtils.locations.list.setData({ did }, (previousSites) => {
+      const nextSite = buildOptimisticCertifiedLocation({
+        did,
+        result,
+        previewUrl: optimisticPreviewUrl,
+      });
+      const dedupedSites = (previousSites ?? []).filter(
+        (site) => site.metadata?.uri !== result.uri,
+      );
+
+      return [nextSite, ...dedupedSites];
+    });
+
+    onCreated?.({
+      uri: result.uri,
+      cid: result.cid,
+      rkey: result.rkey,
+    });
+    setIsCompleted(true);
+
+    setTimeout(() => {
+      void indexerUtils.locations.list
+        .invalidate({ did })
+        .finally(() => URL.revokeObjectURL(optimisticPreviewUrl));
+    }, SITE_CREATE_INVALIDATION_DELAY_MS);
   };
 
   // Update mutation

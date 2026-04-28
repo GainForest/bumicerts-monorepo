@@ -1,10 +1,6 @@
 import React from "react";
 import AuthWrapper from "./[draftId]/_components/AuthWrapper";
-import {
-  ChartPieIcon,
-  HelpCircleIcon,
-  LeafIcon,
-} from "lucide-react";
+import { ChartPieIcon, HelpCircleIcon, LeafIcon } from "lucide-react";
 import GetStartedButton from "./_components/GetStartedButton";
 import Image from "next/image";
 import {
@@ -22,7 +18,7 @@ const CreateBumicertPage = () => {
       <div className="w-full grid grid-cols-1 lg:grid-cols-[1fr_20rem] gap-6 mt-4">
         <div className="flex-1 flex flex-col gap-4">
           {/* Create New Section */}
-          <section className="rounded-xl gap-1 border border-border shadow-xl relative overflow-hidden">
+          <section className="rounded-3xl gap-1 border border-border shadow-xl relative overflow-hidden">
             <Image
               src="/assets/media/images/jeremy-bishop-vGjGvtSfys4-unsplash.jpg"
               alt="Create Bumicert"
@@ -34,7 +30,7 @@ const CreateBumicertPage = () => {
                 <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center">
                   <LeafIcon className="size-4 text-white" />
                 </div>
-                <h1 className="text-2xl font-bold font-serif text-white">
+                <h1 className="text-3xl font-medium italic font-instrument text-white">
                   Start a new application
                 </h1>
               </div>
@@ -70,7 +66,7 @@ const CreateBumicertPage = () => {
               <AccordionTrigger>
                 <div className="flex items-center gap-2">
                   <ChartPieIcon className="size-4 opacity-50" />
-                  Pending Applications
+                  Draft Bumicerts
                 </div>
               </AccordionTrigger>
               <AccordionContent>

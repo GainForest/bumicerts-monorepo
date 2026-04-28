@@ -16,17 +16,25 @@ import TimeText from "@/components/time-text";
 import { useQuery } from "@tanstack/react-query";
 import { links } from "@/lib/links";
 import { queryKeys } from "@/lib/query-keys";
-import type { DraftBumicertData, DraftBumicertResponse, GetDraftBumicertResponse } from "@/app/api/supabase/drafts/bumicert/type";
+import type {
+  DraftBumicertData,
+  DraftBumicertResponse,
+  GetDraftBumicertResponse,
+} from "@/app/api/supabase/drafts/bumicert/type";
 
 async function fetchDrafts(): Promise<DraftBumicertResponse[]> {
-  const res = await fetch(links.api.drafts.bumicert.get(), { method: "GET", credentials: "include" });
+  const res = await fetch(links.api.drafts.bumicert.get(), {
+    method: "GET",
+    credentials: "include",
+  });
   if (!res.ok) {
     if (res.status === 401) throw new Error("Unauthorized");
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || "Failed to fetch drafts");
   }
   const data: GetDraftBumicertResponse = await res.json();
-  if (!data.success || !data.drafts) throw new Error("Invalid response from server");
+  if (!data.success || !data.drafts)
+    throw new Error("Invalid response from server");
   return data.drafts;
 }
 
@@ -54,7 +62,7 @@ const calculateProgress = (data: DraftBumicertData): number => {
   ];
 
   const filledFields = fields.filter(
-    (field) => field !== undefined && field !== null && field !== ""
+    (field) => field !== undefined && field !== null && field !== "",
   ).length;
 
   return Math.round((filledFields / fields.length) * 100);
@@ -120,7 +128,7 @@ const DraftBumicerts = () => {
       <div className="bg-muted/50 rounded-xl p-4 text-muted-foreground flex flex-col items-center justify-center text-center">
         <PartyPopperIcon className="size-8 opacity-50" />
         <span className="text-center text-pretty mt-2">
-          You do not have any pending applications.
+          You do not have any Draft Bumicerts.
         </span>
       </div>
     );

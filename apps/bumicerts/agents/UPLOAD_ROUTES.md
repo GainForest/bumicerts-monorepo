@@ -38,7 +38,6 @@ Current sub-routes and their status:
 |-------|--------------|------------|
 | `/upload` | ✅ | ✅ |
 | `/upload/sites` | ✅ | ✅ |
-| `/upload/bumicerts` | ✅ | ✅ |
 | `/upload/audio` | ✅ | ✅ |
 
 When adding a new sub-route, always create all three files. The `loading.tsx`
