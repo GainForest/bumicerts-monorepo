@@ -1,15 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { DatabaseIcon, Loader2 } from "lucide-react";
+import { CheckIcon, DatabaseIcon, Loader2, SearchIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import {
   ModalContent,
   ModalDescription,
@@ -18,6 +12,7 @@ import {
 } from "@/components/ui/modal/modal";
 import { useModal } from "@/components/ui/modal/context";
 import { debug } from "@/lib/logger";
+import { cn } from "@/lib/utils";
 import type { DatasetItem } from "@/lib/graphql-dev/queries";
 
 type AddToDatasetModalProps = {
@@ -33,14 +28,14 @@ function getDatasetUri(dataset: DatasetItem): string | null {
   return typeof uri === "string" && uri.length > 0 ? uri : null;
 }
 
-function formatDatasetDate(value: string | null | undefined): string {
+function formatDatasetDate(value: string | null | undefined): string | null {
   if (!value) {
-    return "Date unavailable";
+    return null;
   }
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
-    return "Date unavailable";
+    return null;
   }
 
   return date.toLocaleDateString("en-US", {
@@ -50,13 +45,28 @@ function formatDatasetDate(value: string | null | undefined): string {
   });
 }
 
-function formatDatasetOptionLabel(dataset: DatasetItem): string {
+function formatDatasetMeta(dataset: DatasetItem): string {
   const count = dataset.record?.recordCount ?? 0;
   const createdAt = formatDatasetDate(
     dataset.record?.createdAt ?? dataset.metadata?.createdAt,
   );
 
-  return `${dataset.record?.name ?? "Unnamed dataset"} (${count} tree${count === 1 ? "" : "s"} - ${createdAt})`;
+  return `${count} tree${count === 1 ? "" : "s"}${createdAt ? ` · Created ${createdAt}` : ""}`;
+}
+
+function getDatasetSearchText(dataset: DatasetItem): string {
+  return [
+    dataset.record?.name,
+    dataset.record?.description,
+    dataset.record?.recordCount?.toString(),
+    dataset.record?.createdAt,
+    dataset.metadata?.createdAt,
+  ]
+    .filter(
+      (value): value is string => typeof value === "string" && value.length > 0,
+    )
+    .join(" ")
+    .toLowerCase();
 }
 
 export function AddToDatasetModal({
@@ -69,15 +79,20 @@ export function AddToDatasetModal({
     () => datasets.filter((dataset) => getDatasetUri(dataset) !== null),
     [datasets],
   );
-  const firstSelectableDataset = selectableDatasets[0] ?? null;
-  const firstDatasetUri = firstSelectableDataset
-    ? getDatasetUri(firstSelectableDataset)
-    : null;
-  const [selectedDatasetUri, setSelectedDatasetUri] = useState(
-    firstDatasetUri ?? "",
-  );
+  const [selectedDatasetUri, setSelectedDatasetUri] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const filteredDatasets = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) {
+      return selectableDatasets;
+    }
+
+    return selectableDatasets.filter((dataset) =>
+      getDatasetSearchText(dataset).includes(query),
+    );
+  }, [searchQuery, selectableDatasets]);
   const selectedDataset =
     selectableDatasets.find(
       (dataset) => getDatasetUri(dataset) === selectedDatasetUri,
@@ -137,12 +152,14 @@ export function AddToDatasetModal({
       <div className="space-y-4">
         <div className="space-y-1.5">
           <ModalTitle>
-            {treeCount === 1 ? "Add tree to dataset" : "Add ungrouped trees"}
+            {treeCount === 1
+              ? "Add 1 tree to a dataset"
+              : `Add ${treeCount} trees to a dataset`}
           </ModalTitle>
           <ModalDescription>
             {treeCount === 1
-              ? `Choose an existing dataset for this ungrouped ${treeLabel}.`
-              : `Choose an existing dataset for ${treeCount} ungrouped ${treeLabel} from the review bucket. Search filters do not limit this bulk action.`}
+              ? `Choose which dataset to add this ${treeLabel} to.`
+              : `Choose which dataset to add these ${treeCount} ${treeLabel} to.`}
           </ModalDescription>
         </div>
 
@@ -152,50 +169,96 @@ export function AddToDatasetModal({
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Dataset</label>
-              <Select
-                value={selectedDatasetUri}
-                onValueChange={setSelectedDatasetUri}
+            <div className="relative">
+              <label htmlFor="dataset-picker-search" className="sr-only">
+                Search datasets
+              </label>
+              <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="dataset-picker-search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search datasets..."
                 disabled={isPending}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a dataset" />
-                </SelectTrigger>
-                <SelectContent>
-                  {selectableDatasets.map((dataset) => {
+                className="pl-9"
+              />
+            </div>
+
+            <div className="max-h-72 overflow-y-auto rounded-xl border border-border">
+              {filteredDatasets.length === 0 ? (
+                <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                  No datasets match your search.
+                </div>
+              ) : (
+                <div
+                  role="radiogroup"
+                  aria-label="Datasets"
+                  className="divide-y divide-border"
+                >
+                  {filteredDatasets.map((dataset) => {
                     const uri = getDatasetUri(dataset);
                     if (!uri) {
                       return null;
                     }
 
+                    const isSelected = selectedDatasetUri === uri;
+
                     return (
-                      <SelectItem key={uri} value={uri}>
-                        {formatDatasetOptionLabel(dataset)}
-                      </SelectItem>
+                      <button
+                        key={uri}
+                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        onClick={() => {
+                          setSelectedDatasetUri(uri);
+                          setError(null);
+                        }}
+                        disabled={isPending}
+                        className={cn(
+                          "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/35 disabled:cursor-not-allowed disabled:opacity-60",
+                          isSelected ? "bg-primary/5" : "bg-background",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border",
+                            isSelected
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-muted-foreground/40",
+                          )}
+                          aria-hidden="true"
+                        >
+                          {isSelected ? <CheckIcon className="size-3" /> : null}
+                        </span>
+                        <span className="min-w-0 flex-1 space-y-1">
+                          <span className="block truncate text-sm font-medium text-foreground">
+                            {dataset.record?.name ?? "Unnamed dataset"}
+                          </span>
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <DatabaseIcon className="size-3" />
+                            {formatDatasetMeta(dataset)}
+                          </span>
+                          {dataset.record?.description ? (
+                            <span className="line-clamp-2 block text-xs text-muted-foreground">
+                              {dataset.record.description}
+                            </span>
+                          ) : null}
+                        </span>
+                      </button>
                     );
                   })}
-                </SelectContent>
-              </Select>
+                </div>
+              )}
             </div>
 
             {selectedDataset ? (
-              <div className="rounded-xl border border-border bg-muted/20 p-4 text-sm">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-medium text-foreground">
-                    {selectedDataset.record?.name ?? "Unnamed dataset"}
-                  </p>
-                  <span className="inline-flex items-center gap-1 text-muted-foreground">
-                    <DatabaseIcon className="size-3.5" />
-                    {selectedDataset.record?.recordCount ?? 0} tree
-                    {(selectedDataset.record?.recordCount ?? 0) === 1 ? "" : "s"}
-                  </span>
-                </div>
-                <p className="mt-2 text-muted-foreground">
-                  {selectedDataset.record?.description ??
-                    `This will add ${treeCount} ${treeLabel} from the review bucket.`}
-                </p>
-              </div>
+              <p className="text-xs text-muted-foreground">
+                {treeCount} {treeLabel} will be added to{" "}
+                <span className="font-medium text-foreground">
+                  {selectedDataset.record?.name ?? "the selected dataset"}
+                </span>
+                .
+              </p>
             ) : null}
           </div>
         )}
@@ -213,7 +276,9 @@ export function AddToDatasetModal({
         </Button>
         <Button
           onClick={() => void handleConfirm()}
-          disabled={isPending || selectableDatasets.length === 0}
+          disabled={
+            isPending || selectableDatasets.length === 0 || !selectedDataset
+          }
         >
           {isPending ? <Loader2 className="animate-spin" /> : null}
           Add to dataset
