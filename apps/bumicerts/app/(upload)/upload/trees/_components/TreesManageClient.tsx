@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import Container from "@/components/ui/container";
 import {
   Popover,
@@ -509,6 +510,9 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
   const [datasetAttachFeedback, setDatasetAttachFeedback] = useState<
     string | null
   >(null);
+  const [selectedUngroupedTreeRkeys, setSelectedUngroupedTreeRkeys] = useState<
+    string[]
+  >([]);
 
   const selectableEstablishmentMeansOptions = useMemo(
     () =>
@@ -792,6 +796,54 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     return filteredTrees.slice(startIndex, startIndex + TREE_ITEMS_PER_PAGE);
   }, [currentTreePage, filteredTrees]);
 
+  const filteredUngroupedTreeRkeys = useMemo(() => {
+    if (datasetFilter !== UNGROUPED_DATASET_FILTER) {
+      return [];
+    }
+
+    return filteredTrees.flatMap((item) => {
+      if (!isUngroupedTree(item)) {
+        return [];
+      }
+
+      const rkey = item.occurrence.metadata?.rkey;
+      return typeof rkey === "string" && rkey.length > 0 ? [rkey] : [];
+    });
+  }, [datasetFilter, filteredTrees]);
+
+  const filteredUngroupedTreeRkeySet = useMemo(
+    () => new Set(filteredUngroupedTreeRkeys),
+    [filteredUngroupedTreeRkeys],
+  );
+  const selectedUngroupedTreeRkeySet = useMemo(
+    () => new Set(selectedUngroupedTreeRkeys),
+    [selectedUngroupedTreeRkeys],
+  );
+  const selectedUngroupedTrees = useMemo(
+    () =>
+      filteredTrees.filter((item) => {
+        const rkey = item.occurrence.metadata?.rkey;
+        return typeof rkey === "string" && selectedUngroupedTreeRkeySet.has(rkey);
+      }),
+    [filteredTrees, selectedUngroupedTreeRkeySet],
+  );
+  const selectedUngroupedTreeCount = selectedUngroupedTreeRkeys.length;
+  const hasFilteredUngroupedTrees = filteredUngroupedTreeRkeys.length > 0;
+  const allFilteredUngroupedTreesSelected =
+    hasFilteredUngroupedTrees &&
+    filteredUngroupedTreeRkeys.every((rkey) =>
+      selectedUngroupedTreeRkeySet.has(rkey),
+    );
+  const someFilteredUngroupedTreesSelected =
+    filteredUngroupedTreeRkeys.some((rkey) =>
+      selectedUngroupedTreeRkeySet.has(rkey),
+    );
+  const selectAllUngroupedChecked = allFilteredUngroupedTreesSelected
+    ? true
+    : someFilteredUngroupedTreesSelected
+      ? "indeterminate"
+      : false;
+
   const selectedTreeFilteredIndex = useMemo(() => {
     if (!selectedTreeRkey) {
       return -1;
@@ -839,6 +891,24 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
 
     void setSelectedTreeRkey(null);
   }, [selectedTreeRkey, setSelectedTreeRkey, showDatasetLanding]);
+
+  useEffect(() => {
+    const selectionPruneHandle = window.setTimeout(() => {
+      if (datasetFilter !== UNGROUPED_DATASET_FILTER) {
+        setSelectedUngroupedTreeRkeys([]);
+        return;
+      }
+
+      setSelectedUngroupedTreeRkeys((current) => {
+        const next = current.filter((rkey) =>
+          filteredUngroupedTreeRkeySet.has(rkey),
+        );
+        return next.length === current.length ? current : next;
+      });
+    }, 0);
+
+    return () => window.clearTimeout(selectionPruneHandle);
+  }, [datasetFilter, filteredUngroupedTreeRkeySet]);
 
   useEffect(() => {
     if (isLoading) {
@@ -1117,6 +1187,36 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     ]);
   }, [setSearchQuery, setSelectedTreeRkey, setTreePageQuery]);
 
+  const handleToggleUngroupedTreeSelection = useCallback((rkey: string) => {
+    setSelectedUngroupedTreeRkeys((current) => {
+      if (current.includes(rkey)) {
+        return current.filter((selectedRkey) => selectedRkey !== rkey);
+      }
+
+      return [...current, rkey];
+    });
+  }, []);
+
+  const handleToggleAllFilteredUngroupedTrees = useCallback(() => {
+    setSelectedUngroupedTreeRkeys((current) => {
+      if (allFilteredUngroupedTreesSelected) {
+        return current.filter(
+          (rkey) => !filteredUngroupedTreeRkeySet.has(rkey),
+        );
+      }
+
+      const next = new Set(current);
+      for (const rkey of filteredUngroupedTreeRkeys) {
+        next.add(rkey);
+      }
+      return Array.from(next);
+    });
+  }, [
+    allFilteredUngroupedTreesSelected,
+    filteredUngroupedTreeRkeySet,
+    filteredUngroupedTreeRkeys,
+  ]);
+
   const handleActiveSearchChange = useCallback(
     (value: string) => {
       if (showDatasetLanding) {
@@ -1320,6 +1420,9 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
         setDatasetAttachFeedback(feedbackMessage);
 
         if (attachedCount > 0 && datasetFilter === UNGROUPED_DATASET_FILTER) {
+          setSelectedUngroupedTreeRkeys((current) =>
+            current.filter((rkey) => !successfulAttachmentRkeys.includes(rkey)),
+          );
           void setSelectedTreeRkey(null);
         }
 
@@ -1338,6 +1441,7 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
       datasetFilter,
       indexerUtils,
       setSelectedTreeRkey,
+      setSelectedUngroupedTreeRkeys,
       treeByOccurrenceRkey,
     ],
   );
@@ -1730,10 +1834,6 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
   const hasUngroupedDatasetCard = datasetCards.some(
     (datasetCard) => datasetCard.id === UNGROUPED_DATASET_FILTER,
   );
-  const canAttachActiveTreeToDataset =
-    Boolean(activeTree && isUngroupedTree(activeTree)) &&
-    Boolean(activeTree?.occurrence.metadata?.rkey) &&
-    attachableDatasets.length > 0;
   const canBulkAttachUngroupedTrees =
     ungroupedTrees.length > 0 && attachableDatasets.length > 0;
   const canDeleteTree =
@@ -1752,6 +1852,11 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     : showDatasetLanding
       ? `${filteredDatasetCards.length} of ${datasetCards.length} dataset${datasetCards.length === 1 ? "" : "s"}`
       : `${filteredTrees.length} of ${datasetScopedTrees.length} tree record${datasetScopedTrees.length === 1 ? "" : "s"}`;
+  const selectedUngroupedTreeLabel = `${selectedUngroupedTreeCount} selected`;
+  const addSelectedUngroupedTreesLabel =
+    selectedUngroupedTreeCount > 1
+      ? `Add ${selectedUngroupedTreeCount} to a dataset`
+      : "Add to a dataset";
 
   if (isLoading) {
     return <TreesManageSkeleton />;
@@ -1881,17 +1986,6 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
           )}
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-          {!showDatasetLanding && isViewingUngroupedDataset && canBulkAttachUngroupedTrees ? (
-            <Button
-              variant="outline"
-              onClick={() => openAddToDatasetModal(ungroupedTrees)}
-              disabled={attachExistingOccurrences.isPending}
-              className="shrink-0"
-            >
-              <DatabaseIcon />
-              Add all ungrouped
-            </Button>
-          ) : null}
           <p className="text-sm text-muted-foreground shrink-0 sm:text-right">
             {counterLabel}
           </p>
@@ -1908,23 +2002,10 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
             <div className="flex items-start gap-3">
               <InfoIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
-                Click a dataset to review or edit its trees
-                {canBulkAttachUngroupedTrees
-                  ? `, or add ${ungroupedTrees.length} ungrouped tree${ungroupedTrees.length === 1 ? "" : "s"} to an existing dataset.`
-                  : "."}
+                Click a dataset to review or edit its trees. Open ungrouped trees
+                to select records and add them to an existing dataset.
               </p>
             </div>
-            {canBulkAttachUngroupedTrees ? (
-              <Button
-                variant="outline"
-                onClick={() => openAddToDatasetModal(ungroupedTrees)}
-                disabled={attachExistingOccurrences.isPending}
-                className="shrink-0"
-              >
-                <DatabaseIcon />
-                Add all ungrouped
-              </Button>
-            ) : null}
           </div>
 
           {filteredDatasetCards.length === 0 ? (
@@ -1997,14 +2078,50 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
           {(isDesktop || !activeTree) && (
             <section className="rounded-2xl border border-border bg-background overflow-hidden">
-              <div className="border-b border-border px-4 py-3">
-                <p className="text-sm font-medium text-foreground">
-                  Uploaded trees
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Select a record to review its details, measurements, and
-                  photos.
-                </p>
+              <div className="border-b border-border px-4 py-3 space-y-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Uploaded trees
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {isViewingUngroupedDataset
+                      ? "Select trees to add them to a dataset, or open a record to review details."
+                      : "Select a record to review its details, measurements, and photos."}
+                  </p>
+                </div>
+
+                {isViewingUngroupedDataset ? (
+                  <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted/20 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Checkbox
+                        checked={selectAllUngroupedChecked}
+                        onCheckedChange={handleToggleAllFilteredUngroupedTrees}
+                        disabled={!hasFilteredUngroupedTrees}
+                        aria-label="Select all filtered ungrouped trees"
+                      />
+                      <span>Select all</span>
+                      {selectedUngroupedTreeCount > 0 ? (
+                        <span className="font-medium text-foreground">
+                          {selectedUngroupedTreeLabel}
+                        </span>
+                      ) : null}
+                    </label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openAddToDatasetModal(selectedUngroupedTrees)}
+                      disabled={
+                        selectedUngroupedTreeCount === 0 ||
+                        !canBulkAttachUngroupedTrees ||
+                        attachExistingOccurrences.isPending
+                      }
+                      className="w-full sm:w-auto"
+                    >
+                      <DatabaseIcon />
+                      {addSelectedUngroupedTreesLabel}
+                    </Button>
+                  </div>
+                ) : null}
               </div>
 
               <div className="divide-y divide-border">
@@ -2017,72 +2134,92 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
 
                   const isSelected =
                     activeTree?.occurrence.metadata?.rkey === metadata.rkey;
+                  const canSelectUngroupedTree =
+                    isViewingUngroupedDataset && isUngroupedTree(item);
+                  const isUngroupedTreeSelected =
+                    selectedUngroupedTreeRkeySet.has(metadata.rkey);
 
                   return (
-                    <button
+                    <div
                       key={metadata.uri ?? metadata.rkey}
-                      type="button"
-                      onClick={() => void setSelectedTreeRkey(metadata.rkey)}
                       className={cn(
-                        "w-full px-4 py-3 text-left transition-colors",
-                        isSelected ? "bg-primary/5" : "hover:bg-muted/35",
+                        "flex items-start gap-3 px-4 py-3 transition-colors",
+                        isSelected || isUngroupedTreeSelected
+                          ? "bg-primary/5"
+                          : "hover:bg-muted/35",
                       )}
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 space-y-1">
-                          <p
-                            className="text-lg leading-none truncate"
-                            style={{ fontFamily: "var(--font-garamond-var)" }}
-                          >
-                            {record.scientificName ?? "Untitled tree"}
-                          </p>
-                          {record.vernacularName ? (
-                            <p className="text-xs italic text-muted-foreground truncate">
-                              {record.vernacularName}
+                      {canSelectUngroupedTree ? (
+                        <Checkbox
+                          checked={isUngroupedTreeSelected}
+                          onCheckedChange={() =>
+                            handleToggleUngroupedTreeSelection(metadata.rkey)
+                          }
+                          aria-label={`Select ${record.scientificName ?? "tree"}`}
+                          className="mt-0.5"
+                        />
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => void setSelectedTreeRkey(metadata.rkey)}
+                        className="min-w-0 flex-1 text-left"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 space-y-1">
+                            <p
+                              className="text-lg leading-none truncate"
+                              style={{ fontFamily: "var(--font-garamond-var)" }}
+                            >
+                              {record.scientificName ?? "Untitled tree"}
                             </p>
-                          ) : null}
-                          <p className="flex items-center gap-1 text-xs text-muted-foreground truncate">
-                            <MapPin className="size-3" />
-                            {formatTreeSubtitle(item)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatEventDate(record.eventDate)}
-                          </p>
-                        </div>
+                            {record.vernacularName ? (
+                              <p className="text-xs italic text-muted-foreground truncate">
+                                {record.vernacularName}
+                              </p>
+                            ) : null}
+                            <p className="flex items-center gap-1 text-xs text-muted-foreground truncate">
+                              <MapPin className="size-3" />
+                              {formatTreeSubtitle(item)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatEventDate(record.eventDate)}
+                            </p>
+                          </div>
 
-                        <div className="flex flex-col items-end gap-1 shrink-0">
-                          {(() => {
-                            const dsRef = record.datasetRef;
-                            const dsName =
-                              typeof dsRef === "string"
-                                ? datasetLookup.get(dsRef)?.record?.name
-                                : null;
-                            return dsName ? (
-                              <Badge
-                                variant="outline"
-                                className="max-w-[10rem] truncate text-[10px]"
-                              >
-                                <DatabaseIcon className="size-2.5 shrink-0 mr-0.5" />
-                                {dsName}
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            {(() => {
+                              const dsRef = record.datasetRef;
+                              const dsName =
+                                typeof dsRef === "string"
+                                  ? datasetLookup.get(dsRef)?.record?.name
+                                  : null;
+                              return dsName ? (
+                                <Badge
+                                  variant="outline"
+                                  className="max-w-[10rem] truncate text-[10px]"
+                                >
+                                  <DatabaseIcon className="size-2.5 shrink-0 mr-0.5" />
+                                  {dsName}
+                                </Badge>
+                              ) : null;
+                            })()}
+                            {item.photos.length > 0 ? (
+                              <Badge variant="outline">
+                                {item.photos.length} photos
                               </Badge>
-                            ) : null;
-                          })()}
-                          {item.photos.length > 0 ? (
-                            <Badge variant="outline">
-                              {item.photos.length} photos
-                            </Badge>
-                          ) : null}
-                          {item.hasDuplicateBundledMeasurements ? (
-                            <Badge variant="secondary">Needs cleanup</Badge>
-                          ) : item.floraMeasurement ? (
-                            <Badge variant="success">Measurements</Badge>
-                          ) : item.hasLegacyMeasurements ||
-                            item.hasUnsupportedMeasurements ? (
-                            <Badge variant="secondary">Migration needed</Badge>
-                          ) : null}
+                            ) : null}
+                            {item.hasDuplicateBundledMeasurements ? (
+                              <Badge variant="secondary">Needs cleanup</Badge>
+                            ) : item.floraMeasurement ? (
+                              <Badge variant="success">Measurements</Badge>
+                            ) : item.hasLegacyMeasurements ||
+                              item.hasUnsupportedMeasurements ? (
+                              <Badge variant="secondary">Migration needed</Badge>
+                            ) : null}
+                          </div>
                         </div>
-                      </div>
-                    </button>
+                      </button>
+                    </div>
                   );
                 })}
               </div>
@@ -2158,16 +2295,6 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
                   </div>
 
                   <div className="flex flex-wrap gap-2 shrink-0">
-                    {canAttachActiveTreeToDataset ? (
-                      <Button
-                        variant="outline"
-                        onClick={() => openAddToDatasetModal([activeTree])}
-                        disabled={attachExistingOccurrences.isPending}
-                      >
-                        <DatabaseIcon />
-                        Add to dataset
-                      </Button>
-                    ) : null}
                     <Badge variant="outline">
                       {activeTree.photos.length} photos
                     </Badge>
