@@ -30,11 +30,25 @@ import type {
  * record's JSONB to a string and casting with ::jsonb in the query.
  * The VALUES clause uses $N placeholders via sql.unsafe() but all
  * values are still bound parameters (no injection risk).
+ *
+ * De-duplicates records by URI before inserting. Tap can emit multiple events
+ * for the same repo record in a single flush window during backfill/replay; a
+ * multi-row INSERT ... ON CONFLICT statement cannot contain duplicate conflict
+ * keys because PostgreSQL would need to update the same target row twice.
+ * Keeping the last event for each URI preserves the newest value from the
+ * flushed event sequence.
  */
 export async function upsertRecords(records: RecordInsert[]): Promise<void> {
   if (records.length === 0) return;
 
-  const sorted = [...records].sort((a, b) => a.uri.localeCompare(b.uri));
+  const dedupedByUri = new Map<string, RecordInsert>();
+  for (const record of records) {
+    dedupedByUri.set(record.uri, record);
+  }
+
+  const sorted = [...dedupedByUri.values()].sort((a, b) =>
+    a.uri.localeCompare(b.uri)
+  );
 
   // 7 columns per row: uri, did, collection, rkey, record, cid, created_at
   const COLS_PER_ROW = 7;
