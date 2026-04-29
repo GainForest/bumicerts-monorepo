@@ -4,7 +4,6 @@ import type { ValidationIssue } from "../../result";
 import {
   $parse,
 } from "@gainforest/generated/app/gainforest/organization/defaultSite.defs";
-import { $parse as parseLocation } from "@gainforest/generated/app/certified/location.defs";
 import { AtprotoAgent } from "../../services/AtprotoAgent";
 import { fetchRecord, putRecord } from "../../utils/shared";
 import {
@@ -87,8 +86,15 @@ export const setDefaultSite = (
     }
 
     // 3. Verify the location record exists.
+    // IMPORTANT: this check is intentionally schema-tolerant.
+    // We only care about existence here, not strict validation of the location
+    // payload. Older records can fail $parse due to historical blob shapes, which
+    // would incorrectly block setting them as default.
     const location = yield* fetchRecord(
-      LOCATION_COLLECTION, locationRkey, parseLocation, makePdsError
+      LOCATION_COLLECTION,
+      locationRkey,
+      (value) => value,
+      makePdsError,
     );
 
     if (location === null) {

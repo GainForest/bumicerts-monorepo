@@ -30,13 +30,72 @@ import { auth } from "@/lib/auth";
 import type { ProfileData, ProfileAuthError } from "@gainforest/atproto-auth-next/client";
 
 /**
+ * Result of authorize() - either a success with the authorization URL,
+ * or an error with a message that can be displayed to the user.
+ */
+export type AuthorizeResult =
+  | { authorizationUrl: string }
+  | { error: string; errorType: "identity" | "server" };
+
+/**
  * Initiates the OAuth authorization flow.
  *
  * @param handle - The user's ATProto handle (e.g., "alice.climateai.org" or just "alice")
- * @returns The authorization URL to redirect the user to
+ * @returns The authorization URL on success, or an error with type information
  */
-export async function authorize(handle: string): Promise<{ authorizationUrl: string }> {
-  return auth.actions.authorize(handle);
+export async function authorize(handle: string): Promise<AuthorizeResult> {
+  try {
+    const { authorizationUrl } = await auth.actions.authorize(handle);
+    return { authorizationUrl };
+  } catch (err) {
+    // Categorize the error for appropriate user messaging
+    const message = err instanceof Error ? err.message : String(err);
+    const lowerMessage = message.toLowerCase();
+
+    // Identity/username resolution failures (user's handle doesn't exist)
+    const isIdentityError =
+      lowerMessage.includes("does not resolve to a did") ||
+      lowerMessage.includes("failed to resolve identity") ||
+      lowerMessage.includes("does not include the handle") ||
+      lowerMessage.includes("invalid handle");
+
+    // Server/PDS/network failures
+    const isServerError =
+      lowerMessage.includes("authorization server") ||
+      lowerMessage.includes("pds") ||
+      lowerMessage.includes("server metadata") ||
+      lowerMessage.includes("fetch failed") ||
+      lowerMessage.includes("network") ||
+      lowerMessage.includes("econnrefused") ||
+      lowerMessage.includes("timeout");
+
+    // Log for debugging
+    console.error("[authorize] OAuth flow failed:", {
+      message,
+      isIdentityError,
+      isServerError,
+    });
+
+    // Return error in serializable format
+    if (isIdentityError) {
+      return {
+        error: "Username not found. Please check your username and server.",
+        errorType: "identity",
+      };
+    }
+
+    if (isServerError) {
+      return {
+        error: "Unable to connect to the server. Please check your server address or try again later.",
+        errorType: "server",
+      };
+    }
+
+    return {
+      error: "Unable to start sign-in. Please try again.",
+      errorType: "server",
+    };
+  }
 }
 
 /**

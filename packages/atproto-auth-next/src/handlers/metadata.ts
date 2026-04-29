@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { DEFAULT_OAUTH_SCOPE } from "../oauth-client";
 import { isLoopback, resolveRequestPublicUrl } from "../utils/url";
 
+export type EpdsHandleMode = "picker-with-random" | "picker" | "random";
+
 export type ClientMetadataOptions = {
   clientName: string;
   /** Extra redirect URIs to include (e.g. ePDS callback). */
@@ -21,6 +23,8 @@ export type ClientMetadataOptions = {
   tosUri?: string;
   /** Privacy policy URI. */
   policyUri?: string;
+  /** ePDS handle mode for new account creation. */
+  epdsHandleMode?: EpdsHandleMode;
 };
 
 /**
@@ -73,6 +77,7 @@ export function createClientMetadataHandler(
     if (options.emailSubjectTemplate) commonFields.email_subject_template = options.emailSubjectTemplate;
     if (options.tosUri) commonFields.tos_uri = options.tosUri;
     if (options.policyUri) commonFields.policy_uri = options.policyUri;
+    if (options.epdsHandleMode) commonFields.epds_handle_mode = options.epdsHandleMode;
 
     if (loopback) {
       // Loopback/native client (RFC 8252)

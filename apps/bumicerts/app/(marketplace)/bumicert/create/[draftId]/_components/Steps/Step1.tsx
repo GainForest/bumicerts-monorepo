@@ -27,6 +27,10 @@ import { CalendarRange } from "@/components/ui/calendar-range";
 import { useNavbarContext } from "@/app/(marketplace)/_components/Navbar/context";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import {
+  BUMICERT_COVER_IMAGE_MAX_SIZE_MB,
+  BUMICERT_COVER_IMAGE_SUPPORTED_TYPES,
+} from "../../constants";
 
 const Step1 = () => {
   const { viewport, openState } = useNavbarContext();
@@ -90,12 +94,9 @@ const Step1 = () => {
                 )
               }
               supportedFileTypes={[
-                "image/jpg",
-                "image/jpeg",
-                "image/png",
-                "image/webp",
+                ...BUMICERT_COVER_IMAGE_SUPPORTED_TYPES,
               ]}
-              maxSizeInMB={10}
+              maxSizeInMB={BUMICERT_COVER_IMAGE_MAX_SIZE_MB}
             />
           </FormField>
           <div className="flex flex-col gap-2">

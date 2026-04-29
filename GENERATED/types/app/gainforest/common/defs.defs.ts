@@ -64,7 +64,7 @@ type Image = {
   /**
    * Image up to 20MB. Supports JPEG, PNG, WebP, HEIC (phones), TIFF (scientific), GIF, BMP, SVG.
    */
-  file: l.BlobRef
+  file: l.BlobRef | l.LegacyBlobRef
 }
 
 export type { Image }
@@ -89,7 +89,7 @@ const image = l.typedObject<Image>(
         'image/svg+xml',
       ],
       maxSize: 20971520,
-      allowLegacy: false,
+      allowLegacy: true,
     }),
   }),
 )
@@ -103,7 +103,7 @@ type ImageThumbnail = {
   /**
    * Thumbnail image up to 1MB
    */
-  file: l.BlobRef
+  file: l.BlobRef | l.LegacyBlobRef
 }
 
 export type { ImageThumbnail }
@@ -116,7 +116,7 @@ const imageThumbnail = l.typedObject<ImageThumbnail>(
     file: l.blob({
       accept: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
       maxSize: 1048576,
-      allowLegacy: false,
+      allowLegacy: true,
     }),
   }),
 )
@@ -130,7 +130,7 @@ type Video = {
   /**
    * Video up to 100MB. Supports MP4, MOV, AVI, WebM, MKV, MPEG, 3GP.
    */
-  file: l.BlobRef
+  file: l.BlobRef | l.LegacyBlobRef
 }
 
 export type { Video }
@@ -152,7 +152,7 @@ const video = l.typedObject<Video>(
         'video/3gpp2',
       ],
       maxSize: 104857600,
-      allowLegacy: false,
+      allowLegacy: true,
     }),
   }),
 )
@@ -166,7 +166,7 @@ type Audio = {
   /**
    * Audio up to 100MB. Supports WAV, MP3, M4A, AAC, FLAC, OGG, Opus, WebM, AIFF.
    */
-  file: l.BlobRef
+  file: l.BlobRef | l.LegacyBlobRef
 }
 
 export type { Audio }
@@ -195,7 +195,7 @@ const audio = l.typedObject<Audio>(
         'audio/x-aiff',
       ],
       maxSize: 104857600,
-      allowLegacy: false,
+      allowLegacy: true,
     }),
   }),
 )
@@ -209,7 +209,7 @@ type Spectrogram = {
   /**
    * Spectrogram image up to 5MB
    */
-  file: l.BlobRef
+  file: l.BlobRef | l.LegacyBlobRef
 }
 
 export type { Spectrogram }
@@ -222,7 +222,7 @@ const spectrogram = l.typedObject<Spectrogram>(
     file: l.blob({
       accept: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'],
       maxSize: 5242880,
-      allowLegacy: false,
+      allowLegacy: true,
     }),
   }),
 )
@@ -236,7 +236,7 @@ type Document = {
   /**
    * Document up to 20MB. Supports PDF, TXT, Markdown, HTML, RTF, DOC, DOCX.
    */
-  file: l.BlobRef
+  file: l.BlobRef | l.LegacyBlobRef
 }
 
 export type { Document }
@@ -257,7 +257,7 @@ const document = l.typedObject<Document>(
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       ],
       maxSize: 20971520,
-      allowLegacy: false,
+      allowLegacy: true,
     }),
   }),
 )
@@ -271,7 +271,7 @@ type DataFile = {
   /**
    * Data file up to 50MB. Supports CSV, TSV, JSON, JSON-LD, XML, XLS, XLSX, ODS.
    */
-  file: l.BlobRef
+  file: l.BlobRef | l.LegacyBlobRef
 }
 
 export type { DataFile }
@@ -294,7 +294,7 @@ const dataFile = l.typedObject<DataFile>(
         'application/vnd.oasis.opendocument.spreadsheet',
       ],
       maxSize: 52428800,
-      allowLegacy: false,
+      allowLegacy: true,
     }),
   }),
 )
@@ -308,7 +308,7 @@ type GpsTrack = {
   /**
    * GPS track up to 10MB. Supports GPX, KML, KMZ, GeoJSON.
    */
-  file: l.BlobRef
+  file: l.BlobRef | l.LegacyBlobRef
 }
 
 export type { GpsTrack }
@@ -327,7 +327,7 @@ const gpsTrack = l.typedObject<GpsTrack>(
         'application/json',
       ],
       maxSize: 10485760,
-      allowLegacy: false,
+      allowLegacy: true,
     }),
   }),
 )
@@ -341,7 +341,7 @@ type Geospatial = {
   /**
    * Geospatial data up to 100MB. Supports GeoJSON, KML, KMZ, GeoPackage, Shapefile (zipped), GeoTIFF.
    */
-  file: l.BlobRef
+  file: l.BlobRef | l.LegacyBlobRef
 }
 
 export type { Geospatial }
@@ -364,7 +364,7 @@ const geospatial = l.typedObject<Geospatial>(
         'image/geotiff',
       ],
       maxSize: 104857600,
-      allowLegacy: false,
+      allowLegacy: true,
     }),
   }),
 )
@@ -378,7 +378,7 @@ type SensorData = {
   /**
    * Sensor data up to 50MB. Supports CSV, JSON, TXT, NetCDF, HDF5.
    */
-  file: l.BlobRef
+  file: l.BlobRef | l.LegacyBlobRef
 }
 
 export type { SensorData }
@@ -397,7 +397,7 @@ const sensorData = l.typedObject<SensorData>(
         'application/x-hdf5',
       ],
       maxSize: 52428800,
-      allowLegacy: false,
+      allowLegacy: true,
     }),
   }),
 )
@@ -411,7 +411,7 @@ type GeneticData = {
   /**
    * Genetic data up to 100MB. Supports FASTA, FASTQ, CSV, JSON.
    */
-  file: l.BlobRef
+  file: l.BlobRef | l.LegacyBlobRef
 }
 
 export type { GeneticData }
@@ -432,7 +432,7 @@ const geneticData = l.typedObject<GeneticData>(
         'application/json',
       ],
       maxSize: 104857600,
-      allowLegacy: false,
+      allowLegacy: true,
     }),
   }),
 )

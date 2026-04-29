@@ -1,17 +1,17 @@
 "use client";
 
 /**
- * UploadNavGrid
+ * ManageNavGrid
  *
  * A dashboard grid shown in view mode below the org about section.
- * Each card navigates to a section of the upload platform.
+ * Each card navigates to a section of the MANAGE platform.
  *
  * Cards:
- *   Edit Profile  → /upload?mode=edit
- *   Sites         → /upload/sites
- *   Audio         → /upload/audio
- *   Trees         → /upload/trees/manage
- *   Bumicerts     → /upload/bumicerts
+ *   Edit Profile  → /manage?mode=edit
+ *   Sites         → /manage/sites
+ *   Audio         → /manage/audio
+ *   Trees         → /manage/trees
+ *   Bumicerts     → /manage/bumicerts
  */
 
 import Link from "next/link";
@@ -40,42 +40,44 @@ const NAV_CARDS: NavCard[] = [
   {
     id: "edit",
     label: "Edit Profile",
-    description: "Update your organisation name, description, logo, and cover image.",
-    href: links.upload.edit,
+    description:
+      "Update your organization name, description, logo, and cover image.",
+    href: links.manage.edit,
     Icon: PencilIcon,
   },
   {
     id: "sites",
     label: "Sites",
-    description: "Manage your conservation sites, boundaries, and location data.",
-    href: links.upload.sites,
+    description:
+      "Manage your conservation sites, boundaries, and location data.",
+    href: links.manage.sites,
     Icon: MapPinIcon,
   },
   {
     id: "audio",
     label: "Audio",
-    description: "Upload biodiversity audio recordings tied to your sites.",
-    href: links.upload.audio,
+    description: "Manage biodiversity audio recordings tied to your sites.",
+    href: links.manage.audio,
     Icon: MicIcon,
   },
   {
     id: "trees",
     label: "Trees",
-    description:
-      "Review uploaded tree records, update details, and manage linked photos.",
-    href: links.upload.treesManage,
+    description: "Manage tree records, and linked photos.",
+    href: links.manage.trees,
     Icon: TreesIcon,
   },
   {
     id: "bumicerts",
     label: "Bumicerts",
-    description: "Create and manage verified impact certificates for your work.",
-    href: links.upload.bumicerts,
+    description:
+      "Create and manage verified impact certificates for your work.",
+    href: links.manage.bumicerts,
     Icon: BumicertIcon,
   },
 ];
 
-export function UploadNavGrid() {
+export function ManageNavGrid() {
   return (
     <div className="pt-4 pb-2">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
@@ -106,8 +108,12 @@ export function UploadNavGrid() {
 
                 {/* Text */}
                 <div>
-                  <p className="text-sm font-medium text-foreground mb-1">{card.label}</p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{card.description}</p>
+                  <p className="text-sm font-medium text-foreground mb-1">
+                    {card.label}
+                  </p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {card.description}
+                  </p>
                 </div>
               </Link>
             </motion.div>

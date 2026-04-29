@@ -1,11 +1,11 @@
 "use client";
 
 /**
- * UploadHeader
+ * ManageHeader
  *
- * Upload-platform variant of the marketplace Header.
+ * MANAGE-platform variant of the marketplace Header.
  * Identical layout and slot system, but intentionally omits the CartButton —
- * the cart is a marketplace concept and has no meaning in the upload context.
+ * the cart is a MARKETPLACE concept and has no meaning in the MANAGE context.
  */
 
 import { useHeaderSlots } from "@/app/(marketplace)/_components/Header/context";
@@ -15,7 +15,7 @@ import { AuthButton } from "@/components/auth/AuthButton";
 import { MenuIcon } from "lucide-react";
 import { useMobileNav } from "@/hooks/useMobileNav";
 
-export function UploadHeader() {
+export function ManageHeader() {
   const leftContent = useHeaderSlots((s) => s.leftContent);
   const rightContent = useHeaderSlots((s) => s.rightContent);
   const subHeaderContent = useHeaderSlots((s) => s.subHeaderContent);

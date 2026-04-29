@@ -1,18 +1,18 @@
 "use client";
 
 /**
- * UploadDashboardClient
+ * ManageDashboardClient
  *
  * Mode is driven entirely by the `?mode=` URL param (via nuqs):
  *
- * /upload          → view mode  (OrgHero + OrgAbout, read-only)
- * /upload?mode=edit → edit mode  (EditableHero + EditableAbout + EditBar)
+ * /manage          → view mode  (OrgHero + OrgAbout, read-only)
+ * /manage?mode=edit → edit mode  (EditableHero + EditableAbout + EditBar)
  *
  * nuqs is the single source of truth — no Zustand isEditing flag, no
  * useEffect sync, no re-trigger bugs. Cancel simply clears the param.
  *
  * Save uses `organization.info.update` (not upsert) because the record is
- * guaranteed to exist when the user reaches /upload. The update mutation
+ * guaranteed to exist when the user reaches /manage. The update mutation
  * fetches the existing record server-side and applies a partial patch, so
  * we only send the fields that actually changed. This means:
  *   - logo / coverImage are preserved from the PDS record when not re-uploaded
@@ -45,15 +45,15 @@ import { OrgHero } from "@/app/(marketplace)/organization/[did]/_components/OrgH
 import { OrgAbout } from "@/app/(marketplace)/organization/[did]/_components/OrgAbout";
 import { EditableHero, EditBar } from "./EditableHero/index";
 import { EditableAbout } from "./EditableAbout";
-import { UploadNavGrid } from "./UploadNavGrid";
-import { UploadDashboardSkeleton } from "./UploadDashboardSkeleton";
-import { OrgSetupPrompt } from "./OrgSetupPrompt";
-import { useUploadDashboardStore } from "./store";
-import { useUploadMode } from "../_hooks/useUploadMode";
+import { ManageNavGrid } from "./UploadNavGrid";
+import { ManageDashboardSkeleton } from "./UploadDashboardSkeleton";
+import { useManageDashboardState } from "./store";
+import { useManageMode } from "../_hooks/useUploadMode";
+import { OrgSetupPage } from "./OrgSetupPage";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface UploadDashboardClientProps {
+interface ManageDashboardClientProps {
   /** The authenticated user's DID — obtained from server-side session. */
   did: string;
 }
@@ -65,33 +65,48 @@ interface UploadDashboardClientProps {
  * in the query cache is preserved until a matching refetch arrives.
  */
 const INVALIDATION_DELAY_MS = 5_000;
+const SETUP_REFETCH_INTERVAL_MS = 1_000;
+const SETUP_REFETCH_MAX_ATTEMPTS = 15;
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function normalizeLongDescriptionBlobRefs(
-  doc: OrganizationData["longDescription"]
+  doc: OrganizationData["longDescription"],
 ): OrganizationData["longDescription"] {
   return {
     ...doc,
     blocks: doc.blocks.map((wrapper) => {
       const block = wrapper.block;
       if (block.$type !== "pub.leaflet.blocks.image") return wrapper;
-      const image = block.image as Record<string, unknown>;
-      const ref = image["ref"];
-      if (typeof ref === "object" && ref !== null) {
-        const link = (ref as Record<string, unknown>)["$link"];
-        if (typeof link === "string" && link.length > 0) {
+
+      const image = block.image;
+      if (typeof image === "object" && image !== null && "ref" in image) {
+        const ref = image.ref;
+        if (
+          typeof ref === "object" &&
+          ref !== null &&
+          "$link" in ref &&
+          typeof ref.$link === "string" &&
+          ref.$link.length > 0
+        ) {
           const mimeType =
-            typeof image["mimeType"] === "string"
-              ? image["mimeType"]
+            "mimeType" in image && typeof image.mimeType === "string"
+              ? image.mimeType
               : "application/octet-stream";
           const size =
-            typeof image["size"] === "number" ? image["size"] : 0;
+            "size" in image && typeof image.size === "number"
+              ? image.size
+              : 0;
+
           return {
             ...wrapper,
             block: {
               ...block,
               image: {
                 $type: "blob",
-                ref: link,
+                ref: ref.$link,
                 mimeType,
                 size,
               },
@@ -99,6 +114,7 @@ function normalizeLongDescriptionBlobRefs(
           };
         }
       }
+
       return wrapper;
     }),
   };
@@ -106,9 +122,9 @@ function normalizeLongDescriptionBlobRefs(
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function UploadDashboardClient({ did }: UploadDashboardClientProps) {
+export function ManageDashboardClient({ did }: ManageDashboardClientProps) {
   const indexerUtils = indexerTrpc.useUtils();
-  const [mode, setMode] = useUploadMode();
+  const [mode, setMode] = useManageMode();
   const isEditing = mode === "edit";
 
   // Refs for object URLs that need cleanup
@@ -120,32 +136,51 @@ export function UploadDashboardClient({ did }: UploadDashboardClientProps) {
   const [optimisticGuard, setOptimisticGuard] = useState(false);
 
   // ── Store (edit-only state) ────────────────────────────────────────────────
-  const isSaving = useUploadDashboardStore((s) => s.isSaving);
-  const setSaving = useUploadDashboardStore((s) => s.setSaving);
-  const setSaveError = useUploadDashboardStore((s) => s.setSaveError);
-  const onSaveSuccess = useUploadDashboardStore((s) => s.onSaveSuccess);
-  const edits = useUploadDashboardStore((s) => s.edits);
-  const hasChanges = useUploadDashboardStore((s) => s.hasChanges);
+  const isSaving = useManageDashboardState((s) => s.isSaving);
+  const setSaving = useManageDashboardState((s) => s.setSaving);
+  const setSaveError = useManageDashboardState((s) => s.setSaveError);
+  const onSaveSuccess = useManageDashboardState((s) => s.onSaveSuccess);
+  const edits = useManageDashboardState((s) => s.edits);
+  const hasChanges = useManageDashboardState((s) => s.hasChanges);
 
   // ── Data fetch ─────────────────────────────────────────────────────────────
   const {
     data: orgData,
     isLoading,
     error,
-  } = indexerTrpc.organization.byDid.useQuery({ did }, {
-    // Override the global staleTime: 0 so that optimistic data set via
-    // setQueryData is treated as fresh and doesn't trigger an immediate
-    // background refetch on the next render (e.g. after URL change).
-    staleTime: optimisticGuard ? Infinity : 10_000,
-    // Disable automatic refetches during the optimistic protection window.
-    // Without this, React Query can schedule a background refetch that races
-    // against our setQueryData and overwrites optimistic data with stale
-    // indexer results.
-    refetchOnWindowFocus: !optimisticGuard,
-    refetchOnMount: !optimisticGuard,
-    refetchOnReconnect: !optimisticGuard,
-  });
+    refetch,
+  } = indexerTrpc.organization.byDid.useQuery(
+    { did },
+    {
+      // Override the global staleTime: 0 so that optimistic data set via
+      // setQueryData is treated as fresh and doesn't trigger an immediate
+      // background refetch on the next render (e.g. after URL change).
+      staleTime: optimisticGuard ? Infinity : 10_000,
+      // Disable automatic refetches during the optimistic protection window.
+      // Without this, React Query can schedule a background refetch that races
+      // against our setQueryData and overwrites optimistic data with stale
+      // indexer results.
+      refetchOnWindowFocus: !optimisticGuard,
+      refetchOnMount: !optimisticGuard,
+      refetchOnReconnect: !optimisticGuard,
+    },
+  );
   const hasFetchedOrg = orgData?.org !== null && orgData?.org !== undefined;
+
+  const handleSetupSaved = useCallback(async (): Promise<boolean> => {
+    for (let attempt = 0; attempt < SETUP_REFETCH_MAX_ATTEMPTS; attempt += 1) {
+      const queryResult = await refetch();
+      if (queryResult.data?.org) {
+        return true;
+      }
+
+      if (attempt < SETUP_REFETCH_MAX_ATTEMPTS - 1) {
+        await wait(SETUP_REFETCH_INTERVAL_MS);
+      }
+    }
+
+    return false;
+  }, [refetch]);
 
   // Derive OrganizationData from the query cache — single source of truth.
   // No useEffect sync, no Zustand serverData. When setQueryData updates the
@@ -176,21 +211,25 @@ export function UploadDashboardClient({ did }: UploadDashboardClientProps) {
       }
 
       if (edits.shortDescription !== null) {
-        const resolvedFacets = edits.shortDescriptionFacets ?? serverData.shortDescriptionFacets;
+        const resolvedFacets =
+          edits.shortDescriptionFacets ?? serverData.shortDescriptionFacets;
         // Our Facet[] (from leaflet-react) and the generated RichtextFacet.Main[] are
         // structurally identical at runtime (same app.bsky.richtext.facet JSON shape).
         // Cast at this mutation boundary — safe by structural equivalence.
         const shortDescriptionInput: Richtext = {
           text: edits.shortDescription,
-          facets: resolvedFacets.length > 0
-            ? resolvedFacets as unknown as Richtext["facets"]
-            : undefined,
+          facets:
+            resolvedFacets.length > 0
+              ? (resolvedFacets as unknown as Richtext["facets"])
+              : undefined,
         };
         data.shortDescription = shortDescriptionInput;
       }
 
       if (edits.longDescription !== null) {
-        const normalizedLongDescription = normalizeLongDescriptionBlobRefs(edits.longDescription);
+        const normalizedLongDescription = normalizeLongDescriptionBlobRefs(
+          edits.longDescription,
+        );
         // Parse through generated lexicon validator client-side so this payload is
         // guaranteed to match mutation input shape before we send it.
         data.longDescription = parseLinearDocument(normalizedLongDescription);
@@ -212,7 +251,8 @@ export function UploadDashboardClient({ did }: UploadDashboardClientProps) {
 
       if (edits.startDate !== null) {
         // Convert YYYY-MM-DD to full ISO datetime format
-        data.startDate = `${edits.startDate}T00:00:00.000Z` as `${string}-${string}-${string}T${string}:${string}:${string}Z`;
+        data.startDate =
+          `${edits.startDate}T00:00:00.000Z` as `${string}-${string}-${string}T${string}:${string}:${string}Z`;
       }
 
       // Images must be wrapped in SmallImage shape { image: SerializableFile }
@@ -232,7 +272,10 @@ export function UploadDashboardClient({ did }: UploadDashboardClientProps) {
 
       // ── Apply optimistic update to query cache ──────────────────────────
       const cachedQueryData = indexerUtils.organization.byDid.getData({ did });
-      const cachedOrg = cachedQueryData?.org as GraphQLOrgInfoItem | null | undefined;
+      const cachedOrg = cachedQueryData?.org as
+        | GraphQLOrgInfoItem
+        | null
+        | undefined;
       if (!cachedOrg?.record) {
         // Shouldn't happen, but fall back to just clearing edit mode
         onSaveSuccess();
@@ -267,7 +310,9 @@ export function UploadDashboardClient({ did }: UploadDashboardClientProps) {
         objectUrlsRef.current.push(coverUrl);
         optimisticCoverImage = {
           cid: currentRecord.coverImage?.cid ?? null,
-          mimeType: (edits.coverImage.type || currentRecord.coverImage?.mimeType) ?? null,
+          mimeType:
+            (edits.coverImage.type || currentRecord.coverImage?.mimeType) ??
+            null,
           size: edits.coverImage.size ?? currentRecord.coverImage?.size ?? null,
           uri: coverUrl,
         };
@@ -298,8 +343,10 @@ export function UploadDashboardClient({ did }: UploadDashboardClientProps) {
             record: {
               ...prevRecord,
               displayName: rec.displayName ?? prevRecord.displayName,
-              shortDescription: rec.shortDescription ?? prevRecord.shortDescription,
-              longDescription: rec.longDescription ?? prevRecord.longDescription,
+              shortDescription:
+                rec.shortDescription ?? prevRecord.shortDescription,
+              longDescription:
+                rec.longDescription ?? prevRecord.longDescription,
               country: rec.country ?? prevRecord.country,
               website: rec.website ?? prevRecord.website,
               startDate: rec.startDate ?? prevRecord.startDate,
@@ -323,25 +370,36 @@ export function UploadDashboardClient({ did }: UploadDashboardClientProps) {
         setOptimisticGuard(false);
         void indexerUtils.organization.byDid.invalidate({ did });
       }, INVALIDATION_DELAY_MS);
-
     } catch (err) {
       setSaving(false);
       setSaveError(formatError(err));
     }
-  }, [serverData, edits, hasChanges, isSaving, setSaving, setSaveError, onSaveSuccess, setMode, updateMutation, indexerUtils, did]);
+  }, [
+    serverData,
+    edits,
+    hasChanges,
+    isSaving,
+    setSaving,
+    setSaveError,
+    onSaveSuccess,
+    setMode,
+    updateMutation,
+    indexerUtils,
+    did,
+  ]);
 
   // ── Render states ──────────────────────────────────────────────────────────
 
   if (isLoading) {
-    return <UploadDashboardSkeleton />;
+    return <ManageDashboardSkeleton />;
   }
 
   if (error) {
     return (
       <Container className="pt-4">
         <ErrorPage
-          title="Couldn't load your organisation"
-          description="We had trouble fetching your organisation data. Please try refreshing."
+          title="Couldn't load your organization"
+          description="We had trouble fetching your organization data. Please try refreshing."
           error={error}
           showRefreshButton
           showHomeButton={false}
@@ -350,18 +408,18 @@ export function UploadDashboardClient({ did }: UploadDashboardClientProps) {
     );
   }
 
-  // Organization doesn't exist yet — prompt user to set it up
+  // Organization doesn't exist yet — show the user the form to set it up
   if (!hasFetchedOrg && !serverData) {
     return (
       <Container className="pt-4">
-        <OrgSetupPrompt did={did} />
+        <OrgSetupPage did={did} onSetupSaved={handleSetupSaved} />
       </Container>
     );
   }
 
   // Still waiting for serverData to be derived from query
   if (!serverData) {
-    return <UploadDashboardSkeleton />;
+    return <ManageDashboardSkeleton />;
   }
 
   // ── Edit mode ──────────────────────────────────────────────────────────────
@@ -369,7 +427,7 @@ export function UploadDashboardClient({ did }: UploadDashboardClientProps) {
   if (isEditing) {
     return (
       <form
-        id="upload-dashboard-save-form"
+        id="manage-dashboard-save-form"
         onSubmit={(e) => {
           e.preventDefault();
           void handleSave();
@@ -403,7 +461,7 @@ export function UploadDashboardClient({ did }: UploadDashboardClientProps) {
     <Container className="pt-4 pb-8 space-y-2">
       <OrgHero organization={serverData} showEditButton />
       <OrgAbout organization={serverData} />
-      <UploadNavGrid />
+      <ManageNavGrid />
     </Container>
   );
 }

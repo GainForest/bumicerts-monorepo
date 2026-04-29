@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 };
 
 /**
- * Fetches every organisation's DID → country code mapping server-side so the
+ * Fetches every organization's DID → country code mapping server-side so the
  * dashboard can display geographic-reach stats without an extra client query.
  *
  * Returns a plain `Record<string, string>` (serialisable across the
@@ -22,7 +22,9 @@ async function fetchOrgCountryMap(): Promise<Record<string, string>> {
   try {
     const caller = await getIndexerCaller();
     const response = await caller.organization.list({ limit: 1000 });
-    const orgs = ("data" in response ? response.data : []) as GraphQLOrgInfoItem[];
+    const orgs = (
+      "data" in response ? response.data : []
+    ) as GraphQLOrgInfoItem[];
     for (const org of orgs) {
       const did = org.metadata?.did;
       const country = org.record?.country;

@@ -16,20 +16,110 @@ import type { BumicertData } from "@/lib/types";
 import { MODAL_IDS } from "@/components/global/modals/ids";
 import { useUSDCBalance } from "./hooks/useUSDCBalance";
 import { SuccessModal } from "./success";
-import { LinkWalletModal } from "./link-wallet";
-import { toUsdcUnits, EIP3009_TYPES } from "@/lib/facilitator/usdc";
+import { toUsdcUnits, EIP3009_TYPES, CHAIN_ID, USDC_CONTRACT } from "@/lib/facilitator/usdc";
 
 type TxState = "idle" | "waiting-signature" | "processing" | "rejected";
 
 interface ConfirmModalProps {
-  bumicert:        BumicertData;
-  amount:          number;
-  anonymous:       boolean;
+  bumicert: BumicertData;
+  amount: number;
+  donorChoseAnonymous: boolean;
   recipientWallet: string;
 }
 
-export function ConfirmModal({ bumicert, amount, anonymous, recipientWallet }: ConfirmModalProps) {
-  const { pushModal, popModal, stack, hide } = useModal();
+type HexAddress = `0x${string}`;
+type FundResponse = {
+  success: boolean;
+  transactionHash: string;
+  receiptUri: string | null;
+  donorRecordedAs: "did" | "wallet";
+};
+
+function isHexAddress(value: string): value is HexAddress {
+  return /^0x[a-fA-F0-9]{40}$/.test(value);
+}
+
+function isHexBytes32(value: string): value is HexAddress {
+  return /^0x[a-fA-F0-9]{64}$/.test(value);
+}
+
+function createNonce(): HexAddress {
+  const nonce = `0x${Array.from(crypto.getRandomValues(new Uint8Array(32)))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("")}`;
+
+  if (!isHexBytes32(nonce)) {
+    throw new Error("Failed to create a valid nonce");
+  }
+
+  return nonce;
+}
+
+function buildTypedData(params: {
+  senderWallet: HexAddress;
+  recipientWallet: HexAddress;
+  usdcAmount: bigint;
+}) {
+  const now = Math.floor(Date.now() / 1000);
+  const nonce = createNonce();
+
+  return {
+    domain: {
+      name: "USD Coin",
+      version: "2",
+      chainId: CHAIN_ID,
+      verifyingContract: USDC_CONTRACT,
+    },
+    types: EIP3009_TYPES,
+    message: {
+      from: params.senderWallet,
+      to: params.recipientWallet,
+      value: params.usdcAmount,
+      validAfter: BigInt(0),
+      validBefore: BigInt(now + 300),
+      nonce,
+    },
+    authorization: {
+      from: params.senderWallet,
+      to: params.recipientWallet,
+      value: params.usdcAmount.toString(),
+      validAfter: "0",
+      validBefore: String(now + 300),
+      nonce,
+    },
+  };
+}
+
+function parseFundResponse(value: unknown): FundResponse | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const success = Reflect.get(value, "success");
+  const transactionHash = Reflect.get(value, "transactionHash");
+  const receiptUri = Reflect.get(value, "receiptUri");
+  const donorRecordedAs = Reflect.get(value, "donorRecordedAs");
+
+  if (typeof success !== "boolean") return null;
+  if (typeof transactionHash !== "string") return null;
+  if (receiptUri !== null && typeof receiptUri !== "string") return null;
+  if (donorRecordedAs !== "did" && donorRecordedAs !== "wallet") return null;
+
+  return {
+    success,
+    transactionHash,
+    receiptUri,
+    donorRecordedAs,
+  };
+}
+
+export function ConfirmModal({
+  bumicert,
+  amount,
+  donorChoseAnonymous,
+  recipientWallet,
+}: ConfirmModalProps) {
+  const { pushModal, popModal, hide, clear } = useModal();
   const { address } = useAccount();
   const auth = useAtprotoStore((state) => state.auth);
   const { balance, isLoading: isBalanceLoading } = useUSDCBalance(address);
@@ -39,66 +129,51 @@ export function ConfirmModal({ bumicert, amount, anonymous, recipientWallet }: C
 
   const { signTypedDataAsync } = useSignTypedData();
 
-  const isAuthenticated = auth.status === "AUTHENTICATED";
-  const donorDid = isAuthenticated ? (auth as { did?: string }).did : undefined;
+  const donorDid = auth.authenticated ? auth.user.did : undefined;
+  const storeDonationAsAnonymous = donorDid ? donorChoseAnonymous : true;
 
   const usdcAmount = toUsdcUnits(amount);
   const hasEnoughBalance = balance !== null && parseFloat(balance) >= amount;
 
   const handleBack = () => {
-    if (stack.length === 1) {
-      hide().then(() => popModal());
-    } else {
-      popModal();
-    }
+    popModal();
   };
 
-  function buildTypedData(toWallet: `0x${string}`) {
-    const now = Math.floor(Date.now() / 1000);
-    const nonce = `0x${Array.from(crypto.getRandomValues(new Uint8Array(32)))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("")}` as `0x${string}`;
-
-    return {
-      domain: {
-        name:              "USD Coin",
-        version:           "2",
-        chainId:           8453,
-        verifyingContract: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as `0x${string}`,
-      },
-      types:       EIP3009_TYPES,
-      primaryType: "TransferWithAuthorization" as const,
-      message: {
-        from:        address as `0x${string}`,
-        to:          toWallet,
-        value:       usdcAmount,
-        validAfter:  BigInt(0),
-        validBefore: BigInt(now + 300),
-        nonce,
-      },
-      authorization: {
-        from:        address as string,
-        to:          toWallet as string,
-        value:       usdcAmount.toString(),
-        validAfter:  "0",
-        validBefore: String(now + 300),
-        nonce,
-      },
-    };
-  }
+  const handleCancel = async () => {
+    await hide();
+    clear();
+  };
 
   const handlePay = async () => {
-    if (!address) return;
+    if (!address) {
+      setErrorMsg("Please connect your wallet.");
+      setTxState("rejected");
+      return;
+    }
 
-    const { domain, types, primaryType, message, authorization } =
-      buildTypedData(recipientWallet as `0x${string}`);
+    if (!isHexAddress(recipientWallet)) {
+      setErrorMsg("Recipient wallet is invalid.");
+      setTxState("rejected");
+      return;
+    }
+
+    const { domain, types, message, authorization } = buildTypedData({
+      senderWallet: address,
+      recipientWallet,
+      usdcAmount,
+    });
 
     setTxState("waiting-signature");
     setErrorMsg(null);
 
     let signature: `0x${string}`;
     try {
-      signature = await signTypedDataAsync({ domain, types, primaryType, message });
+        signature = await signTypedDataAsync({
+          domain,
+          types,
+          primaryType: "TransferWithAuthorization",
+          message,
+        });
     } catch {
       setTxState("rejected");
       return;
@@ -108,26 +183,28 @@ export function ConfirmModal({ bumicert, amount, anonymous, recipientWallet }: C
 
     const sigPayload = {
       x402Version: 2,
-      scheme:      "exact",
-      networkId:   "eip155:8453",
-      payload:     { signature, authorization },
+      scheme: "exact",
+      networkId: "eip155:8453",
+      payload: { signature, authorization },
     };
-    const sigHeader = Buffer.from(JSON.stringify(sigPayload)).toString("base64");
+    const sigHeader = Buffer.from(JSON.stringify(sigPayload)).toString(
+      "base64",
+    );
 
     try {
       const res = await fetch("/api/fund", {
-        method:  "POST",
+        method: "POST",
         headers: {
-          "Content-Type":      "application/json",
+          "Content-Type": "application/json",
           "PAYMENT-SIGNATURE": sigHeader,
         },
         body: JSON.stringify({
           activityUri: `at://${bumicert.organizationDid}/org.hypercerts.claim.activity/${bumicert.rkey}`,
-          orgDid:      bumicert.organizationDid,
-          amount:      String(amount),
-          currency:    "USDC",
-          donorDid,
-          anonymous,
+          orgDid: bumicert.organizationDid,
+          amount: String(amount),
+          currency: "USDC",
+          donorDid: storeDonationAsAnonymous ? undefined : donorDid,
+          anonymous: storeDonationAsAnonymous,
         }),
       });
 
@@ -136,11 +213,11 @@ export function ConfirmModal({ bumicert, amount, anonymous, recipientWallet }: C
         throw new Error(err.error || "Payment failed");
       }
 
-      const data = (await res.json()) as {
-        success: boolean;
-        transactionHash: string;
-        receiptUri: string | null;
-      };
+      const rawData = await res.json();
+      const data = parseFundResponse(rawData);
+      if (!data) {
+        throw new Error("Payment completed, but response was invalid.");
+      }
 
       pushModal({
         id: MODAL_IDS.DONATE_SUCCESS,
@@ -149,9 +226,8 @@ export function ConfirmModal({ bumicert, amount, anonymous, recipientWallet }: C
             amount={amount}
             organizationName={bumicert.organizationName}
             transactionHash={data.transactionHash}
-            isAuthenticated={isAuthenticated}
-            anonymous={anonymous}
             bumicertId={`${bumicert.organizationDid}-${bumicert.rkey}`}
+            donorRecordedAs={data.donorRecordedAs}
           />
         ),
       });
@@ -167,18 +243,30 @@ export function ConfirmModal({ bumicert, amount, anonymous, recipientWallet }: C
       <ModalContent dismissible={false}>
         <ModalHeader>
           <ModalTitle>Waiting for Signature</ModalTitle>
-          <ModalDescription className="sr-only">Please sign in your wallet</ModalDescription>
+          <ModalDescription className="sr-only">
+            Please sign in your wallet
+          </ModalDescription>
         </ModalHeader>
         <div className="flex flex-col items-center gap-4 py-8 text-center">
           <div className="h-10 w-10 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-          <p className="font-medium">Please sign the transaction in your wallet</p>
-          <p className="text-sm text-muted-foreground">
-            This authorizes ${amount.toFixed(2)} USDC to {bumicert.organizationName}
+          <p className="font-medium">
+            Please sign the transaction in your wallet
           </p>
-          <p className="text-xs text-muted-foreground">No gas required from you</p>
+          <p className="text-sm text-muted-foreground">
+            This authorizes ${amount.toFixed(2)} USDC to{" "}
+            {bumicert.organizationName}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            No gas required from you
+          </p>
         </div>
         <ModalFooter>
-          <Button variant="ghost" onClick={handleBack} className="w-full" disabled>
+          <Button
+            variant="outline"
+            onClick={handleCancel}
+            className="w-full"
+            disabled
+          >
             Cancel
           </Button>
         </ModalFooter>
@@ -191,15 +279,26 @@ export function ConfirmModal({ bumicert, amount, anonymous, recipientWallet }: C
       <ModalContent dismissible={false}>
         <ModalHeader>
           <ModalTitle>Processing Donation</ModalTitle>
-          <ModalDescription className="sr-only">Your donation is being confirmed on-chain</ModalDescription>
+          <ModalDescription className="sr-only">
+            Your donation is being confirmed on-chain
+          </ModalDescription>
         </ModalHeader>
         <div className="flex flex-col items-center gap-4 py-8 text-center">
           <div className="h-10 w-10 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-          <p className="font-medium">Your donation is being confirmed on the Base network</p>
-          <p className="text-sm text-muted-foreground">This usually takes a few seconds</p>
+          <p className="font-medium">
+            Your donation is being confirmed on the Base network
+          </p>
+          <p className="text-sm text-muted-foreground">
+            This usually takes a few seconds
+          </p>
         </div>
         <ModalFooter>
-          <Button variant="ghost" onClick={handleBack} className="w-full" disabled>
+          <Button
+            variant="outline"
+            onClick={handleCancel}
+            className="w-full"
+            disabled
+          >
             Cancel
           </Button>
         </ModalFooter>
@@ -212,18 +311,28 @@ export function ConfirmModal({ bumicert, amount, anonymous, recipientWallet }: C
       <ModalContent dismissible={false}>
         <ModalHeader>
           <ModalTitle>Transaction Rejected</ModalTitle>
-          <ModalDescription className="sr-only">The transaction was rejected</ModalDescription>
+          <ModalDescription className="sr-only">
+            The transaction was rejected
+          </ModalDescription>
         </ModalHeader>
         <div className="flex flex-col items-center gap-4 py-6 text-center">
           <span className="text-4xl">✕</span>
-          <p className="font-medium">The transaction was rejected in your wallet</p>
+          <p className="font-medium">
+            The transaction was rejected in your wallet
+          </p>
           {errorMsg && <p className="text-sm text-destructive">{errorMsg}</p>}
         </div>
         <ModalFooter className="flex gap-2">
           <Button variant="outline" className="flex-1" onClick={handleBack}>
             Cancel
           </Button>
-          <Button className="flex-1" onClick={() => { setTxState("idle"); setErrorMsg(null); }}>
+          <Button
+            className="flex-1"
+            onClick={() => {
+              setTxState("idle");
+              setErrorMsg(null);
+            }}
+          >
             Try Again
           </Button>
         </ModalFooter>
@@ -240,7 +349,9 @@ export function ConfirmModal({ bumicert, amount, anonymous, recipientWallet }: C
     <ModalContent dismissible={false}>
       <ModalHeader backAction={handleBack}>
         <ModalTitle>Confirm Donation</ModalTitle>
-        <ModalDescription className="sr-only">Review and confirm your donation</ModalDescription>
+        <ModalDescription className="sr-only">
+          Review and confirm your donation
+        </ModalDescription>
       </ModalHeader>
 
       <div className="border border-border rounded-lg px-4 py-3">
@@ -256,37 +367,15 @@ export function ConfirmModal({ bumicert, amount, anonymous, recipientWallet }: C
         </p>
       </div>
 
-      {isAuthenticated && !anonymous && (
-        <div className="border border-amber-200 bg-amber-50 dark:bg-amber-950/20 rounded-lg px-4 py-3">
-          <p className="text-xs text-amber-800 dark:text-amber-400 mb-1">
-            ⚠️ This wallet isn&apos;t linked to your Bumicerts identity yet.
-          </p>
-          <button
-            className="text-xs text-primary font-medium hover:underline"
-            onClick={() =>
-              pushModal({
-                id: MODAL_IDS.DONATE_LINK_WALLET,
-                content: (
-                  <LinkWalletModal
-                    bumicert={bumicert}
-                    amount={amount}
-                    anonymous={anonymous}
-                    recipientWallet={recipientWallet}
-                  />
-                ),
-              })
-            }
-          >
-            Link wallet to my account →
-          </button>
-        </div>
-      )}
-
       <div className="border border-border rounded-lg px-4 py-3 flex flex-col gap-1">
         <p className="text-xs text-muted-foreground">You&apos;re donating</p>
         <p className="text-xl font-bold">${amount.toFixed(2)} USDC</p>
-        <p className="text-sm text-muted-foreground">→ {bumicert.organizationName}</p>
-        <p className="text-xs text-muted-foreground">for &ldquo;{bumicert.title}&rdquo;</p>
+        <p className="text-sm text-muted-foreground">
+          → {bumicert.organizationName}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          for &ldquo;{bumicert.title}&rdquo;
+        </p>
       </div>
 
       {!isBalanceLoading && balance !== null && !hasEnoughBalance && (
@@ -303,7 +392,7 @@ export function ConfirmModal({ bumicert, amount, anonymous, recipientWallet }: C
         >
           Pay ${amount.toFixed(2)}
         </Button>
-        <Button variant="ghost" onClick={handleBack} className="w-full">
+        <Button variant="outline" onClick={handleCancel} className="w-full">
           Cancel
         </Button>
       </ModalFooter>

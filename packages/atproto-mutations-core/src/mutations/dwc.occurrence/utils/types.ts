@@ -36,6 +36,7 @@ export type CreateDwcOccurrenceInput = {
   projectRef?: string;
   establishmentMeans?: string;
   datasetRef?: string;
+  dynamicProperties?: string;
   rkey?: string;
 };
 

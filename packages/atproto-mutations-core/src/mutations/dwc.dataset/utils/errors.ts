@@ -15,6 +15,13 @@ export class DwcDatasetNotFoundError extends Data.TaggedError(
   rkey: string;
 }> {}
 
+export class DwcDatasetUnavailableError extends Data.TaggedError(
+  "DwcDatasetUnavailableError"
+)<{
+  message: string;
+  cause?: unknown;
+}> {}
+
 export class DwcDatasetPdsError extends Data.TaggedError(
   "DwcDatasetPdsError"
 )<{

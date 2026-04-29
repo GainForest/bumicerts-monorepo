@@ -97,11 +97,16 @@ const KNOWN_PATTERNS: { patterns: string[]; target: string }[] = [
 
   // Measurement fields
   { patterns: ["dbh", "diameter_breast_height", "trunk_diameter"], target: "dbh" },
-  { patterns: ["height", "tree_height", "total_height"], target: "totalHeight" },
+  { patterns: ["height", "tree_height", "total_height"], target: "height" },
   { patterns: ["diameter"], target: "diameter" },
   {
-    patterns: ["crown_diameter", "canopy_diameter", "canopy_cover"],
-    target: "canopyCover",
+    patterns: [
+      "canopycoverpercent",
+      "canopy_cover_percent",
+      "canopy_cover_pct",
+      "canopy_cover",
+    ],
+    target: "canopyCoverPercent",
   },
 
   // Media fields — photoUrl allows multiple columns (multi-photo per tree)

@@ -15,6 +15,10 @@ import { toSerializableFile } from "@/lib/mutations-utils";
 import { trpc } from "@/lib/trpc/client";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { formatError } from "@/lib/utils/trpc-errors";
+import {
+  BUMICERT_COVER_IMAGE_MAX_SIZE_MB,
+  BUMICERT_COVER_IMAGE_SUPPORTED_TYPES,
+} from "../../../constants";
 
 
 export const UploadLogoModalId = "upload/organization/logo";
@@ -33,6 +37,33 @@ export const UploadLogoModal = () => {
   } = trpc.organization.info.update.useMutation({
     onSuccess: () => {
       setUploadError(null);
+      const did = auth.user?.did;
+      if (did && logo) {
+        const optimisticLogoUrl = URL.createObjectURL(logo);
+        indexerUtils.organization.logo.setData({ did }, optimisticLogoUrl);
+        indexerUtils.organization.byDid.setData({ did }, (prev) => {
+          if (!prev?.org?.record) return prev;
+
+          return {
+            ...prev,
+            org: {
+              ...prev.org,
+              record: {
+                ...prev.org.record,
+                logo: {
+                  cid: prev.org.record.logo?.cid ?? null,
+                  mimeType:
+                    logo.type.trim().length > 0
+                      ? logo.type
+                      : (prev.org.record.logo?.mimeType ?? null),
+                  size: logo.size ?? prev.org.record.logo?.size ?? null,
+                  uri: optimisticLogoUrl,
+                },
+              },
+            },
+          };
+        });
+      }
       void indexerUtils.organization.invalidate();
     },
     onError: (err) => {
@@ -72,13 +103,8 @@ export const UploadLogoModal = () => {
       </ModalHeader>
       <FileInput
         placeholder="Upload a logo for your organization"
-        supportedFileTypes={[
-          "image/jpg",
-          "image/jpeg",
-          "image/png",
-          "image/webp",
-        ]}
-        maxSizeInMB={5}
+        supportedFileTypes={[...BUMICERT_COVER_IMAGE_SUPPORTED_TYPES]}
+        maxSizeInMB={BUMICERT_COVER_IMAGE_MAX_SIZE_MB}
         value={logo}
         onFileChange={setLogo}
       />

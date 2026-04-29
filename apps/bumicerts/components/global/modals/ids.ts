@@ -19,15 +19,17 @@ export const MODAL_IDS = {
   DONATE_WALLET: "donate/wallet",
   DONATE_CONFIRM: "donate/confirm",
   DONATE_SUCCESS: "donate/success",
-  DONATE_LINK_WALLET: "donate/link-wallet",
 
-  // Upload / org management
-  UPLOAD_IMAGE_EDITOR: "upload/image-editor",
-  UPLOAD_COUNTRY_SELECTOR: "upload/country-selector",
-  UPLOAD_WEBSITE_EDITOR: "upload/website-editor",
-  UPLOAD_START_DATE_SELECTOR: "upload/start-date-selector",
-  UPLOAD_VISIBILITY_SELECTOR: "upload/visibility-selector",
-  UPLOAD_PHOTO_ATTACH: "upload/photo-attach",
+  // Manage / org management
+  MANAGE_IMAGE_EDITOR: "manage/image-editor",
+  MANAGE_COUNTRY_SELECTOR: "manage/country-selector",
+  MANAGE_WEBSITE_EDITOR: "manage/website-editor",
+  MANAGE_START_DATE_SELECTOR: "manage/start-date-selector",
+  MANAGE_VISIBILITY_SELECTOR: "manage/visibility-selector",
+  MANAGE_PHOTO_ATTACH: "manage/photo-attach",
+
+  // Upload flows
+  UPLOAD_TREES_COMPLETE: "upload/trees/complete",
 } as const;
 
 export type ModalId = (typeof MODAL_IDS)[keyof typeof MODAL_IDS];

@@ -1,6 +1,6 @@
 "use client";
 
-import { Download } from "lucide-react";
+import { Download, InfoIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Accordion,
@@ -9,6 +9,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { links } from "@/lib/links";
+import { cn } from "@/lib/utils";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Field reference data
@@ -19,7 +20,22 @@ type FieldDoc = {
   description: string;
   format: string;
   required?: boolean;
+  helperText?: string;
+  helperTone?: "default" | "destructive";
 };
+
+const TEMPLATE_DOWNLOADS = [
+  {
+    href: links.assets.treeDataBasicTemplate,
+    download: "tree-data-basic-template.csv",
+    label: "Download basic CSV",
+  },
+  {
+    href: links.assets.treeDataDetailedTemplate,
+    download: "tree-data-detailed-template.csv",
+    label: "Download detailed CSV",
+  },
+] as const;
 
 /**
  * Fields shown in the documentation table. Names match the CSV template
@@ -31,11 +47,6 @@ const FIELD_DOCS: FieldDoc[] = [
     description: "Scientific name of the species",
     format: "Text",
     required: true,
-  },
-  {
-    field: "vernacularName",
-    description: "Common or local name",
-    format: "Text",
   },
   {
     field: "eventDate",
@@ -56,6 +67,11 @@ const FIELD_DOCS: FieldDoc[] = [
     required: true,
   },
   {
+    field: "vernacularName",
+    description: "Common or local name",
+    format: "Text",
+  },
+  {
     field: "recordedBy",
     description: "Name of recorder",
     format: "Text",
@@ -63,6 +79,21 @@ const FIELD_DOCS: FieldDoc[] = [
   {
     field: "locality",
     description: "Site or location name",
+    format: "Text",
+  },
+  {
+    field: "country",
+    description: "Country where the tree was recorded",
+    format: "Text",
+  },
+  {
+    field: "occurrenceRemarks",
+    description: "Notes or comments about the occurrence",
+    format: "Text",
+  },
+  {
+    field: "habitat",
+    description: "Habitat or vegetation type",
     format: "Text",
   },
   {
@@ -76,24 +107,42 @@ const FIELD_DOCS: FieldDoc[] = [
     format: "Number",
   },
   {
-    field: "establishmentMeans",
-    description: "How the tree was established (native, managed, etc.)",
-    format: "Enum",
+    field: "diameter",
+    description: "Basal or stem diameter in centimeters",
+    format: "Number",
+  },
+  {
+    field: "canopyCoverPercent",
+    description: "Canopy cover percentage",
+    format: "0-100",
   },
   {
     field: "photo_tree",
     description: "URL to a photo of the whole tree (Google Drive, etc.)",
     format: "URL",
+    helperText: "Must be publicly accessible — no sign-in required",
+    helperTone: "destructive",
   },
   {
     field: "photo_leaf",
     description: "URL to a photo of the leaf. Subject part auto-detected.",
     format: "URL",
+    helperText: "Must be publicly accessible — no sign-in required",
+    helperTone: "destructive",
   },
   {
     field: "photo_bark",
     description: "URL to a photo of the bark. Subject part auto-detected.",
     format: "URL",
+    helperText: "Must be publicly accessible — no sign-in required",
+    helperTone: "destructive",
+  },
+  {
+    field: "photo_url",
+    description: "Generic photo URL column. Multiple URLs may be separated with commas or semicolons.",
+    format: "URL(s)",
+    helperText: "Subject part is inferred from the column name; generic photos default to whole tree",
+    helperTone: "destructive",
   },
 ];
 
@@ -106,7 +155,7 @@ export default function TreeDataGuide() {
     <Accordion type="single" collapsible className="rounded-lg border">
       <AccordionItem value="guide" className="border-b-0">
         <AccordionTrigger className="px-4 hover:no-underline">
-          New to tree data? See accepted fields and download the template
+          New to tree data? See accepted fields and download templates
         </AccordionTrigger>
 
         <AccordionContent className="px-4">
@@ -121,16 +170,17 @@ export default function TreeDataGuide() {
             use&nbsp;&mdash; just remove them before uploading.
           </p>
 
-          {/* Download template */}
-          <Button variant="outline" size="sm" className="mb-5" asChild>
-            <a
-              href={links.assets.treeDataTemplate}
-              download="tree-data-template.csv"
-            >
-              <Download />
-              Download template
-            </a>
-          </Button>
+          {/* Download templates */}
+          <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            {TEMPLATE_DOWNLOADS.map((template) => (
+              <Button key={template.download} variant="outline" size="sm" asChild>
+                <a href={template.href} download={template.download}>
+                  <Download />
+                  {template.label}
+                </a>
+              </Button>
+            ))}
+          </div>
 
           {/* Field reference table */}
           <div className="rounded-lg border overflow-hidden">
@@ -146,7 +196,7 @@ export default function TreeDataGuide() {
               {FIELD_DOCS.map((doc) => (
                 <div
                   key={doc.field}
-                  className="grid grid-cols-[1fr_1.5fr_0.6fr] gap-0 px-4 py-2.5 items-center"
+                  className="grid grid-cols-[1fr_1.5fr_0.6fr] gap-0 px-4 py-2.5 items-start"
                 >
                   <span className="text-sm font-mono text-foreground">
                     {doc.field}
@@ -154,9 +204,22 @@ export default function TreeDataGuide() {
                       <span className="text-destructive ml-1">*</span>
                     )}
                   </span>
-                  <span className="text-sm text-muted-foreground">
-                    {doc.description}
-                  </span>
+                  <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+                    <span>{doc.description}</span>
+                    {doc.helperText ? (
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 text-xs font-medium",
+                          doc.helperTone === "destructive"
+                            ? "text-destructive"
+                            : "text-primary"
+                        )}
+                      >
+                        <InfoIcon className="size-3.5 shrink-0" />
+                        {doc.helperText}
+                      </span>
+                    ) : null}
+                  </div>
                   <span className="text-sm text-muted-foreground">
                     {doc.format}
                   </span>

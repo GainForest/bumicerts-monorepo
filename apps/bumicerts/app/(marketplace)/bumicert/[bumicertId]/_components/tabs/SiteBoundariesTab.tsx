@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { MapPinIcon, ExternalLinkIcon, Loader2Icon } from "lucide-react";
+import { MapPinIcon, Loader2Icon } from "lucide-react";
 import type { BumicertData } from "@/lib/types";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { links } from "@/lib/links";
@@ -19,43 +19,12 @@ function parseAtUri(uri: string): { did: string; rkey: string } | null {
   return { did: match[1], rkey: match[2] };
 }
 
-/**
- * Extract a resolved blob/http URL from the `record.location` JSON scalar.
- *
- * Observed shapes from the indexer:
- *   - string                              → plain URI, use as-is
- *   - { uri: string }                     → #uri variant
- *   - { $type: "org.hypercerts.defs#smallBlob", blob: { uri: string } }
- *                                         → smallBlob — URI is nested under blob.uri
- *   - { ref: { uri: string } }            → ATProto BlobRef with resolved uri
- *   - { string: string }                  → #string inline coordinate — no URL
- */
-function extractLocationUrl(location: unknown): string | null {
-  if (typeof location === "string") return location || null;
-  if (location && typeof location === "object") {
-    const loc = location as Record<string, unknown>;
-    // Direct uri field (#uri variant)
-    if (typeof loc["uri"] === "string" && loc["uri"]) return loc["uri"];
-    // #smallBlob — { blob: { uri } }
-    if (loc["blob"] && typeof loc["blob"] === "object") {
-      const blob = loc["blob"] as Record<string, unknown>;
-      if (typeof blob["uri"] === "string" && blob["uri"]) return blob["uri"];
-    }
-    // ATProto BlobRef — { ref: { uri } }
-    if (loc["ref"] && typeof loc["ref"] === "object") {
-      const ref = loc["ref"] as Record<string, unknown>;
-      if (typeof ref["uri"] === "string" && ref["uri"]) return ref["uri"];
-    }
-  }
-  return null;
-}
-
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface SiteEntry {
   rkey: string;
   name: string | null;
-  shapefileUrl: string | null;
+  locationUri: string | null; // AT URI of the location record
 }
 
 // ── Site list item ─────────────────────────────────────────────────────────────
@@ -90,20 +59,6 @@ function SiteListItem({
           {label}
         </span>
       </div>
-
-      {site.shapefileUrl && (
-        <a
-          href={site.shapefileUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="shrink-0 flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
-          aria-label={`View raw GeoJSON for ${label}`}
-        >
-          <ExternalLinkIcon className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Raw file</span>
-        </a>
-      )}
     </div>
   );
 }
@@ -113,11 +68,13 @@ function SiteListItem({
 export function SiteBoundariesTab({ bumicert }: { bumicert: BumicertData }) {
   const parsedRefs = bumicert.locationRefs
     .map((ref) => parseAtUri(ref.uri))
-    .filter((parsed): parsed is { did: string; rkey: string } => parsed !== null);
+    .filter(
+      (parsed): parsed is { did: string; rkey: string } => parsed !== null,
+    );
 
   // One query per linked location — fetched by exact did + rkey
   const locationResults = indexerTrpc.useQueries((t) =>
-    parsedRefs.map((ref) => t.locations.list({ did: ref.did, rkey: ref.rkey }))
+    parsedRefs.map((ref) => t.locations.list({ did: ref.did, rkey: ref.rkey })),
   );
 
   const isLoading = locationResults.some((r) => r.isLoading);
@@ -127,17 +84,23 @@ export function SiteBoundariesTab({ bumicert }: { bumicert: BumicertData }) {
     .map((item) => ({
       rkey: item.metadata?.rkey ?? "",
       name: item.record?.name ?? null,
-      shapefileUrl: extractLocationUrl(item.record?.location),
+      locationUri: item.metadata?.uri ?? null, // AT URI of the location record
     }))
-    .filter((s) => s.shapefileUrl !== null);
+    .filter((s) => s.locationUri !== null);
 
   const firstSite = sites[0] ?? null;
   const [activeSiteRkey, setActiveSiteRkey] = useState<string | null>(null);
 
   const activeRkey = activeSiteRkey ?? firstSite?.rkey ?? null;
   const activeSite = sites.find((s) => s.rkey === activeRkey) ?? firstSite;
-  const iframeUrl = activeSite?.shapefileUrl
-    ? links.external.gainforestMapViewer(activeSite.shapefileUrl)
+  const iframeUrl = activeSite?.locationUri
+    ? links.external.polygonsAppUrl({
+        mode: "view",
+        params: {
+          certifiedLocationRecordUri:
+            activeSite.locationUri as `at://did:plc:${string}/app.certified.location/${string}`,
+        },
+      })
     : null;
 
   return (

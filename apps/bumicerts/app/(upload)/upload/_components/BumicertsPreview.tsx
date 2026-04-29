@@ -9,23 +9,28 @@ import { links } from "@/lib/links";
 import { Skeleton } from "@/components/ui/skeleton";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import type { OrganizationData } from "@/lib/types";
-import { activitiesToBumicertDataArray, type GraphQLHcActivityItem } from "@/lib/adapters";
+import {
+  activitiesToBumicertDataArray,
+  type GraphQLHcActivityItem,
+} from "@/lib/adapters";
 
 interface BumicertsPreviewProps {
   organization: OrganizationData;
 }
 
 /**
- * Compact 2-card preview of the organisation's bumicerts.
+ * Compact 2-card preview of the organization's bumicerts.
  * Fetches the first 2 activities and renders them as mini cards.
  * "View all" links to the bumicerts management page.
  */
 export function BumicertsPreview({ organization }: BumicertsPreviewProps) {
-  const { data: orgData, isLoading } = indexerTrpc.organization.byDid.useQuery(
-    { did: organization.did }
-  );
+  const { data: orgData, isLoading } = indexerTrpc.organization.byDid.useQuery({
+    did: organization.did,
+  });
   const data = orgData
-    ? activitiesToBumicertDataArray((orgData.activities as GraphQLHcActivityItem[]).slice(0, 2))
+    ? activitiesToBumicertDataArray(
+        (orgData.activities as GraphQLHcActivityItem[]).slice(0, 2),
+      )
     : undefined;
 
   const bumicerts = data ?? [];
@@ -41,7 +46,7 @@ export function BumicertsPreview({ organization }: BumicertsPreviewProps) {
           </span>
         </div>
         <Link
-          href={links.upload.bumicerts}
+          href={links.manage.bumicerts}
           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
         >
           View all

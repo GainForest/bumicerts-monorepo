@@ -9,6 +9,7 @@ export type NewBumicertFormState = {
 
 export type NewBumicertFormActions = {
   setCurrentStepIndex: (step: number) => void;
+  reset: () => void;
 };
 
 const useNewBumicertStore = create<
@@ -21,6 +22,11 @@ const useNewBumicertStore = create<
       currentStepIndex: step,
       maxStepIndexReached: Math.max(state.maxStepIndexReached, step),
     })),
+  reset: () =>
+    set({
+      currentStepIndex: 0,
+      maxStepIndexReached: 0,
+    }),
 }));
 
 export default useNewBumicertStore;

@@ -188,6 +188,7 @@ async function runLexBuild(): Promise<void> {
     "--indexFile",
     "--importExt", ".ts",
     "--clear",
+    "--allowLegacyBlobs", // Enable legacy blob refs to support $link format from PDS
   ];
 
   for (const nsid of EXCLUDED_NSIDS) {

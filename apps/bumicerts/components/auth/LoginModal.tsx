@@ -2,13 +2,22 @@
 
 import { useState, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRightIcon, LoaderIcon, ChevronDownIcon, CheckIcon } from "lucide-react";
+import {
+  ArrowRightIcon,
+  LoaderIcon,
+  ChevronDownIcon,
+  CheckIcon,
+} from "lucide-react";
 import { authorize } from "@/components/actions/oauth";
 import { loginPDSDomains, isValidPdsDomain } from "@/lib/config/pds";
 import { clientEnv as env } from "@/lib/env/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
@@ -36,7 +45,7 @@ function PillToggle({
           "flex-1 rounded-full px-4 py-1.5 text-sm font-medium transition-all",
           active === "email"
             ? "bg-background text-foreground shadow-sm"
-            : "text-muted-foreground hover:text-foreground"
+            : "text-muted-foreground hover:text-foreground",
         )}
       >
         Email
@@ -48,7 +57,7 @@ function PillToggle({
           "flex-1 rounded-full px-4 py-1.5 text-sm font-medium transition-all",
           active === "handle"
             ? "bg-background text-foreground shadow-sm"
-            : "text-muted-foreground hover:text-foreground"
+            : "text-muted-foreground hover:text-foreground",
         )}
       >
         Handle
@@ -75,7 +84,7 @@ function PdsDomainDropdown({
   const [open, setOpen] = useState(false);
   const isCustom = value === CUSTOM_SENTINEL;
 
-  const displayLabel = isCustom ? (customValue || "custom server") : value;
+  const displayLabel = isCustom ? customValue || "custom server" : value;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -85,7 +94,12 @@ function PdsDomainDropdown({
           className="flex items-center gap-1 h-9 px-2 bg-muted border-y border-r border-input rounded-r-md text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0 max-w-[160px]"
         >
           <span className="truncate font-mono">.{displayLabel}</span>
-          <ChevronDownIcon className={cn("w-3 h-3 shrink-0 transition-transform", open && "rotate-180")} />
+          <ChevronDownIcon
+            className={cn(
+              "w-3 h-3 shrink-0 transition-transform",
+              open && "rotate-180",
+            )}
+          />
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-48 p-1">
@@ -93,14 +107,19 @@ function PdsDomainDropdown({
           <button
             key={domain}
             type="button"
-            onClick={() => { onChange(domain); setOpen(false); }}
+            onClick={() => {
+              onChange(domain);
+              setOpen(false);
+            }}
             className={cn(
               "w-full text-left flex items-center justify-between px-3 py-2 text-xs rounded-sm hover:bg-accent transition-colors",
-              value === domain && "bg-accent/60"
+              value === domain && "bg-accent/60",
             )}
           >
             <span className="font-mono">{domain}</span>
-            {value === domain && <CheckIcon className="w-3 h-3 shrink-0 text-primary" />}
+            {value === domain && (
+              <CheckIcon className="w-3 h-3 shrink-0 text-primary" />
+            )}
           </button>
         ))}
 
@@ -108,10 +127,13 @@ function PdsDomainDropdown({
 
         <button
           type="button"
-          onClick={() => { onChange(CUSTOM_SENTINEL); setOpen(false); }}
+          onClick={() => {
+            onChange(CUSTOM_SENTINEL);
+            setOpen(false);
+          }}
           className={cn(
             "w-full text-left flex items-center justify-between px-3 py-2 text-xs rounded-sm hover:bg-accent transition-colors",
-            isCustom && "bg-accent/60"
+            isCustom && "bg-accent/60",
           )}
         >
           <span className="text-muted-foreground">Custom server…</span>
@@ -133,7 +155,10 @@ function EmailForm() {
     setIsRedirecting(true);
     setTimeout(() => setIsRedirecting(false), 10_000);
     // Save the current page so we can redirect back after login
-    localStorage.setItem("auth_redirect", window.location.pathname);
+    localStorage.setItem(
+      "auth_redirect",
+      `${window.location.pathname}${window.location.search}`,
+    );
     const url = email
       ? `/api/oauth/epds/login?email=${encodeURIComponent(email)}`
       : "/api/oauth/epds/login";
@@ -161,7 +186,11 @@ function EmailForm() {
         </p>
       </div>
 
-      <Button type="submit" disabled={isRedirecting || !email.trim()} className="w-full">
+      <Button
+        type="submit"
+        disabled={isRedirecting || !email.trim()}
+        className="w-full"
+      >
         {isRedirecting ? (
           <>
             <LoaderIcon className="animate-spin" />
@@ -182,7 +211,9 @@ function EmailForm() {
 
 function HandleForm() {
   const [handle, setHandle] = useState("");
-  const [selectedDomain, setSelectedDomain] = useState<string>(loginPDSDomains[0]);
+  const [selectedDomain, setSelectedDomain] = useState<string>(
+    loginPDSDomains[0],
+  );
   const [customDomain, setCustomDomain] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -196,8 +227,8 @@ function HandleForm() {
   const fullHandle = handle.includes(".")
     ? handle.trim()
     : handle.trim() && effectiveDomain
-    ? `${handle.trim()}.${effectiveDomain}`
-    : "";
+      ? `${handle.trim()}.${effectiveDomain}`
+      : "";
 
   const customDomainError =
     isCustom && customDomain && !isValidPdsDomain(customDomain)
@@ -221,14 +252,21 @@ function HandleForm() {
     if (!canSubmit) return;
     setError(null);
     // Save the current page so we can redirect back after login
-    localStorage.setItem("auth_redirect", window.location.pathname);
+    localStorage.setItem(
+      "auth_redirect",
+      `${window.location.pathname}${window.location.search}`,
+    );
     startTransition(async () => {
       try {
-        const { authorizationUrl } = await authorize(fullHandle || handle.trim());
-        window.location.href = authorizationUrl;
-      } catch (err) {
-        setError("Unable to start sign-in. Please try again.");
-        console.error(err);
+        const result = await authorize(fullHandle || handle.trim());
+        if ("authorizationUrl" in result) {
+          window.location.href = result.authorizationUrl;
+        } else {
+          // Error returned from server action (not thrown)
+          setError(result.error);
+        }
+      } catch {
+        setError("Something went wrong. Please try again.");
       }
     });
   };
@@ -244,7 +282,10 @@ function HandleForm() {
             id="login-handle"
             type="text"
             value={handle}
-            onChange={(e) => { setHandle(e.target.value); setError(null); }}
+            onChange={(e) => {
+              setHandle(e.target.value);
+              setError(null);
+            }}
             placeholder="your-handle"
             autoComplete="username"
             autoFocus
@@ -271,17 +312,22 @@ function HandleForm() {
               <Input
                 type="text"
                 value={customDomain}
-                onChange={(e) => setCustomDomain(e.target.value.toLowerCase().trim())}
+                onChange={(e) =>
+                  setCustomDomain(e.target.value.toLowerCase().trim())
+                }
                 placeholder="pds.example.com"
                 autoFocus
                 disabled={isPending}
                 className={cn(
                   "mt-1.5 h-8 text-xs font-mono",
-                  customDomainError && "border-destructive focus-visible:ring-destructive/50"
+                  customDomainError &&
+                    "border-destructive focus-visible:ring-destructive/50",
                 )}
               />
               {customDomainError && (
-                <p className="text-xs text-destructive mt-1">{customDomainError}</p>
+                <p className="text-xs text-destructive mt-1">
+                  {customDomainError}
+                </p>
               )}
             </motion.div>
           )}
@@ -369,7 +415,6 @@ export function LoginModal({ onClose }: LoginModalProps) {
           alt="GainForest"
           width={40}
           height={40}
-          className="dark:invert"
         />
       </div>
 
@@ -379,10 +424,10 @@ export function LoginModal({ onClose }: LoginModalProps) {
           className="text-3xl font-light tracking-[-0.02em] text-foreground mb-2"
           style={{ fontFamily: "var(--font-garamond-var)" }}
         >
-          Welcome back
+          Get Started
         </h2>
         <p className="text-sm text-muted-foreground">
-          Sign in to your account
+          Sign up or Sign in to your account
         </p>
       </div>
 
@@ -415,23 +460,6 @@ export function LoginModal({ onClose }: LoginModalProps) {
           </motion.div>
         )}
       </AnimatePresence>
-
-      <div className="flex items-center gap-3 my-4">
-        <div className="flex-1 h-px bg-border" />
-        <span className="text-xs text-muted-foreground">or</span>
-        <div className="flex-1 h-px bg-border" />
-      </div>
-
-      <p className="text-center text-sm text-muted-foreground">
-        Don&apos;t have an account?{" "}
-        <Link
-          href={links.onboarding}
-          onClick={onClose}
-          className="text-primary font-medium hover:underline"
-        >
-          Sign up as an organization
-        </Link>
-      </p>
     </motion.div>
   );
 }

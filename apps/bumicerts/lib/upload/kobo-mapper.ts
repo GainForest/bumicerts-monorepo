@@ -22,6 +22,29 @@ type KoboPattern = {
   koboSpecific?: boolean;
 };
 
+function isCrownOrCanopyDiameterHeader(header: string): boolean {
+  const normalizedHeader = header.replace(/([a-z0-9])([A-Z])/g, "$1 $2");
+  const tokens = normalizedHeader
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length > 0);
+  const compactHeader = tokens.join("");
+  const mentionsCrownOrCanopy =
+    tokens.includes("crown") ||
+    tokens.includes("canopy") ||
+    compactHeader.includes("crown") ||
+    compactHeader.includes("canopy");
+  const mentionsDiameter =
+    tokens.some(
+      (token) =>
+        token === "diameter" || token === "diam" || token === "dia"
+    ) ||
+    compactHeader.includes("diameter") ||
+    /(diam|dia)(cm|mm|m)?$/.test(compactHeader);
+
+  return mentionsCrownOrCanopy && mentionsDiameter;
+}
+
 const KOBO_PATTERNS: KoboPattern[] = [
   // Combined GPS field — handled specially: produces TWO mappings
   // koboSpecific: these combined GPS fields are unique to KoboToolbox exports
@@ -52,11 +75,13 @@ const KOBO_PATTERNS: KoboPattern[] = [
   // Measurements
   { pattern: "dbh", targetField: "dbh" },
   { pattern: "diameter_breast_height", targetField: "dbh" },
-  { pattern: "height", targetField: "totalHeight" },
-  { pattern: "tree_height", targetField: "totalHeight" },
+  { pattern: "height", targetField: "height" },
+  { pattern: "tree_height", targetField: "height" },
   { pattern: "diameter", targetField: "diameter" },
-  { pattern: "canopy_cover", targetField: "canopyCover" },
-  { pattern: "canopy", targetField: "canopyCover" },
+  { pattern: "canopycoverpercent", targetField: "canopyCoverPercent" },
+  { pattern: "canopy_cover_percent", targetField: "canopyCoverPercent" },
+  { pattern: "canopy_cover_pct", targetField: "canopyCoverPercent" },
+  { pattern: "canopy_cover", targetField: "canopyCoverPercent" },
 
   // Date / time — explicit date fields take priority over submission_time
   // koboSpecific: FCD tree time field is KoboToolbox-specific
@@ -116,6 +141,7 @@ const KOBO_PATTERNS: KoboPattern[] = [
  */
 function matchPattern(header: string): KoboPattern | null {
   const lower = header.toLowerCase();
+  const isCrownOrCanopyDiameter = isCrownOrCanopyDiameterHeader(header);
 
   // Pass 1: exact match
   for (const entry of KOBO_PATTERNS) {
@@ -127,6 +153,14 @@ function matchPattern(header: string): KoboPattern | null {
   // Pass 2: substring match — skip gpsCombined patterns to prevent
   // "_gps_longitude".includes("gps") from firing the combined-GPS handler
   for (const entry of KOBO_PATTERNS) {
+    if (
+      isCrownOrCanopyDiameter &&
+      (entry.pattern === "diameter" ||
+        entry.targetField === "canopyCoverPercent")
+    ) {
+      continue;
+    }
+
     if (!entry.gpsCombined && lower.includes(entry.pattern)) {
       return entry;
     }

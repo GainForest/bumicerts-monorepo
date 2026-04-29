@@ -64,6 +64,8 @@ export interface UserChipProps {
   avatarAndLabelGap?: number;
   /** Custom className */
   className?: string;
+  /** Text classname (applies on text) */
+  textClassName?: string;
 }
 
 /**
@@ -86,16 +88,18 @@ export function UserChip({
   linkMode = "bluesky",
   avatarAndLabelGap = 4,
   className,
+  textClassName,
 }: UserChipProps) {
   const { copy, isCopied } = useCopy();
-  
+
   // Fetch profile only if not provided
   const { data: fetchedProfile, isLoading } = useProfile(did, {
     enabled: !providedProfile,
   });
 
   const profile = providedProfile ?? fetchedProfile;
-  const displayName = profile?.displayName ?? profile?.handle ?? truncateDid(did);
+  const displayName =
+    profile?.displayName ?? profile?.handle ?? truncateDid(did);
   const truncatedDid = truncateDid(did);
 
   // Determine link href
@@ -113,9 +117,11 @@ export function UserChip({
         style={{ gap: `${avatarAndLabelGap}px` }}
       >
         {showAvatar && (
-          <Avatar style={{ height: `${avatarSize}px`, width: `${avatarSize}px` }}>
-            <AvatarImage 
-              src={profile?.avatar ?? blo(didToAddress(did))} 
+          <Avatar
+            style={{ height: `${avatarSize}px`, width: `${avatarSize}px` }}
+          >
+            <AvatarImage
+              src={profile?.avatar ?? blo(didToAddress(did))}
               alt={displayName}
             />
             <AvatarFallback>
@@ -123,12 +129,15 @@ export function UserChip({
             </AvatarFallback>
           </Avatar>
         )}
-        
+
         <span
           className={cn(
             "min-w-0 flex-1 truncate text-xs relative",
-            href && "cursor-pointer group-hover/user-chip:text-primary group-hover/user-chip:underline",
-            isLoading && "animate-shimmer bg-gradient-to-r from-muted-foreground/60 via-foreground to-muted-foreground/60 bg-[length:200%_100%] bg-clip-text text-transparent",
+            href &&
+              "cursor-pointer group-hover/user-chip:text-primary group-hover/user-chip:underline",
+            isLoading &&
+              "animate-shimmer bg-gradient-to-r from-muted-foreground/60 via-foreground to-muted-foreground/60 bg-[length:200%_100%] bg-clip-text text-transparent",
+            textClassName,
           )}
         >
           {isLoading ? truncatedDid : displayName}
@@ -168,10 +177,10 @@ export function UserChip({
     <TooltipProvider delayDuration={400}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <span 
+          <span
             className={cn(
               "inline-flex rounded-full hover:bg-muted/50 transition-colors",
-              className
+              className,
             )}
           >
             {chipContent}

@@ -19,7 +19,7 @@ export type BumicertContributor = {
 export type BumicertData = {
   /** "{did}-{rkey}" — used as the route param */
   id: string;
-  /** Organisation DID that owns this bumicert */
+  /** Organization DID that owns this bumicert */
   organizationDid: string;
   /** ATProto record key */
   rkey: string;
@@ -50,7 +50,7 @@ export type BumicertData = {
   coverImageUrl: string | null;
   /** Resolved logo URL for the owning org or null */
   logoUrl: string | null;
-  /** Organisation display name */
+  /** Organization display name */
   organizationName: string;
 
   /** ISO 3166-1 alpha-2 */

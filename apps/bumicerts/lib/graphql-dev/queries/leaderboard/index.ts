@@ -11,7 +11,7 @@
  *
  * Donor identification:
  *   - Identified donors: `record.from.did`
- *   - Anonymous donors: wallet address extracted from `record.notes`
+ *   - Anonymous donors: wallet address in `record.from.value`
  *
  * Leaf: queries.leaderboard
  */

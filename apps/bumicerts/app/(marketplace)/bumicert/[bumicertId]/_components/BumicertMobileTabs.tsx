@@ -2,7 +2,12 @@
 
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { TAB_IDS, TAB_LABELS, useTabParam, type TabId } from "../_hooks/useTabParam";
+import {
+  TAB_IDS,
+  TAB_LABELS,
+  useTabParam,
+  type TabId,
+} from "../_hooks/useTabParam";
 
 export function BumicertTabs() {
   const [tab, setTab] = useTabParam();
@@ -18,16 +23,14 @@ export function BumicertTabs() {
               onClick={() => setTab(id)}
               className={cn(
                 "relative flex items-center px-4 py-2.5 text-sm font-medium transition-colors duration-150 whitespace-nowrap select-none cursor-pointer",
-                isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                isActive
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
               {TAB_LABELS[id]}
               {isActive && (
-                <motion.div
-                  layoutId="bumicert-tab-indicator"
-                  className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground rounded-full"
-                  transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                />
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground rounded-full" />
               )}
             </button>
           );

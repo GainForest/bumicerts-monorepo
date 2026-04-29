@@ -1,15 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { GithubIcon, TwitterIcon, FileTextIcon } from "lucide-react";
+import { GithubIcon, TwitterIcon, BookOpenIcon, GlobeIcon } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { links } from "@/lib/links";
 import { cn } from "@/lib/utils";
 
 const SOCIAL_LINKS = [
   { href: links.external.github, label: "GitHub", Icon: GithubIcon },
+  { href: links.external.docs, label: "Documentation", Icon: BookOpenIcon },
   { href: links.external.twitter, label: "X (Twitter)", Icon: TwitterIcon },
-  { href: links.external.gainforest, label: "GainForest", Icon: FileTextIcon },
+  { href: links.external.gainforest, label: "GainForest", Icon: GlobeIcon },
 ];
 
 export function SocialFooter() {
@@ -27,7 +28,7 @@ export function SocialFooter() {
             className={cn(
               "p-1.5 rounded-md",
               "text-muted-foreground hover:text-foreground hover:bg-muted/60",
-              "transition-colors duration-150"
+              "transition-colors duration-150",
             )}
           >
             <link.Icon className="h-3.5 w-3.5" />

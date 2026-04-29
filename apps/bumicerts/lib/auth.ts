@@ -34,10 +34,7 @@ import { getPublicUrl } from "@/lib/url";
 // Supabase client (server-side with service role)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const supabase = createClient(
-  env.SUPABASE_URL,
-  env.SUPABASE_SERVICE_ROLE_KEY
-);
+const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Auth setup — lazy so JSON.parse(privateKeyJwk) only runs at request time
@@ -65,11 +62,15 @@ function getAuth() {
     epds: clientEnv.NEXT_PUBLIC_EPDS_URL
       ? { url: clientEnv.NEXT_PUBLIC_EPDS_URL }
       : undefined,
+    epdsHandleMode: "random",
     onCallback: { redirectTo: "/auth/complete" },
-    logoUri: publicUrl ? `${publicUrl}/assets/media/images/app-icon.png` : undefined,
-    brandColor: "#2FCE8A",
+    logoUri: publicUrl
+      ? `${publicUrl}/assets/media/images/app-icon.png`
+      : undefined,
     backgroundColor: "#FFFFFF",
-    emailTemplateUri: publicUrl ? `${publicUrl}/assets/email/otp-template.html` : undefined,
+    emailTemplateUri: publicUrl
+      ? `${publicUrl}/assets/email/otp-template.html`
+      : undefined,
     emailSubjectTemplate: "{{code}} - Your {{app_name}} sign-in code",
     tosUri: publicUrl ? `${publicUrl}/terms` : undefined,
     policyUri: publicUrl ? `${publicUrl}/privacy` : undefined,

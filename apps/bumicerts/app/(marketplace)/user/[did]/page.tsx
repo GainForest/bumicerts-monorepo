@@ -6,6 +6,7 @@ import { blo } from "blo";
 import { requirePublicUrl } from "@/lib/url";
 import Container from "@/components/ui/container";
 import { DonationHistory } from "./_components/DonationHistory";
+import { links } from "@/lib/links";
 
 // ── Data fetching ─────────────────────────────────────────────────────────────
 
@@ -32,10 +33,7 @@ function didToAddress(did: string): `0x${string}` {
 
 async function fetchProfile(did: string): Promise<AtprotoProfile | null> {
   try {
-    const url = new URL(
-      "https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile",
-    );
-    url.searchParams.set("actor", did);
+    const url = links.api.getProfile(did);
     const res = await fetch(url.toString(), {
       next: { revalidate: 300 }, // 5 minutes
     });
@@ -126,7 +124,7 @@ export default async function UserProfilePage({
   }
 
   const displayName = profile.displayName ?? profile.handle;
-  const bskyUrl = `https://bsky.app/profile/${did}`;
+  const certifiedAppProfileUrl = links.external.certifiedApp.profileUrl(did);
 
   return (
     <Container className="max-w-5xl py-8">
@@ -147,8 +145,12 @@ export default async function UserProfilePage({
               </div>
 
               <div>
-                <h1 className="text-xl font-bold text-foreground">{displayName}</h1>
-                <p className="text-sm text-muted-foreground">@{profile.handle}</p>
+                <h1 className="text-xl font-bold text-foreground">
+                  {displayName}
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  @{profile.handle}
+                </p>
               </div>
 
               {/* Bio */}
@@ -158,15 +160,15 @@ export default async function UserProfilePage({
                 </p>
               )}
 
-              {/* Link to Bluesky */}
+              {/* Link to Certified */}
               <a
-                href={bskyUrl}
+                href={certifiedAppProfileUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
               >
                 <ExternalLinkIcon className="h-3 w-3" />
-                View on Bluesky
+                View on Certified
               </a>
             </div>
 
@@ -175,7 +177,9 @@ export default async function UserProfilePage({
               <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
                 Decentralized ID
               </p>
-              <p className="text-xs font-mono text-foreground/70 break-all">{did}</p>
+              <p className="text-xs font-mono text-foreground/70 break-all">
+                {did}
+              </p>
             </div>
 
             {/* Quick stats */}
@@ -185,14 +189,15 @@ export default async function UserProfilePage({
               </p>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Member since</span>
-                  <span className="text-xs font-medium text-foreground">
-                    {new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                  <span className="text-xs text-muted-foreground">
+                    Member since
                   </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Profile views</span>
-                  <span className="text-xs font-medium text-foreground">—</span>
+                  <span className="text-xs font-medium text-foreground">
+                    {new Date().toLocaleDateString("en-US", {
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </span>
                 </div>
               </div>
             </div>

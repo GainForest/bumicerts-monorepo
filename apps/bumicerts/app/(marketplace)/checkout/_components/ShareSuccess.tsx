@@ -1,232 +1,230 @@
 "use client";
 
-/**
- * ShareSuccess — post-donation sharing component.
- *
- * Shows share options after a successful donation:
- * - Share on X (Twitter)
- * - Share on Bluesky
- * - Copy link
- * - View transaction on BaseScan
- * - View bumicert donations
- * - View leaderboard
- */
-
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
+  ArrowUpRightIcon,
+  BadgeCheckIcon,
   CheckIcon,
+  CompassIcon,
   CopyIcon,
-  ExternalLinkIcon,
+  Share2,
   TrophyIcon,
 } from "lucide-react";
 import { links } from "@/lib/links";
+import { getPublicUrlClient } from "@/lib/url";
 import Link from "next/link";
+import BlueskyIcon from "@/icons/BlueskyIcon";
+import XIcon from "@/icons/XIcon";
+import TelegramIcon from "@/icons/TelegramIcon";
+import { useCopy } from "@/hooks/use-copy";
+import type { CheckoutResult } from "./hooks/useCheckoutFlow";
+import { UserChip } from "@/components/ui/user-chip";
+import { cn } from "@/lib/utils";
 
-// Platform icons as inline SVGs to avoid dependency issues
-function XIcon({ className }: { className?: string }) {
+const CopyButton = ({ copyText }: { copyText: string }) => {
+  const { copy, isCopied } = useCopy();
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className={className}
-      aria-hidden="true"
+    <Button
+      onClick={() => {
+        copy(copyText);
+      }}
+      variant={"ghost"}
+      size={"icon-sm"}
     >
-      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-    </svg>
+      {isCopied ? <CheckIcon /> : <CopyIcon />}
+    </Button>
   );
-}
-
-function BlueskyIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 600 530"
-      fill="currentColor"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="m135.72 44.03c66.496 49.921 138.02 151.14 164.28 205.46 26.262-54.316 97.782-155.54 164.28-205.46 47.98-36.021 125.72-63.892 125.72 24.795 0 17.712-10.155 148.79-16.111 170.07-20.703 73.984-96.144 92.854-163.25 81.433 117.3 19.964 147.14 86.092 82.697 152.22-122.39 125.59-175.91-31.511-189.63-71.766-2.514-7.3797-3.6904-10.832-3.7077-7.8964-0.0174-2.9357-1.1937 0.51669-3.7077 7.8964-13.714 40.255-67.233 197.36-189.63 71.766-64.444-66.128-34.605-132.26 82.697-152.22-67.108 11.421-142.55-7.4491-163.25-81.433-5.9562-21.282-16.111-152.36-16.111-170.07 0-88.687 77.742-60.816 125.72-24.795z" />
-    </svg>
-  );
-}
-
-interface ShareSuccessProps {
-  /** Total amount donated (in USDC) */
-  amount: number;
-  /** Names of the organizations donated to */
-  organizationNames: string[];
-  /** Bumicert IDs for linking */
-  bumicertIds: string[];
-  /** On-chain transaction hash */
-  transactionHash: string;
-  /** Whether the donor is authenticated */
-  isAuthenticated: boolean;
-  /** Whether the donation was anonymous */
-  anonymous: boolean;
-}
+};
 
 export function ShareSuccess({
-  amount,
-  organizationNames,
-  bumicertIds,
-  transactionHash,
-  isAuthenticated,
-  anonymous,
-}: ShareSuccessProps) {
-  const [copied, setCopied] = useState(false);
+  checkoutResults,
+}: {
+  checkoutResults: CheckoutResult;
+}) {
+  const successfulResults = checkoutResults.results.filter(
+    (result) => result.success,
+  );
+  const successfulTotalAmount = successfulResults.reduce((sum, result) => {
+    const parsedAmount = Number.parseFloat(result.amount);
+    return Number.isFinite(parsedAmount) ? sum + parsedAmount : sum;
+  }, 0);
+  const totalAmountFormatted = successfulTotalAmount.toFixed(2);
+  const successfulItemCount =
+    checkoutResults.successCount > 0
+      ? checkoutResults.successCount
+      : successfulResults.length;
+  const bumicertLabel = successfulItemCount === 1 ? "Bumicert" : "Bumicerts";
 
-  // Build share text
-  const orgText =
-    organizationNames.length === 1
-      ? organizationNames[0]
-      : organizationNames.length === 2
-        ? `${organizationNames[0]} and ${organizationNames[1]}`
-        : `${organizationNames.slice(0, -1).join(", ")}, and ${organizationNames[organizationNames.length - 1]}`;
+  // Share functionality
+  const baseUrl = getPublicUrlClient();
+  const shareUrl = `${baseUrl}${links.explore}`;
 
-  const shareText = `I just donated $${amount.toFixed(2)} USDC to support ${orgText} on Bumicerts!`;
+  const shareText = `I just donated $${totalAmountFormatted} to ${successfulItemCount} ${bumicertLabel}. Explore bumicerts on ${shareUrl}`;
 
-  // Base URL for sharing
-  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-  const shareUrl =
-    bumicertIds.length === 1
-      ? `${baseUrl}${links.bumicert.view(bumicertIds[0])}`
-      : `${baseUrl}${links.leaderboard}`;
+  const shareXUrl = links.external.share.x(shareText);
+  const shareBlueskyUrl = links.external.share.bluesky(shareText);
+  const shareTelegramUrl = links.external.share.telegram(shareText);
 
-  // BaseScan URL
-  const baseScanUrl = `https://basescan.org/tx/${transactionHash}`;
-
-  // Share on X
-  const handleShareX = () => {
-    const text = encodeURIComponent(shareText);
-    const url = encodeURIComponent(shareUrl);
-    window.open(
-      `https://twitter.com/intent/tweet?text=${text}&url=${url}`,
-      "_blank",
-      "noopener,noreferrer"
-    );
-  };
-
-  // Share on Bluesky
-  const handleShareBluesky = () => {
-    const text = encodeURIComponent(`${shareText} ${shareUrl}`);
-    window.open(
-      `https://bsky.app/intent/compose?text=${text}`,
-      "_blank",
-      "noopener,noreferrer"
-    );
-  };
-
-  // Copy link
-  const handleCopyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback if clipboard API fails
-      console.error("Failed to copy to clipboard");
-    }
-  };
+  const { copy, isCopied } = useCopy();
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-1">
       {/* Success message */}
-      <div className="flex flex-col items-center gap-4 py-4 text-center">
+      <div className="flex flex-col items-center gap-4 py-2 text-center">
         <div className="relative flex items-center justify-center">
-          <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center animate-pulse">
-            <span className="text-3xl">✓</span>
-          </div>
+          <div className="absolute inset-0 rounded-full blur-xl bg-primary animate-pulse"></div>
+          <BadgeCheckIcon className="size-12 text-primary" />
         </div>
 
         <div className="flex flex-col gap-1">
-          <p className="font-semibold text-lg">Thank you for your support!</p>
-          <p className="text-sm text-muted-foreground">
-            ${amount.toFixed(2)} USDC donated to {orgText}
+          <p className="font-instrument italic font-medium text-4xl text-primary">
+            Thank you!
           </p>
-        </div>
-
-        {isAuthenticated && !anonymous && (
-          <p className="text-xs text-muted-foreground">
-            This donation is linked to your Bumicerts identity.
+          <p className="font-medium text-muted-foreground mt-2 text-pretty">
+            Your donation worth&nbsp;
+            <span className="text-foreground text-nowrap">
+              {totalAmountFormatted} USDC
+            </span>
+            &nbsp;was successful.
           </p>
-        )}
-      </div>
-
-      {/* Share options */}
-      <div className="flex flex-col gap-3">
-        <p className="text-sm font-medium text-center">Share your impact</p>
-
-        <div className="grid grid-cols-2 gap-2">
-          <Button
-            variant="outline"
-            className="flex items-center gap-2"
-            onClick={handleShareX}
-          >
-            <XIcon className="size-4" />
-            Share on X
-          </Button>
-
-          <Button
-            variant="outline"
-            className="flex items-center gap-2"
-            onClick={handleShareBluesky}
-          >
-            <BlueskyIcon className="size-4" />
-            Bluesky
-          </Button>
-
-          <Button
-            variant="outline"
-            className="flex items-center gap-2"
-            onClick={handleCopyLink}
-          >
-            {copied ? (
-              <>
-                <CheckIcon className="size-4 text-green-600" />
-                Copied!
-              </>
-            ) : (
-              <>
-                <CopyIcon className="size-4" />
-                Copy link
-              </>
-            )}
-          </Button>
-
-          <Button variant="outline" asChild>
-            <a
-              href={baseScanUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2"
-            >
-              <ExternalLinkIcon className="size-4" />
-              View tx
-            </a>
-          </Button>
+          <p className="text-xs text-muted-foreground mt-1">
+            {checkoutResults.donorRecordedAs === "did"
+              ? "Recorded with your Bumicerts profile."
+              : "Recorded as anonymous."}
+          </p>
         </div>
       </div>
 
-      {/* Navigation options */}
-      <div className="flex flex-col gap-2 pt-2 border-t border-border">
-        {bumicertIds.length === 1 && (
-          <Button variant="ghost" asChild className="w-full justify-start">
-            <Link href={links.bumicert.view(bumicertIds[0])}>
-              View bumicert donations →
+      <div className="overflow-x-auto my-6">
+        <table className="w-full min-w-[720px] border border-border rounded-xl overflow-hidden">
+          <thead className="bg-muted">
+            <tr>
+              <th scope="col" className="font-medium py-2 text-sm">
+                Creator
+              </th>
+              <th scope="col" className="font-medium py-2 text-sm">
+                Bumicert
+              </th>
+              <th scope="col" className="font-medium py-2 text-sm">
+                Transaction Hash
+              </th>
+              <th scope="col" className="font-medium py-2 text-sm">
+                Amount (USDC)
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {successfulResults.map((r, idx) => {
+              const isOddItem = idx % 2;
+              return (
+                <tr
+                  key={`${r.orgDid}-${r.activityUri}-${r.transactionHash}`}
+                  className={cn(isOddItem && "bg-muted/60")}
+                >
+                  <td>
+                    {<UserChip did={r.orgDid} textClassName="text-base" />}
+                  </td>
+                  <td className="py-1 text-center">
+                    <Button variant={"secondary"} asChild>
+                      <Link
+                        href={links.bumicert.view(
+                          `${r.orgDid}-${r.activityUri.split("/").at(-1)}`,
+                        )}
+                      >
+                        View
+                      </Link>
+                    </Button>
+                  </td>
+                  <td className="text-center align-middle">
+                    <span className="mr-2 font-mono">
+                      {r.transactionHash.slice(0, 6)}...
+                      {r.transactionHash.slice(-6)}
+                    </span>
+                    <CopyButton copyText={r.transactionHash} />
+                    <Button variant={"link"} size={"icon-sm"} asChild>
+                      <Link href={r.receiptUri ?? "#"} target="_blank">
+                        <ArrowUpRightIcon />
+                      </Link>
+                    </Button>
+                  </td>
+                  <td className="text-right font-medium px-3">
+                    {parseFloat(r.amount).toFixed(2)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot className="bg-muted">
+            <tr>
+              <td
+                colSpan={2}
+                className="text-sm text-muted-foreground px-2 font-semibold"
+              >
+                Total Amount Donated (USDC)
+              </td>
+              <td></td>
+              <td className="text-right px-3">{totalAmountFormatted}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div className="w-full flex flex-col items-center justify-center ">
+        <div className="flex items-center px-3 gap-1.5 text-muted-foreground">
+          <Share2 className="size-3.5" />
+          <span className="text-sm">Share this with others</span>
+        </div>
+        <div className="flex items-center justify-center gap-1 flex-wrap mt-2">
+          <Button variant={"secondary"} asChild>
+            <Link href={shareXUrl} target="_blank">
+              <XIcon className="text-black dark:text-white" /> X (Twitter)
             </Link>
           </Button>
-        )}
+          <Button variant={"secondary"} asChild>
+            <Link href={shareBlueskyUrl} target="_blank">
+              <BlueskyIcon className="text-blue-600" /> Bluesky
+            </Link>
+          </Button>
+          <Button variant={"secondary"} asChild>
+            <Link href={shareTelegramUrl} target="_blank">
+              <TelegramIcon className="text-blue-500" /> Telegram
+            </Link>
+          </Button>
+          <Button variant={"secondary"} onClick={() => copy(shareText)}>
+            {isCopied ? <CheckIcon /> : <CopyIcon />} Copy
+          </Button>
+        </div>
+      </div>
 
-        <Button variant="ghost" asChild className="w-full justify-start">
-          <Link href={links.leaderboard} className="flex items-center gap-2">
-            <TrophyIcon className="size-4" />
-            View leaderboard →
-          </Link>
-        </Button>
-
-        <Button variant="ghost" asChild className="w-full justify-start">
-          <Link href={links.explore}>Explore more bumicerts →</Link>
-        </Button>
+      <div className="rounded-2xl w-full flex flex-col items-center gap-2 mt-4">
+        <div className="flex items-center px-3 gap-1.5 text-muted-foreground text-center">
+          <CompassIcon className="size-3.5" />
+          <span className="text-sm">What next?</span>
+        </div>
+        <div className="flex items-center justify-center flex-wrap">
+          <div className="flex items-center gap-1">
+            <Button
+              variant={"secondary"}
+              className="flex flex-col items-start rounded-2xl h-16"
+              asChild
+            >
+              <Link href={links.leaderboard}>
+                <TrophyIcon className="opacity-40" />
+                <span>See Leaderboard</span>
+              </Link>
+            </Button>
+            <Button
+              variant={"secondary"}
+              className="flex flex-col items-start rounded-2xl h-16"
+              asChild
+            >
+              <Link href={links.explore}>
+                <CompassIcon className="opacity-40" />
+                <span>Explore more Bumicerts</span>
+              </Link>
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );

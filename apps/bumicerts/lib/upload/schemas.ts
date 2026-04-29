@@ -47,8 +47,10 @@ export const OccurrenceRowSchema = z.object({
 
 const MeasurementFields = {
   height: z.coerce.number().positive().optional(),
+  totalHeight: z.coerce.number().positive().optional(),
   dbh: z.coerce.number().positive().optional(),
   diameter: z.coerce.number().positive().optional(),
+  canopyCoverPercent: z.coerce.number().min(0).max(100).optional(),
   canopyCover: z.coerce.number().min(0).max(100).optional(),
 };
 
@@ -61,8 +63,11 @@ type TreeRowOutput = z.output<typeof TreeRowSchema>;
 function extractFloraMeasurement(row: TreeRowOutput): FloraMeasurementBundle | null {
   const bundle: FloraMeasurementBundle = {};
 
-  if (row.height !== undefined) {
-    bundle.totalHeight = String(row.height);
+  const totalHeight = row.height ?? row.totalHeight;
+  const canopyCoverPercent = row.canopyCoverPercent ?? row.canopyCover;
+
+  if (totalHeight !== undefined) {
+    bundle.totalHeight = String(totalHeight);
   }
 
   if (row.dbh !== undefined) {
@@ -73,8 +78,8 @@ function extractFloraMeasurement(row: TreeRowOutput): FloraMeasurementBundle | n
     bundle.diameter = String(row.diameter);
   }
 
-  if (row.canopyCover !== undefined) {
-    bundle.canopyCoverPercent = String(row.canopyCover);
+  if (canopyCoverPercent !== undefined) {
+    bundle.canopyCoverPercent = String(canopyCoverPercent);
   }
 
   const hasAnyField =

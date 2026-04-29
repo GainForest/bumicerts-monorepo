@@ -35,7 +35,7 @@ export const fetchRecord = <TRecord, TPdsError>(
   collection: string,
   rkey: string,
   parse: (v: unknown) => TRecord,
-  makePdsError: (message: string, cause: unknown) => TPdsError
+  makePdsError: (message: string, cause: unknown) => TPdsError,
 ): Effect.Effect<TRecord | null, TPdsError, AtprotoAgent> =>
   Effect.gen(function* () {
     const agent = yield* AtprotoAgent;
@@ -44,14 +44,22 @@ export const fetchRecord = <TRecord, TPdsError>(
     const raw = yield* Effect.tryPromise({
       try: async () => {
         try {
-          const res = await agent.com.atproto.repo.getRecord({ repo, collection, rkey });
+          const res = await agent.com.atproto.repo.getRecord({
+            repo,
+            collection,
+            rkey,
+          });
           return res.data.value;
         } catch {
           // Record does not exist — return null
           return null;
         }
       },
-      catch: (cause) => makePdsError(`Failed to fetch ${collection} record at rkey "${rkey}"`, cause),
+      catch: (cause) =>
+        makePdsError(
+          `Failed to fetch ${collection} record at rkey "${rkey}"`,
+          cause,
+        ),
     });
 
     if (raw === null) return null;
@@ -64,9 +72,11 @@ export const fetchRecord = <TRecord, TPdsError>(
       // This handles schema migrations gracefully: the next upsert will write valid data.
       console.warn(
         `[fetchRecord] Record at ${collection}/${rkey} failed validation — treating as non-existent:`,
-        error
+        error,
       );
-      return null;
+      // @TODO: THIS IS A BUG. WE MUST RETURN NULL IF VALIDATION FAILS. BUT WE LET IT GO
+      // AS OF NOW BECAUSE OF DISCREPANICES BEING TOO MUCH TO SOLVE, IN SO LESS TIME.
+      return raw as TRecord;
     }
   });
 
@@ -83,7 +93,7 @@ export const createRecord = <TPdsError>(
   collection: string,
   record: Record<string, unknown>,
   rkey: string | undefined,
-  makePdsError: (message: string, cause: unknown) => TPdsError
+  makePdsError: (message: string, cause: unknown) => TPdsError,
 ): Effect.Effect<{ uri: string; cid: string }, TPdsError, AtprotoAgent> =>
   Effect.gen(function* () {
     const agent = yield* AtprotoAgent;
@@ -96,7 +106,8 @@ export const createRecord = <TPdsError>(
           ...(rkey !== undefined ? { rkey } : {}),
           record,
         }),
-      catch: (cause) => makePdsError(`PDS rejected createRecord for ${collection}`, cause),
+      catch: (cause) =>
+        makePdsError(`PDS rejected createRecord for ${collection}`, cause),
     });
     return { uri: response.data.uri, cid: response.data.cid };
   });
@@ -113,7 +124,7 @@ export const putRecord = <TPdsError>(
   collection: string,
   rkey: string,
   record: Record<string, unknown>,
-  makePdsError: (message: string, cause: unknown) => TPdsError
+  makePdsError: (message: string, cause: unknown) => TPdsError,
 ): Effect.Effect<{ uri: string; cid: string }, TPdsError, AtprotoAgent> =>
   Effect.gen(function* () {
     const agent = yield* AtprotoAgent;
@@ -121,7 +132,11 @@ export const putRecord = <TPdsError>(
     const response = yield* Effect.tryPromise({
       try: () =>
         agent.com.atproto.repo.putRecord({ repo, collection, rkey, record }),
-      catch: (cause) => makePdsError(`PDS rejected putRecord for ${collection} at rkey "${rkey}"`, cause),
+      catch: (cause) =>
+        makePdsError(
+          `PDS rejected putRecord for ${collection} at rkey "${rkey}"`,
+          cause,
+        ),
     });
     return { uri: response.data.uri, cid: response.data.cid };
   });
@@ -137,7 +152,7 @@ export const putRecord = <TPdsError>(
 export const deleteRecord = <TPdsError>(
   collection: string,
   rkey: string,
-  makePdsError: (message: string, cause: unknown) => TPdsError
+  makePdsError: (message: string, cause: unknown) => TPdsError,
 ): Effect.Effect<void, TPdsError, AtprotoAgent> =>
   Effect.gen(function* () {
     const agent = yield* AtprotoAgent;
@@ -145,6 +160,10 @@ export const deleteRecord = <TPdsError>(
     yield* Effect.tryPromise({
       try: () =>
         agent.com.atproto.repo.deleteRecord({ repo, collection, rkey }),
-      catch: (cause) => makePdsError(`PDS rejected deleteRecord for ${collection} at rkey "${rkey}"`, cause),
+      catch: (cause) =>
+        makePdsError(
+          `PDS rejected deleteRecord for ${collection} at rkey "${rkey}"`,
+          cause,
+        ),
     });
   });

@@ -23,6 +23,7 @@ export type OccurrenceInput = {
   kingdom?: string;
   establishmentMeans?: string;
   datasetRef?: string;
+  dynamicProperties?: string;
 };
 
 export type FloraMeasurementBundle = {
@@ -75,8 +76,8 @@ export const TARGET_FIELDS: TargetField[] = [
   { field: "occurrenceRemarks", label: "Occurrence Remarks", required: false, category: "occurrence" },
   // Habitat (1)
   { field: "habitat", label: "Habitat", required: false, category: "occurrence" },
-  // Measurement (4)
-  { field: "totalHeight", label: "Height", required: false, category: "measurement" },
+  // Measurement (4) — CSV-facing names are mapped to floraMeasurement fields during validation
+  { field: "height", label: "Height", required: false, category: "measurement" },
   { field: "dbh", label: "DBH", required: false, category: "measurement" },
   { field: "diameter", label: "Diameter", required: false, category: "measurement" },
   { field: "canopyCoverPercent", label: "Canopy Cover (%)", required: false, category: "measurement" },

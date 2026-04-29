@@ -16,6 +16,22 @@ import type {
 // ============================================================
 
 /**
+ * Maximum number of parameters PostgreSQL can handle in a single query.
+ * We leave some margin for safety.
+ */
+const MAX_PARAMETERS = 65000;
+
+/**
+ * 7 columns per record: uri, did, collection, rkey, record, cid, created_at
+ */
+const COLS_PER_ROW = 7;
+
+/**
+ * Maximum records per batch to stay under MAX_PARAMETERS limit.
+ */
+const MAX_RECORDS_PER_BATCH = Math.floor(MAX_PARAMETERS / COLS_PER_ROW);
+
+/**
  * Upsert a batch of records into the database.
  * On conflict (same uri), updates the record content and cid.
  * This is the hot path — called for every matching firehose event.
@@ -37,6 +53,9 @@ import type {
  * keys because PostgreSQL would need to update the same target row twice.
  * Keeping the last event for each URI preserves the newest value from the
  * flushed event sequence.
+ *
+ * Batches large inserts to respect PostgreSQL's 65534 parameter limit.
+ * Uses a transaction to ensure atomicity — all batches commit or all roll back.
  */
 export async function upsertRecords(records: RecordInsert[]): Promise<void> {
   if (records.length === 0) return;
@@ -50,13 +69,31 @@ export async function upsertRecords(records: RecordInsert[]): Promise<void> {
     a.uri.localeCompare(b.uri)
   );
 
-  // 7 columns per row: uri, did, collection, rkey, record, cid, created_at
-  const COLS_PER_ROW = 7;
+  // Process in batches within a transaction for atomicity
+  await sql.begin(async (tx) => {
+    const q = tx as unknown as typeof sql;
+    for (let i = 0; i < sorted.length; i += MAX_RECORDS_PER_BATCH) {
+      const batch = sorted.slice(i, i + MAX_RECORDS_PER_BATCH);
+      await upsertRecordsBatchTx(q, batch);
+    }
+  });
+}
+
+/**
+ * Upsert a single batch of records within a transaction.
+ */
+async function upsertRecordsBatchTx(
+  tx: typeof sql,
+  records: RecordInsert[]
+): Promise<void> {
+  if (records.length === 0) return;
+
+  const q = tx as unknown as typeof sql;
   const params: (string | number | Date | null)[] = [];
   const valueRows: string[] = [];
 
-  for (let i = 0; i < sorted.length; i++) {
-    const r = sorted[i]!;
+  for (let i = 0; i < records.length; i++) {
+    const r = records[i]!;
     const offset = i * COLS_PER_ROW;
     valueRows.push(
       `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}::jsonb, $${offset + 6}, $${offset + 7})`
@@ -82,7 +119,7 @@ export async function upsertRecords(records: RecordInsert[]): Promise<void> {
       indexed_at = NOW()
   `;
 
-  await sql.unsafe(query, params);
+  await q.unsafe(query, params);
 }
 
 /**
@@ -855,15 +892,52 @@ export async function getPdsHostsFromDb(dids: string[]): Promise<Map<string, str
 /**
  * Upsert PDS host mappings into the database cache.
  * Safe to call with duplicates — uses ON CONFLICT DO UPDATE.
+ * Batches large inserts to respect PostgreSQL's parameter limit.
+ * Uses a transaction to ensure atomicity.
  */
 export async function upsertPdsHosts(
   entries: Array<{ did: string; host: string }>
 ): Promise<void> {
   if (entries.length === 0) return;
-  await sql`
-    INSERT INTO pds_hosts ${sql(entries.map((e) => ({ did: e.did, host: e.host, fetched_at: new Date() })))}
+
+  // 3 columns per entry: did, host, fetched_at
+  const COLS_PER_ENTRY = 3;
+  const MAX_HOSTS_PER_BATCH = Math.floor(MAX_PARAMETERS / COLS_PER_ENTRY);
+
+  // Process in batches within a transaction for atomicity
+  await sql.begin(async (tx) => {
+    const q = tx as unknown as typeof sql;
+    for (let i = 0; i < entries.length; i += MAX_HOSTS_PER_BATCH) {
+      const batch = entries.slice(i, i + MAX_HOSTS_PER_BATCH);
+      await upsertPdsHostsBatchTx(q, batch, COLS_PER_ENTRY);
+    }
+  });
+}
+
+async function upsertPdsHostsBatchTx(
+  tx: typeof sql,
+  entries: Array<{ did: string; host: string }>,
+  colsPerEntry: number
+): Promise<void> {
+  if (entries.length === 0) return;
+
+  const q = tx as unknown as typeof sql;
+  const params: (string | Date)[] = [];
+  const valueRows: string[] = [];
+
+  for (let i = 0; i < entries.length; i++) {
+    const offset = i * colsPerEntry;
+    valueRows.push(`($${offset + 1}, $${offset + 2}, $${offset + 3})`);
+    params.push(entries[i]!.did, entries[i]!.host, new Date());
+  }
+
+  const query = `
+    INSERT INTO pds_hosts (did, host, fetched_at)
+    VALUES ${valueRows.join(", ")}
     ON CONFLICT (did) DO UPDATE SET host = EXCLUDED.host, fetched_at = EXCLUDED.fetched_at
   `;
+
+  await q.unsafe(query, params);
 }
 
 // ============================================================

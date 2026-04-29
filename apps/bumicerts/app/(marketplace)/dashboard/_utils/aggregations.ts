@@ -6,7 +6,10 @@
  */
 
 import type { FundingReceiptItem } from "@/lib/graphql-dev/queries/fundingReceipts";
-import { extractDonor as extractDonorFromReceipt, extractOrgDidFromFor } from "@/lib/utils/extract-donor";
+import {
+  extractDonor as extractDonorFromReceipt,
+  extractOrgDidFromFor,
+} from "@/lib/utils/extract-donor";
 
 // ── Helper to extract URI from StrongRef ─────────────────────────────────────
 
@@ -19,7 +22,6 @@ function extractUriFromStrongRef(strongRef: unknown): string | null {
   const ref = strongRef as Record<string, unknown>;
   return typeof ref.uri === "string" ? ref.uri : null;
 }
-
 
 import type { Period } from "@/lib/utils/leaderboard";
 
@@ -180,7 +182,7 @@ export function computeTimeSeries(
     if (granularity === "week") {
       // Monday of that week
       const day = d.getDay(); // 0=Sun
-      const diff = (day === 0 ? -6 : 1 - day);
+      const diff = day === 0 ? -6 : 1 - day;
       const monday = new Date(d);
       monday.setDate(d.getDate() + diff);
       return monday.toISOString().slice(0, 10);
@@ -252,7 +254,10 @@ export function computeTopDonors(
     if (existing) {
       existing.totalAmount += amount;
       existing.donationCount += 1;
-      if (dateStr && (!existing.lastDonatedAt || dateStr > existing.lastDonatedAt)) {
+      if (
+        dateStr &&
+        (!existing.lastDonatedAt || dateStr > existing.lastDonatedAt)
+      ) {
         existing.lastDonatedAt = dateStr;
       }
     } else {
@@ -278,7 +283,7 @@ export function computeTopDonors(
     }));
 }
 
-// ── Per-organisation ──────────────────────────────────────────────────────────
+// ── Per-organization ──────────────────────────────────────────────────────────
 
 export interface OrgRow {
   orgDid: string;

@@ -45,6 +45,7 @@ export const appRouter = router({
     dataset: router({
       create: effectMutation(mutations.dwc.dataset.create),
       update: effectMutation(mutations.dwc.dataset.update),
+      appendExisting: effectMutation(mutations.dwc.dataset.appendExisting),
       delete: effectMutation(mutations.dwc.dataset.delete),
     }),
     occurrence: router({

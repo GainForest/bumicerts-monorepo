@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/modal/modal";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { parseOrganizationDate } from "@/lib/date";
 
 interface StartDateSelectorModalProps {
   currentDate: string | null;
@@ -22,8 +23,11 @@ export function StartDateSelectorModal({
   onConfirm,
 }: StartDateSelectorModalProps) {
   const { hide, popModal, stack } = useModal();
+  const parsedCurrentDate = parseOrganizationDate(currentDate);
   const [selected, setSelected] = useState<Date | undefined>(
-    currentDate ? new Date(currentDate) : undefined
+    parsedCurrentDate.state === "valid" && parsedCurrentDate.date
+      ? parsedCurrentDate.date
+      : undefined,
   );
 
   const handleClose = async () => {
@@ -44,36 +48,38 @@ export function StartDateSelectorModal({
   return (
     <ModalContent>
       <ModalHeader backAction={stack.length > 1 ? handleClose : undefined}>
-        <ModalTitle>Organisation start date</ModalTitle>
-        <ModalDescription className="sr-only">
-          Select the date your organisation was founded or began operations.
+        <ModalTitle>Founding Date</ModalTitle>
+        <ModalDescription>
+          Select the date your organization was founded or began operations.
         </ModalDescription>
       </ModalHeader>
 
       <div className="flex justify-center py-2">
         <Calendar
+          captionLayout="dropdown"
           mode="single"
           selected={selected}
           onSelect={setSelected}
-          toDate={new Date()}
-          initialFocus
+          hidden={{ after: new Date() }}
+          autoFocus
         />
       </div>
 
       <ModalFooter className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={handleClose}>
-          Cancel
-        </Button>
-        {selected && (
+        <Button onClick={handleConfirm}>Confirm</Button>
+        <div className="flex items-center gap-1">
           <Button
-            variant="ghost"
+            variant="outline"
             onClick={() => setSelected(undefined)}
-            className="text-destructive hover:text-destructive"
+            className="text-destructive hover:text-destructive flex-1"
+            disabled={!selected}
           >
             Clear
           </Button>
-        )}
-        <Button onClick={handleConfirm}>Confirm</Button>
+          <Button variant="outline" onClick={handleClose} className="flex-1">
+            Cancel
+          </Button>
+        </div>
       </ModalFooter>
     </ModalContent>
   );

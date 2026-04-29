@@ -16,13 +16,11 @@ import { IndividualAmounts } from "./IndividualAmounts";
 import { CheckoutSummary } from "./CheckoutSummary";
 import { PaymentSection } from "./PaymentSection";
 import { ShareSuccess } from "./ShareSuccess";
-import {
-  useCheckoutFlow,
-  type CheckoutItem,
-} from "./hooks/useCheckoutFlow";
+import { useCheckoutFlow, type CheckoutItem } from "./hooks/useCheckoutFlow";
 import { useBatchPayment } from "./hooks/useBatchPayment";
 import type { CartBumicertItem } from "@/lib/graphql-dev/queries/cartBumicert";
 import type { EvmLink } from "@/lib/graphql-dev/queries/linkEvm";
+import Container from "@/components/ui/container";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -32,7 +30,7 @@ const DEFAULT_AMOUNT = 25;
 
 function isLinkValid(
   link: EvmLink,
-  facilitatorAddress: string | undefined
+  facilitatorAddress: string | undefined,
 ): boolean {
   if (link.specialMetadata?.valid !== true) return false;
   if (!facilitatorAddress) return true;
@@ -44,7 +42,7 @@ function isLinkValid(
 function isDonationOpen(
   item: CartBumicertItem,
   evmLinks: EvmLink[],
-  facilitatorAddress: string | undefined
+  facilitatorAddress: string | undefined,
 ): boolean {
   if (!item.fundingConfig) return false;
   const walletUri = item.fundingConfig.receivingWallet?.uri;
@@ -58,16 +56,23 @@ function isDonationOpen(
 // Item Loader — fetches bumicert + wallet data for a single cart item
 // ---------------------------------------------------------------------------
 
-function useCheckoutItemLoader(id: string, facilitatorAddress: string | undefined) {
-  const { data: item, isLoading: itemLoading } = indexerTrpc.claim.activity.get.useQuery({ id }, { retry: false });
+function useCheckoutItemLoader(
+  id: string,
+  facilitatorAddress: string | undefined,
+) {
+  const { data: item, isLoading: itemLoading } =
+    indexerTrpc.claim.activity.get.useQuery({ id }, { retry: false });
   const ownerDid = item?.organizationDid ?? "";
-  const { data: evmLinks = [], isLoading: linksLoading } = indexerTrpc.link.evm.list.useQuery(
-    { did: ownerDid },
-    { enabled: !!ownerDid, retry: false }
-  );
+  const { data: evmLinks = [], isLoading: linksLoading } =
+    indexerTrpc.link.evm.list.useQuery(
+      { did: ownerDid },
+      { enabled: !!ownerDid, retry: false },
+    );
 
   const isLoading = itemLoading || (!!ownerDid && linksLoading);
-  const isOpen = item ? isDonationOpen(item, evmLinks, facilitatorAddress) : false;
+  const isOpen = item
+    ? isDonationOpen(item, evmLinks, facilitatorAddress)
+    : false;
 
   return { item, isLoading, isOpen };
 }
@@ -136,32 +141,26 @@ export function CheckoutClient() {
 
   const facilitatorAddress = clientEnv.NEXT_PUBLIC_FACILITATOR_WALLET_ADDRESS;
 
-  const isAuthenticated = auth.status === "AUTHENTICATED";
-  const donorDid = isAuthenticated ? (auth as { did?: string }).did : undefined;
+  const donorDid = auth.authenticated ? auth.user.did : undefined;
 
   // Items state
   const [checkoutItems, setCheckoutItems] = useState<CheckoutItem[]>([]);
   const [loadedIds, setLoadedIds] = useState<Set<string>>(new Set());
 
   // Anonymous checkbox
-  const [anonymous, setAnonymous] = useState(false);
+  const [donorChoseAnonymous, setDonorChoseAnonymous] = useState(false);
+
+  const shouldStoreDonationAsAnonymous = donorDid ? donorChoseAnonymous : true;
 
   // Checkout flow
-  const {
-    state,
-    error,
-    result,
-    setState,
-    setError,
-    setResult,
-    reset,
-  } = useCheckoutFlow();
+  const { state, error, result, setState, setError, setResult, reset } =
+    useCheckoutFlow();
 
   // Batch payment
   const { executeBatchPayment } = useBatchPayment({
     address,
     donorDid,
-    anonymous,
+    shouldStoreDonationAsAnonymous,
     onSigning: () => setState("signing"),
     onProcessing: () => setState("processing"),
     onSuccess: (r) => {
@@ -183,15 +182,13 @@ export function CheckoutClient() {
   // Handle item amount change
   const handleItemAmountChange = useCallback((id: string, amount: number) => {
     setCheckoutItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, amount } : item))
+      prev.map((item) => (item.id === id ? { ...item, amount } : item)),
     );
   }, []);
 
   // Handle setting all items to the same amount
   const handleSetAllAmounts = useCallback((amount: number) => {
-    setCheckoutItems((prev) =>
-      prev.map((item) => ({ ...item, amount }))
-    );
+    setCheckoutItems((prev) => prev.map((item) => ({ ...item, amount })));
   }, []);
 
   // Handle remove item
@@ -200,7 +197,7 @@ export function CheckoutClient() {
       removeFromCart(id);
       setCheckoutItems((prev) => prev.filter((item) => item.id !== id));
     },
-    [removeFromCart]
+    [removeFromCart],
   );
 
   // Handle pay
@@ -220,20 +217,10 @@ export function CheckoutClient() {
 
   // Success state
   if (state === "success" && result) {
-    const orgNames = checkoutItems.map((item) => item.organizationName);
-    const bumicertIds = checkoutItems.map((item) => item.bumicertId);
-
     return (
-      <div className="container max-w-2xl mx-auto py-12 px-6">
-        <ShareSuccess
-          amount={calculatedTotal}
-          organizationNames={orgNames}
-          bumicertIds={bumicertIds}
-          transactionHash={result.donorToFacilitatorHash}
-          isAuthenticated={isAuthenticated}
-          anonymous={anonymous}
-        />
-      </div>
+      <Container>
+        <ShareSuccess checkoutResults={result} />
+      </Container>
     );
   }
 
@@ -287,7 +274,12 @@ export function CheckoutClient() {
             <p className="text-sm text-muted-foreground">
               None of the items in your cart are currently accepting donations.
             </p>
-            <Button asChild variant="outline" size="sm" className="mt-4 rounded-full">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="mt-4 rounded-full"
+            >
               <Link href={links.explore}>Explore other bumicerts</Link>
             </Button>
           </div>
@@ -309,12 +301,12 @@ export function CheckoutClient() {
         )}
 
         {/* Anonymous checkbox */}
-        {isAuthenticated && checkoutItems.length > 0 && (
+        {auth.authenticated && checkoutItems.length > 0 && (
           <label className="flex items-start gap-3 cursor-pointer">
             <input
               type="checkbox"
-              checked={anonymous}
-              onChange={(e) => setAnonymous(e.target.checked)}
+              checked={donorChoseAnonymous}
+              onChange={(e) => setDonorChoseAnonymous(e.target.checked)}
               className="mt-1 size-4 rounded border-border"
             />
             <div>
@@ -386,7 +378,10 @@ function SingleItemLoader({
   setLoadedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
   setCheckoutItems: React.Dispatch<React.SetStateAction<CheckoutItem[]>>;
 }) {
-  const { item, isLoading, isOpen } = useCheckoutItemLoader(id, facilitatorAddress);
+  const { item, isLoading, isOpen } = useCheckoutItemLoader(
+    id,
+    facilitatorAddress,
+  );
 
   useEffect(() => {
     if (isLoading) return;
@@ -411,15 +406,7 @@ function SingleItemLoader({
       if (prev.some((p) => p.id === checkoutItem.id)) return prev;
       return [...prev, checkoutItem];
     });
-  }, [
-    id,
-    item,
-    isLoading,
-    isOpen,
-    loadedIds,
-    setLoadedIds,
-    setCheckoutItems,
-  ]);
+  }, [id, item, isLoading, isOpen, loadedIds, setLoadedIds, setCheckoutItems]);
 
   // This component doesn't render anything — it just loads data
   return null;

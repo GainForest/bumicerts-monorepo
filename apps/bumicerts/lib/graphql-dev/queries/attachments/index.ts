@@ -55,6 +55,7 @@ const byDidDocument = graphql(`
             record {
               title
               shortDescription
+              description
               contentType
               subjects {
                 uri

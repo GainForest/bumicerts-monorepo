@@ -98,7 +98,7 @@ export const draftBumicertDataSchema = z.union([
 export const createDraftBumicertRequestSchema = z.object({
   id: z.number({ invalid_type_error: "Draft ID must be a number" }).optional(),
   data: draftBumicertDataSchemaV1,
-  version: z.number({ invalid_type_error: "Version must be a number" }).optional().default(0),
+  version: z.number({ invalid_type_error: "Version must be a number" }).optional().default(1),
 });
 
 export const updateDraftBumicertRequestSchema = z.object({

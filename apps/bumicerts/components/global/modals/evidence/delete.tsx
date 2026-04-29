@@ -13,6 +13,7 @@ import {
   ModalHeader,
   ModalTitle,
   ModalDescription,
+  ModalFooter,
 } from "@/components/ui/modal/modal";
 import { trpc } from "@/lib/trpc/client";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
@@ -65,14 +66,13 @@ export function EvidenceDeleteModal({
       <ModalHeader>
         <ModalTitle>Remove Evidence</ModalTitle>
         <ModalDescription>
-          Remove{" "}
-          <span className="font-medium text-foreground">{title}</span>{" "}
+          Remove <span className="font-medium text-foreground">{title}</span>{" "}
           from this bumicert&apos;s timeline? This cannot be undone.
         </ModalDescription>
       </ModalHeader>
 
-      <div className="flex flex-col gap-2 pt-2">
-        {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      <ModalFooter>
         <Button
           variant="destructive"
           className="w-full"
@@ -82,14 +82,14 @@ export function EvidenceDeleteModal({
           {isDeleting ? "Removing…" : "Remove Evidence"}
         </Button>
         <Button
-          variant="ghost"
+          variant="outline"
           className="w-full"
           onClick={handleCancel}
           disabled={isDeleting}
         >
           Cancel
         </Button>
-      </div>
+      </ModalFooter>
     </ModalContent>
   );
 }

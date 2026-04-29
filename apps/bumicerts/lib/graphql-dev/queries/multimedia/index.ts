@@ -1,8 +1,7 @@
 /**
  * Multimedia query module.
  *
- * Params:
- *   { did } → MultimediaItem[] (all multimedia records for a DID)
+ * Fetches all multimedia records for a DID.
  *
  * Leaf: queries.multimedia
  *
@@ -16,10 +15,16 @@ import type { QueryModule } from "@/lib/graphql-dev/create-query";
 import { ClientError } from "graphql-request";
 
 const document = /* GraphQL */ `
-  query MultimediaByDid($did: String!) {
+  query MultimediaByDid($did: String!, $limit: Int, $cursor: String) {
     gainforest {
       ac {
-        multimedia(where: { did: $did }, order: DESC, sortBy: CREATED_AT) {
+        multimedia(
+          where: { did: $did }
+          limit: $limit
+          cursor: $cursor
+          order: DESC
+          sortBy: CREATED_AT
+        ) {
           data {
             metadata {
               did
@@ -43,6 +48,11 @@ const document = /* GraphQL */ `
               createDate
               createdAt
             }
+          }
+          pageInfo {
+            endCursor
+            hasNextPage
+            count
           }
         }
       }
@@ -75,11 +85,18 @@ export type MultimediaItem = {
   };
 };
 
+type PageInfo = {
+  endCursor: string | null;
+  hasNextPage: boolean;
+  count: number;
+};
+
 type MultimediaResponse = {
   gainforest?: {
     ac?: {
       multimedia?: {
         data?: MultimediaItem[] | null;
+        pageInfo?: PageInfo | null;
       } | null;
     } | null;
   } | null;
@@ -88,6 +105,9 @@ type MultimediaResponse = {
 export type Params = { did: string };
 export type Result = MultimediaItem[];
 
+const PAGE_SIZE = 200;
+const MAX_PAGES = 50;
+
 let hasWarnedMissingMultimediaSchema = false;
 
 function isUnsupportedMultimediaQueryError(error: unknown): boolean {
@@ -95,24 +115,56 @@ function isUnsupportedMultimediaQueryError(error: unknown): boolean {
     return false;
   }
 
-  return error.response.errors?.some((item) => {
-    const message = item.message.toLowerCase();
+  return (
+    error.response.errors?.some((item) => {
+      const message = item.message.toLowerCase();
 
-    return (
-      (message.includes("cannot query field") && message.includes("multimedia")) ||
-      (message.includes("unknown field") && message.includes("multimedia")) ||
-      (message.includes("gainforestacnamespace") && message.includes("multimedia"))
-    );
-  }) ?? false;
+      return (
+        (message.includes("cannot query field") &&
+          message.includes("multimedia")) ||
+        (message.includes("unknown field") &&
+          message.includes("multimedia")) ||
+        (message.includes("gainforestacnamespace") &&
+          message.includes("multimedia"))
+      );
+    }) ?? false
+  );
 }
 
 export async function fetch(params: Params): Promise<Result> {
   try {
-    const res = await graphqlClient.request<MultimediaResponse>(document, {
-      did: params.did,
-    });
+    const allMultimedia: MultimediaItem[] = [];
+    let cursor: string | undefined;
 
-    return res.gainforest?.ac?.multimedia?.data ?? [];
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const res = await graphqlClient.request<MultimediaResponse>(document, {
+        did: params.did,
+        limit: PAGE_SIZE,
+        cursor,
+      });
+
+      const multimedia = res.gainforest?.ac?.multimedia;
+      if (multimedia?.data) {
+        allMultimedia.push(...multimedia.data);
+      }
+
+      const pageInfo = multimedia?.pageInfo;
+      if (pageInfo?.hasNextPage && pageInfo.endCursor) {
+        if (page === MAX_PAGES - 1) {
+          console.warn(
+            `Multimedia query hit pagination safety cap for ${params.did}; results may be truncated.`,
+          );
+          break;
+        }
+
+        cursor = pageInfo.endCursor;
+        continue;
+      }
+
+      break;
+    }
+
+    return allMultimedia;
   } catch (error) {
     if (isUnsupportedMultimediaQueryError(error)) {
       if (
@@ -121,7 +173,7 @@ export async function fetch(params: Params): Promise<Result> {
       ) {
         hasWarnedMissingMultimediaSchema = true;
         console.warn(
-          "Indexer schema does not expose gainforest.ac.multimedia yet; returning an empty multimedia list."
+          "Indexer schema does not expose gainforest.ac.multimedia yet; returning an empty multimedia list.",
         );
       }
 

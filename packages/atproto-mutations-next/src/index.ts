@@ -153,6 +153,27 @@ export {
   DwcOccurrencePdsError,
 } from "@gainforest/atproto-mutations-core";
 
+// dwc.dataset types — safe everywhere
+export type {
+  CreateDwcDatasetInput,
+  UpdateDwcDatasetInput,
+  DwcDatasetMutationResult,
+  DwcDatasetRecord,
+  AppendExistingDwcDatasetInput,
+  AppendExistingDwcDatasetOccurrenceInput,
+  AppendExistingDwcDatasetFloraMeasurementInput,
+  AppendExistingDwcDatasetRowInput,
+  AppendExistingDwcDatasetRowResult,
+  AppendExistingDwcDatasetResult,
+} from "@gainforest/atproto-mutations-core";
+export {
+  APPEND_EXISTING_DWC_DATASET_MAX_ROWS,
+  DwcDatasetValidationError,
+  DwcDatasetNotFoundError,
+  DwcDatasetUnavailableError,
+  DwcDatasetPdsError,
+} from "@gainforest/atproto-mutations-core";
+
 // dwc.measurement types — safe everywhere
 export type {
   CreateDwcMeasurementInput,

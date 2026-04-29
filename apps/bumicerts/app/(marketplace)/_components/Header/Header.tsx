@@ -16,7 +16,6 @@ export function Header() {
 
   return (
     <div className="sticky top-0 z-30" data-header>
-
       {/* Progressive blur background - same approach as TopNavbar */}
       <div className="absolute inset-0 pointer-events-none">
         {/* Subtle gradient overlay for readability */}

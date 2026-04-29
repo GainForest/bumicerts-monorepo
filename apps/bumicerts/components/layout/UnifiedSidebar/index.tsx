@@ -6,11 +6,12 @@ import { SidebarHeader } from "./SidebarHeader";
 import { NavSection } from "./NavSection";
 import { SocialFooter } from "./SocialFooter";
 import { NAV_ITEMS } from "./data";
+import BumicertCreationCard from "./BumicertCreationCard";
 
 /**
  * UnifiedSidebar
  *
- * Single sidebar component shared between (marketplace) and (upload) route groups.
+ * Single sidebar component shared between (marketplace) and (manage) route groups.
  * Replaces the old separate DesktopSidebar components.
  *
  * Structure:
@@ -50,8 +51,8 @@ export function UnifiedSidebar() {
 
       {/* Spacer */}
       <div className="flex-1" />
-
       {/* Bottom section */}
+      <BumicertCreationCard />
       <div className="flex flex-col gap-2">
         {/* MANAGE section */}
         <LayoutGroup id="unified-sidebar-nav-manage">

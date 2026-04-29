@@ -61,8 +61,10 @@ export function WebsiteEditorModal({
   return (
     <ModalContent>
       <ModalHeader backAction={stack.length > 1 ? handleClose : undefined}>
-        <ModalTitle>Website URL</ModalTitle>
-        <ModalDescription>Enter your organisation&apos;s website address.</ModalDescription>
+        <ModalTitle>Website</ModalTitle>
+        <ModalDescription>
+          Enter your organization&apos;s website address.
+        </ModalDescription>
       </ModalHeader>
 
       <div className="py-4 flex flex-col gap-2">
@@ -76,32 +78,32 @@ export function WebsiteEditorModal({
           onKeyDown={(e) => {
             if (e.key === "Enter") void handleConfirm();
           }}
-          placeholder="https://yourorganisation.com"
+          placeholder="https://yourorganization.com"
           className="w-full h-10 px-3 text-sm bg-muted/40 rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-colors"
           autoFocus
         />
-        {error && (
-          <p className="text-xs text-destructive">{error}</p>
-        )}
+        {error && <p className="text-xs text-destructive">{error}</p>}
       </div>
 
       <ModalFooter className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={handleClose}>
-          Cancel
-        </Button>
-        {value && (
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setValue("");
-              setError(null);
-            }}
-            className="text-destructive hover:text-destructive"
-          >
-            Remove
-          </Button>
-        )}
         <Button onClick={handleConfirm}>Save</Button>
+        <div className="flex items-center gap-1">
+          {value && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setValue("");
+                setError(null);
+              }}
+              className="text-destructive hover:text-destructive flex-1"
+            >
+              Remove
+            </Button>
+          )}
+          <Button variant="outline" onClick={handleClose} className="flex-1">
+            Cancel
+          </Button>
+        </div>
       </ModalFooter>
     </ModalContent>
   );

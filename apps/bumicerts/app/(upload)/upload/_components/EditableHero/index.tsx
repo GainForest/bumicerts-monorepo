@@ -45,8 +45,8 @@ import CountrySelectorModal from "@/components/modals/country-selector";
 import { WebsiteEditorModal } from "../../_modals/WebsiteEditorModal";
 import { StartDateSelectorModal } from "../../_modals/StartDateSelectorModal";
 import { VisibilitySelectorModal } from "../../_modals/VisibilitySelectorModal";
-import { useUploadDashboardStore } from "../store";
-import { useUploadMode } from "../../_hooks/useUploadMode";
+import { useManageDashboardState } from "../store";
+import { useManageMode } from "../../_hooks/useUploadMode";
 import type { OrganizationData } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { BskyRichTextDisplay } from "@/components/ui/bsky-richtext-display";
@@ -54,27 +54,12 @@ import { BskyRichTextEditor } from "@/components/ui/bsky-richtext-editor";
 import type { Facet } from "@gainforest/leaflet-react/richtext";
 import type { app } from "@gainforest/generated";
 import { countries } from "@/lib/countries";
+import { formatOrganizationSinceDate } from "@/lib/date";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatWebsite(url: string): string {
   return url.replace(/^https?:\/\//, "").replace(/\/$/, "");
-}
-
-function formatSinceDate(dateStr: string | null): string | null {
-  if (!dateStr) return null;
-  try {
-    // Parse as UTC to prevent timezone offset issues
-    // Dates stored as YYYY-MM-DD should be treated as UTC midnight
-    const date = new Date(`${dateStr}T00:00:00Z`);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      year: "numeric",
-      timeZone: "UTC",
-    });
-  } catch {
-    return null;
-  }
 }
 
 // ── EditChip ──────────────────────────────────────────────────────────────────
@@ -138,11 +123,11 @@ interface EditableHeroProps {
 
 export function EditableHero({ organization }: EditableHeroProps) {
   const { pushModal, show } = useModal();
-  const [mode] = useUploadMode();
+  const [mode] = useManageMode();
   const isEditing = mode === "edit";
 
-  const edits = useUploadDashboardStore((s) => s.edits);
-  const setEdit = useUploadDashboardStore((s) => s.setEdit);
+  const edits = useManageDashboardState((s) => s.edits);
+  const setEdit = useManageDashboardState((s) => s.setEdit);
 
   // Resolved display values — edit buffer takes priority over server data
   const displayName = edits.displayName ?? organization.displayName;
@@ -186,13 +171,14 @@ export function EditableHero({ organization }: EditableHeroProps) {
   const logoUrl = logoObjectUrl ?? organization.logoUrl;
 
   const initial = displayName.charAt(0).toUpperCase();
-  const sinceLabel = formatSinceDate(startDate);
+  const sinceDate = formatOrganizationSinceDate(startDate);
+  const sinceLabel = sinceDate.label;
   const countryName = country ? (countries[country]?.name ?? country) : null;
   const countryFlag = countries[country]?.emoji ?? "";
 
   const hasPillRow =
     isEditing ||
-    sinceLabel !== null ||
+    sinceDate.state === "valid" ||
     countryName !== null ||
     organization.objectives.length > 0 ||
     website !== null;
@@ -202,7 +188,7 @@ export function EditableHero({ organization }: EditableHeroProps) {
   const openCoverEditor = () => {
     pushModal(
       {
-        id: MODAL_IDS.UPLOAD_IMAGE_EDITOR,
+        id: MODAL_IDS.MANAGE_IMAGE_EDITOR,
         content: (
           <ImageEditorModal
             target="cover"
@@ -218,7 +204,7 @@ export function EditableHero({ organization }: EditableHeroProps) {
   const openLogoEditor = () => {
     pushModal(
       {
-        id: MODAL_IDS.UPLOAD_IMAGE_EDITOR,
+        id: MODAL_IDS.MANAGE_IMAGE_EDITOR,
         content: (
           <ImageEditorModal
             target="logo"
@@ -234,7 +220,7 @@ export function EditableHero({ organization }: EditableHeroProps) {
   const openCountry = () => {
     pushModal(
       {
-        id: MODAL_IDS.UPLOAD_COUNTRY_SELECTOR,
+        id: MODAL_IDS.MANAGE_COUNTRY_SELECTOR,
         content: (
           <CountrySelectorModal
             initialCountryCode={country ?? ""}
@@ -250,7 +236,7 @@ export function EditableHero({ organization }: EditableHeroProps) {
   const openWebsite = () => {
     pushModal(
       {
-        id: MODAL_IDS.UPLOAD_WEBSITE_EDITOR,
+        id: MODAL_IDS.MANAGE_WEBSITE_EDITOR,
         content: (
           <WebsiteEditorModal
             currentUrl={website}
@@ -266,7 +252,7 @@ export function EditableHero({ organization }: EditableHeroProps) {
   const openStartDate = () => {
     pushModal(
       {
-        id: MODAL_IDS.UPLOAD_START_DATE_SELECTOR,
+        id: MODAL_IDS.MANAGE_START_DATE_SELECTOR,
         content: (
           <StartDateSelectorModal
             currentDate={startDate}
@@ -282,7 +268,7 @@ export function EditableHero({ organization }: EditableHeroProps) {
   const openVisibility = () => {
     pushModal(
       {
-        id: MODAL_IDS.UPLOAD_VISIBILITY_SELECTOR,
+        id: MODAL_IDS.MANAGE_VISIBILITY_SELECTOR,
         content: (
           <VisibilitySelectorModal
             current={visibility ?? "Public"}
@@ -365,7 +351,7 @@ export function EditableHero({ organization }: EditableHeroProps) {
                 type="text"
                 value={displayName}
                 onChange={(e) => setEdit("displayName", e.target.value || null)}
-                placeholder="Organisation name"
+                placeholder="Organization name"
                 className={cn(
                   "text-3xl sm:text-4xl md:text-5xl font-light tracking-[-0.02em] leading-none",
                   "bg-transparent border-b-2 border-white/40 focus:border-primary/60 outline-none",
@@ -435,10 +421,18 @@ export function EditableHero({ organization }: EditableHeroProps) {
               <EditChip
                 onClick={openStartDate}
                 isEditing={isEditing}
-                isEmpty={!sinceLabel}
+                isEmpty={
+                  isEditing
+                    ? sinceDate.state === "empty"
+                    : sinceDate.state !== "valid"
+                }
               >
                 <CalendarIcon className="h-3 w-3 shrink-0" />
-                {sinceLabel ? `Since ${sinceLabel}` : "Add start date"}
+                {sinceDate.state === "valid"
+                  ? `Since ${sinceLabel}`
+                  : isEditing && sinceDate.state === "invalid"
+                    ? "Invalid Date"
+                    : "Add start date"}
               </EditChip>
 
               <EditChip
@@ -533,12 +527,12 @@ export function EditableHero({ organization }: EditableHeroProps) {
 // ── EditBar ───────────────────────────────────────────────────────────────────
 
 export function EditBar() {
-  const [mode, setMode] = useUploadMode();
+  const [mode, setMode] = useManageMode();
   const isEditing = mode === "edit";
-  const isSaving = useUploadDashboardStore((s) => s.isSaving);
-  const saveError = useUploadDashboardStore((s) => s.saveError);
-  const hasChanges = useUploadDashboardStore((s) => s.hasChanges);
-  const cancelEditing = useUploadDashboardStore((s) => s.cancelEditing);
+  const isSaving = useManageDashboardState((s) => s.isSaving);
+  const saveError = useManageDashboardState((s) => s.saveError);
+  const hasChanges = useManageDashboardState((s) => s.hasChanges);
+  const cancelEditing = useManageDashboardState((s) => s.cancelEditing);
 
   if (!isEditing) return null;
 
@@ -577,7 +571,7 @@ export function EditBar() {
           Cancel
         </button>
         <button
-          form="upload-dashboard-save-form"
+          form="manage-dashboard-save-form"
           type="submit"
           disabled={isSaving || !hasChanges()}
           className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-50"

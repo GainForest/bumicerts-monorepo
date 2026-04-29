@@ -148,7 +148,7 @@ bun run test:e2e --tags "@smoke"
 
 **Key Selectors Fixed**:
 - Mobile/desktop duplicate elements → use `.first()` or `.last()`
-- Edit button → `a[aria-label="Edit organisation profile"]` (Link, not Button)
+- Edit button → `a[aria-label="Edit organization profile"]` (Link, not Button)
 - Site buttons → `button:has(svg.lucide-circle-dashed)` (avoid step navigation)
 - Modal inputs → Use specific IDs like `#name-for-site`
 

@@ -29,6 +29,8 @@ import {
 import type { OrganizationData } from "@/lib/types";
 import { links } from "@/lib/links";
 import { BskyRichTextDisplay } from "@/components/ui/bsky-richtext-display";
+import { countries } from "@/lib/countries";
+import { formatOrganizationSinceDate } from "@/lib/date";
 
 interface OrgHeroProps {
   organization: OrganizationData;
@@ -40,153 +42,6 @@ function formatWebsite(url: string): string {
   return url.replace(/^https?:\/\//, "").replace(/\/$/, "");
 }
 
-function formatSinceDate(dateStr: string | null): string | null {
-  if (!dateStr) return null;
-  try {
-    // Parse as UTC to prevent timezone offset issues
-    // Dates stored as YYYY-MM-DD should be treated as UTC midnight
-    const date = new Date(`${dateStr}T00:00:00Z`);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      year: "numeric",
-      timeZone: "UTC",
-    });
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Convert ISO 3166-1 alpha-2 code to a flag emoji.
- * Each letter maps to a Regional Indicator Symbol (U+1F1E6–U+1F1FF).
- */
-function countryCodeToFlag(code: string): string {
-  if (!code || code.length !== 2) return "";
-  const base = 0x1f1e6 - 0x41; // offset from 'A'
-  return (
-    String.fromCodePoint(code.toUpperCase().charCodeAt(0) + base) +
-    String.fromCodePoint(code.toUpperCase().charCodeAt(1) + base)
-  );
-}
-
-// ISO 3166-1 alpha-2 → display name
-const COUNTRY_NAMES: Record<string, string> = {
-  AF: "Afghanistan",
-  AL: "Albania",
-  DZ: "Algeria",
-  AR: "Argentina",
-  AU: "Australia",
-  AT: "Austria",
-  BD: "Bangladesh",
-  BE: "Belgium",
-  BO: "Bolivia",
-  BR: "Brazil",
-  KH: "Cambodia",
-  CM: "Cameroon",
-  CA: "Canada",
-  CL: "Chile",
-  CN: "China",
-  CO: "Colombia",
-  CD: "Congo (DRC)",
-  CR: "Costa Rica",
-  HR: "Croatia",
-  CU: "Cuba",
-  CZ: "Czech Republic",
-  DK: "Denmark",
-  DO: "Dominican Republic",
-  EC: "Ecuador",
-  EG: "Egypt",
-  SV: "El Salvador",
-  ET: "Ethiopia",
-  FI: "Finland",
-  FR: "France",
-  GA: "Gabon",
-  GH: "Ghana",
-  DE: "Germany",
-  GT: "Guatemala",
-  HN: "Honduras",
-  HU: "Hungary",
-  IN: "India",
-  ID: "Indonesia",
-  IR: "Iran",
-  IQ: "Iraq",
-  IE: "Ireland",
-  IL: "Israel",
-  IT: "Italy",
-  JM: "Jamaica",
-  JP: "Japan",
-  JO: "Jordan",
-  KZ: "Kazakhstan",
-  KE: "Kenya",
-  KR: "South Korea",
-  KW: "Kuwait",
-  LA: "Laos",
-  LB: "Lebanon",
-  LR: "Liberia",
-  LY: "Libya",
-  MG: "Madagascar",
-  MW: "Malawi",
-  MY: "Malaysia",
-  MV: "Maldives",
-  ML: "Mali",
-  MX: "Mexico",
-  MA: "Morocco",
-  MZ: "Mozambique",
-  MM: "Myanmar",
-  NA: "Namibia",
-  NP: "Nepal",
-  NL: "Netherlands",
-  NZ: "New Zealand",
-  NI: "Nicaragua",
-  NE: "Niger",
-  NG: "Nigeria",
-  NO: "Norway",
-  PK: "Pakistan",
-  PA: "Panama",
-  PG: "Papua New Guinea",
-  PY: "Paraguay",
-  PE: "Peru",
-  PH: "Philippines",
-  PL: "Poland",
-  PT: "Portugal",
-  QA: "Qatar",
-  RO: "Romania",
-  RU: "Russia",
-  RW: "Rwanda",
-  SA: "Saudi Arabia",
-  SN: "Senegal",
-  SL: "Sierra Leone",
-  SG: "Singapore",
-  SO: "Somalia",
-  ZA: "South Africa",
-  SS: "South Sudan",
-  ES: "Spain",
-  LK: "Sri Lanka",
-  SD: "Sudan",
-  SE: "Sweden",
-  CH: "Switzerland",
-  SY: "Syria",
-  TW: "Taiwan",
-  TZ: "Tanzania",
-  TH: "Thailand",
-  TG: "Togo",
-  TT: "Trinidad and Tobago",
-  TN: "Tunisia",
-  TR: "Turkey",
-  UG: "Uganda",
-  UA: "Ukraine",
-  AE: "United Arab Emirates",
-  GB: "United Kingdom",
-  US: "United States",
-  UY: "Uruguay",
-  UZ: "Uzbekistan",
-  VE: "Venezuela",
-  VN: "Vietnam",
-  YE: "Yemen",
-  ZM: "Zambia",
-  ZW: "Zimbabwe",
-};
-
 export function OrgHero({
   organization,
   showEditButton = false,
@@ -194,15 +49,18 @@ export function OrgHero({
   const [copied, setCopied] = useState(false);
 
   const initial = organization.displayName.charAt(0).toUpperCase();
-  const sinceLabel = formatSinceDate(organization.startDate);
-  const countryName =
-    COUNTRY_NAMES[organization.country] ?? organization.country ?? null;
-  const countryFlag = organization.country
-    ? countryCodeToFlag(organization.country)
-    : "";
+  const sinceDate = formatOrganizationSinceDate(organization.startDate);
+  const sinceLabel = sinceDate.label;
+  const countryCode = organization.country;
+  const allCountryCodes = Object.keys(countries);
+  const country = countryCode
+    ? allCountryCodes.includes(countryCode)
+      ? countries[countryCode]
+      : null
+    : null;
   const hasPillRow =
-    sinceLabel ||
-    countryName ||
+    sinceDate.state === "valid" ||
+    country ||
     organization.objectives.length > 0 ||
     organization.website;
 
@@ -293,9 +151,9 @@ export function OrgHero({
         {/* Edit button — only rendered when viewer is the owner */}
         {showEditButton && (
           <Link
-            href={links.upload.edit}
+            href={links.manage.edit}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground border border-primary/20 shadow-lg transition-colors"
-            aria-label="Edit organisation profile"
+            aria-label="Edit organization profile"
           >
             <PencilIcon className="h-3.5 w-3.5 shrink-0" />
             <span className="text-xs font-medium">Edit</span>
@@ -308,13 +166,12 @@ export function OrgHero({
         <div className="max-w-3xl">
           {/* Logo + Org name — same line, vertically centered */}
           <div className="flex items-center gap-3 mb-3 org-animate org-fade-in-up org-delay-1">
-            <div className="h-9 w-9 rounded-full overflow-hidden bg-muted border border-white/15 shadow-sm shrink-0">
+            <div className="relative h-9 w-9 rounded-full overflow-hidden bg-muted border border-white/15 shadow-sm shrink-0">
               {organization.logoUrl ? (
                 <Image
                   src={organization.logoUrl}
                   alt={organization.displayName}
-                  width={36}
-                  height={36}
+                  fill
                   className="object-cover"
                 />
               ) : (
@@ -354,14 +211,12 @@ export function OrgHero({
               )}
 
               {/* Country pill with flag */}
-              {countryName && (
+              {country && (
                 <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.08em] text-foreground/60 bg-background/40 backdrop-blur-md border border-border/50 rounded-full px-2.5 py-1 font-medium">
-                  {countryFlag && (
-                    <span className="text-sm leading-none" aria-hidden="true">
-                      {countryFlag}
-                    </span>
-                  )}
-                  {countryName}
+                  <span className="text-sm leading-none" aria-hidden="true">
+                    {country.emoji}
+                  </span>
+                  {country.name}
                 </span>
               )}
 

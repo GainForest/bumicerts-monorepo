@@ -22,11 +22,11 @@ import { ConfirmModal } from "./confirm";
 interface WalletModalProps {
   bumicert: BumicertData;
   amount: number;
-  anonymous: boolean;
+  donorChoseAnonymous: boolean;
 }
 
-export function WalletModal({ bumicert, amount, anonymous }: WalletModalProps) {
-  const { pushModal, popModal, stack, hide } = useModal();
+export function WalletModal({ bumicert, amount, donorChoseAnonymous }: WalletModalProps) {
+  const { pushModal, popModal, hide, clear } = useModal();
   const { address, chainId, isConnected } = useAccount();
   const { openConnectModal } = useConnectModal();
   const { switchChain, isPending: isSwitching } = useSwitchChain();
@@ -41,11 +41,12 @@ export function WalletModal({ bumicert, amount, anonymous }: WalletModalProps) {
   const pushedRef = useRef(false);
 
   const handleBack = () => {
-    if (stack.length === 1) {
-      hide().then(() => popModal());
-    } else {
-      popModal();
-    }
+    popModal();
+  };
+
+  const handleCancel = async () => {
+    await hide();
+    clear();
   };
 
   // Auto-advance to ConfirmModal only when the wallet *just* connected during
@@ -63,12 +64,12 @@ export function WalletModal({ bumicert, amount, anonymous }: WalletModalProps) {
         <ConfirmModal
           bumicert={bumicert}
           amount={amount}
-          anonymous={anonymous}
+          donorChoseAnonymous={donorChoseAnonymous}
           recipientWallet={recipientStatus.address}
         />
       ),
     });
-  }, [mountedConnected, isConnected, isCorrectNetwork, isVerifying, recipientStatus, bumicert, amount, anonymous, pushModal]);
+  }, [mountedConnected, isConnected, isCorrectNetwork, isVerifying, recipientStatus, bumicert, amount, donorChoseAnonymous, pushModal]);
 
   // --- Not connected ---
   if (!isConnected) {
@@ -89,7 +90,7 @@ export function WalletModal({ bumicert, amount, anonymous }: WalletModalProps) {
           </p>
         </div>
         <ModalFooter>
-          <Button variant="ghost" onClick={handleBack} className="w-full">
+          <Button variant="outline" onClick={handleCancel} className="w-full">
             Cancel
           </Button>
         </ModalFooter>
@@ -122,7 +123,7 @@ export function WalletModal({ bumicert, amount, anonymous }: WalletModalProps) {
           >
             {isSwitching ? "Switching…" : "Switch to Base"}
           </Button>
-          <Button variant="ghost" onClick={handleBack} className="w-full" disabled={isSwitching}>
+          <Button variant="outline" onClick={handleCancel} className="w-full" disabled={isSwitching}>
             Cancel
           </Button>
         </ModalFooter>
@@ -183,7 +184,7 @@ export function WalletModal({ bumicert, amount, anonymous }: WalletModalProps) {
         <ConfirmModal
           bumicert={bumicert}
           amount={amount}
-          anonymous={anonymous}
+          donorChoseAnonymous={donorChoseAnonymous}
           recipientWallet={recipientStatus.address}
         />
       ),
@@ -210,7 +211,7 @@ export function WalletModal({ bumicert, amount, anonymous }: WalletModalProps) {
         <Button className="w-full" onClick={handleContinue}>
           Continue to Confirm
         </Button>
-        <Button variant="ghost" onClick={handleBack} className="w-full">
+        <Button variant="outline" onClick={handleCancel} className="w-full">
           Cancel
         </Button>
       </ModalFooter>

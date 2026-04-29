@@ -95,6 +95,9 @@ export const auth = createAuthSetup({
   epds: process.env.NEXT_PUBLIC_EPDS_URL
     ? { url: process.env.NEXT_PUBLIC_EPDS_URL }
     : undefined,
+  // Optional: control handle step for new ePDS signups
+  // "random" skips the choose-handle screen
+  epdsHandleMode: "random",
 
   // Where to redirect after login/logout
   onCallback: { redirectTo: "/" },
@@ -312,6 +315,21 @@ When `epds.url` is configured, users can sign in via email OTP through the ePDS 
 ```
 
 The ePDS flow reuses the same Supabase session table as the standard OAuth flow — both produce a valid session that `restoreSession()` can use.
+
+### ePDS handle mode (optional)
+
+You can set a preferred handle mode for new account creation via `createAuthSetup`:
+
+```ts
+epdsHandleMode: "picker-with-random" | "picker" | "random"
+```
+
+- `picker-with-random`: show the handle picker with a random option
+- `picker`: show the picker without random option
+- `random`: skip picker and auto-assign a random handle
+
+This value is emitted as `epds_handle_mode` in `/client-metadata.json`.
+Per ePDS behavior, an `epds_handle_mode` query param on the authorization URL takes precedence over client metadata.
 
 ---
 

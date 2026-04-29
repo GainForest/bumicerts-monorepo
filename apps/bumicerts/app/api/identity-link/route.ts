@@ -1,152 +1,112 @@
-/**
- * POST /api/identity-link
- *
- * Links an EVM wallet address to the authenticated user's ATProto DID by
- * writing an app.bumicerts.link.evm record to their own PDS.
- *
- * Requires the user to be signed in (uses their OAuth session).
- * The record is written to their repo so they can prove ownership.
- *
- * The server generates the platform counter-signature (EIP-191 personal_sign)
- * over the user's raw signature using FACILITATOR_PRIVATE_KEY.
- *
- * Request body:
- * {
- *   address: string,       // EVM wallet address (0x...)
- *   chainId: number,       // 8453 for Base
- *   signature: string,     // EIP-712 signature from wallet
- *   message: {
- *     did: string,
- *     evmAddress: string,
- *     chainId: string,
- *     timestamp: string,
- *     nonce: string,
- *   },
- *   name?: string,         // optional human-readable label for the wallet
- * }
- *
- * Response:
- *   { uri: string, rkey: string }
- */
-
 import { NextRequest } from "next/server";
-import { Effect } from "effect";
-import { auth } from "@/lib/auth";
-import { makeUserAgentLayer } from "@gainforest/atproto-mutations-next/server";
-import { mutations } from "@gainforest/atproto-mutations-next";
-import { serverEnv } from "@/lib/env/server";
+import { z } from "zod";
 import { signMessage, privateKeyToAccount } from "viem/accounts";
+import { TRPCError } from "@trpc/server";
+import { serverEnv } from "@/lib/env/server";
+import { getServerCaller } from "@/lib/trpc/server";
 
 export const dynamic = "force-dynamic";
 
-type RequestBody = {
-  address: string;
-  chainId: number;
-  signature: string;
-  message: {
-    did: string;
-    evmAddress: string;
-    chainId: string;
-    timestamp: string;
-    nonce: string;
-  };
-  /** Optional human-readable label for the wallet. */
-  name?: string;
-};
+const requestSchema = z.object({
+  address: z.string().min(1),
+  chainId: z.number().int().positive(),
+  signature: z.string().min(1),
+  message: z.object({
+    did: z.string().min(1),
+    evmAddress: z.string().min(1),
+    chainId: z.string().min(1),
+    timestamp: z.string().min(1),
+    nonce: z.string().min(1),
+  }),
+  name: z.string().trim().min(1).max(80).optional(),
+});
+
+function isHexPrefixed(value: string): value is `0x${string}` {
+  return /^0x[0-9a-fA-F]+$/.test(value);
+}
 
 export async function POST(req: NextRequest) {
-  // --- Build agent layer from user's OAuth session ---
-  const agentLayer = makeUserAgentLayer(auth);
+  const json = await req.json().catch(() => null);
+  const parsed = requestSchema.safeParse(json);
 
-  // --- Parse body ---
-  let body: RequestBody;
-  try {
-    body = await req.json() as RequestBody;
-  } catch {
-    return Response.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
-
-  // --- Validate required fields ---
-  if (
-    !body.address ||
-    !body.chainId ||
-    !body.signature ||
-    !body.message
-  ) {
+  if (!parsed.success) {
     return Response.json(
-      { error: "Missing required fields: address, chainId, signature, message" },
-      { status: 400 }
+      {
+        error: "Invalid request body",
+        issues: parsed.error.flatten(),
+      },
+      { status: 400 },
     );
   }
 
-  // --- Platform counter-sign the user's signature (EIP-191 personal_sign) ---
-  const platformPrivateKey = serverEnv.FACILITATOR_PRIVATE_KEY as `0x${string}` | undefined;
-  if (!platformPrivateKey) {
+  const body = parsed.data;
+
+  if (body.address.toLowerCase() !== body.message.evmAddress.toLowerCase()) {
+    return Response.json(
+      { error: "address and message.evmAddress must match" },
+      { status: 400 },
+    );
+  }
+
+  if (!isHexPrefixed(body.signature)) {
+    return Response.json(
+      { error: "signature must be a hex string (0x...)" },
+      { status: 400 },
+    );
+  }
+
+  const platformPrivateKey = serverEnv.FACILITATOR_PRIVATE_KEY;
+  if (!platformPrivateKey || !isHexPrefixed(platformPrivateKey)) {
     return Response.json(
       { error: "Platform signing key not configured" },
-      { status: 500 }
+      { status: 500 },
     );
   }
-  const platformAccount = privateKeyToAccount(platformPrivateKey);
+
+  const platformAddress = privateKeyToAccount(platformPrivateKey).address;
   const platformSignature = await signMessage({
-    privateKey:  platformPrivateKey,
-    message:     { raw: body.signature as `0x${string}` },
+    privateKey: platformPrivateKey,
+    message: { raw: body.signature },
   });
-  const platformAddress = platformAccount.address;
 
-  // --- Write link.evm record via Effect ---
-  let result: { uri: string; rkey: string };
   try {
-    const data = await Effect.runPromise(
-      mutations.link.evm.create({
-        ...(body.name ? { name: body.name } : {}),
-        address: body.address,
-        userProof: {
-          $type: "app.bumicerts.link.evm#eip712Proof",
-          signature: body.signature,
-          message: {
-            $type: "app.bumicerts.link.evm#eip712Message",
-            did:        body.message.did as `did:${string}:${string}`,
-            evmAddress: body.message.evmAddress,
-            chainId:    body.message.chainId,
-            timestamp:  body.message.timestamp,
-            nonce:      body.message.nonce,
-          },
+    const caller = await getServerCaller();
+    const result = await caller.link.evm.create({
+      ...(body.name ? { name: body.name } : {}),
+      address: body.address,
+      userProof: {
+        $type: "app.bumicerts.link.evm#eip712Proof",
+        signature: body.signature,
+        message: {
+          $type: "app.bumicerts.link.evm#eip712Message",
+          did: body.message.did,
+          evmAddress: body.message.evmAddress,
+          chainId: body.message.chainId,
+          timestamp: body.message.timestamp,
+          nonce: body.message.nonce,
         },
-        platformAttestation: {
-          $type: "app.bumicerts.link.evm#eip712PlatformAttestation",
-          signature:       platformSignature,
-          platformAddress: platformAddress,
-          signedData:      body.signature, // platform signed over the user's raw sig
-        },
-      }).pipe(Effect.provide(agentLayer))
-    );
-    result = { uri: data.uri, rkey: data.rkey };
-  } catch (err) {
-    if (err && typeof err === "object" && "_tag" in err) {
-      const tag = (err as { _tag: string })._tag;
-      if (tag === "UnauthorizedError") {
-        return Response.json(
-          { error: "Not authenticated — please sign in first" },
-          { status: 401 }
-        );
-      }
-      if (tag === "SessionExpiredError") {
-        return Response.json(
-          { error: "Session expired — please sign in again" },
-          { status: 401 }
-        );
-      }
-    }
-    console.error("[identity-link] Failed to write link.evm record:", err);
-    return Response.json(
-      { error: err instanceof Error ? err.message : "Failed to write link.evm record" },
-      { status: 500 }
-    );
-  }
+      },
+      platformAttestation: {
+        $type: "app.bumicerts.link.evm#eip712PlatformAttestation",
+        signature: platformSignature,
+        platformAddress,
+        signedData: body.signature,
+      },
+    });
 
-  return Response.json({
-    uri:  result.uri,
-    rkey: result.rkey,
-  });
+    return Response.json({ uri: result.uri, rkey: result.rkey });
+  } catch (error) {
+    if (error instanceof TRPCError) {
+      if (error.code === "UNAUTHORIZED") {
+        return Response.json({ error: error.message }, { status: 401 });
+      }
+      if (error.code === "BAD_REQUEST") {
+        return Response.json({ error: error.message }, { status: 400 });
+      }
+      return Response.json({ error: error.message }, { status: 500 });
+    }
+
+    console.error("[identity-link] Failed to write link.evm record", error);
+    return Response.json({ error: "Failed to link wallet" }, { status: 500 });
+  }
 }

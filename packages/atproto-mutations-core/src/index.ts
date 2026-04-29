@@ -165,6 +165,14 @@ export {
   OrganizationInfoValidationError,
 } from "./mutations/organization.info/utils/errors";
 
+// dwc.dataset
+export {
+  DwcDatasetValidationError,
+  DwcDatasetNotFoundError,
+  DwcDatasetUnavailableError,
+  DwcDatasetPdsError,
+} from "./mutations/dwc.dataset/utils/errors";
+
 // dwc.occurrence
 export {
   DwcOccurrenceValidationError,
@@ -299,6 +307,21 @@ export type {
   SmallImage,
   UpdateOrganizationInfoInput,
 } from "./mutations/organization.info/utils/types";
+
+// dwc.dataset
+export type {
+  CreateDwcDatasetInput,
+  UpdateDwcDatasetInput,
+  DwcDatasetMutationResult,
+  DwcDatasetRecord,
+  AppendExistingDwcDatasetInput,
+  AppendExistingDwcDatasetOccurrenceInput,
+  AppendExistingDwcDatasetFloraMeasurementInput,
+  AppendExistingDwcDatasetRowInput,
+  AppendExistingDwcDatasetRowResult,
+  AppendExistingDwcDatasetResult,
+} from "./mutations/dwc.dataset/utils/types";
+export { APPEND_EXISTING_DWC_DATASET_MAX_ROWS } from "./mutations/dwc.dataset/utils/types";
 
 // dwc.occurrence
 export type {

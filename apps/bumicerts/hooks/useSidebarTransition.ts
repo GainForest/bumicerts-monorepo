@@ -4,7 +4,7 @@
  * useSidebarTransition
  *
  * Returns `switching`, `isExiting`, and `targetPlatform` for 3 seconds whenever
- * the user crosses the marketplace ↔ upload boundary. Sidebars use this to
+ * the user crosses the marketplace ↔ manage boundary. Sidebars use this to
  * temporarily replace their content with a centred transition overlay.
  *
  * Timeline per transition:
@@ -16,8 +16,8 @@
  * the stored value is always up to date across layout remounts.
  *
  * Triggers in exactly two scenarios:
- *   1. Entering any /upload route (from anywhere).
- *   2. Entering any marketplace route coming FROM an /upload route.
+ *   1. Entering any /manage route (from anywhere).
+ *   2. Entering any marketplace route coming FROM an /manage route.
  */
 
 import { useState, useEffect, useRef, startTransition } from "react";
@@ -60,7 +60,8 @@ export function useSidebarTransition(): SidebarTransitionState {
   const pathname = usePathname();
   const [switching, setSwitching] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
-  const [targetPlatform, setTargetPlatform] = useState<SidebarPlatform>("marketplace");
+  const [targetPlatform, setTargetPlatform] =
+    useState<SidebarPlatform>("marketplace");
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const unmountTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -108,7 +109,8 @@ export function useSidebarTransition(): SidebarTransitionState {
   useEffect(() => {
     return () => {
       if (exitTimerRef.current !== null) clearTimeout(exitTimerRef.current);
-      if (unmountTimerRef.current !== null) clearTimeout(unmountTimerRef.current);
+      if (unmountTimerRef.current !== null)
+        clearTimeout(unmountTimerRef.current);
     };
   }, []);
 

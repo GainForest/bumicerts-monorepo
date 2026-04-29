@@ -3,7 +3,7 @@
  * `components/layout/UnifiedSidebar/`. Kept for reference only.
  * See: Unified sidebar implementation (April 2026)
  *
- * The new unified sidebar combines both marketplace and upload navigation
+ * The new unified sidebar combines both MARKETPLACE and MANAGE navigation
  * into a single component with EXPLORE and MANAGE sections.
  */
 
@@ -20,6 +20,7 @@ import {
   ExternalLinkIcon,
   ChevronRightIcon,
   XIcon,
+  LeafIcon,
 } from "lucide-react";
 import { AnimatePresence, motion, LayoutGroup } from "framer-motion";
 import { useState, useEffect } from "react";
@@ -36,15 +37,16 @@ import { buildMarketplaceNavItems, type NavItem } from "./data";
 import { links } from "@/lib/links";
 
 const FOOTER_LINKS = [
-  { href: links.external.github, text: "GitHub", Icon: GithubIcon },
+  { href: links.external.gainforest, text: "GainForest", Icon: LeafIcon },
+  { href: links.external.docs, text: "Documentation", Icon: FileTextIcon },
   { href: links.external.twitter, text: "Twitter", Icon: TwitterIcon },
-  { href: links.external.gainforest, text: "GainForest", Icon: FileTextIcon },
+  { href: links.external.github, text: "GitHub", Icon: GithubIcon },
   // { href: "/changelog", text: "Changelog", Icon: FileTextIcon },
 ];
 
 function isLeafActive(
   pathCheck: { equals?: string; startsWith?: string },
-  pathname: string
+  pathname: string,
 ): boolean {
   if (pathCheck.equals) return pathname === pathCheck.equals;
   if (pathCheck.startsWith) return pathname.startsWith(pathCheck.startsWith);
@@ -56,7 +58,10 @@ function isLeafActive(
 const WELCOME_DISMISSED_KEY = "bumicerts:marketplace-welcome-dismissed";
 
 function MarketplaceWelcomeCard() {
-  const [dismissed, setDismissed] = useLocalStorage(WELCOME_DISMISSED_KEY, false);
+  const [dismissed, setDismissed] = useLocalStorage(
+    WELCOME_DISMISSED_KEY,
+    false,
+  );
 
   if (dismissed) return null;
 
@@ -92,7 +97,8 @@ function MarketplaceWelcomeCard() {
         <div className="flex flex-col w-full items-center gap-1">
           <span className="font-instrument text-2xl">Marketplace</span>
           <p className="text-xs text-muted-foreground text-pretty text-center">
-            This is the Bumicerts Marketplace. Discover and support regenerative impact projects.
+            This is the Bumicerts Marketplace. Discover and support regenerative
+            impact projects.
           </p>
         </div>
       </motion.div>
@@ -140,7 +146,7 @@ function NavItemRenderer({
         if (item.kind === "group") {
           const isExpanded = expandedGroups.includes(item.id);
           const hasActiveChild = item.children.some((child) =>
-            isLeafActive(child.pathCheck, pathname)
+            isLeafActive(child.pathCheck, pathname),
           );
 
           return (
@@ -148,10 +154,17 @@ function NavItemRenderer({
               key={item.id}
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3, delay: 0.05 * idx, ease: [0.25, 0.1, 0.25, 1] }}
+              transition={{
+                duration: 0.3,
+                delay: 0.05 * idx,
+                ease: [0.25, 0.1, 0.25, 1],
+              }}
               className="flex flex-col gap-0.5"
             >
-              <button onClick={() => toggleGroup(item.id)} className="w-full cursor-pointer">
+              <button
+                onClick={() => toggleGroup(item.id)}
+                className="w-full cursor-pointer"
+              >
                 <motion.div
                   whileHover={{ x: 2 }}
                   transition={{ type: "spring", stiffness: 400, damping: 30 }}
@@ -159,7 +172,7 @@ function NavItemRenderer({
                     "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors duration-150 relative",
                     hasActiveChild && !isExpanded
                       ? "bg-primary/10 text-primary font-medium"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
                   )}
                 >
                   {hasActiveChild && !isExpanded && (
@@ -199,12 +212,16 @@ function NavItemRenderer({
                         >
                           <motion.div
                             whileHover={{ x: 2 }}
-                            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 400,
+                              damping: 30,
+                            }}
                             className={cn(
                               "flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-colors duration-150 relative",
                               isActive
                                 ? "bg-primary text-primary-foreground font-medium"
-                                : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
                             )}
                           >
                             {isActive && (
@@ -243,7 +260,7 @@ function NavItemRenderer({
                 ? "bg-primary text-primary-foreground font-medium"
                 : isDisabled
                   ? "text-muted-foreground/50 cursor-not-allowed"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
             )}
           >
             {isActive && (
@@ -265,14 +282,25 @@ function NavItemRenderer({
             key={item.id}
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3, delay: 0.05 * idx, ease: [0.25, 0.1, 0.25, 1] }}
+            transition={{
+              duration: 0.3,
+              delay: 0.05 * idx,
+              ease: [0.25, 0.1, 0.25, 1],
+            }}
           >
             {isDisabled ? (
-              <QuickTooltip content={item.disabledTooltip ?? "Unavailable"} asChild={false}>
+              <QuickTooltip
+                content={item.disabledTooltip ?? "Unavailable"}
+                asChild={false}
+              >
                 <div>{inner}</div>
               </QuickTooltip>
             ) : (
-              <Link href={item.href} onClick={() => closeMobileNav(false)} className="block relative">
+              <Link
+                href={item.href}
+                onClick={() => closeMobileNav(false)}
+                className="block relative"
+              >
                 {inner}
               </Link>
             )}
@@ -300,22 +328,22 @@ export function DesktopSidebar() {
     navItems.forEach((item) => {
       if (item.kind === "group") {
         const hasActiveChild = item.children.some((child) =>
-          isLeafActive(child.pathCheck, pathname)
+          isLeafActive(child.pathCheck, pathname),
         );
         if (hasActiveChild) {
           setExpandedGroups((prev) =>
-            prev.includes(item.id) ? prev : [...prev, item.id]
+            prev.includes(item.id) ? prev : [...prev, item.id],
           );
         }
       }
     });
-  // navItems changes every render (built inline) — depend on pathname + did only.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // navItems changes every render (built inline) — depend on pathname + did only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, did]);
 
   const toggleGroup = (id: string) => {
     setExpandedGroups((prev) =>
-      prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id],
     );
   };
 
@@ -324,7 +352,10 @@ export function DesktopSidebar() {
       {/* Platform transition overlay */}
       <AnimatePresence>
         {switching && (
-          <SidebarTransitionOverlay targetPlatform={targetPlatform} isExiting={isExiting} />
+          <SidebarTransitionOverlay
+            targetPlatform={targetPlatform}
+            isExiting={isExiting}
+          />
         )}
       </AnimatePresence>
 

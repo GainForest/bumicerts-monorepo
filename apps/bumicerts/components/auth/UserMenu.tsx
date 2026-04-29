@@ -2,14 +2,12 @@
 
 import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   LogOutIcon,
   BuildingIcon,
   ChevronDownIcon,
   UserIcon,
-  UploadCloudIcon,
-  StoreIcon,
 } from "lucide-react";
 import { useAtprotoStore } from "@/components/stores/atproto";
 import { logout } from "@/components/actions/oauth";
@@ -20,7 +18,7 @@ import { links } from "@/lib/links";
 
 const AuthModal = dynamic(
   () => import("./AuthModal").then((m) => ({ default: m.AuthModal })),
-  { ssr: false }
+  { ssr: false },
 );
 
 // ─── Skeleton ──────────────────────────────────────────────────────────────────
@@ -45,7 +43,7 @@ function UnauthenticatedButtons() {
         id: "auth",
         content: <AuthModal />,
       },
-      true
+      true,
     );
     show();
   };
@@ -65,7 +63,12 @@ function UnauthenticatedButtons() {
 
 // ─── Authenticated dropdown ────────────────────────────────────────────────────
 
-function AuthenticatedMenu({ did, handle, displayName, avatar }: {
+function AuthenticatedMenu({
+  did,
+  handle,
+  displayName,
+  avatar,
+}: {
   did: string;
   handle?: string;
   displayName?: string;
@@ -73,11 +76,8 @@ function AuthenticatedMenu({ did, handle, displayName, avatar }: {
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
-  const pathname = usePathname();
   const { setAuth } = useAtprotoStore();
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const isOnUpload = pathname.startsWith("/upload");
 
   const handleLogout = async () => {
     setOpen(false);
@@ -106,7 +106,11 @@ function AuthenticatedMenu({ did, handle, displayName, avatar }: {
         <div className="h-7 w-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 overflow-hidden">
           {avatar ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatar} alt={displayLabel} className="h-full w-full object-cover" />
+            <img
+              src={avatar}
+              alt={displayLabel}
+              className="h-full w-full object-cover"
+            />
           ) : (
             <UserIcon className="h-3.5 w-3.5 text-primary" />
           )}
@@ -137,14 +141,27 @@ function AuthenticatedMenu({ did, handle, displayName, avatar }: {
           >
             {/* User info header */}
             <div className="px-3 py-2.5 border-b border-border">
-              <p className="text-sm font-medium text-foreground truncate">{displayLabel}</p>
+              <p className="text-sm font-medium text-foreground truncate">
+                {displayLabel}
+              </p>
               {handleLabel && (
-                <p className="text-xs text-muted-foreground truncate">{handleLabel}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {handleLabel}
+                </p>
               )}
             </div>
 
             {/* Menu items */}
             <div className="p-1">
+              <Link
+                href={links.user(did)}
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-foreground hover:bg-muted/60 transition-colors w-full text-left"
+              >
+                <UserIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                My Profile
+              </Link>
+
               <Link
                 href={links.organization.home(did)}
                 onClick={() => setOpen(false)}
@@ -153,29 +170,6 @@ function AuthenticatedMenu({ did, handle, displayName, avatar }: {
                 <BuildingIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                 My Organization
               </Link>
-
-              {/* Platform switcher */}
-              <div className="h-px bg-border/60 my-1" />
-
-              {isOnUpload ? (
-                <Link
-                  href={links.root}
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors w-full text-left"
-                >
-                  <StoreIcon className="h-3.5 w-3.5 shrink-0" />
-                  Switch to Marketplace
-                </Link>
-              ) : (
-                <Link
-                  href={links.upload.home}
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors w-full text-left"
-                >
-                  <UploadCloudIcon className="h-3.5 w-3.5 shrink-0" />
-                  Switch to Upload
-                </Link>
-              )}
 
               <div className="h-px bg-border/60 my-1" />
 

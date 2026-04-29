@@ -2,11 +2,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Container from "@/components/ui/container";
 
 /**
- * Full-page skeleton for the Upload dashboard.
+ * Full-page skeleton for the Manage dashboard.
  * Layout mirrors the real page to prevent layout shift on swap.
  * No text labels — pure Skeleton blocks only.
  */
-export function UploadDashboardSkeleton() {
+export function ManageDashboardSkeleton() {
   return (
     <Container className="pt-4 pb-8 space-y-6">
       {/* Hero skeleton */}

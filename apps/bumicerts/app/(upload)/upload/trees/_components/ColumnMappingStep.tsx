@@ -14,7 +14,7 @@ import {
 import { TARGET_FIELDS } from "@/lib/upload/types";
 import type { ColumnMapping } from "@/lib/upload/types";
 import { inferSubjectPartFromColumnName } from "@/lib/upload/column-mapper";
-import { CheckCircle2, AlertTriangle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, CircleAlertIcon } from "lucide-react";
 
 /** Target fields that allow multiple source columns (no duplicate warning). */
 const MULTI_MAP_TARGETS = new Set(["photoUrl"]);
@@ -107,6 +107,15 @@ export default function ColumnMappingStep({
   const missingRequired = REQUIRED_FIELDS.filter((f) => !mappedTargets.has(f));
   const allRequiredMapped = missingRequired.length === 0;
 
+  const skippedColumns = useMemo(
+    () =>
+      headers.filter(
+        (header) => getMappedTarget(mappings, header) === SKIP_SENTINEL
+      ),
+    [headers, mappings]
+  );
+  const skippedColumnCount = skippedColumns.length;
+
   // Detect which source columns have duplicate targets (only the second+ occurrence is a dupe)
   // Multi-map targets (e.g. photoUrl) are excluded — multiple columns are expected.
   const duplicateSourceColumns = useMemo(() => {
@@ -159,6 +168,24 @@ export default function ColumnMappingStep({
         </div>
       )}
 
+      {/* Skipped columns review prompt */}
+      {skippedColumnCount > 0 && (
+        <div className="flex items-start gap-2 rounded-md border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm text-yellow-700 dark:text-yellow-300">
+          <CircleAlertIcon className="h-4 w-4 mt-0.5 shrink-0" />
+          <div className="space-y-1">
+            <p className="font-medium">Review skipped columns before continuing.</p>
+            <p className="text-yellow-700/90 dark:text-yellow-300/90">
+              {skippedColumnCount} source column
+              {skippedColumnCount !== 1 ? "s are" : " is"} marked to be
+              skipped and will not be uploaded. Rows with a yellow left border
+              are source columns currently treated as optional/skipped; required
+              target fields that still need manual input appear in the red
+              warning above when any remain.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Column mapping table */}
       <div className="rounded-lg border overflow-hidden">
         {/* Table header */}
@@ -181,12 +208,17 @@ export default function ColumnMappingStep({
               (f) => f.field === currentTarget
             );
             const isRequiredField = targetMeta?.required ?? false;
+            const isSkipped = !isMapped;
 
             return (
               <div
                 key={header}
                 className={`grid grid-cols-[1fr_1fr_1fr] gap-0 items-center px-4 py-3 ${
-                  isDuplicate ? "bg-yellow-500/5" : ""
+                  isDuplicate
+                    ? "bg-yellow-500/5"
+                    : isSkipped
+                      ? "border-l-2 border-l-yellow-500/60 bg-yellow-500/5"
+                      : ""
                 }`}
               >
                 {/* Source column name */}
@@ -286,13 +318,20 @@ export default function ColumnMappingStep({
                     <AlertTriangle
                       className="h-4 w-4 shrink-0 text-yellow-500"
                       aria-label="Duplicate mapping — only the first source column will be used"
+                      role="img"
                     />
                   ) : isMapped ? (
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-green-500" />
+                    <CheckCircle2
+                      className="h-4 w-4 shrink-0 text-green-500"
+                      aria-label="Mapped column"
+                      role="img"
+                    />
                   ) : (
-                    <span className="text-xs text-muted-foreground/60 shrink-0 w-4 text-center">
-                      —
-                    </span>
+                    <CircleAlertIcon
+                      className="h-4 w-4 shrink-0 text-yellow-500"
+                      aria-label="Skipped column — review before continuing"
+                      role="img"
+                    />
                   )}
                 </div>
               </div>
@@ -321,8 +360,8 @@ export default function ColumnMappingStep({
           Mapped
         </span>
         <span className="flex items-center gap-1">
-          <span className="text-muted-foreground/60">—</span>
-          Skipped
+          <CircleAlertIcon className="h-3.5 w-3.5 text-yellow-500" />
+          Skipped — not uploaded
         </span>
         <span className="flex items-center gap-1">
           <AlertTriangle className="h-3.5 w-3.5 text-yellow-500" />

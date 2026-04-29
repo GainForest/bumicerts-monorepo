@@ -269,3 +269,7 @@ body {
 [data-rk] * {
   pointer-events: auto;
 }
+
+@theme {
+  --animate-spin-slow: spin 8s linear infinite;
+}

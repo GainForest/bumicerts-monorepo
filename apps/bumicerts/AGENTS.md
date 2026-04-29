@@ -15,7 +15,7 @@ follow the references at the bottom.
 
 ---
 
-## File Organisation
+## File Organization
 
 - **Prefer creating a new file** over appending more code to an existing one. If a
   component, hook, or utility is growing large or serving a distinct purpose, split it.

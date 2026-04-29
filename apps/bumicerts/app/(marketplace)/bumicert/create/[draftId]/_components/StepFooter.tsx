@@ -53,6 +53,10 @@ const StepFooter = () => {
     return false;
   }, [currentStepIndex]);
 
+  if (overallStatusForStep5 === "success") {
+    return null;
+  }
+
   const handleSaveDraft = () => {
     pushModal({ id: SaveAsDraftModalId, content: <SaveAsDraftModal /> }, true);
     show();

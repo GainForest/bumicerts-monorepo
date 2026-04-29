@@ -4,6 +4,8 @@ import { ExternalLinkIcon, ClockIcon } from "lucide-react";
 import { blockExplorerUrl } from "../_utils/aggregations";
 import type { TransactionRow } from "../_utils/aggregations";
 import { UserChip } from "@/components/ui/user-chip";
+import { links } from "@/lib/links";
+import Link from "next/link";
 
 interface RecentTransactionsTableProps {
   rows: TransactionRow[];
@@ -16,10 +18,14 @@ function formatWalletAddress(address: string): string {
   return `Anonymous (${truncated})`;
 }
 
-function truncateBumicertUri(uri: string): string {
-  // at://did:plc:xxx/org.hypercerts.claim.activity/rkey → last segment
-  const parts = uri.split("/");
-  return parts[parts.length - 1] ?? uri;
+/**
+ * Extracts bumicert did and rkey from an activity AT URI.
+ * Format: at://did:plc:xxx/org.hypercerts.claim.activity/rkey
+ */
+function parseBumicertUri(uri: string): { did: string; rkey: string } | null {
+  const match = uri.match(/^at:\/\/(did:[^/]+)\/[^/]+\/(.+)$/);
+  if (!match) return null;
+  return { did: match[1], rkey: match[2] };
 }
 
 export function RecentTransactionsTable({ rows }: RecentTransactionsTableProps) {
@@ -105,13 +111,20 @@ export function RecentTransactionsTable({ rows }: RecentTransactionsTableProps) 
                     }).format(row.amount)}
                   </td>
                   <td className="py-2.5 px-3 text-muted-foreground font-mono text-xs">
-                    {row.bumicertUri ? (
-                      <span title={row.bumicertUri}>
-                        {truncateBumicertUri(row.bumicertUri)}
-                      </span>
-                    ) : (
-                      "—"
-                    )}
+                    {(() => {
+                      if (!row.bumicertUri) return "—";
+                      const parsed = parseBumicertUri(row.bumicertUri);
+                      if (!parsed) return "—";
+                      return (
+                        <Link
+                          href={links.bumicert.view(parsed.did, parsed.rkey)}
+                          className="text-primary hover:underline"
+                          title="View bumicert"
+                        >
+                          {parsed.rkey}
+                        </Link>
+                      );
+                    })()}
                   </td>
                   <td className="py-2.5 px-3">
                     {(() => {

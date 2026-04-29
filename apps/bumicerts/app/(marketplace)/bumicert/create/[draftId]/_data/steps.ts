@@ -57,8 +57,8 @@ export const STEPS: StepData[] = [
       pre: "When writing your impact story, use this STAR framework:",
       bullets: [
         "Situation — What was happening and who or what was affected?",
-        "Task — What was the role of your organisation, group, or community? Who else was involved?",
-        "Action — Describe what your organisation or community did.",
+        "Task — What was the role of your organization, group, or community? Who else was involved?",
+        "Action — Describe what your organization or community did.",
         "Result — What happened as a result? Include numbers if available, and mention both tangible and non-tangible outcomes. This will be supported by the impact data you provide later.",
       ],
       post: "Write freely. Longer stories are welcome.",
@@ -74,7 +74,7 @@ export const STEPS: StepData[] = [
     icon: EarthLockIcon,
     tips: {
       bullets: [
-        "When adding contributors, include your organisation first, then other contributors, and make sure everyone agrees to be included.",
+        "When adding contributors, include your organization first, then other contributors, and make sure everyone agrees to be included.",
         "When adding sites, make sure site boundaries are accurate, as this will be important for verification.",
       ],
     },

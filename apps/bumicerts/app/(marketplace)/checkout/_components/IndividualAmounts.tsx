@@ -20,9 +20,7 @@ export function IndividualAmounts({
   return (
     <div className="border border-border rounded-2xl overflow-hidden">
       {/* Set all amounts — only show when there are multiple items */}
-      {items.length > 1 && (
-        <SetAllAmounts onSetAllAmounts={onSetAllAmounts} />
-      )}
+      {items.length > 1 && <SetAllAmounts onSetAllAmounts={onSetAllAmounts} />}
 
       <div className="px-4">
         {items.map((item) => (

@@ -14,6 +14,9 @@
  *     return { cid: blobRef.ref.$link, url: URL.createObjectURL(file) };
  *   }}
  *   resolveImageUrl={(cid) => buildBlobUrl(pdsUrl, did, cid)}
+ *   initialHeight={280}
+ *   minHeight={180}
+ *   maxHeight="70vh"
  * />
  * ```
  */
@@ -84,6 +87,11 @@ function resolveImageCids(
   };
 }
 
+function toCssSize(value: number | string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  return typeof value === "number" ? `${value}px` : value;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Component
 // ─────────────────────────────────────────────────────────────────────────────
@@ -115,6 +123,12 @@ export interface LeafletEditorProps {
   className?: string;
   /** Enable image insertion/upload interactions. Defaults to true. */
   enableImageUpload?: boolean;
+  /** Initial height for the resizable editor area (e.g. `320` or `"20rem"`). */
+  initialHeight?: number | string;
+  /** Minimum height for the resizable editor area (e.g. `160` or `"12rem"`). */
+  minHeight?: number | string;
+  /** Maximum height for the resizable editor area (e.g. `"80vh"`). */
+  maxHeight?: number | string;
 }
 
 export function LeafletEditor({
@@ -126,6 +140,9 @@ export function LeafletEditor({
   editable = true,
   className = "",
   enableImageUpload = true,
+  initialHeight,
+  minHeight,
+  maxHeight,
 }: LeafletEditorProps) {
   const [imageError, setImageError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -322,7 +339,14 @@ export function LeafletEditor({
         </div>
       )}
 
-      <div className="leaflet-editor__resizable">
+      <div
+        className="leaflet-editor__resizable"
+        style={{
+          height: toCssSize(initialHeight),
+          minHeight: toCssSize(minHeight),
+          maxHeight: toCssSize(maxHeight),
+        }}
+      >
         <EditorContent editor={editor} className="leaflet-editor__content" />
       </div>
     </div>

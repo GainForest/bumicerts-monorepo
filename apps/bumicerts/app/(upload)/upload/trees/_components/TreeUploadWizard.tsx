@@ -6,6 +6,10 @@ import ColumnMappingStep from "./ColumnMappingStep";
 import PreviewStep from "./PreviewStep";
 import UploadStep, { readPendingUpload } from "./UploadStep";
 import type { ColumnMapping, ValidatedRow } from "@/lib/upload/types";
+import {
+  NO_UPLOAD_DATASET_SELECTION,
+  type UploadDatasetSelection,
+} from "./upload-dataset-selection";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -19,8 +23,7 @@ type WizardState = {
   mappings: ColumnMapping[];
   validRows: ValidatedRow[];
   establishmentMeans: string | null;
-  datasetName: string;
-  datasetDescription: string;
+  datasetSelection: UploadDatasetSelection;
 };
 
 const INITIAL_STATE: WizardState = {
@@ -31,8 +34,7 @@ const INITIAL_STATE: WizardState = {
   mappings: [],
   validRows: [],
   establishmentMeans: null,
-  datasetName: "",
-  datasetDescription: "",
+  datasetSelection: NO_UPLOAD_DATASET_SELECTION,
 };
 
 /**
@@ -42,12 +44,18 @@ const INITIAL_STATE: WizardState = {
  * This runs synchronously during the initial render, not inside an effect,
  * so it avoids the cascading-render lint rule.
  */
-function initWizardState(): WizardState {
+function initWizardState(did: string): WizardState {
   // sessionStorage is only available in the browser
   if (typeof window === "undefined") return INITIAL_STATE;
-  const pending = readPendingUpload();
+  const pending = readPendingUpload(did);
   if (pending) {
-    return { ...INITIAL_STATE, validRows: pending.validRows, currentStep: 4 };
+    return {
+      ...INITIAL_STATE,
+      validRows: pending.validRows,
+      establishmentMeans: pending.establishmentMeans,
+      datasetSelection: pending.datasetSelection,
+      currentStep: 4,
+    };
   }
   return INITIAL_STATE;
 }
@@ -134,10 +142,14 @@ function StepIndicator({ currentStep }: { currentStep: 1 | 2 | 3 | 4 }) {
 // Main wizard component
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function TreeUploadWizard() {
+type TreeUploadWizardProps = {
+  did: string;
+};
+
+export function TreeUploadWizard({ did }: TreeUploadWizardProps) {
   // Lazy initializer: checks sessionStorage on first render for pending upload
   // data (e.g. after an OAuth redirect) and restores to step 4 if found.
-  const [state, setState] = useState<WizardState>(initWizardState);
+  const [state, setState] = useState<WizardState>(() => initWizardState(did));
 
   // ── Step 1 → 2: file parsed and initial mappings detected ─────────────────
   const handleFileAndMappings = (
@@ -146,8 +158,7 @@ export function TreeUploadWizard() {
     headers: string[],
     mappings: ColumnMapping[],
     establishmentMeans: string | null,
-    datasetName: string,
-    datasetDescription: string,
+    datasetSelection: UploadDatasetSelection,
   ) => {
     setState((prev) => ({
       ...prev,
@@ -156,8 +167,7 @@ export function TreeUploadWizard() {
       headers,
       mappings,
       establishmentMeans,
-      datasetName,
-      datasetDescription,
+      datasetSelection,
       currentStep: 2,
     }));
   };
@@ -192,17 +202,28 @@ export function TreeUploadWizard() {
   };
 
   const handleBackToStep3 = () => {
-    setState((prev) => ({ ...prev, currentStep: 3 }));
+    setState((prev) => ({
+      ...prev,
+      currentStep: prev.parsedData !== null ? 3 : 1,
+    }));
   };
 
-  const { currentStep, parsedData, headers, mappings, validRows, establishmentMeans, datasetName, datasetDescription } = state;
+  const {
+    currentStep,
+    parsedData,
+    headers,
+    mappings,
+    validRows,
+    establishmentMeans,
+    datasetSelection,
+  } = state;
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Upload Tree Data</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Upload tree biodiversity records from a CSV or KoboToolbox export.
+          Upload tree biodiversity records from a CSV or TSV file.
         </p>
       </div>
 
@@ -210,7 +231,12 @@ export function TreeUploadWizard() {
 
       {/* Step 1: File drop */}
       {currentStep === 1 && (
-        <FileDropStep onFileAndMappings={handleFileAndMappings} />
+        <FileDropStep
+          did={did}
+          initialEstablishmentMeans={establishmentMeans}
+          initialDatasetSelection={datasetSelection}
+          onFileAndMappings={handleFileAndMappings}
+        />
       )}
 
       {/* Step 2: Column mapping */}
@@ -238,10 +264,11 @@ export function TreeUploadWizard() {
       {/* Step 4: Upload to PDS */}
       {currentStep === 4 && (
         <UploadStep
+          did={did}
           validRows={validRows}
           establishmentMeans={establishmentMeans}
-          datasetName={datasetName}
-          datasetDescription={datasetDescription}
+          datasetSelection={datasetSelection}
+          backLabel={parsedData !== null ? "Back to Preview" : "Start Over"}
           onBack={handleBackToStep3}
           onComplete={handleComplete}
         />

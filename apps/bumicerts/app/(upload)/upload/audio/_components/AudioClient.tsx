@@ -35,19 +35,21 @@ export function AudioClient({ did }: AudioClientProps) {
   // ── URL state ───────────────────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useQueryState(
     "q",
-    parseAsString.withDefault("")
+    parseAsString.withDefault(""),
   );
   const [viewMode, setViewMode] = useQueryState(
     "view",
-    parseAsStringLiteral(VIEW_OPTIONS).withDefault("grid")
+    parseAsStringLiteral(VIEW_OPTIONS).withDefault("grid"),
   );
   const [editRkey, setEditRkey] = useQueryState(
     "editRkey",
-    parseAsString.withDefault("")
+    parseAsString.withDefault(""),
   );
 
   // ── Data ────────────────────────────────────────────────────────────────────
-  const { data: recordings, isLoading } = indexerTrpc.audio.list.useQuery({ did });
+  const { data: recordings, isLoading } = indexerTrpc.audio.list.useQuery({
+    did,
+  });
   const allRecordings = recordings ?? [];
 
   // ── Filter ──────────────────────────────────────────────────────────────────
@@ -69,7 +71,7 @@ export function AudioClient({ did }: AudioClientProps) {
       void setEditRkey(rkey);
       void setViewMode("edit");
     },
-    [setEditRkey, setViewMode]
+    [setEditRkey, setViewMode],
   );
 
   const handleBackToList = useCallback(() => {
@@ -87,7 +89,7 @@ export function AudioClient({ did }: AudioClientProps) {
 
   const editTarget =
     viewMode === "edit"
-      ? allRecordings.find((r) => r.metadata?.rkey === editRkey) ?? null
+      ? (allRecordings.find((r) => r.metadata?.rkey === editRkey) ?? null)
       : null;
 
   return (
@@ -102,7 +104,7 @@ export function AudioClient({ did }: AudioClientProps) {
             Audio Recordings
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Upload and manage audio recordings for your organisation.
+            Upload and manage audio recordings for your organization.
           </p>
         </div>
       )}
@@ -221,13 +223,16 @@ export function AudioClient({ did }: AudioClientProps) {
             /* List view */
             <div
               className={cn(
-                "divide-y divide-border rounded-xl border border-border overflow-hidden"
+                "divide-y divide-border rounded-xl border border-border overflow-hidden",
               )}
             >
               {filteredRecordings.map((r) => {
                 const name = r.record?.name ?? "Untitled Recording";
                 const rkey = r.metadata?.rkey;
-                const meta = r.record?.metadata as Record<string, unknown> | null | undefined;
+                const meta = r.record?.metadata as
+                  | Record<string, unknown>
+                  | null
+                  | undefined;
                 const recordedAt = meta?.["recordedAt"] as string | undefined;
                 return (
                   <div
