@@ -9,6 +9,7 @@ import {
   ChevronLeftIcon,
   CirclePlusIcon,
   DatabaseIcon,
+  ExternalLink,
   InfoIcon,
   Loader2,
   MapPin,
@@ -471,6 +472,9 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     "tree",
     parseAsString.withDefault(""),
   );
+  const [previewFocusedTreeRkey, setPreviewFocusedTreeRkey] = useState<
+    string | null
+  >(null);
   const [managerView, setManagerView] = useQueryState("view", parseAsString);
   const [datasetFilter, setDatasetFilter] = useQueryState(
     "dataset",
@@ -734,6 +738,30 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
 
     return trees;
   }, [datasetFilter, treeItems]);
+
+  const activeDatasetPreviewRef =
+    datasetFilter &&
+    datasetFilter !== UNGROUPED_DATASET_FILTER &&
+    activeDatasetCard &&
+    !activeDatasetCard.isUngrouped
+      ? datasetFilter
+      : null;
+  const activeDatasetPreviewName = activeDatasetPreviewRef
+    ? activeDatasetCard?.name ??
+      datasetLookup.get(activeDatasetPreviewRef)?.record?.name ??
+      null
+    : null;
+  const activeDatasetPreviewTreeCount = activeDatasetPreviewRef
+    ? datasetScopedTrees.length
+    : null;
+  const previewFocusedTree = previewFocusedTreeRkey
+    ? (treeByOccurrenceRkey.get(previewFocusedTreeRkey) ?? null)
+    : null;
+  const activeDatasetPreviewFocusedTree =
+    activeDatasetPreviewRef &&
+    previewFocusedTree?.occurrence.record?.datasetRef === activeDatasetPreviewRef
+      ? previewFocusedTree
+      : null;
 
   const filteredTrees = useMemo(() => {
     const trees = datasetScopedTrees;
@@ -1089,6 +1117,7 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
   const handleTreePageChange = useCallback(
     (nextPage: number) => {
       const boundedPage = getBoundedPage(nextPage, totalTreePages);
+      setPreviewFocusedTreeRkey(null);
 
       void Promise.all([
         setTreePageQuery(boundedPage === 1 ? null : String(boundedPage)),
@@ -1100,6 +1129,7 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
 
   const handleTreeSearchChange = useCallback(
     (value: string) => {
+      setPreviewFocusedTreeRkey(null);
       void Promise.all([
         setSearchQuery(toNullableQueryValue(value)),
         setTreePageQuery(null),
@@ -1110,6 +1140,7 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
   );
 
   const handleClearTreeSearch = useCallback(() => {
+    setPreviewFocusedTreeRkey(null);
     void Promise.all([
       setSearchQuery(null),
       setTreePageQuery(null),
@@ -1131,6 +1162,7 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
 
   const handleOpenDataset = useCallback(
     (nextDatasetFilter: string) => {
+      setPreviewFocusedTreeRkey(null);
       void Promise.all([
         setDatasetFilter(nextDatasetFilter),
         setSearchQuery(null),
@@ -1142,6 +1174,7 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
   );
 
   const handleReturnToDatasets = useCallback(() => {
+    setPreviewFocusedTreeRkey(null);
     void Promise.all([
       setManagerView(null),
       setDatasetFilter(null),
@@ -1159,6 +1192,7 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
 
   const handleDatasetFilterChange = useCallback(
     (value: string) => {
+      setPreviewFocusedTreeRkey(null);
       if (value === "__all__") {
         void Promise.all([
           setManagerView("trees"),
@@ -1898,6 +1932,22 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
         </div>
       </div>
 
+      {activeDatasetPreviewRef ? (
+        <GreenGlobeTreePreviewCard
+          did={did}
+          datasetRef={activeDatasetPreviewRef}
+          datasetName={activeDatasetPreviewName}
+          datasetTreeCount={activeDatasetPreviewTreeCount}
+          treeUri={
+            activeDatasetPreviewFocusedTree?.occurrence.metadata?.uri ?? null
+          }
+          treeName={
+            activeDatasetPreviewFocusedTree?.occurrence.record?.scientificName ??
+            null
+          }
+        />
+      ) : null}
+
       {datasetCards.length === 0 &&
       treeItems.length === 0 &&
       !isPendingDatasetFilter ? (
@@ -2022,7 +2072,10 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
                     <button
                       key={metadata.uri ?? metadata.rkey}
                       type="button"
-                      onClick={() => void setSelectedTreeRkey(metadata.rkey)}
+                      onClick={() => {
+                        setPreviewFocusedTreeRkey(metadata.rkey);
+                        void setSelectedTreeRkey(metadata.rkey);
+                      }}
                       className={cn(
                         "w-full px-4 py-3 text-left transition-colors",
                         isSelected ? "bg-primary/5" : "hover:bg-muted/35",
@@ -2158,6 +2211,26 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
                   </div>
 
                   <div className="flex flex-wrap gap-2 shrink-0">
+                    {!activeDatasetPreviewRef &&
+                    activeTree.occurrence.metadata?.uri ? (
+                      <Button asChild variant="outline">
+                        <Link
+                          href={links.external.greenGlobeTreePreview(did, {
+                            treeUri: activeTree.occurrence.metadata.uri,
+                            datasetRef:
+                              typeof activeTree.occurrence.record?.datasetRef ===
+                              "string"
+                                ? activeTree.occurrence.record.datasetRef
+                                : null,
+                          })}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <ExternalLink />
+                          Open in Green Globe
+                        </Link>
+                      </Button>
+                    ) : null}
                     {canAttachActiveTreeToDataset ? (
                       <Button
                         variant="outline"
@@ -2192,17 +2265,6 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
                   </div>
                 ) : null}
               </section>
-
-              {activeTree.occurrence.metadata?.uri ? (
-                <GreenGlobeTreePreviewCard
-                  did={did}
-                  treeUri={activeTree.occurrence.metadata.uri}
-                  datasetRef={typeof activeTree.occurrence.record?.datasetRef === "string"
-                    ? activeTree.occurrence.record.datasetRef
-                    : null}
-                  treeName={activeTree.occurrence.record?.scientificName ?? null}
-                />
-              ) : null}
 
               <SectionCard
                 title="Tree details"
