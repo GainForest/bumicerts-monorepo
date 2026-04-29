@@ -12,12 +12,15 @@ import {
   InfoIcon,
   Loader2,
   MapPin,
+  Pencil,
   RefreshCcw,
   SearchIcon,
   Trash2,
+  X,
 } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
 import { ATTACH_EXISTING_DWC_DATASET_MAX_OCCURRENCES } from "@gainforest/atproto-mutations-next";
+import type { UpdateAcMultimediaInput } from "@gainforest/atproto-mutations-next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -87,6 +90,8 @@ import AddToDatasetModal from "./AddToDatasetModal";
 type TreesManageClientProps = {
   did: string;
 };
+
+type MultimediaUnsetField = NonNullable<UpdateAcMultimediaInput["unset"]>[number];
 
 type OccurrenceField = keyof TreeOccurrenceDraft;
 type OptionalOccurrenceField = Exclude<
@@ -297,6 +302,27 @@ function sameMeasurementSet(
   return left.every((item, index) => sameMeasurementItem(item, right[index]!));
 }
 
+function sameMultimediaRecord(
+  left: MultimediaItem["record"],
+  right: MultimediaItem["record"],
+): boolean {
+  return (
+    left.occurrenceRef === right.occurrenceRef &&
+    left.siteRef === right.siteRef &&
+    left.subjectPart === right.subjectPart &&
+    left.subjectPartUri === right.subjectPartUri &&
+    left.subjectOrientation === right.subjectOrientation &&
+    sameJsonValue(left.file, right.file) &&
+    left.format === right.format &&
+    left.accessUri === right.accessUri &&
+    left.variantLiteral === right.variantLiteral &&
+    left.caption === right.caption &&
+    left.creator === right.creator &&
+    left.createDate === right.createDate &&
+    left.createdAt === right.createdAt
+  );
+}
+
 function createOptimisticMeasurementItem(
   did: string,
   occurrenceUri: string,
@@ -492,6 +518,7 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
   const createMeasurement = trpc.dwc.measurement.create.useMutation();
   const updateMeasurement = trpc.dwc.measurement.update.useMutation();
   const deleteMeasurement = trpc.dwc.measurement.delete.useMutation();
+  const updateMultimedia = trpc.ac.multimedia.update.useMutation();
   const deleteMultimedia = trpc.ac.multimedia.delete.useMutation();
 
   const [occurrenceDraft, setOccurrenceDraft] = useState<TreeOccurrenceDraft>(
@@ -510,6 +537,20 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     null,
   );
   const [datasetAttachFeedback, setDatasetAttachFeedback] = useState<
+    string | null
+  >(null);
+  const [editingPhotoCaptionRkey, setEditingPhotoCaptionRkey] = useState<
+    string | null
+  >(null);
+  const [photoCaptionDraft, setPhotoCaptionDraft] = useState("");
+  const [savingPhotoCaptionRkey, setSavingPhotoCaptionRkey] = useState<
+    string | null
+  >(null);
+  const [photoCaptionError, setPhotoCaptionError] = useState<{
+    rkey: string;
+    message: string;
+  } | null>(null);
+  const [photoCaptionFeedbackRkey, setPhotoCaptionFeedbackRkey] = useState<
     string | null
   >(null);
   const [selectedUngroupedTreeRkeys, setSelectedUngroupedTreeRkeys] = useState<
@@ -539,6 +580,8 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
   const [optimisticAddedPhotos, setOptimisticAddedPhotos] = useState<
     Record<string, MultimediaItem[]>
   >({});
+  const [optimisticMultimediaRecords, setOptimisticMultimediaRecords] =
+    useState<Record<string, MultimediaItem["record"]>>({});
   const [optimisticDeletedPhotoRkeys, setOptimisticDeletedPhotoRkeys] =
     useState<Record<string, true>>({});
   const [
@@ -651,11 +694,26 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
         );
       });
 
-    return [...optimisticPhotos, ...basePhotos];
+    return [...optimisticPhotos, ...basePhotos].map((item) => {
+      const rkey = item.metadata?.rkey;
+      const optimisticRecord = rkey
+        ? optimisticMultimediaRecords[rkey]
+        : undefined;
+
+      if (!optimisticRecord || sameMultimediaRecord(item.record, optimisticRecord)) {
+        return item;
+      }
+
+      return {
+        ...item,
+        record: optimisticRecord,
+      };
+    });
   }, [
     multimediaQuery.data,
     optimisticAddedPhotos,
     optimisticDeletedPhotoRkeys,
+    optimisticMultimediaRecords,
   ]);
 
   const treeItems = useMemo(
@@ -1119,10 +1177,36 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
           ? (Object.fromEntries(remainingEntries) as typeof current)
           : current;
       });
+
+      setOptimisticMultimediaRecords((current) => {
+        let changed = false;
+        const serverByRkey = new Map(
+          (multimediaQuery.data ?? []).flatMap((item) => {
+            const rkey = item.metadata?.rkey;
+            return rkey ? [[rkey, item.record] as const] : [];
+          }),
+        );
+
+        const remainingEntries = Object.entries(current).filter(
+          ([rkey, optimisticRecord]) => {
+            const serverRecord = serverByRkey.get(rkey);
+            const keep =
+              !serverRecord || !sameMultimediaRecord(serverRecord, optimisticRecord);
+            if (!keep) {
+              changed = true;
+            }
+            return keep;
+          },
+        );
+
+        return changed
+          ? (Object.fromEntries(remainingEntries) as typeof current)
+          : current;
+      });
     }, 0);
 
     return () => window.clearTimeout(resetHandle);
-  }, [measurementsQuery.data, occurrencesQuery.data]);
+  }, [measurementsQuery.data, multimediaQuery.data, occurrencesQuery.data]);
 
   const occurrenceHasChanges = !isDraftEqual(
     occurrenceDraft,
@@ -1708,6 +1792,75 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     }
   };
 
+  const handleStartEditPhotoCaption = (photo: MultimediaItem) => {
+    if (savingPhotoCaptionRkey) {
+      return;
+    }
+
+    const rkey = photo.metadata?.rkey;
+    if (!rkey) {
+      return;
+    }
+
+    setEditingPhotoCaptionRkey(rkey);
+    setPhotoCaptionDraft(photo.record.caption ?? "");
+    setPhotoCaptionError(null);
+    setPhotoCaptionFeedbackRkey(null);
+  };
+
+  const handleCancelEditPhotoCaption = () => {
+    setEditingPhotoCaptionRkey(null);
+    setPhotoCaptionDraft("");
+    setPhotoCaptionError(null);
+  };
+
+  const handleSavePhotoCaption = async (photo: MultimediaItem) => {
+    const rkey = photo.metadata?.rkey;
+    if (!rkey) {
+      return;
+    }
+
+    const normalizedCaption = normalizeDraftValue(photoCaptionDraft);
+    const currentCaption = normalizeDraftValue(photo.record.caption ?? "");
+
+    if (normalizedCaption === currentCaption) {
+      setEditingPhotoCaptionRkey(null);
+      setPhotoCaptionDraft("");
+      setPhotoCaptionFeedbackRkey(null);
+      setPhotoCaptionError(null);
+      return;
+    }
+
+    try {
+      setSavingPhotoCaptionRkey(rkey);
+      setPhotoCaptionError(null);
+      const unsetCaption: MultimediaUnsetField[] = ["caption"];
+      await updateMultimedia.mutateAsync({
+        rkey,
+        data: normalizedCaption.length > 0 ? { caption: normalizedCaption } : {},
+        ...(normalizedCaption.length === 0 ? { unset: unsetCaption } : {}),
+      });
+
+      setOptimisticMultimediaRecords((current) => ({
+        ...current,
+        [rkey]: {
+          ...photo.record,
+          caption: normalizedCaption.length > 0 ? normalizedCaption : null,
+        },
+      }));
+      setEditingPhotoCaptionRkey(null);
+      setPhotoCaptionDraft("");
+      setPhotoCaptionFeedbackRkey(rkey);
+      setPhotoCaptionError(null);
+      await indexerUtils.multimedia.list.invalidate();
+    } catch (error) {
+      setPhotoCaptionError({ rkey, message: formatError(error) });
+      setPhotoCaptionFeedbackRkey(null);
+    } finally {
+      setSavingPhotoCaptionRkey(null);
+    }
+  };
+
   const openAddPhotoModal = () => {
     const occurrenceUri = getOccurrenceUri(activeTree);
     const speciesName = activeTree?.occurrence.record?.scientificName ?? "tree";
@@ -1785,6 +1938,18 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
                 ...current,
                 [photoRkey]: true,
               }));
+              setOptimisticMultimediaRecords((current) => {
+                const remaining: typeof current = {};
+                for (const [rkey, record] of Object.entries(current)) {
+                  if (rkey !== photoRkey) {
+                    remaining[rkey] = record;
+                  }
+                }
+                return remaining;
+              });
+              if (editingPhotoCaptionRkey === photoRkey) {
+                handleCancelEditPhotoCaption();
+              }
               await indexerUtils.multimedia.list.invalidate();
             }}
           />
@@ -2692,6 +2857,24 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
                         photo.record.subjectPart,
                         photo.record.caption,
                       );
+                      const isEditingCaption =
+                        editingPhotoCaptionRkey === metadata.rkey;
+                      const normalizedCaptionDraft = normalizeDraftValue(
+                        photoCaptionDraft,
+                      );
+                      const normalizedCurrentCaption = normalizeDraftValue(
+                        photo.record.caption ?? "",
+                      );
+                      const isSavingCaption = savingPhotoCaptionRkey === metadata.rkey;
+                      const captionSaveDisabled =
+                        isSavingCaption ||
+                        normalizedCaptionDraft === normalizedCurrentCaption;
+                      const photoCaptionErrorMessage =
+                        photoCaptionError?.rkey === metadata.rkey
+                          ? photoCaptionError.message
+                          : null;
+                      const captionEditorId = `photo-caption-${metadata.rkey}`;
+                      const captionErrorId = `photo-caption-error-${metadata.rkey}`;
 
                       return (
                         <article
@@ -2718,18 +2901,98 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
 
                           <div className="space-y-3 p-3">
                             <div className="flex items-start justify-between gap-3">
-                              <div className="space-y-1 min-w-0">
+                              <div className="space-y-2 min-w-0 flex-1">
                                 <Badge variant="outline">
                                   {formatSubjectPart(photo.record.subjectPart)}
                                 </Badge>
-                                {photo.record.caption ? (
-                                  <p className="text-sm text-foreground break-words">
-                                    {photo.record.caption}
-                                  </p>
+
+                                {isEditingCaption ? (
+                                  <div className="space-y-2">
+                                    <Textarea
+                                      id={captionEditorId}
+                                      aria-label="Photo caption"
+                                      aria-describedby={
+                                        photoCaptionErrorMessage
+                                          ? captionErrorId
+                                          : undefined
+                                      }
+                                      value={photoCaptionDraft}
+                                      onChange={(event) => {
+                                        setPhotoCaptionDraft(event.target.value);
+                                        setPhotoCaptionError(null);
+                                      }}
+                                      placeholder="Describe the photo…"
+                                      disabled={isSavingCaption}
+                                      rows={3}
+                                      className="resize-none text-sm"
+                                    />
+                                    {photoCaptionErrorMessage ? (
+                                      <p
+                                        id={captionErrorId}
+                                        className="text-xs text-destructive"
+                                        role="alert"
+                                      >
+                                        {photoCaptionErrorMessage}
+                                      </p>
+                                    ) : null}
+                                    <div className="flex flex-wrap gap-2">
+                                      <Button
+                                        size="sm"
+                                        onClick={() => {
+                                          void handleSavePhotoCaption(photo);
+                                        }}
+                                        disabled={captionSaveDisabled}
+                                      >
+                                        {isSavingCaption ? (
+                                          <Loader2 className="animate-spin" />
+                                        ) : null}
+                                        Save caption
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={handleCancelEditPhotoCaption}
+                                        disabled={isSavingCaption}
+                                      >
+                                        <X />
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                  </div>
                                 ) : (
-                                  <p className="text-sm text-muted-foreground">
-                                    No caption added.
-                                  </p>
+                                  <div className="space-y-2">
+                                    {photo.record.caption ? (
+                                      <p className="text-sm text-foreground break-words">
+                                        {photo.record.caption}
+                                      </p>
+                                    ) : (
+                                      <p className="text-sm text-muted-foreground">
+                                        No caption added.
+                                      </p>
+                                    )}
+                                    {photoCaptionFeedbackRkey === metadata.rkey ? (
+                                      <p
+                                        className="text-xs text-muted-foreground"
+                                        aria-live="polite"
+                                      >
+                                        Caption saved.
+                                      </p>
+                                    ) : null}
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() =>
+                                        handleStartEditPhotoCaption(photo)
+                                      }
+                                      disabled={savingPhotoCaptionRkey !== null}
+                                    >
+                                      <Pencil />
+                                      {photo.record.caption
+                                        ? "Edit caption"
+                                        : "Add caption"}
+                                    </Button>
+                                  </div>
                                 )}
                               </div>
 
@@ -2737,11 +3000,12 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
                                 variant="ghost"
                                 size="icon-sm"
                                 className="text-muted-foreground hover:text-destructive"
+                                aria-label="Delete photo"
                                 onClick={() =>
                                   openDeletePhotoModal(metadata.rkey)
                                 }
                               >
-                                <Trash2 className="size-4" />
+                                <Trash2 />
                               </Button>
                             </div>
 
