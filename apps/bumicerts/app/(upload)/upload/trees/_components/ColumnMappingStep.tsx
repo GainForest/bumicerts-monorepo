@@ -173,14 +173,11 @@ export default function ColumnMappingStep({
         <div className="flex items-start gap-2 rounded-md border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm text-yellow-700 dark:text-yellow-300">
           <CircleAlertIcon className="h-4 w-4 mt-0.5 shrink-0" />
           <div className="space-y-1">
-            <p className="font-medium">Review skipped columns before continuing.</p>
+            <p className="font-medium">Check unmapped columns before continuing.</p>
             <p className="text-yellow-700/90 dark:text-yellow-300/90">
-              {skippedColumnCount} source column
-              {skippedColumnCount !== 1 ? "s are" : " is"} marked to be
-              skipped and will not be uploaded. Rows with a yellow left border
-              are source columns currently treated as optional/skipped; required
-              target fields that still need manual input appear in the red
-              warning above when any remain.
+              {skippedColumnCount} column{skippedColumnCount !== 1 ? "s" : ""} {skippedColumnCount !== 1 ? "are" : "is"} not mapped yet.
+              They will be skipped. This is OK if they are not needed. Please
+              check before you continue.
             </p>
           </div>
         </div>
