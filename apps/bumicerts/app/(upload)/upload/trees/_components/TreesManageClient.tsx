@@ -62,6 +62,7 @@ import {
 import GreenGlobeTreePreviewCard from "./GreenGlobeTreePreviewCard";
 import { ManageConfirmModal } from "./ManageConfirmModal";
 import { TreesManageSkeleton } from "./TreesManageSkeleton";
+import { TreeListPagination } from "./TreeListPagination";
 import {
   buildTreeManagerItems,
   formatEventDate,
@@ -124,6 +125,33 @@ const EMPTY_MEASUREMENT_DRAFT: TreeMeasurementDraft = {
 };
 
 const ATTACH_INVALIDATION_DELAY_MS = 1_000;
+const TREE_ITEMS_PER_PAGE = 10;
+
+function getTreePageFromQuery(value: string | null): number {
+  if (!value) {
+    return 1;
+  }
+
+  if (!/^\d+$/.test(value)) {
+    return 1;
+  }
+
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
+
+function getTotalPages(totalItems: number, pageSize: number): number {
+  return Math.max(1, Math.ceil(totalItems / pageSize));
+}
+
+function getBoundedPage(page: number, totalPages: number): number {
+  return Math.min(Math.max(page, 1), totalPages);
+}
+
+function toNullableQueryValue(value: string): string | null {
+  return value.length > 0 ? value : null;
+}
 
 function normalizeDraftValue(value: string): string {
   return value.trim();
@@ -430,6 +458,10 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
   const [searchQuery, setSearchQuery] = useQueryState(
     "q",
     parseAsString.withDefault(""),
+  );
+  const [treePageQuery, setTreePageQuery] = useQueryState(
+    "tree-page",
+    parseAsString,
   );
   const [datasetSearchQuery, setDatasetSearchQuery] = useQueryState(
     "dataset-q",
@@ -745,6 +777,32 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     });
   }, [datasetLookup, datasetScopedTrees, searchQuery]);
 
+  const requestedTreePage = useMemo(
+    () => getTreePageFromQuery(treePageQuery),
+    [treePageQuery],
+  );
+  const totalTreePages = getTotalPages(
+    filteredTrees.length,
+    TREE_ITEMS_PER_PAGE,
+  );
+  const currentTreePage = getBoundedPage(requestedTreePage, totalTreePages);
+  const paginatedTrees = useMemo(() => {
+    const startIndex = (currentTreePage - 1) * TREE_ITEMS_PER_PAGE;
+
+    return filteredTrees.slice(startIndex, startIndex + TREE_ITEMS_PER_PAGE);
+  }, [currentTreePage, filteredTrees]);
+
+  const selectedTreeFilteredIndex = useMemo(() => {
+    if (!selectedTreeRkey) {
+      return -1;
+    }
+
+    return filteredTrees.findIndex(
+      (item) => item.occurrence.metadata?.rkey === selectedTreeRkey,
+    );
+  }, [filteredTrees, selectedTreeRkey]);
+  const selectedTreeIsInFilteredTrees = selectedTreeFilteredIndex >= 0;
+
   const selectedTree = useMemo(() => {
     if (!selectedTreeRkey) {
       return null;
@@ -757,11 +815,22 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     );
   }, [selectedTreeRkey, treeItems]);
 
+  const selectedTreeIsOnCurrentPage = Boolean(
+    selectedTreeRkey &&
+      paginatedTrees.some(
+        (item) => item.occurrence.metadata?.rkey === selectedTreeRkey,
+      ),
+  );
+
   const activeTree = showDatasetLanding
     ? null
     : isDesktop
-      ? (selectedTree ?? filteredTrees[0] ?? null)
-      : selectedTree;
+      ? selectedTreeIsOnCurrentPage
+        ? (selectedTree ?? paginatedTrees[0] ?? null)
+        : (paginatedTrees[0] ?? null)
+      : selectedTreeIsInFilteredTrees
+        ? selectedTree
+        : null;
 
   useEffect(() => {
     if (!showDatasetLanding || !selectedTreeRkey) {
@@ -772,17 +841,70 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
   }, [selectedTreeRkey, setSelectedTreeRkey, showDatasetLanding]);
 
   useEffect(() => {
-    if (showDatasetLanding) {
+    if (isLoading) {
       return;
     }
 
-    const firstVisibleRkey = getSelectedRkey(filteredTrees[0] ?? null);
-    const isSelectionVisible = Boolean(
-      selectedTreeRkey &&
-      filteredTrees.some(
-        (item) => item.occurrence.metadata?.rkey === selectedTreeRkey,
-      ),
+    const canonicalTreePageQuery =
+      currentTreePage === 1 ? null : String(currentTreePage);
+
+    if (
+      requestedTreePage === currentTreePage &&
+      treePageQuery === canonicalTreePageQuery
+    ) {
+      return;
+    }
+
+    void setTreePageQuery(canonicalTreePageQuery);
+  }, [
+    currentTreePage,
+    isLoading,
+    requestedTreePage,
+    setTreePageQuery,
+    treePageQuery,
+  ]);
+
+  useEffect(() => {
+    if (isLoading || showDatasetLanding) {
+      return;
+    }
+
+    if (
+      treePageQuery !== null ||
+      selectedTreeFilteredIndex < 0 ||
+      selectedTreeIsOnCurrentPage
+    ) {
+      return;
+    }
+
+    const selectedTreePage =
+      Math.floor(selectedTreeFilteredIndex / TREE_ITEMS_PER_PAGE) + 1;
+
+    if (selectedTreePage === currentTreePage) {
+      return;
+    }
+
+    void setTreePageQuery(
+      selectedTreePage === 1 ? null : String(selectedTreePage),
     );
+  }, [
+    currentTreePage,
+    isLoading,
+    selectedTreeFilteredIndex,
+    selectedTreeIsOnCurrentPage,
+    setTreePageQuery,
+    showDatasetLanding,
+    treePageQuery,
+  ]);
+
+  useEffect(() => {
+    if (isLoading || showDatasetLanding) {
+      return;
+    }
+
+    const firstVisibleRkey = getSelectedRkey(paginatedTrees[0] ?? null);
+    const canonicalTreePageQuery =
+      currentTreePage === 1 ? null : String(currentTreePage);
 
     if (isDesktop) {
       if (!selectedTreeRkey && firstVisibleRkey) {
@@ -790,21 +912,37 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
         return;
       }
 
-      if (selectedTreeRkey && !isSelectionVisible) {
+      if (selectedTreeRkey && !selectedTreeIsInFilteredTrees) {
         void setSelectedTreeRkey(firstVisibleRkey);
+        return;
+      }
+
+      if (
+        selectedTreeRkey &&
+        selectedTreeIsInFilteredTrees &&
+        !selectedTreeIsOnCurrentPage &&
+        treePageQuery !== null &&
+        treePageQuery === canonicalTreePageQuery
+      ) {
+        void setSelectedTreeRkey(null);
       }
       return;
     }
 
-    if (selectedTreeRkey && !isSelectionVisible) {
+    if (selectedTreeRkey && !selectedTreeIsInFilteredTrees) {
       void setSelectedTreeRkey(null);
     }
   }, [
-    filteredTrees,
+    currentTreePage,
     isDesktop,
+    isLoading,
+    paginatedTrees,
+    selectedTreeIsInFilteredTrees,
+    selectedTreeIsOnCurrentPage,
     selectedTreeRkey,
     setSelectedTreeRkey,
     showDatasetLanding,
+    treePageQuery,
   ]);
 
   const activeTreeResetKey = activeTree?.occurrence.metadata?.rkey ?? null;
@@ -948,15 +1086,59 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     ]);
   };
 
+  const handleTreePageChange = useCallback(
+    (nextPage: number) => {
+      const boundedPage = getBoundedPage(nextPage, totalTreePages);
+
+      void Promise.all([
+        setTreePageQuery(boundedPage === 1 ? null : String(boundedPage)),
+        setSelectedTreeRkey(null),
+      ]);
+    },
+    [setSelectedTreeRkey, setTreePageQuery, totalTreePages],
+  );
+
+  const handleTreeSearchChange = useCallback(
+    (value: string) => {
+      void Promise.all([
+        setSearchQuery(toNullableQueryValue(value)),
+        setTreePageQuery(null),
+        setSelectedTreeRkey(null),
+      ]);
+    },
+    [setSearchQuery, setSelectedTreeRkey, setTreePageQuery],
+  );
+
+  const handleClearTreeSearch = useCallback(() => {
+    void Promise.all([
+      setSearchQuery(null),
+      setTreePageQuery(null),
+      setSelectedTreeRkey(null),
+    ]);
+  }, [setSearchQuery, setSelectedTreeRkey, setTreePageQuery]);
+
+  const handleActiveSearchChange = useCallback(
+    (value: string) => {
+      if (showDatasetLanding) {
+        void setDatasetSearchQuery(toNullableQueryValue(value));
+        return;
+      }
+
+      handleTreeSearchChange(value);
+    },
+    [handleTreeSearchChange, setDatasetSearchQuery, showDatasetLanding],
+  );
+
   const handleOpenDataset = useCallback(
     (nextDatasetFilter: string) => {
       void Promise.all([
         setDatasetFilter(nextDatasetFilter),
         setSearchQuery(null),
+        setTreePageQuery(null),
         setSelectedTreeRkey(null),
       ]);
     },
-    [setDatasetFilter, setSearchQuery, setSelectedTreeRkey],
+    [setDatasetFilter, setSearchQuery, setSelectedTreeRkey, setTreePageQuery],
   );
 
   const handleReturnToDatasets = useCallback(() => {
@@ -964,9 +1146,16 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
       setManagerView(null),
       setDatasetFilter(null),
       setSearchQuery(null),
+      setTreePageQuery(null),
       setSelectedTreeRkey(null),
     ]);
-  }, [setManagerView, setDatasetFilter, setSearchQuery, setSelectedTreeRkey]);
+  }, [
+    setManagerView,
+    setDatasetFilter,
+    setSearchQuery,
+    setSelectedTreeRkey,
+    setTreePageQuery,
+  ]);
 
   const handleDatasetFilterChange = useCallback(
     (value: string) => {
@@ -974,6 +1163,7 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
         void Promise.all([
           setManagerView("trees"),
           setDatasetFilter(null),
+          setTreePageQuery(null),
           setSelectedTreeRkey(null),
         ]);
         return;
@@ -982,10 +1172,11 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
       void Promise.all([
         setManagerView("trees"),
         setDatasetFilter(value),
+        setTreePageQuery(null),
         setSelectedTreeRkey(null),
       ]);
     },
-    [setManagerView, setDatasetFilter, setSelectedTreeRkey],
+    [setManagerView, setDatasetFilter, setSelectedTreeRkey, setTreePageQuery],
   );
 
   const handleAttachTreesToDataset = useCallback(
@@ -1556,9 +1747,6 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
       : "Search by species, locality, recorder, or date";
   const searchQueryTrimmed = searchQuery.trim();
   const activeSearchQuery = showDatasetLanding ? datasetSearchQuery : searchQuery;
-  const activeSearchSetter = showDatasetLanding
-    ? setDatasetSearchQuery
-    : setSearchQuery;
   const counterLabel = isPendingDatasetFilter
     ? "Dataset still indexing"
     : showDatasetLanding
@@ -1651,7 +1839,7 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
             <Input
               value={activeSearchQuery}
               onChange={(event) =>
-                void activeSearchSetter(event.target.value || null)
+                handleActiveSearchChange(event.target.value)
               }
               placeholder={searchPlaceholder}
               className="pl-9"
@@ -1796,7 +1984,7 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
               ) : null}
             </div>
           ) : searchQueryTrimmed ? (
-            <Button variant="outline" onClick={() => void setSearchQuery(null)}>
+            <Button variant="outline" onClick={handleClearTreeSearch}>
               Clear search
             </Button>
           ) : (
@@ -1820,7 +2008,7 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
               </div>
 
               <div className="divide-y divide-border">
-                {filteredTrees.map((item) => {
+                {paginatedTrees.map((item) => {
                   const record = item.occurrence.record;
                   const metadata = item.occurrence.metadata;
                   if (!record || !metadata?.rkey) {
@@ -1898,6 +2086,14 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
                   );
                 })}
               </div>
+
+              <TreeListPagination
+                currentPage={currentTreePage}
+                totalPages={totalTreePages}
+                totalItems={filteredTrees.length}
+                pageSize={TREE_ITEMS_PER_PAGE}
+                onPageChange={handleTreePageChange}
+              />
             </section>
           )}
 
