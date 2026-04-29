@@ -66,6 +66,8 @@ import { TreesManageSkeleton } from "./TreesManageSkeleton";
 import { TreeListPagination } from "./TreeListPagination";
 import {
   buildTreeManagerItems,
+  capCanopyCoverPercentInput,
+  CANOPY_COVER_PERCENT_MAX,
   formatEventDate,
   formatTreeSubtitle,
   getPhotoUrl,
@@ -1509,7 +1511,12 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     field: keyof TreeMeasurementDraft,
     value: string,
   ) => {
-    setMeasurementDraft((current) => ({ ...current, [field]: value }));
+    const nextValue =
+      field === "canopyCoverPercent"
+        ? capCanopyCoverPercentInput(value)
+        : value;
+
+    setMeasurementDraft((current) => ({ ...current, [field]: nextValue }));
     setMeasurementFeedback(null);
     setMeasurementError(null);
   };
@@ -2587,6 +2594,11 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
                       </Field>
                       <Field label="Canopy cover (%)">
                         <Input
+                          type="number"
+                          min={0}
+                          max={CANOPY_COVER_PERCENT_MAX}
+                          step="any"
+                          inputMode="decimal"
                           value={measurementDraft.canopyCoverPercent}
                           onChange={(event) =>
                             handleMeasurementFieldChange(
