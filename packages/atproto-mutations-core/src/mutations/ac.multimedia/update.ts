@@ -45,6 +45,21 @@ const makePdsError = (message: string, cause: unknown) =>
 const makeValidationError = (message: string, cause: unknown, issues?: ValidationIssue[]) =>
   new AcMultimediaValidationError({ message, cause, issues });
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function parseExistingAcMultimediaRecord(value: unknown): AcMultimediaRecord {
+  if (!isRecord(value)) {
+    return $parse(value);
+  }
+
+  return $parse({
+    ...value,
+    file: normalizeBlobRef(value["file"]),
+  });
+}
+
 export const updateAcMultimedia = (
   input: UpdateAcMultimediaInput
 ): Effect.Effect<
@@ -84,7 +99,7 @@ export const updateAcMultimedia = (
     const existing = yield* fetchRecord(
       COLLECTION,
       rkey,
-      $parse,
+      parseExistingAcMultimediaRecord,
       makePdsError
     );
 
