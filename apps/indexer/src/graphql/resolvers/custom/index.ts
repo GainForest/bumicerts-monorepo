@@ -29,3 +29,6 @@ export * from "./gainforestDwcOccurrence.ts";
 
 // 4. Creates GainforestLinkNS, adds `link` (with `evm`) to generated GainforestNS
 export * from "./gainforestLinkEvm.ts";
+
+// 5. Adds temporary `bumicerts` root alias → GainforestNamespace for old clients
+export * from "./bumicertsCompat.ts";

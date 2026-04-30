@@ -239,7 +239,7 @@ export function FundingConfigModal({
       await upsertConfig.mutateAsync({
         rkey: bumicertRkey,
         receivingWallet: {
-          $type: "app.bumicerts.funding.config#evmLinkRef",
+          $type: "app.gainforest.funding.config#evmLinkRef",
           uri: selectedWalletUri,
         },
         status,

@@ -75,10 +75,10 @@ export async function POST(req: NextRequest) {
       ...(body.name ? { name: body.name } : {}),
       address: body.address,
       userProof: {
-        $type: "app.bumicerts.link.evm#eip712Proof",
+        $type: "app.gainforest.link.evm#eip712Proof",
         signature: body.signature,
         message: {
-          $type: "app.bumicerts.link.evm#eip712Message",
+          $type: "app.gainforest.link.evm#eip712Message",
           did: body.message.did,
           evmAddress: body.message.evmAddress,
           chainId: body.message.chainId,
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
         },
       },
       platformAttestation: {
-        $type: "app.bumicerts.link.evm#eip712PlatformAttestation",
+        $type: "app.gainforest.link.evm#eip712PlatformAttestation",
         signature: platformSignature,
         platformAddress,
         signedData: body.signature,
