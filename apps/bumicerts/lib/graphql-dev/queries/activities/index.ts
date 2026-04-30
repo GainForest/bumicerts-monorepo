@@ -13,6 +13,7 @@ import { fetchHyperlabelActivitiesForTier, fetchHyperlabelForDid } from "../_hyp
 
 const LEGACY_DEFAULT_LIMIT = 50;
 const LEGACY_MAX_LIMIT = 100;
+const MAX_DID_PAGES = 50;
 
 const byDidDocument = /* GraphQL */ `
   query ActivitiesByDid($did: String!, $first: Int, $after: String) {
@@ -1161,8 +1162,10 @@ export async function fetch<P extends Params>(params: P): Promise<Result<P>> {
   if ("did" in params) {
     const nodes: ActivityDetailNode[] = [];
     let after: string | undefined;
+    const seenCursors = new Set<string>();
+    let exceededMaxPages = true;
 
-    while (true) {
+    for (let pageIndex = 0; pageIndex < MAX_DID_PAGES; pageIndex += 1) {
       const res = await graphqlClient.request<ActivityResponse>(byDidDocument, {
         did: params.did,
         first: LEGACY_MAX_LIMIT,
@@ -1174,12 +1177,25 @@ export async function fetch<P extends Params>(params: P): Promise<Result<P>> {
       const endCursor = res.orgHypercertsClaimActivity?.pageInfo?.endCursor ?? undefined;
       const hasNextPage = res.orgHypercertsClaimActivity?.pageInfo?.hasNextPage ?? false;
 
-      if (!hasNextPage) break;
+      if (!hasNextPage) {
+        exceededMaxPages = false;
+        break;
+      }
+
       if (!endCursor) {
         throw new Error("orgHypercertsClaimActivity reported hasNextPage without an endCursor for did-scoped fetch");
       }
 
+      if (endCursor === after || seenCursors.has(endCursor)) {
+        throw new Error(`orgHypercertsClaimActivity repeated cursor ${endCursor} for ${params.did}`);
+      }
+
+      seenCursors.add(endCursor);
       after = endCursor;
+    }
+
+    if (exceededMaxPages) {
+      throw new Error(`orgHypercertsClaimActivity exceeded ${MAX_DID_PAGES} pages for ${params.did}`);
     }
 
     const orgMap = await fetchOrgMap(nodes.map((item) => item.did));

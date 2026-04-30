@@ -16,6 +16,7 @@ import { fetchHyperlabelForDid } from "../_hyperlabel";
 import { scoreActivity } from "../_labeller-scorer.ts";
 
 const LOCAL_LABELLER_SOURCE = "local";
+const MAX_ACTIVITY_PAGES = 50;
 
 const INDEXER_URL = process.env.NEXT_PUBLIC_INDEXER_URL;
 
@@ -949,8 +950,10 @@ async function fetchOrgByDid(did: string): Promise<OrgInfo | null> {
 async function fetchActivitiesByDid(did: string, org: OrgInfo | null): Promise<OrgActivity[]> {
   const nodes: ActivityNode[] = [];
   let after: string | undefined;
+  const seenCursors = new Set<string>();
+  let exceededMaxPages = true;
 
-  while (true) {
+  for (let pageIndex = 0; pageIndex < MAX_ACTIVITY_PAGES; pageIndex += 1) {
     const response = await requestGraphQL<ActivityResponse>(activitiesByDidDocument, {
       did,
       first: 100,
@@ -962,12 +965,25 @@ async function fetchActivitiesByDid(did: string, org: OrgInfo | null): Promise<O
     const endCursor = response.orgHypercertsClaimActivity?.pageInfo?.endCursor ?? undefined;
     const hasNextPage = response.orgHypercertsClaimActivity?.pageInfo?.hasNextPage ?? false;
 
-    if (!hasNextPage) break;
+    if (!hasNextPage) {
+      exceededMaxPages = false;
+      break;
+    }
+
     if (!endCursor) {
       throw new Error("orgHypercertsClaimActivity reported hasNextPage without an endCursor for did-scoped fetch");
     }
 
+    if (endCursor === after || seenCursors.has(endCursor)) {
+      throw new Error(`orgHypercertsClaimActivity repeated cursor ${endCursor} for ${did}`);
+    }
+
+    seenCursors.add(endCursor);
     after = endCursor;
+  }
+
+  if (exceededMaxPages) {
+    throw new Error(`orgHypercertsClaimActivity exceeded ${MAX_ACTIVITY_PAGES} pages for ${did}`);
   }
 
   return Promise.all(

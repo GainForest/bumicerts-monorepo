@@ -146,6 +146,6 @@ export const RATE_LIMITS = {
     byIp: { windowMs: 60 * 60 * 1000, maxAttempts: 15 },
   },
   indexerAddRepos: {
-    byIp: { windowMs: 60 * 60 * 1000, maxAttempts: 60 },
+    byIp: { windowMs: 60 * 1000, maxAttempts: 30 },
   },
 } as const;

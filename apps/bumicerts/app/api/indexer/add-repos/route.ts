@@ -78,6 +78,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  await recordRateLimitAttempt(ipIdentifier, "indexer-add-repos");
+
   let body: AddReposRequestBody | null = null;
 
   try {
@@ -100,8 +102,6 @@ export async function POST(request: NextRequest) {
 
     return Response.json({ error: validation.error }, { status: 400 });
   }
-
-  await recordRateLimitAttempt(ipIdentifier, "indexer-add-repos");
 
   try {
     const enqueued = await addRepos(validation.dids);
