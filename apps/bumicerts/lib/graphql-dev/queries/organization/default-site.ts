@@ -1,40 +1,58 @@
 /**
  * Organization default-site query module.
  *
- * Reads the singleton `app.gainforest.organization.defaultSite` record for a DID
- * and returns only its `record.site` AT-URI.
- *
- * Leaf: queries.organization.defaultSite
- * Params: { did: string }
- * Result: string | null
+ * Scratch migration target:
+ *   appGainforestOrganizationDefaultSite(...) { edges { node { site } } }
  */
 
-import { graphqlClient } from "@/lib/graphql-dev/client";
-import { graphql } from "@/lib/graphql-dev/tada";
-import type { QueryModule } from "@/lib/graphql-dev/create-query";
+import { GraphQLClient } from "graphql-request";
+import type { QueryModule } from "../../create-query";
+import type { ConnectionResult } from "../_migration-helpers";
+import { pluckConnectionNodes } from "../_migration-helpers";
 
-const document = graphql(`
+const indexerUrl = process.env.NEXT_PUBLIC_INDEXER_URL;
+
+if (!indexerUrl) {
+  throw new Error("NEXT_PUBLIC_INDEXER_URL is required");
+}
+
+const graphqlClient = new GraphQLClient(indexerUrl, {
+  headers: {
+    "ngrok-skip-browser-warning": "true",
+  },
+});
+
+const document = /* GraphQL */ `
   query OrgDefaultSite($did: String!) {
-    gainforest {
-      organization {
-        defaultSite(where: { did: $did }, limit: 1) {
-          data {
-            record {
-              site
-            }
-          }
+    appGainforestOrganizationDefaultSite(
+      where: { did: { eq: $did } }
+      first: 1
+      sortDirection: DESC
+      sortBy: createdAt
+    ) {
+      edges {
+        node {
+          site
         }
       }
     }
   }
-`);
+`;
 
 export type Params = { did: string };
 export type Result = string | null;
 
+type DefaultSiteNode = {
+  site: string;
+};
+
+type DefaultSiteResponse = {
+  appGainforestOrganizationDefaultSite?: ConnectionResult<DefaultSiteNode> | null;
+};
+
 export async function fetch(params: Params): Promise<Result> {
-  const res = await graphqlClient.request(document, { did: params.did });
-  return res.gainforest?.organization?.defaultSite?.data?.[0]?.record?.site ?? null;
+  const res = await graphqlClient.request<DefaultSiteResponse>(document, { did: params.did });
+  return pluckConnectionNodes(res.appGainforestOrganizationDefaultSite)[0]?.site ?? null;
 }
 
 export const defaultOptions = {

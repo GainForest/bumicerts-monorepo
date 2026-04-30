@@ -1,61 +1,72 @@
 /**
  * Organization logo query module.
  *
- * A lightweight fetch that returns just the logo URI string.
- * Kept as a separate query so callers that only need the logo
- * don't pull the full OrgInfo payload.
- *
- * Leaf: queries.organization.logo
- * Params: { did: string }
- * Result: string | null
- *
- * Schema shape (post-redesign):
- *   gainforest.organization.info(...) { data { record { logo { uri } } } }
+ * Scratch migration target:
+ *   appGainforestOrganizationInfo(...) { edges { node { logo } } }
  */
 
-import { graphqlClient } from "@/lib/graphql-dev/client";
-import { graphql } from "@/lib/graphql-dev/tada";
-import type { QueryModule } from "@/lib/graphql-dev/create-query";
+import { GraphQLClient } from "graphql-request";
+import type { QueryModule } from "../../create-query";
+import type { ConnectionResult } from "../_migration-helpers";
+import { pluckConnectionNodes, toResolvedLegacyBlob } from "../_migration-helpers";
 
-// ── Document ──────────────────────────────────────────────────────────────────
-
-const document = graphql(`
+const document = /* GraphQL */ `
   query OrgLogo($did: String!) {
-    gainforest {
-      organization {
-        info(where: { did: $did }, limit: 1) {
-          data {
-            record {
-              logo {
-                uri
-              }
+    appGainforestOrganizationInfo(
+      where: { did: { eq: $did } }
+      first: 1
+      sortDirection: DESC
+      sortBy: createdAt
+    ) {
+      edges {
+        node {
+          did
+          logo {
+            image {
+              ref
             }
           }
         }
       }
     }
   }
-`);
+`;
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+const graphqlClient = new GraphQLClient(process.env.NEXT_PUBLIC_INDEXER_URL ?? "", {
+  headers: {
+    "ngrok-skip-browser-warning": "true",
+  },
+});
 
 export type Params = { did: string };
 export type Result = string | null;
 
-// ── Fetch ─────────────────────────────────────────────────────────────────────
+type OrgLogoNode = {
+  did?: string;
+  logo: {
+    image?: {
+      ref?: string | null;
+      mimeType?: string | null;
+      size?: number | null;
+    } | null;
+  } | null;
+};
+
+type OrgLogoResponse = {
+  appGainforestOrganizationInfo?: ConnectionResult<OrgLogoNode> | null;
+};
 
 export async function fetch(params: Params): Promise<Result> {
-  const res = await graphqlClient.request(document, { did: params.did });
-  return res.gainforest?.organization?.info?.data?.[0]?.record?.logo?.uri ?? null;
+  const res = await graphqlClient.request<OrgLogoResponse>(document, { did: params.did });
+  const node = pluckConnectionNodes(res.appGainforestOrganizationInfo)[0];
+  if (!node) return null;
+  const resolved = await toResolvedLegacyBlob(node.logo?.image ?? null, params.did);
+  return resolved?.uri ?? null;
 }
 
-// ── Default options ───────────────────────────────────────────────────────────
-
 export const defaultOptions = {
-  staleTime: 60 * 1_000, // 1 minute
+  staleTime: 60 * 1_000,
 } satisfies QueryModule<Params, Result>["defaultOptions"];
-
-// ── Enabled ───────────────────────────────────────────────────────────────────
 
 export function enabled(params: Params): boolean {
   return !!params.did;

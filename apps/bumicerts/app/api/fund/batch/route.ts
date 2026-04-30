@@ -28,12 +28,13 @@ import { serverEnv } from "@/lib/env/server";
 import { clientEnv } from "@/lib/env/client";
 import { parsePaymentSignature } from "@/lib/facilitator/eip3009";
 import { executeTransferWithAuthorization, executeSimpleTransfer } from "@/lib/facilitator/index";
+import { fetchCidByAtUri } from "@/lib/graphql-dev/queries/activities";
+import { fetchVerifiedAddress } from "@/lib/graphql-dev/queries/linkEvm";
 import {
   makeCredentialAgentLayer,
   mutations,
 } from "@gainforest/atproto-mutations-core";
 import { Effect } from "effect";
-import { GraphQLClient } from "graphql-request";
 
 export const dynamic = "force-dynamic";
 
@@ -70,34 +71,6 @@ type BatchItemResult = {
 // Helpers — resolve recipient wallet
 // ---------------------------------------------------------------------------
 
-const ATTESTATION_QUERY = `
-  query VerifyRecipient($did: String!) {
-    gainforest {
-      link {
-        evm(limit: 1, where: { did: $did, valid: true }) {
-          data {
-            record {
-              address
-            }
-          }
-        }
-      }
-    }
-  }
-`;
-
-type AttestationQueryResult = {
-  gainforest: {
-    link: {
-      evm: {
-        data: Array<{
-          record: { address: string | null };
-        }>;
-      };
-    };
-  };
-};
-
 type HexAddress = `0x${string}`;
 type DidIdentifier = `did:${string}:${string}`;
 
@@ -123,15 +96,7 @@ async function resolveRecipientWallet(
   orgDid: string
 ): Promise<HexAddress | null> {
   try {
-    const client = new GraphQLClient(clientEnv.NEXT_PUBLIC_INDEXER_URL, {
-      headers: { "ngrok-skip-browser-warning": "true" },
-    });
-    const data = await client.request<AttestationQueryResult>(
-      ATTESTATION_QUERY,
-      { did: orgDid }
-    );
-    const records = data?.gainforest?.link?.evm?.data ?? [];
-    const resolvedAddress = records[0]?.record.address;
+    const resolvedAddress = await fetchVerifiedAddress(orgDid);
     if (!resolvedAddress || !isHexAddress(resolvedAddress)) {
       return null;
     }
@@ -145,55 +110,18 @@ async function resolveRecipientWallet(
 // Activity CID resolver — fetches CID for an activity AT-URI from indexer
 // ---------------------------------------------------------------------------
 
-const ACTIVITY_CID_QUERY = `
-  query GetActivityCid($did: String!, $rkey: String!) {
-    hypercerts {
-      claim {
-        activity(where: { did: $did, rkey: $rkey }, limit: 1) {
-          data {
-            metadata {
-              cid
-            }
-          }
-        }
-      }
-    }
-  }
-`;
-
-type ActivityCidQueryResult = {
-  hypercerts: {
-    claim: {
-      activity: {
-        data: Array<{
-          metadata: { cid: string | null };
-        }>;
-      };
-    };
-  };
-};
-
 async function getActivityCid(activityUri: string): Promise<string> {
-  // Parse AT-URI: at://did/collection/rkey
-  const match = activityUri.match(/^at:\/\/([^/]+)\/[^/]+\/([^/]+)$/);
-  if (!match) {
+  if (!isAtUriString(activityUri)) {
     throw new Error(`Invalid activity AT-URI format: ${activityUri}`);
   }
-  const [, did, rkey] = match;
 
   try {
-    const client = new GraphQLClient(clientEnv.NEXT_PUBLIC_INDEXER_URL, {
-      headers: { "ngrok-skip-browser-warning": "true" },
-    });
-    const data = await client.request<ActivityCidQueryResult>(
-      ACTIVITY_CID_QUERY,
-      { did, rkey }
-    );
-    const records = data?.hypercerts?.claim?.activity?.data ?? [];
-    if (!records.length || !records[0].metadata.cid) {
+    const cid = await fetchCidByAtUri(activityUri);
+    if (!cid) {
       throw new Error(`Activity CID not found for ${activityUri}`);
     }
-    return records[0].metadata.cid;
+
+    return cid;
   } catch (error) {
     throw new Error(
       `Failed to fetch activity CID for ${activityUri}: ${error instanceof Error ? error.message : String(error)}`

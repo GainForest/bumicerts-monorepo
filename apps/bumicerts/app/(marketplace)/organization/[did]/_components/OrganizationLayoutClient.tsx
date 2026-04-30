@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { addReposViaLocalRoute } from "@/lib/graphql-dev/mutations/add-repos";
 
 interface OrganizationLayoutClientProps {
   did: string;
@@ -21,14 +22,7 @@ export function OrganizationLayoutClient({
     if (!did) return;
 
     // Fire-and-forget: track the user's repo in the indexer when they view an org
-    fetch("/api/indexer/trpc", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        query: "mutation AddRepos($dids: [String!]!) { addRepos(dids: $dids) }",
-        variables: { dids: [did] },
-      }),
-    }).catch(() => {
+    addReposViaLocalRoute([did]).catch(() => {
       // No-op: don't track if it failed or passed
     });
   }, [did]);

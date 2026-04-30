@@ -47,6 +47,7 @@ import {
   toSerializableFile,
   type LinearDocument,
 } from "@gainforest/atproto-mutations-next";
+import { addRepos } from "@/lib/graphql-dev/mutations/add-repos";
 
 const VALID_OBJECTIVES = [
   "Conservation",
@@ -112,40 +113,11 @@ function jsonApiError(
 }
 
 async function enqueueIndexerRepo(did: string): Promise<void> {
-  const indexerUrl =
-    process.env.NEXT_PUBLIC_INDEXER_URL || "http://localhost:4000/graphql";
-
   try {
-    const response = await fetch(indexerUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        query: "mutation AddRepos($dids: [String!]!) { addRepos(dids: $dids) }",
-        variables: { dids: [did] },
-      }),
-    });
+    const enqueued = await addRepos([did]);
 
-    if (!response.ok) {
-      const body = await response.text().catch(() => "");
-      console.error("Indexer addRepos request failed:", {
-        did,
-        status: response.status,
-        body,
-      });
-      return;
-    }
-
-    const payload = (await response.json()) as {
-      data?: { addRepos?: boolean };
-      errors?: Array<{ message?: string }>;
-    };
-
-    if (payload.errors?.length || payload.data?.addRepos !== true) {
-      console.error("Indexer addRepos returned errors:", {
-        did,
-        errors: payload.errors,
-        data: payload.data,
-      });
+    if (!enqueued) {
+      console.error("Indexer addRepos returned false:", { did });
     }
   } catch (error) {
     console.error("Failed to call indexer addRepos:", { did, error });
