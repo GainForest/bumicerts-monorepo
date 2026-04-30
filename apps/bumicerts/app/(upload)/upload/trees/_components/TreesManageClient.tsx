@@ -501,9 +501,6 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     "tree",
     parseAsString.withDefault(""),
   );
-  const [previewFocusedTreeRkey, setPreviewFocusedTreeRkey] = useState<
-    string | null
-  >(null);
   const [managerView, setManagerView] = useQueryState("view", parseAsString);
   const [datasetFilter, setDatasetFilter] = useQueryState(
     "dataset",
@@ -818,15 +815,6 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
   const activeDatasetPreviewTreeCount = activeDatasetPreviewRef
     ? datasetScopedTrees.length
     : null;
-  const previewFocusedTree = previewFocusedTreeRkey
-    ? (treeByOccurrenceRkey.get(previewFocusedTreeRkey) ?? null)
-    : null;
-  const activeDatasetPreviewFocusedTree =
-    activeDatasetPreviewRef &&
-    previewFocusedTree?.occurrence.record?.datasetRef === activeDatasetPreviewRef
-      ? previewFocusedTree
-      : null;
-
   const filteredTrees = useMemo(() => {
     const trees = datasetScopedTrees;
 
@@ -971,6 +959,11 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
       : selectedTreeIsInFilteredTrees
         ? selectedTree
         : null;
+  const activeDatasetPreviewFocusedTree =
+    activeDatasetPreviewRef &&
+    activeTree?.occurrence.record?.datasetRef === activeDatasetPreviewRef
+      ? activeTree
+      : null;
 
   useEffect(() => {
     if (!showDatasetLanding || !selectedTreeRkey) {
@@ -1273,7 +1266,6 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
   const handleTreePageChange = useCallback(
     (nextPage: number) => {
       const boundedPage = getBoundedPage(nextPage, totalTreePages);
-      setPreviewFocusedTreeRkey(null);
 
       void Promise.all([
         setTreePageQuery(boundedPage === 1 ? null : String(boundedPage)),
@@ -1285,7 +1277,6 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
 
   const handleTreeSearchChange = useCallback(
     (value: string) => {
-      setPreviewFocusedTreeRkey(null);
       void Promise.all([
         setSearchQuery(toNullableQueryValue(value)),
         setTreePageQuery(null),
@@ -1296,7 +1287,6 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
   );
 
   const handleClearTreeSearch = useCallback(() => {
-    setPreviewFocusedTreeRkey(null);
     void Promise.all([
       setSearchQuery(null),
       setTreePageQuery(null),
@@ -1348,7 +1338,6 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
 
   const handleOpenDataset = useCallback(
     (nextDatasetFilter: string) => {
-      setPreviewFocusedTreeRkey(null);
       void Promise.all([
         setDatasetFilter(nextDatasetFilter),
         setSearchQuery(null),
@@ -1360,7 +1349,6 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
   );
 
   const handleReturnToDatasets = useCallback(() => {
-    setPreviewFocusedTreeRkey(null);
     void Promise.all([
       setManagerView(null),
       setDatasetFilter(null),
@@ -1378,7 +1366,6 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
 
   const handleDatasetFilterChange = useCallback(
     (value: string) => {
-      setPreviewFocusedTreeRkey(null);
       if (value === "__all__") {
         void Promise.all([
           setManagerView("trees"),
@@ -1868,6 +1855,36 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     try {
       setSavingPhotoCaptionRkey(rkey);
       setPhotoCaptionError(null);
+      const nextCaption = normalizedCaption.length > 0 ? normalizedCaption : null;
+      const applyOptimisticCaptionToCache = () => {
+        indexerUtils.multimedia.list.setData({ did }, (previous) => {
+          if (!previous) {
+            return previous;
+          }
+
+          let changed = false;
+          const next = previous.map((item) => {
+            if (item.metadata?.rkey !== rkey) {
+              return item;
+            }
+
+            if (item.record.caption === nextCaption) {
+              return item;
+            }
+
+            changed = true;
+            return {
+              ...item,
+              record: {
+                ...item.record,
+                caption: nextCaption,
+              },
+            };
+          });
+
+          return changed ? next : previous;
+        });
+      };
       const unsetCaption: MultimediaUnsetField[] = ["caption"];
       await updateMultimedia.mutateAsync({
         rkey,
@@ -1879,14 +1896,20 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
         ...current,
         [rkey]: {
           ...photo.record,
-          caption: normalizedCaption.length > 0 ? normalizedCaption : null,
+          caption: nextCaption,
         },
       }));
+      applyOptimisticCaptionToCache();
       setEditingPhotoCaptionRkey(null);
       setPhotoCaptionDraft("");
       setPhotoCaptionFeedbackRkey(rkey);
       setPhotoCaptionError(null);
-      await indexerUtils.multimedia.list.invalidate();
+      try {
+        await indexerUtils.multimedia.list.invalidate({ did });
+        applyOptimisticCaptionToCache();
+      } catch {
+        applyOptimisticCaptionToCache();
+      }
     } catch (error) {
       setPhotoCaptionError({ rkey, message: formatError(error) });
       setPhotoCaptionFeedbackRkey(null);
@@ -2387,7 +2410,6 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
                       <button
                         type="button"
                         onClick={() => {
-                          setPreviewFocusedTreeRkey(metadata.rkey);
                           void setSelectedTreeRkey(metadata.rkey);
                         }}
                         className="min-w-0 flex-1 text-left"
