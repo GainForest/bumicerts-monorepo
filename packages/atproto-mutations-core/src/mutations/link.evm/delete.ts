@@ -6,9 +6,9 @@ import {
   LinkEvmPdsError,
 } from "./utils/errors";
 import { fetchRecord, deleteRecord } from "../../utils/shared";
-import { $parse } from "@gainforest/generated/app/bumicerts/link/evm.defs";
+import { $parse } from "@gainforest/generated/app/gainforest/link/evm.defs";
 
-const COLLECTION = "app.bumicerts.link.evm";
+const COLLECTION = "app.gainforest.link.evm";
 
 const makePdsError = (message: string, cause: unknown) =>
   new LinkEvmPdsError({ message, cause });

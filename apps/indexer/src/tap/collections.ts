@@ -15,8 +15,6 @@
 // ============================================================
 
 export const INDEXED_COLLECTIONS = [
-  "app.bumicerts.funding.config",
-  "app.bumicerts.link.evm",
   "app.certified.actor.organization",
   "app.certified.actor.profile",
   "app.certified.badge.award",
@@ -27,6 +25,7 @@ export const INDEXED_COLLECTIONS = [
   "app.gainforest.ac.audio",
   "app.gainforest.ac.deployment",
   "app.gainforest.ac.multimedia",
+  "app.gainforest.asset.file",
   "app.gainforest.dwc.dataset",
   "app.gainforest.dwc.event",
   "app.gainforest.dwc.measurement",
@@ -34,7 +33,9 @@ export const INDEXED_COLLECTIONS = [
   "app.gainforest.evaluator.evaluation",
   "app.gainforest.evaluator.service",
   "app.gainforest.evaluator.subscription",
+  "app.gainforest.funding.config",
   "app.gainforest.gbif.dataset",
+  "app.gainforest.link.evm",
   "app.gainforest.organization.defaultSite",
   "app.gainforest.organization.donation",
   "app.gainforest.organization.info",
@@ -86,8 +87,6 @@ export function isIndexedCollection(
 export type RecordKeyType = "tid" | "literal:self" | "any";
 
 export const COLLECTION_KEY_TYPE: Record<IndexedCollection, RecordKeyType> = {
-  "app.bumicerts.funding.config":                            "any",
-  "app.bumicerts.link.evm":                                  "any",
   "app.certified.actor.organization":                        "literal:self",
   "app.certified.actor.profile":                             "literal:self",
   "app.certified.badge.award":                               "tid",
@@ -98,6 +97,7 @@ export const COLLECTION_KEY_TYPE: Record<IndexedCollection, RecordKeyType> = {
   "app.gainforest.ac.audio":                                 "tid",
   "app.gainforest.ac.deployment":                            "tid",
   "app.gainforest.ac.multimedia":                            "tid",
+  "app.gainforest.asset.file":                               "tid",
   "app.gainforest.dwc.dataset":                              "tid",
   "app.gainforest.dwc.event":                                "tid",
   "app.gainforest.dwc.measurement":                          "tid",
@@ -105,7 +105,9 @@ export const COLLECTION_KEY_TYPE: Record<IndexedCollection, RecordKeyType> = {
   "app.gainforest.evaluator.evaluation":                     "tid",
   "app.gainforest.evaluator.service":                        "literal:self",
   "app.gainforest.evaluator.subscription":                   "tid",
+  "app.gainforest.funding.config":                           "any",
   "app.gainforest.gbif.dataset":                             "tid",
+  "app.gainforest.link.evm":                                 "any",
   "app.gainforest.organization.defaultSite":                 "literal:self",
   "app.gainforest.organization.donation":                    "tid",
   "app.gainforest.organization.info":                        "literal:self",

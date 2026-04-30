@@ -16,7 +16,7 @@ type Main = {
   $type: 'org.hyperboards.board'
 
   /**
-   * Reference to the org.hypercerts.claim.activity or org.hypercerts.claim.collection this board visualizes.
+   * Reference to the org.hypercerts.claim.activity or org.hypercerts.collection this board visualizes.
    */
   subject: RepoStrongRef.Main
 

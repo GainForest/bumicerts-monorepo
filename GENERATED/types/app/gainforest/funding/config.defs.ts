@@ -4,23 +4,23 @@
 
 import { l } from '@atproto/lex'
 
-const $nsid = 'app.bumicerts.funding.config'
+const $nsid = 'app.gainforest.funding.config'
 
 export { $nsid }
 
-/** Reference to an EVM wallet link record (app.bumicerts.link.evm). */
+/** Reference to an EVM wallet link record (app.gainforest.link.evm). */
 type EvmLinkRef = {
-  $type?: 'app.bumicerts.funding.config#evmLinkRef'
+  $type?: 'app.gainforest.funding.config#evmLinkRef'
 
   /**
-   * AT-URI of the app.bumicerts.link.evm record.
+   * AT-URI of the app.gainforest.link.evm record.
    */
   uri: l.AtUriString
 }
 
 export type { EvmLinkRef }
 
-/** Reference to an EVM wallet link record (app.bumicerts.link.evm). */
+/** Reference to an EVM wallet link record (app.gainforest.link.evm). */
 const evmLinkRef = l.typedObject<EvmLinkRef>(
   $nsid,
   'evmLinkRef',
@@ -31,7 +31,7 @@ export { evmLinkRef }
 
 /** The funding / donations configuration for a given bumicert. */
 type Main = {
-  $type: 'app.bumicerts.funding.config'
+  $type: 'app.gainforest.funding.config'
 
   /**
    * Reference to the wallet link record where funds should be received. Open union to support future wallet types (e.g. Solana, Cosmos).
@@ -90,7 +90,10 @@ const main = l.record<'any', Main>(
     maxDonationInUSD: l.optional(l.string({ maxLength: 50 })),
     allowOversell: l.optional(l.withDefault(l.boolean(), true)),
     status: l.optional(
-      l.string<{ knownValues: ['coming-soon', 'open', 'paused', 'closed'] }>(),
+      l.string<{
+        maxLength: 20
+        knownValues: ['coming-soon', 'open', 'paused', 'closed']
+      }>({ maxLength: 20 }),
     ),
     updatedAt: l.string({ format: 'datetime' }),
     createdAt: l.string({ format: 'datetime' }),

@@ -2,10 +2,10 @@
  * Derives TAP_COLLECTION_FILTERS from INDEXED_COLLECTIONS.
  *
  * Converts specific collection NSIDs like:
- *   ["app.bumicerts.link.evm", "app.bumicerts.funding.config", "app.gainforest.organization.info"]
+ *   ["app.gainforest.link.evm", "app.gainforest.funding.config", "app.gainforest.organization.info"]
  *
  * Into wildcard patterns like:
- *   "app.bumicerts.*,app.gainforest.*"
+ *   "app.certified.*,app.gainforest.*"
  *
  * This ensures Tap and the indexer stay in sync automatically.
  */
@@ -14,12 +14,12 @@ import { INDEXED_COLLECTIONS } from "./collections.ts";
 
 /**
  * Extract the namespace prefix from a collection NSID.
- * e.g., "app.bumicerts.link.evm" → "app.bumicerts"
+ * e.g., "app.gainforest.link.evm" → "app.gainforest"
  *       "org.hypercerts.claim.activity" → "org.hypercerts"
  */
 function getNamespacePrefix(collection: string): string {
   const parts = collection.split(".");
-  // Take first two segments: "app.bumicerts" or "org.hypercerts"
+  // Take first two segments: "app.gainforest" or "org.hypercerts"
   return parts.slice(0, 2).join(".");
 }
 

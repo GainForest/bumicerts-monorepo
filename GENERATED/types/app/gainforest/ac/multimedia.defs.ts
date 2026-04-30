@@ -8,6 +8,7 @@ const $nsid = 'app.gainforest.ac.multimedia'
 
 export { $nsid }
 
+/** A multimedia evidence record associated with a biodiversity occurrence. */
 type Main = {
   $type: 'app.gainforest.ac.multimedia'
 
@@ -101,6 +102,7 @@ type Main = {
 
 export type { Main }
 
+/** A multimedia evidence record associated with a biodiversity occurrence. */
 const main = l.record<'tid', Main>(
   'tid',
   $nsid,

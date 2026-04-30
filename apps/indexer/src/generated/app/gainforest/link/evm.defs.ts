@@ -4,13 +4,13 @@
 
 import { l } from '@atproto/lex'
 
-const $nsid = 'app.bumicerts.link.evm'
+const $nsid = 'app.gainforest.link.evm'
 
 export { $nsid }
 
 /** A verifiable link between an ATProto DID and an EVM wallet address, with platform attestation. The user proves wallet ownership via EIP-712 signature, and the platform co-signs to attest the linking occurred through a trusted service. */
 type Main = {
-  $type: 'app.bumicerts.link.evm'
+  $type: 'app.gainforest.link.evm'
 
   /**
    * Optional user-defined name for this wallet link (e.g. 'Personal Wallet', 'Project Treasury'). Helps users identify which wallet this record represents when they have multiple linked wallets.
@@ -82,7 +82,7 @@ export const $assert = /*#__PURE__*/ main.assert.bind(main),
 
 /** EOA wallet ownership proof via EIP-712 typed data signature. */
 type Eip712Proof = {
-  $type?: 'app.bumicerts.link.evm#eip712Proof'
+  $type?: 'app.gainforest.link.evm#eip712Proof'
 
   /**
    * User's ECDSA signature over the EIP-712 hash (hex-encoded with 0x prefix, 64 or 65 bytes).
@@ -111,7 +111,7 @@ export { eip712Proof }
 
 /** The EIP-712 typed data message signed by the user's wallet. */
 type Eip712Message = {
-  $type?: 'app.bumicerts.link.evm#eip712Message'
+  $type?: 'app.gainforest.link.evm#eip712Message'
 
   /**
    * The ATProto DID being linked to the EVM address.
@@ -158,7 +158,7 @@ export { eip712Message }
 
 /** Platform's EIP-712 attestation that this DID-wallet link was created through a trusted service. The platform signs over the user's signature to bind its attestation to the specific linking event. */
 type Eip712PlatformAttestation = {
-  $type?: 'app.bumicerts.link.evm#eip712PlatformAttestation'
+  $type?: 'app.gainforest.link.evm#eip712PlatformAttestation'
 
   /**
    * Platform's ECDSA signature over the signedData (hex-encoded with 0x prefix, 64 or 65 bytes).

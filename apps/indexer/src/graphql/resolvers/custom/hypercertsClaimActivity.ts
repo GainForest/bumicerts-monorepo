@@ -31,7 +31,11 @@ import type { RecordRow } from "@/db/types.ts";
 
 // Import the generated NS class token — Pothos merges multiple objectType()
 // calls on the same class so we can attach `activity` here without conflicts.
-import { HypercertsClaimNS, BumicertsFundingConfigRecordType, mapBumicertsFundingConfig } from "../generated.ts";
+import {
+  HypercertsClaimNS,
+  GainforestFundingConfigRecordType,
+  mapGainforestFundingConfig,
+} from "../generated.ts";
 
 // JSONB accessors
 const s = (p: Record<string, unknown>, k: string): string | null => {
@@ -110,11 +114,11 @@ const HypercertsClaimActivityItemType = builder.simpleObject("HypercertsClaimAct
     creatorInfo:   t.field({ type: CreatorInfoType }),
     record:        t.field({ type: HypercertsClaimActivityRecordType }),
     fundingConfig: t.field({
-      type: BumicertsFundingConfigRecordType,
+      type: GainforestFundingConfigRecordType,
       nullable: true,
       description:
         "The associated funding / donations configuration for this activity " +
-        "(app.bumicerts.funding.config record with the same rkey). " +
+        "(app.gainforest.funding.config record with the same rkey). " +
         "Null if no funding configuration has been created for this activity.",
     }),
   }),
@@ -135,7 +139,7 @@ export async function mapHypercertsClaimActivity(
     tier: string; labeler: string; labeledAt: string | null; syncedAt: string;
     score: number | null; breakdown: unknown;
   } | null = null,
-  fundingConfigRecord: Awaited<ReturnType<typeof mapBumicertsFundingConfig>>["record"] | null = null,
+  fundingConfigRecord: Awaited<ReturnType<typeof mapGainforestFundingConfig>>["record"] | null = null,
 ) {
   const p = payload(row);
   return {
@@ -257,7 +261,7 @@ builder.objectFields(HypercertsClaimNS, (t) => ({
 
         // Batch-load funding configs: one DB query for all (did, rkey) pairs on this page.
         const fundingConfigMap = await getRecordsByDidRkeyPairs(
-          "app.bumicerts.funding.config",
+          "app.gainforest.funding.config",
           rows.map((r) => ({ did: r.did, rkey: r.rkey }))
         );
 
@@ -274,7 +278,7 @@ builder.objectFields(HypercertsClaimNS, (t) => ({
 
           // Resolve the funding config record for this activity (same did + rkey)
           const fcRow = fundingConfigMap.get(`${row.did}:${row.rkey}`) ?? null;
-          const fcRecord = fcRow ? (await mapBumicertsFundingConfig(fcRow)).record : null;
+          const fcRecord = fcRow ? (await mapGainforestFundingConfig(fcRow)).record : null;
 
           return mapHypercertsClaimActivity(row, label, fcRecord);
         }));

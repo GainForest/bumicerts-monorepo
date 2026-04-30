@@ -36,7 +36,7 @@ export const EXCLUDED_COLLECTIONS = new Set<string>([
   // Custom: EVM wallet link has nested EIP-712 proof sub-objects, a `valid`
   // boolean metadata field computed at query time from cryptographic verification,
   // and a custom EvmLinkWhereInput with a `valid` filter.
-  "app.bumicerts.link.evm",
+  "app.gainforest.link.evm",
 ]);
 
 // ─────────────────────────────────────────────────────────────────────────────

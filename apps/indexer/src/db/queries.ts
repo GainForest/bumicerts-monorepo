@@ -238,7 +238,7 @@ export async function getRecordsByCollection(
 /**
  * Batch-fetch records from a single collection by DID + rkey pairs.
  *
- * Used for join-style lookups, e.g. fetching all `app.bumicerts.funding.config`
+ * Used for join-style lookups, e.g. fetching all `app.gainforest.funding.config`
  * records that share an rkey with a set of `org.hypercerts.claim.activity` rows.
  *
  * Returns a Map keyed by `"${did}:${rkey}"` for O(1) lookup.

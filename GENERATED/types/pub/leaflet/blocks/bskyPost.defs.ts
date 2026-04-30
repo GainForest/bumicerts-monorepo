@@ -12,6 +12,7 @@ export { $nsid }
 type Main = {
   $type?: 'pub.leaflet.blocks.bskyPost'
   postRef: RepoStrongRef.Main
+  clientHost?: string
 }
 
 export type { Main }
@@ -21,6 +22,7 @@ const main = l.typedObject<Main>(
   'main',
   l.object({
     postRef: l.ref<RepoStrongRef.Main>((() => RepoStrongRef.main) as any),
+    clientHost: l.optional(l.string()),
   }),
 )
 

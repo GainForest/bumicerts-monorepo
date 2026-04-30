@@ -508,19 +508,6 @@
                         "type": "string",
                         "format": "uri",
                         "description": "URL to a representative species image."
-                    },
-                    "establishmentMeans": {
-                        "type": "string",
-                        "description": "The process by which the organism became established at the location. Uses the GBIF controlled vocabulary for establishmentMeans.",
-                        "maxGraphemes": 64,
-                        "enum": [
-                            "native",
-                            "introduced",
-                            "naturalised",
-                            "invasive",
-                            "managed",
-                            "uncertain"
-                        ]
                     }
                 }
             }

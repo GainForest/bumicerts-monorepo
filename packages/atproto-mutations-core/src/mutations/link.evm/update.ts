@@ -3,7 +3,7 @@ import type { ValidationIssue } from "../../result";
 import { AtprotoAgent } from "../../services/AtprotoAgent";
 import {
   $parse,
-} from "@gainforest/generated/app/bumicerts/link/evm.defs";
+} from "@gainforest/generated/app/gainforest/link/evm.defs";
 import type {
   LinkEvmMutationResult,
   LinkEvmRecord,
@@ -23,7 +23,7 @@ import {
   putRecord,
 } from "../../utils/shared";
 
-const COLLECTION = "app.bumicerts.link.evm";
+const COLLECTION = "app.gainforest.link.evm";
 
 const makePdsError = (message: string, cause: unknown) =>
   new LinkEvmPdsError({ message, cause });
@@ -32,7 +32,7 @@ const makeValidationError = (message: string, cause: unknown, issues?: Validatio
   new LinkEvmValidationError({ message, cause, issues });
 
 /**
- * Updates an existing app.bumicerts.link.evm record.
+ * Updates an existing app.gainforest.link.evm record.
  *
  * Only the mutable field `name` can be updated — the cryptographic proof
  * fields (address, userProof, platformAttestation) are carried over unchanged

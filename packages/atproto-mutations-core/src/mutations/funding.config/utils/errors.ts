@@ -2,7 +2,7 @@ import { Data } from "effect";
 import type { ValidationIssue } from "../../../result";
 
 /**
- * Input failed validation against the app.bumicerts.funding.config lexicon.
+ * Input failed validation against the app.gainforest.funding.config lexicon.
  * Raised by all operations (create, update, upsert) before any PDS call.
  */
 export class FundingConfigValidationError extends Data.TaggedError(

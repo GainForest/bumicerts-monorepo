@@ -9,6 +9,7 @@ import * as BlocksBlockquote from '../blocks/blockquote.defs.ts'
 import * as BlocksHeader from '../blocks/header.defs.ts'
 import * as BlocksImage from '../blocks/image.defs.ts'
 import * as BlocksUnorderedList from '../blocks/unorderedList.defs.ts'
+import * as BlocksOrderedList from '../blocks/orderedList.defs.ts'
 import * as BlocksWebsite from '../blocks/website.defs.ts'
 import * as BlocksMath from '../blocks/math.defs.ts'
 import * as BlocksCode from '../blocks/code.defs.ts'
@@ -63,6 +64,7 @@ type Block = {
     | l.$Typed<BlocksHeader.Main>
     | l.$Typed<BlocksImage.Main>
     | l.$Typed<BlocksUnorderedList.Main>
+    | l.$Typed<BlocksOrderedList.Main>
     | l.$Typed<BlocksWebsite.Main>
     | l.$Typed<BlocksMath.Main>
     | l.$Typed<BlocksCode.Main>
@@ -95,6 +97,9 @@ const block = l.typedObject<Block>(
         l.typedRef<BlocksImage.Main>((() => BlocksImage.main) as any),
         l.typedRef<BlocksUnorderedList.Main>(
           (() => BlocksUnorderedList.main) as any,
+        ),
+        l.typedRef<BlocksOrderedList.Main>(
+          (() => BlocksOrderedList.main) as any,
         ),
         l.typedRef<BlocksWebsite.Main>((() => BlocksWebsite.main) as any),
         l.typedRef<BlocksMath.Main>((() => BlocksMath.main) as any),

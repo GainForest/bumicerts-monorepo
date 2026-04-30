@@ -8,10 +8,10 @@
  *   3. stats.ts / tap.ts — independent resolver modules kept as-is
  */
 
-// Auto-generated resolvers (36 standard collections)
+// Auto-generated resolvers (41 standard collections)
 import "./generated.ts";
 
-// Custom overrides for the 5 excluded collections
+// Custom overrides for the 4 excluded collections
 import "./custom/index.ts";
 
 // Independent resolver modules (unchanged)

@@ -61,58 +61,6 @@ const j = (p: Record<string, unknown>, k: string): unknown => p[k] ?? null;
 // ════════════════════════════════════════════════════════════════════════════
 
 // ──────────────────────────────────────────────────────────────────────────
-// app.bumicerts.funding.config
-// ──────────────────────────────────────────────────────────────────────────
-
-export const BumicertsFundingConfigRecordType = builder.simpleObject("BumicertsFundingConfigRecord", {
-  description: "Pure payload for app.bumicerts.funding.config. The funding / donations configuration for a given bumicert.",
-  fields: (t) => ({
-        receivingWallet: t.field({ type: "JSON", nullable: true, description: "Reference to the wallet link record where funds should be received. Open union to support future wallet types (e.g. Solana, Cosmos)." }),
-        goalInUSD: t.string({ nullable: true, description: "An optional field to set a fundraising goal in USD (e.g. '1000.50')." }),
-        minDonationInUSD: t.string({ nullable: true, description: "Optional minimum donation amount in USD (e.g. '1.00'). Donations below this amount will be rejected." }),
-        maxDonationInUSD: t.string({ nullable: true, description: "Optional maximum donation amount in USD (e.g. '10000.00'). Donations above this amount will be rejected." }),
-        allowOversell: t.boolean({ nullable: true, description: "An optional field to determine if donations are accepted post the goal reach. Defaults to true (overselling is allowed)." }),
-        status: t.string({ nullable: true, description: "The current status of the listing. Defaults to 'open'." }),
-        updatedAt: t.field({ type: "DateTime", nullable: true, description: "Client-declared timestamp when this record was last updated." }),
-        createdAt: t.field({ type: "DateTime", nullable: true, description: "Client-declared timestamp when this record was originally created." }),
-  }),
-});
-
-export const BumicertsFundingConfigItemType = builder.simpleObject("BumicertsFundingConfigItem", {
-  description: "A record from app.bumicerts.funding.config.",
-  fields: (t) => ({
-    metadata:    t.field({ type: RecordMetaType }),
-    creatorInfo: t.field({ type: CreatorInfoType }),
-    record:      t.field({ type: BumicertsFundingConfigRecordType }),
-  }),
-});
-
-export const BumicertsFundingConfigPageType = builder.simpleObject("BumicertsFundingConfigPage", {
-  fields: (t) => ({
-    data:     t.field({ type: [BumicertsFundingConfigItemType] }),
-    pageInfo: t.field({ type: PageInfoType }),
-  }),
-});
-
-export async function mapBumicertsFundingConfig(row: RecordRow) {
-  const p = payload(row);
-  return {
-    metadata:    rowToMeta(row),
-    creatorInfo: await resolveCreatorInfo(row.did),
-    record: {
-            receivingWallet: j(p, "receivingWallet"),
-            goalInUSD: s(p, "goalInUSD"),
-            minDonationInUSD: s(p, "minDonationInUSD"),
-            maxDonationInUSD: s(p, "maxDonationInUSD"),
-            allowOversell: b(p, "allowOversell"),
-            status: s(p, "status"),
-            updatedAt: s(p, "updatedAt"),
-            createdAt: s(p, "createdAt"),
-    },
-  };
-}
-
-// ──────────────────────────────────────────────────────────────────────────
 // app.certified.actor.organization
 // ──────────────────────────────────────────────────────────────────────────
 
@@ -123,6 +71,8 @@ export const CertifiedActorOrganizationRecordType = builder.simpleObject("Certif
         urls: t.field({ type: "JSON", nullable: true, description: "Additional reference URLs (social media profiles, contact pages, donation links, etc.) with a display label for each URL." }),
         location: t.field({ type: StrongRefType, nullable: true, description: "A strong reference to the location where the organization is based. The record referenced must conform with the lexicon app.certified.location." }),
         foundedDate: t.field({ type: "DateTime", nullable: true, description: "When the organization was established. Stored as datetime per ATProto conventions (no date-only format exists). Clients should use midnight UTC (e.g., '2005-01-01T00:00:00.000Z'); consumers should treat only the date portion as canonical." }),
+        longDescription: t.field({ type: "JSON", nullable: true, description: "Long-form description of the organization, such as its mission, history, or detailed project narrative. An inline string for plain text or markdown, a Leaflet linear document record embedded directly, or a strong reference to an existing document record." }),
+        visibility: t.string({ nullable: true, description: "Controls whether the organization or project is publicly discoverable on platforms that honor this setting." }),
         createdAt: t.field({ type: "DateTime", nullable: true, description: "Client-declared timestamp when this record was originally created." }),
   }),
 });
@@ -153,6 +103,8 @@ export async function mapCertifiedActorOrganization(row: RecordRow) {
             urls: j(p, "urls"),
             location: extractStrongRef(j(p, "location")),
             foundedDate: s(p, "foundedDate"),
+            longDescription: j(p, "longDescription"),
+            visibility: s(p, "visibility"),
             createdAt: s(p, "createdAt"),
     },
   };
@@ -443,7 +395,7 @@ export async function mapCertifiedLocation(row: RecordRow) {
 // ──────────────────────────────────────────────────────────────────────────
 
 export const GainforestAcAudioRecordType = builder.simpleObject("GainforestAcAudioRecord", {
-  description: "Pure payload for app.gainforest.ac.audio.",
+  description: "Pure payload for app.gainforest.ac.audio. An audio recording record with technical metadata and optional links to occurrence, deployment, and site records.",
   fields: (t) => ({
         name: t.string({ nullable: true, description: "A short human-readable name or label for this audio recording." }),
         description: t.field({ type: "JSON", nullable: true, description: "A longer human-readable description of the audio recording content." }),
@@ -505,7 +457,7 @@ export async function mapGainforestAcAudio(row: RecordRow) {
 // ──────────────────────────────────────────────────────────────────────────
 
 export const GainforestAcDeploymentRecordType = builder.simpleObject("GainforestAcDeploymentRecord", {
-  description: "Pure payload for app.gainforest.ac.deployment.",
+  description: "Pure payload for app.gainforest.ac.deployment. A passive acoustic monitoring device deployment record describing recorder setup, placement, and timing.",
   fields: (t) => ({
         name: t.string({ nullable: true, description: "A short human-readable label for this deployment (e.g., 'Site A North — AudioMoth March 2024')." }),
         deviceModel: t.string({ nullable: true, description: "Recording device model name (e.g., 'AudioMoth 1.2.0', 'AudioMoth 1.1.0', 'Wildlife Acoustics Song Meter SM4', 'Cornell Lab Swift'). Aligns with AC ac:captureDevice." }),
@@ -585,7 +537,7 @@ export async function mapGainforestAcDeployment(row: RecordRow) {
 // ──────────────────────────────────────────────────────────────────────────
 
 export const GainforestAcMultimediaRecordType = builder.simpleObject("GainforestAcMultimediaRecord", {
-  description: "Pure payload for app.gainforest.ac.multimedia.",
+  description: "Pure payload for app.gainforest.ac.multimedia. A multimedia evidence record associated with a biodiversity occurrence.",
   fields: (t) => ({
         occurrenceRef: t.string({ nullable: true, description: "AT-URI of the dwc.occurrence record this media is evidence for." }),
         siteRef: t.string({ nullable: true, description: "AT-URI of the organization site record where this media was captured." }),
@@ -637,6 +589,48 @@ export async function mapGainforestAcMultimedia(row: RecordRow) {
             caption: s(p, "caption"),
             creator: s(p, "creator"),
             createDate: s(p, "createDate"),
+            createdAt: s(p, "createdAt"),
+    },
+  };
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// app.gainforest.asset.file
+// ──────────────────────────────────────────────────────────────────────────
+
+export const GainforestAssetFileRecordType = builder.simpleObject("GainforestAssetFileRecord", {
+  description: "Pure payload for app.gainforest.asset.file. A durable asset anchor record for an uploaded blob and optional tags.",
+  fields: (t) => ({
+        file: t.field({ type: "JSON", nullable: true, description: "Uploaded file blob. This record can be used as a durable anchor so temporary uploads are not garbage-collected before final attachment." }),
+        tags: t.stringList({ nullable: true, description: "Optional machine-readable tags for quick checks and filtering." }),
+        createdAt: t.field({ type: "DateTime", nullable: true, description: "Timestamp of record creation in the ATProto PDS." }),
+  }),
+});
+
+export const GainforestAssetFileItemType = builder.simpleObject("GainforestAssetFileItem", {
+  description: "A record from app.gainforest.asset.file.",
+  fields: (t) => ({
+    metadata:    t.field({ type: RecordMetaType }),
+    creatorInfo: t.field({ type: CreatorInfoType }),
+    record:      t.field({ type: GainforestAssetFileRecordType }),
+  }),
+});
+
+export const GainforestAssetFilePageType = builder.simpleObject("GainforestAssetFilePage", {
+  fields: (t) => ({
+    data:     t.field({ type: [GainforestAssetFileItemType] }),
+    pageInfo: t.field({ type: PageInfoType }),
+  }),
+});
+
+export async function mapGainforestAssetFile(row: RecordRow) {
+  const p = payload(row);
+  return {
+    metadata:    rowToMeta(row),
+    creatorInfo: await resolveCreatorInfo(row.did),
+    record: {
+            file: await resolveBlobsInValue(j(p, "file"), row.did),
+            tags: arr(p, "tags"),
             createdAt: s(p, "createdAt"),
     },
   };
@@ -1007,6 +1001,58 @@ export async function mapGainforestEvaluatorSubscription(row: RecordRow) {
             evaluator: s(p, "evaluator"),
             collections: arr(p, "collections"),
             evaluationTypes: arr(p, "evaluationTypes"),
+            createdAt: s(p, "createdAt"),
+    },
+  };
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// app.gainforest.funding.config
+// ──────────────────────────────────────────────────────────────────────────
+
+export const GainforestFundingConfigRecordType = builder.simpleObject("GainforestFundingConfigRecord", {
+  description: "Pure payload for app.gainforest.funding.config. The funding / donations configuration for a given bumicert.",
+  fields: (t) => ({
+        receivingWallet: t.field({ type: "JSON", nullable: true, description: "Reference to the wallet link record where funds should be received. Open union to support future wallet types (e.g. Solana, Cosmos)." }),
+        goalInUSD: t.string({ nullable: true, description: "An optional field to set a fundraising goal in USD (e.g. '1000.50')." }),
+        minDonationInUSD: t.string({ nullable: true, description: "Optional minimum donation amount in USD (e.g. '1.00'). Donations below this amount will be rejected." }),
+        maxDonationInUSD: t.string({ nullable: true, description: "Optional maximum donation amount in USD (e.g. '10000.00'). Donations above this amount will be rejected." }),
+        allowOversell: t.boolean({ nullable: true, description: "An optional field to determine if donations are accepted post the goal reach. Defaults to true (overselling is allowed)." }),
+        status: t.string({ nullable: true, description: "The current status of the listing. Defaults to 'open'." }),
+        updatedAt: t.field({ type: "DateTime", nullable: true, description: "Client-declared timestamp when this record was last updated." }),
+        createdAt: t.field({ type: "DateTime", nullable: true, description: "Client-declared timestamp when this record was originally created." }),
+  }),
+});
+
+export const GainforestFundingConfigItemType = builder.simpleObject("GainforestFundingConfigItem", {
+  description: "A record from app.gainforest.funding.config.",
+  fields: (t) => ({
+    metadata:    t.field({ type: RecordMetaType }),
+    creatorInfo: t.field({ type: CreatorInfoType }),
+    record:      t.field({ type: GainforestFundingConfigRecordType }),
+  }),
+});
+
+export const GainforestFundingConfigPageType = builder.simpleObject("GainforestFundingConfigPage", {
+  fields: (t) => ({
+    data:     t.field({ type: [GainforestFundingConfigItemType] }),
+    pageInfo: t.field({ type: PageInfoType }),
+  }),
+});
+
+export async function mapGainforestFundingConfig(row: RecordRow) {
+  const p = payload(row);
+  return {
+    metadata:    rowToMeta(row),
+    creatorInfo: await resolveCreatorInfo(row.did),
+    record: {
+            receivingWallet: j(p, "receivingWallet"),
+            goalInUSD: s(p, "goalInUSD"),
+            minDonationInUSD: s(p, "minDonationInUSD"),
+            maxDonationInUSD: s(p, "maxDonationInUSD"),
+            allowOversell: b(p, "allowOversell"),
+            status: s(p, "status"),
+            updatedAt: s(p, "updatedAt"),
             createdAt: s(p, "createdAt"),
     },
   };
@@ -1629,7 +1675,7 @@ export async function mapGainforestOrganizationPredictionsFlora(row: RecordRow) 
 export const HyperboardsBoardRecordType = builder.simpleObject("HyperboardsBoardRecord", {
   description: "Pure payload for org.hyperboards.board. Configuration record for a hyperboard, wrapping an underlying activity or collection with visual presentation settings. Stored in the creator's PDS.",
   fields: (t) => ({
-        subject: t.field({ type: StrongRefType, nullable: true, description: "Reference to the org.hypercerts.claim.activity or org.hypercerts.claim.collection this board visualizes." }),
+        subject: t.field({ type: StrongRefType, nullable: true, description: "Reference to the org.hypercerts.claim.activity or org.hypercerts.collection this board visualizes." }),
         config: t.field({ type: "JSON", nullable: true, description: "Board-level visual configuration (background, colors, aspect ratio)." }),
         contributorConfigs: t.field({ type: "JSON", nullable: true, description: "Per-contributor configuration entries for this board." }),
         createdAt: t.field({ type: "DateTime", nullable: true, description: "Client-declared timestamp when this record was originally created." }),
@@ -1863,7 +1909,7 @@ export const HypercertsCollectionRecordType = builder.simpleObject("HypercertsCo
         title: t.string({ nullable: true, description: "Display name for this collection (e.g. 'Q1 2025 Impact Projects')" }),
         shortDescription: t.string({ nullable: true, description: "Short summary of this collection, suitable for previews and list views. Rich text annotations may be provided via `shortDescriptionFacets`." }),
         shortDescriptionFacets: t.field({ type: "JSON", nullable: true, description: "Rich text annotations for `shortDescription` (mentions, URLs, hashtags, etc)." }),
-        description: t.field({ type: "JSON", nullable: true, description: "Rich-text description, represented as a Leaflet linear document." }),
+        description: t.field({ type: "JSON", nullable: true, description: "Long-form description of the collection. An inline string for plain text or markdown, a Leaflet linear document for rich-text content, or a strong reference to an external description record." }),
         avatar: t.field({ type: "JSON", nullable: true, description: "The collection's avatar/profile image as a URI or image blob." }),
         banner: t.field({ type: "JSON", nullable: true, description: "Larger horizontal image to display behind the collection view." }),
         items: t.field({ type: "JSON", nullable: true, description: "Array of items in this collection with optional weights." }),
@@ -1967,7 +2013,7 @@ export const HypercertsContextAttachmentRecordType = builder.simpleObject("Hyper
         title: t.string({ nullable: true, description: "Display title for this attachment (e.g. 'Impact Assessment Report', 'Audit Findings')" }),
         shortDescription: t.string({ nullable: true, description: "Short summary of this attachment, suitable for previews and list views. Rich text annotations may be provided via `shortDescriptionFacets`." }),
         shortDescriptionFacets: t.field({ type: "JSON", nullable: true, description: "Rich text annotations for `shortDescription` (mentions, URLs, hashtags, etc)." }),
-        description: t.field({ type: "JSON", nullable: true, description: "Rich-text description, represented as a Leaflet linear document." }),
+        description: t.field({ type: "JSON", nullable: true, description: "Long-form description of the attachment. An inline string for plain text or markdown, a Leaflet linear document for rich-text content, or a strong reference to an external description record." }),
         location: t.field({ type: StrongRefType, nullable: true, description: "A strong reference to the location where this attachment's subject matter occurred. The record referenced must conform with the lexicon app.certified.location." }),
         createdAt: t.field({ type: "DateTime", nullable: true, description: "Client-declared timestamp when this record was originally created." }),
   }),
@@ -2244,16 +2290,16 @@ export async function mapHypercertsWorkscopeTag(row: RecordRow) {
 // NAMESPACE CLASSES
 // ════════════════════════════════════════════════════════════════════════════
 
-export class BumicertsNS {}
-export class BumicertsFundingNS {}
 export class CertifiedNS {}
 export class CertifiedActorNS {}
 export class CertifiedBadgeNS {}
 export class CertifiedLinkNS {}
 export class GainforestNS {}
 export class GainforestAcNS {}
+export class GainforestAssetNS {}
 export class GainforestDwcNS {}
 export class GainforestEvaluatorNS {}
+export class GainforestFundingNS {}
 export class GainforestGbifNS {}
 export class GainforestOrganizationNS {}
 export class GainforestOrganizationObservationsNS {}
@@ -2268,33 +2314,6 @@ export class HypercertsWorkscopeNS {}
 // ════════════════════════════════════════════════════════════════════════════
 // NAMESPACE OBJECTTYPES  (children declared before parents)
 // ════════════════════════════════════════════════════════════════════════════
-
-builder.objectType(BumicertsFundingNS, {
-  name: "BumicertsFundingNamespace",
-  description: "BumicertsFundingNamespace namespace (bumicerts.funding.*).",
-  fields: (t) => ({
-    config: t.field({
-      type: BumicertsFundingConfigPageType,
-      description: "Paginated list of app.bumicerts.funding.config records.",
-      args: {
-        cursor: t.arg.string(),
-        limit: t.arg.int(),
-        where: t.arg({ type: WhereInputRef, required: false }),
-        sortBy: t.arg({ type: SortFieldEnum }),
-        order: t.arg({ type: SortOrderEnum }),
-      },
-      resolve: (_, args) => fetchCollectionPage("app.bumicerts.funding.config", args, mapBumicertsFundingConfig),
-    }),
-  }),
-});
-
-builder.objectType(BumicertsNS, {
-  name: "BumicertsNamespace",
-  description: "BumicertsNamespace namespace (bumicerts.*).",
-  fields: (t) => ({
-    funding: t.field({ type: BumicertsFundingNS, description: "BumicertsFundingNamespace namespace.", resolve: () => new BumicertsFundingNS() }),
-  }),
-});
 
 builder.objectType(CertifiedActorNS, {
   name: "CertifiedActorNamespace",
@@ -2464,6 +2483,27 @@ builder.objectType(GainforestAcNS, {
   }),
 });
 
+builder.objectType(GainforestAssetNS, {
+  name: "GainforestAssetNamespace",
+  description: "GainforestAssetNamespace namespace (gainforest.asset.*).",
+  fields: (t) => ({
+    file: t.field({
+      type: GainforestAssetFilePageType,
+      description: "Paginated list of app.gainforest.asset.file records.",
+      args: {
+        cursor: t.arg.string(),
+        limit: t.arg.int(),
+        where: t.arg({ type: WhereInputRef, required: false }),
+        sortBy: t.arg({ type: SortFieldEnum }),
+        order: t.arg({ type: SortOrderEnum }),
+      },
+      resolve: (_, args) => fetchCollectionPage("app.gainforest.asset.file", args, mapGainforestAssetFile, {
+        preFetch: (rows) => getPdsHostsBatch([...new Set(rows.map((r) => r.did))]),
+      }),
+    }),
+  }),
+});
+
 builder.objectType(GainforestDwcNS, {
   name: "GainforestDwcNamespace",
   description: "GainforestDwcNamespace namespace (gainforest.dwc.*).",
@@ -2546,6 +2586,25 @@ builder.objectType(GainforestEvaluatorNS, {
         order: t.arg({ type: SortOrderEnum }),
       },
       resolve: (_, args) => fetchCollectionPage("app.gainforest.evaluator.subscription", args, mapGainforestEvaluatorSubscription),
+    }),
+  }),
+});
+
+builder.objectType(GainforestFundingNS, {
+  name: "GainforestFundingNamespace",
+  description: "GainforestFundingNamespace namespace (gainforest.funding.*).",
+  fields: (t) => ({
+    config: t.field({
+      type: GainforestFundingConfigPageType,
+      description: "Paginated list of app.gainforest.funding.config records.",
+      args: {
+        cursor: t.arg.string(),
+        limit: t.arg.int(),
+        where: t.arg({ type: WhereInputRef, required: false }),
+        sortBy: t.arg({ type: SortFieldEnum }),
+        order: t.arg({ type: SortOrderEnum }),
+      },
+      resolve: (_, args) => fetchCollectionPage("app.gainforest.funding.config", args, mapGainforestFundingConfig),
     }),
   }),
 });
@@ -2727,8 +2786,10 @@ builder.objectType(GainforestNS, {
   description: "GainforestNamespace namespace (gainforest.*).",
   fields: (t) => ({
     ac: t.field({ type: GainforestAcNS, description: "GainforestAcNamespace namespace.", resolve: () => new GainforestAcNS() }),
+    asset: t.field({ type: GainforestAssetNS, description: "GainforestAssetNamespace namespace.", resolve: () => new GainforestAssetNS() }),
     dwc: t.field({ type: GainforestDwcNS, description: "GainforestDwcNamespace namespace.", resolve: () => new GainforestDwcNS() }),
     evaluator: t.field({ type: GainforestEvaluatorNS, description: "GainforestEvaluatorNamespace namespace.", resolve: () => new GainforestEvaluatorNS() }),
+    funding: t.field({ type: GainforestFundingNS, description: "GainforestFundingNamespace namespace.", resolve: () => new GainforestFundingNS() }),
     gbif: t.field({ type: GainforestGbifNS, description: "GainforestGbifNamespace namespace.", resolve: () => new GainforestGbifNS() }),
     organization: t.field({ type: GainforestOrganizationNS, description: "GainforestOrganizationNamespace namespace.", resolve: () => new GainforestOrganizationNS() }),
   }),
@@ -2945,11 +3006,6 @@ builder.objectType(HypercertsNS, {
 // ════════════════════════════════════════════════════════════════════════════
 
 builder.queryFields((t) => ({
-  bumicerts: t.field({
-    type: BumicertsNS,
-    description: "All BumicertsNamespace indexed records.",
-    resolve: () => new BumicertsNS(),
-  }),
   certified: t.field({
     type: CertifiedNS,
     description: "All CertifiedNamespace indexed records.",

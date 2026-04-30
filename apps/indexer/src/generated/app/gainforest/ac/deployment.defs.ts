@@ -8,6 +8,7 @@ const $nsid = 'app.gainforest.ac.deployment'
 
 export { $nsid }
 
+/** A passive acoustic monitoring device deployment record describing recorder setup, placement, and timing. */
 type Main = {
   $type: 'app.gainforest.ac.deployment'
 
@@ -124,6 +125,7 @@ type Main = {
 
 export type { Main }
 
+/** A passive acoustic monitoring device deployment record describing recorder setup, placement, and timing. */
 const main = l.record<'tid', Main>(
   'tid',
   $nsid,

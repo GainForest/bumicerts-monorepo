@@ -4,6 +4,8 @@
 
 import { l } from '@atproto/lex'
 import * as RepoStrongRef from '../../../com/atproto/repo/strongRef.defs.ts'
+import * as HypercertsDefs from '../../../org/hypercerts/defs.defs.ts'
+import * as PagesLinearDocument from '../../../pub/leaflet/pages/linearDocument.defs.ts'
 
 const $nsid = 'app.certified.actor.organization'
 
@@ -34,6 +36,20 @@ type Main = {
   foundedDate?: l.DatetimeString
 
   /**
+   * Long-form description of the organization, such as its mission, history, or detailed project narrative. An inline string for plain text or markdown, a Leaflet linear document record embedded directly, or a strong reference to an existing document record.
+   */
+  longDescription?:
+    | l.$Typed<HypercertsDefs.DescriptionString>
+    | l.$Typed<PagesLinearDocument.Main>
+    | l.$Typed<RepoStrongRef.Main>
+    | l.Unknown$TypedObject
+
+  /**
+   * Controls whether the organization or project is publicly discoverable on platforms that honor this setting.
+   */
+  visibility?: 'public' | 'unlisted' | l.UnknownString
+
+  /**
    * Client-declared timestamp when this record was originally created.
    */
   createdAt: l.DatetimeString
@@ -56,6 +72,21 @@ const main = l.record<'literal:self', Main>(
       l.ref<RepoStrongRef.Main>((() => RepoStrongRef.main) as any),
     ),
     foundedDate: l.optional(l.string({ format: 'datetime' })),
+    longDescription: l.optional(
+      l.typedUnion(
+        [
+          l.typedRef<HypercertsDefs.DescriptionString>(
+            (() => HypercertsDefs.descriptionString) as any,
+          ),
+          l.typedRef<PagesLinearDocument.Main>(
+            (() => PagesLinearDocument.main) as any,
+          ),
+          l.typedRef<RepoStrongRef.Main>((() => RepoStrongRef.main) as any),
+        ],
+        false,
+      ),
+    ),
+    visibility: l.optional(l.string<{ knownValues: ['public', 'unlisted'] }>()),
     createdAt: l.string({ format: 'datetime' }),
   }),
 )

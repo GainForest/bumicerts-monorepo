@@ -6,9 +6,9 @@ import {
   FundingConfigPdsError,
 } from "./utils/errors";
 import { fetchRecord, deleteRecord } from "../../utils/shared";
-import { $parse } from "@gainforest/generated/app/bumicerts/funding/config.defs";
+import { $parse } from "@gainforest/generated/app/gainforest/funding/config.defs";
 
-const COLLECTION = "app.bumicerts.funding.config";
+const COLLECTION = "app.gainforest.funding.config";
 
 const makePdsError = (message: string, cause: unknown) =>
   new FundingConfigPdsError({ message, cause });

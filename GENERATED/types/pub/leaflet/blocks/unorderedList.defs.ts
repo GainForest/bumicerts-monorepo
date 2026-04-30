@@ -6,6 +6,7 @@ import { l } from '@atproto/lex'
 import * as BlocksText from './text.defs.ts'
 import * as BlocksHeader from './header.defs.ts'
 import * as BlocksImage from './image.defs.ts'
+import * as BlocksOrderedList from './orderedList.defs.ts'
 
 const $nsid = 'pub.leaflet.blocks.unorderedList'
 
@@ -38,12 +39,26 @@ export const $assert = /*#__PURE__*/ main.assert.bind(main),
 
 type ListItem = {
   $type?: 'pub.leaflet.blocks.unorderedList#listItem'
+
+  /**
+   * If present, this item is a checklist item. true = checked, false = unchecked. If absent, this is a normal list item.
+   */
+  checked?: boolean
   content:
     | l.$Typed<BlocksText.Main>
     | l.$Typed<BlocksHeader.Main>
     | l.$Typed<BlocksImage.Main>
     | l.Unknown$TypedObject
+
+  /**
+   * Nested unordered list items. Mutually exclusive with orderedListChildren; if both are present, children takes precedence.
+   */
   children?: ListItem[]
+
+  /**
+   * Nested ordered list items. Mutually exclusive with children; if both are present, children takes precedence.
+   */
+  orderedListChildren?: BlocksOrderedList.Main
 }
 
 export type { ListItem }
@@ -52,6 +67,7 @@ const listItem = l.typedObject<ListItem>(
   $nsid,
   'listItem',
   l.object({
+    checked: l.optional(l.boolean()),
     content: l.typedUnion(
       [
         l.typedRef<BlocksText.Main>((() => BlocksText.main) as any),
@@ -61,6 +77,9 @@ const listItem = l.typedObject<ListItem>(
       false,
     ),
     children: l.optional(l.array(l.ref<ListItem>((() => listItem) as any))),
+    orderedListChildren: l.optional(
+      l.ref<BlocksOrderedList.Main>((() => BlocksOrderedList.main) as any),
+    ),
   }),
 )
 

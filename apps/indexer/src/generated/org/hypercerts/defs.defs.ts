@@ -3,10 +3,42 @@
  */
 
 import { l } from '@atproto/lex'
+import * as RichtextFacet from '../../app/bsky/richtext/facet.defs.ts'
 
 const $nsid = 'org.hypercerts.defs'
 
 export { $nsid }
+
+/** An inline long-form description as plain text or markdown, with optional rich-text annotations. */
+type DescriptionString = {
+  $type?: 'org.hypercerts.defs#descriptionString'
+
+  /**
+   * The description text (plain text or markdown).
+   */
+  value: string
+
+  /**
+   * Rich text annotations for the description (mentions, URLs, hashtags, etc).
+   */
+  facets?: RichtextFacet.Main[]
+}
+
+export type { DescriptionString }
+
+/** An inline long-form description as plain text or markdown, with optional rich-text annotations. */
+const descriptionString = l.typedObject<DescriptionString>(
+  $nsid,
+  'descriptionString',
+  l.object({
+    value: l.string({ maxLength: 250000, maxGraphemes: 25000 }),
+    facets: l.optional(
+      l.array(l.ref<RichtextFacet.Main>((() => RichtextFacet.main) as any)),
+    ),
+  }),
+)
+
+export { descriptionString }
 
 /** Object containing a URI to external data */
 type Uri = {
@@ -36,7 +68,7 @@ type SmallBlob = {
   /**
    * Blob to external data (up to 10MB)
    */
-  blob: l.BlobRef
+  blob: l.BlobRef | l.LegacyBlobRef
 }
 
 export type { SmallBlob }
@@ -46,7 +78,7 @@ const smallBlob = l.typedObject<SmallBlob>(
   $nsid,
   'smallBlob',
   l.object({
-    blob: l.blob({ accept: ['*/*'], maxSize: 10485760, allowLegacy: false }),
+    blob: l.blob({ accept: ['*/*'], maxSize: 10485760, allowLegacy: true }),
   }),
 )
 
@@ -59,7 +91,7 @@ type LargeBlob = {
   /**
    * Blob to external data (up to 100MB)
    */
-  blob: l.BlobRef
+  blob: l.BlobRef | l.LegacyBlobRef
 }
 
 export type { LargeBlob }
@@ -69,7 +101,7 @@ const largeBlob = l.typedObject<LargeBlob>(
   $nsid,
   'largeBlob',
   l.object({
-    blob: l.blob({ accept: ['*/*'], maxSize: 104857600, allowLegacy: false }),
+    blob: l.blob({ accept: ['*/*'], maxSize: 104857600, allowLegacy: true }),
   }),
 )
 
@@ -82,7 +114,7 @@ type SmallImage = {
   /**
    * Image (up to 5MB)
    */
-  image: l.BlobRef
+  image: l.BlobRef | l.LegacyBlobRef
 }
 
 export type { SmallImage }
@@ -95,7 +127,7 @@ const smallImage = l.typedObject<SmallImage>(
     image: l.blob({
       accept: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
       maxSize: 5242880,
-      allowLegacy: false,
+      allowLegacy: true,
     }),
   }),
 )
@@ -109,7 +141,7 @@ type SmallVideo = {
   /**
    * Video (up to 20MB)
    */
-  video: l.BlobRef
+  video: l.BlobRef | l.LegacyBlobRef
 }
 
 export type { SmallVideo }
@@ -122,7 +154,7 @@ const smallVideo = l.typedObject<SmallVideo>(
     video: l.blob({
       accept: ['video/mp4', 'video/webm'],
       maxSize: 20971520,
-      allowLegacy: false,
+      allowLegacy: true,
     }),
   }),
 )
@@ -136,7 +168,7 @@ type LargeImage = {
   /**
    * Image (up to 10MB)
    */
-  image: l.BlobRef
+  image: l.BlobRef | l.LegacyBlobRef
 }
 
 export type { LargeImage }
@@ -149,7 +181,7 @@ const largeImage = l.typedObject<LargeImage>(
     image: l.blob({
       accept: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
       maxSize: 10485760,
-      allowLegacy: false,
+      allowLegacy: true,
     }),
   }),
 )

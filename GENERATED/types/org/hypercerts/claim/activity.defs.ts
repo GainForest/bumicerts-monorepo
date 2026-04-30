@@ -4,10 +4,10 @@
 
 import { l } from '@atproto/lex'
 import * as RichtextFacet from '../../../app/bsky/richtext/facet.defs.ts'
-import * as PagesLinearDocument from '../../../pub/leaflet/pages/linearDocument.defs.ts'
 import * as HypercertsDefs from '../defs.defs.ts'
-import * as WorkscopeCel from '../workscope/cel.defs.ts'
+import * as PagesLinearDocument from '../../../pub/leaflet/pages/linearDocument.defs.ts'
 import * as RepoStrongRef from '../../../com/atproto/repo/strongRef.defs.ts'
+import * as WorkscopeCel from '../workscope/cel.defs.ts'
 
 const $nsid = 'org.hypercerts.claim.activity'
 
@@ -33,9 +33,13 @@ type Main = {
   shortDescriptionFacets?: RichtextFacet.Main[]
 
   /**
-   * Rich-text description, represented as a Leaflet linear document.
+   * Long-form description of the activity. An inline string for plain text or markdown, a Leaflet linear document for rich-text content, or a strong reference to an external description record.
    */
-  description?: PagesLinearDocument.Main
+  description?:
+    | l.$Typed<HypercertsDefs.DescriptionString>
+    | l.$Typed<PagesLinearDocument.Main>
+    | l.$Typed<RepoStrongRef.Main>
+    | l.Unknown$TypedObject
 
   /**
    * The hypercert visual representation as a URI or image blob.
@@ -97,7 +101,18 @@ const main = l.record<'any', Main>(
       l.array(l.ref<RichtextFacet.Main>((() => RichtextFacet.main) as any)),
     ),
     description: l.optional(
-      l.ref<PagesLinearDocument.Main>((() => PagesLinearDocument.main) as any),
+      l.typedUnion(
+        [
+          l.typedRef<HypercertsDefs.DescriptionString>(
+            (() => HypercertsDefs.descriptionString) as any,
+          ),
+          l.typedRef<PagesLinearDocument.Main>(
+            (() => PagesLinearDocument.main) as any,
+          ),
+          l.typedRef<RepoStrongRef.Main>((() => RepoStrongRef.main) as any),
+        ],
+        false,
+      ),
     ),
     image: l.optional(
       l.typedUnion(

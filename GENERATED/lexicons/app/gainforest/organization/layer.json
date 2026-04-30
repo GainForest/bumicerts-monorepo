@@ -23,6 +23,7 @@
                     "type": {
                         "type": "string",
                         "description": "The type of the layer",
+                        "maxGraphemes": 64,
                         "enum": [
                             "geojson_points",
                             "geojson_points_trees",
@@ -39,6 +40,7 @@
                     "uri": {
                         "type": "string",
                         "format": "uri",
+                        "maxGraphemes": 2048,
                         "description": "The URI of the layer"
                     },
                     "description": {

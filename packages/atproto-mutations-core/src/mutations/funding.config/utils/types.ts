@@ -2,14 +2,14 @@
 // Re-export generated types — single source of truth, no manual duplication.
 // ---------------------------------------------------------------------------
 
-export type { Main as FundingConfigRecord } from "@gainforest/generated/app/bumicerts/funding/config.defs";
-export type { EvmLinkRef } from "@gainforest/generated/app/bumicerts/funding/config.defs";
+export type { Main as FundingConfigRecord } from "@gainforest/generated/app/gainforest/funding/config.defs";
+export type { EvmLinkRef } from "@gainforest/generated/app/gainforest/funding/config.defs";
 
 // ---------------------------------------------------------------------------
 // Entity-specific derived types
 // ---------------------------------------------------------------------------
 
-import type { Main as FundingConfigRecord } from "@gainforest/generated/app/bumicerts/funding/config.defs";
+import type { Main as FundingConfigRecord } from "@gainforest/generated/app/gainforest/funding/config.defs";
 import type {
   RecordMutationResult,
   RecordCreateInput,

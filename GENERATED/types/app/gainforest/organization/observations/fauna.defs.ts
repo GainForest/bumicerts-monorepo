@@ -30,7 +30,7 @@ const main = l.record<'tid', Main>(
   'tid',
   $nsid,
   l.object({
-    gbifTaxonKeys: l.array(l.string()),
+    gbifTaxonKeys: l.array(l.string({ maxGraphemes: 64 })),
     createdAt: l.string({ format: 'datetime' }),
   }),
 )

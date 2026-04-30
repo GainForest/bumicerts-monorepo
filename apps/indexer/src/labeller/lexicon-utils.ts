@@ -1,16 +1,42 @@
 import type { Main as LinearDocument } from "@/generated/pub/leaflet/pages/linearDocument.defs.ts";
 
 /**
- * Extracts plain text from a pub.leaflet.pages.linearDocument for use in
- * scoring and HuggingFace classification. Walks the block list and pulls
- * `plaintext` from all text-bearing block types (text, header, blockquote,
- * code). Non-text blocks (image, iframe, horizontalRule, etc.) are skipped.
- * List items are recursed into via their `content` blocks.
+ * Extracts plain text from the current Hypercerts description union for use in
+ * scoring and HuggingFace classification.
+ *
+ * Supported forms:
+ *   - org.hypercerts.defs#descriptionString  → returns `.value`
+ *   - pub.leaflet.pages.linearDocument       → walks blocks and extracts text
+ *   - com.atproto.repo.strongRef             → returns empty string
  */
 export function extractDescriptionText(
-  doc: LinearDocument | undefined,
+  description: unknown,
 ): string {
-  if (!doc) return "";
+  if (!description || typeof description !== "object") return "";
+
+  const typed = description as { $type?: string };
+
+  const value = (description as { value?: unknown }).value;
+  if (
+    typed.$type === "org.hypercerts.defs#descriptionString" ||
+    typeof value === "string"
+  ) {
+    return typeof value === "string" ? value : "";
+  }
+
+  if (typed.$type === "com.atproto.repo.strongRef") {
+    return "";
+  }
+
+  const maybeBlocks = (description as { blocks?: unknown }).blocks;
+  if (
+    typed.$type !== "pub.leaflet.pages.linearDocument" &&
+    !Array.isArray(maybeBlocks)
+  ) {
+    return "";
+  }
+
+  const doc = description as LinearDocument;
 
   const parts: string[] = [];
 
@@ -43,8 +69,11 @@ function collectBlockText(
     return;
   }
 
-  // Unordered list: recurse into children → each child has a `content` block
-  if (type === "pub.leaflet.blocks.unorderedList") {
+  // Ordered/unordered lists: recurse into children → each child has a `content` block
+  if (
+    type === "pub.leaflet.blocks.unorderedList" ||
+    type === "pub.leaflet.blocks.orderedList"
+  ) {
     const children = block.children;
     if (Array.isArray(children)) {
       for (const child of children) {
@@ -57,6 +86,26 @@ function collectBlockText(
             },
             out,
           );
+
+          const nestedUnordered = (child as { children?: unknown }).children;
+          if (Array.isArray(nestedUnordered)) {
+            collectBlockText(
+              {
+                $type: "pub.leaflet.blocks.unorderedList",
+                children: nestedUnordered,
+              },
+              out,
+            );
+          }
+
+          const nestedOrdered = (child as { orderedListChildren?: unknown })
+            .orderedListChildren;
+          if (nestedOrdered && typeof nestedOrdered === "object") {
+            collectBlockText(
+              nestedOrdered as { $type?: string; [key: string]: unknown },
+              out,
+            );
+          }
         }
       }
     }

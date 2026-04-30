@@ -3,7 +3,7 @@ import type { ValidationIssue } from "../../result";
 import { AtprotoAgent } from "../../services/AtprotoAgent";
 import {
   $parse,
-} from "@gainforest/generated/app/bumicerts/link/evm.defs";
+} from "@gainforest/generated/app/gainforest/link/evm.defs";
 import type {
   LinkEvmMutationResult,
   LinkEvmRecord,
@@ -21,7 +21,7 @@ import {
   createRecord,
 } from "../../utils/shared";
 
-const COLLECTION = "app.bumicerts.link.evm";
+const COLLECTION = "app.gainforest.link.evm";
 
 const makePdsError = (message: string, cause: unknown) =>
   new LinkEvmPdsError({ message, cause });
@@ -30,7 +30,7 @@ const makeValidationError = (message: string, cause: unknown, issues?: Validatio
   new LinkEvmValidationError({ message, cause, issues });
 
 /**
- * Creates a new app.bumicerts.link.evm record in the authenticated ATProto repo.
+ * Creates a new app.gainforest.link.evm record in the authenticated ATProto repo.
  *
  * This record links an EVM wallet address to the user's ATProto DID.
  * It is immutable/append-only — there is no update, upsert, or delete.

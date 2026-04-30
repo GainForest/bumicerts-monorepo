@@ -17,6 +17,11 @@ type Main = {
    */
   alt?: string
   aspectRatio: AspectRatio
+
+  /**
+   * Whether the image should extend to the full width of the container, ignoring padding.
+   */
+  fullBleed?: boolean
 }
 
 export type { Main }
@@ -28,6 +33,7 @@ const main = l.typedObject<Main>(
     image: l.blob({ accept: ['image/*'], maxSize: 1000000, allowLegacy: true }),
     alt: l.optional(l.string()),
     aspectRatio: l.ref<AspectRatio>((() => aspectRatio) as any),
+    fullBleed: l.optional(l.boolean()),
   }),
 )
 

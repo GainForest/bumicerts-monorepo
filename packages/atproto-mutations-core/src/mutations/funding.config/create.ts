@@ -3,7 +3,7 @@ import type { ValidationIssue } from "../../result";
 import { AtprotoAgent } from "../../services/AtprotoAgent";
 import {
   $parse,
-} from "@gainforest/generated/app/bumicerts/funding/config.defs";
+} from "@gainforest/generated/app/gainforest/funding/config.defs";
 import type {
   FundingConfigMutationResult,
   FundingConfigRecord,
@@ -21,7 +21,7 @@ import {
   createRecord,
 } from "../../utils/shared";
 
-const COLLECTION = "app.bumicerts.funding.config";
+const COLLECTION = "app.gainforest.funding.config";
 
 const makePdsError = (message: string, cause: unknown) =>
   new FundingConfigPdsError({ message, cause });
@@ -30,7 +30,7 @@ const makeValidationError = (message: string, cause: unknown, issues?: Validatio
   new FundingConfigValidationError({ message, cause, issues });
 
 /**
- * Creates a new app.bumicerts.funding.config record.
+ * Creates a new app.gainforest.funding.config record.
  *
  * The rkey SHOULD match the rkey of the associated org.hypercerts.claim.activity
  * record to enable the shared-rkey join in the indexer (the `fundingConfig` field

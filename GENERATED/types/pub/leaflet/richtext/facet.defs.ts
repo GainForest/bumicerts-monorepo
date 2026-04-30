@@ -23,6 +23,7 @@ type Main = {
     | l.$Typed<Id>
     | l.$Typed<Bold>
     | l.$Typed<Italic>
+    | l.$Typed<Footnote>
     | l.Unknown$TypedObject
   )[]
 }
@@ -48,6 +49,7 @@ const main = l.typedObject<Main>(
           l.typedRef<Id>((() => id) as any),
           l.typedRef<Bold>((() => bold) as any),
           l.typedRef<Italic>((() => italic) as any),
+          l.typedRef<Footnote>((() => footnote) as any),
         ],
         false,
       ),
@@ -212,3 +214,26 @@ export type { Italic }
 const italic = l.typedObject<Italic>($nsid, 'italic', l.object({}))
 
 export { italic }
+
+/** Facet feature for a footnote reference */
+type Footnote = {
+  $type?: 'pub.leaflet.richtext.facet#footnote'
+  footnoteId: string
+  contentPlaintext: string
+  contentFacets?: Main[]
+}
+
+export type { Footnote }
+
+/** Facet feature for a footnote reference */
+const footnote = l.typedObject<Footnote>(
+  $nsid,
+  'footnote',
+  l.object({
+    footnoteId: l.string(),
+    contentPlaintext: l.string(),
+    contentFacets: l.optional(l.array(l.ref<Main>((() => main) as any))),
+  }),
+)
+
+export { footnote }

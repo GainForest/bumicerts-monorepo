@@ -10,13 +10,18 @@ export { $nsid }
 
 type Main = {
   $type?: 'pub.leaflet.blocks.image'
-  image: l.BlobRef
+  image: l.BlobRef | l.LegacyBlobRef
 
   /**
    * Alt text description of the image, for accessibility.
    */
   alt?: string
   aspectRatio: AspectRatio
+
+  /**
+   * Whether the image should extend to the full width of the container, ignoring padding.
+   */
+  fullBleed?: boolean
 }
 
 export type { Main }
@@ -25,13 +30,10 @@ const main = l.typedObject<Main>(
   $nsid,
   'main',
   l.object({
-    image: l.blob({
-      accept: ['image/*'],
-      maxSize: 1000000,
-      allowLegacy: false,
-    }),
+    image: l.blob({ accept: ['image/*'], maxSize: 1000000, allowLegacy: true }),
     alt: l.optional(l.string()),
     aspectRatio: l.ref<AspectRatio>((() => aspectRatio) as any),
+    fullBleed: l.optional(l.boolean()),
   }),
 )
 

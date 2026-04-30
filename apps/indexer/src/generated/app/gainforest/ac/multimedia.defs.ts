@@ -8,6 +8,7 @@ const $nsid = 'app.gainforest.ac.multimedia'
 
 export { $nsid }
 
+/** A multimedia evidence record associated with a biodiversity occurrence. */
 type Main = {
   $type: 'app.gainforest.ac.multimedia'
 
@@ -54,7 +55,7 @@ type Main = {
   /**
    * The media file blob. Images up to 100MB, audio up to 100MB, video up to 100MB. For PDS-stored compressed versions; original full-res referenced via accessUri.
    */
-  file: l.BlobRef
+  file: l.BlobRef | l.LegacyBlobRef
 
   /**
    * MIME type of the media file (e.g. image/webp, audio/flac). Should match the blob's actual content type.
@@ -101,6 +102,7 @@ type Main = {
 
 export type { Main }
 
+/** A multimedia evidence record associated with a biodiversity occurrence. */
 const main = l.record<'tid', Main>(
   'tid',
   $nsid,
@@ -159,7 +161,7 @@ const main = l.record<'tid', Main>(
         'video/x-matroska',
       ],
       maxSize: 104857600,
-      allowLegacy: false,
+      allowLegacy: true,
     }),
     format: l.optional(l.string({ maxGraphemes: 128 })),
     accessUri: l.optional(l.string({ format: 'uri', maxGraphemes: 2048 })),

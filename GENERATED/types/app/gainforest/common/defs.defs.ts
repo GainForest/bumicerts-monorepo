@@ -27,7 +27,7 @@ const richtext = l.typedObject<Richtext>(
   $nsid,
   'richtext',
   l.object({
-    text: l.string(),
+    text: l.string({ maxGraphemes: 10000 }),
     facets: l.optional(
       l.array(l.ref<RichtextFacet.Main>((() => RichtextFacet.main) as any)),
     ),
@@ -460,7 +460,10 @@ export type { IndexedOrganization }
 const indexedOrganization = l.typedObject<IndexedOrganization>(
   $nsid,
   'indexedOrganization',
-  l.object({ id: l.string({ format: 'uri' }), name: l.string() }),
+  l.object({
+    id: l.string({ format: 'uri', maxGraphemes: 2048 }),
+    name: l.string({ maxGraphemes: 256 }),
+  }),
 )
 
 export { indexedOrganization }

@@ -170,7 +170,7 @@ const main = l.record<'tid', Main>(
       'contour',
       'satellite_overlay',
     ]),
-    uri: l.string({ format: 'uri' }),
+    uri: l.string({ format: 'uri', maxGraphemes: 2048 }),
     description: l.optional(l.string({ maxGraphemes: 2048 })),
     createdAt: l.string({ format: 'datetime' }),
     category: l.optional(l.string({ maxGraphemes: 128 })),

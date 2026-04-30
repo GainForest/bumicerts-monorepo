@@ -3,6 +3,5 @@
  */
 
 export * as bsky from './app/bsky.ts'
-export * as bumicerts from './app/bumicerts.ts'
 export * as certified from './app/certified.ts'
 export * as gainforest from './app/gainforest.ts'

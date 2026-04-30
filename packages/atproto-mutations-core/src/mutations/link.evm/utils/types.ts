@@ -2,16 +2,16 @@
 // Re-export generated types — single source of truth, no manual duplication.
 // ---------------------------------------------------------------------------
 
-export type { Main as LinkEvmRecord } from "@gainforest/generated/app/bumicerts/link/evm.defs";
-export type { Eip712Proof } from "@gainforest/generated/app/bumicerts/link/evm.defs";
-export type { Eip712Message } from "@gainforest/generated/app/bumicerts/link/evm.defs";
-export type { Eip712PlatformAttestation } from "@gainforest/generated/app/bumicerts/link/evm.defs";
+export type { Main as LinkEvmRecord } from "@gainforest/generated/app/gainforest/link/evm.defs";
+export type { Eip712Proof } from "@gainforest/generated/app/gainforest/link/evm.defs";
+export type { Eip712Message } from "@gainforest/generated/app/gainforest/link/evm.defs";
+export type { Eip712PlatformAttestation } from "@gainforest/generated/app/gainforest/link/evm.defs";
 
 // ---------------------------------------------------------------------------
 // Entity-specific derived types
 // ---------------------------------------------------------------------------
 
-import type { Main as LinkEvmRecord } from "@gainforest/generated/app/bumicerts/link/evm.defs";
+import type { Main as LinkEvmRecord } from "@gainforest/generated/app/gainforest/link/evm.defs";
 import type {
   RecordMutationResult,
   RecordCreateInput,

@@ -69,6 +69,34 @@ const TAP_OUT_DIR = join(INDEXER_DIR, "src", "tap");
 const GENERATED_TYPES_OUT_DIR = join(INDEXER_DIR, "src", "generated");
 
 // ============================================================
+// LEXICON PATCHES
+// Keep indexer-local type generation aligned with GENERATED/scripts/codegen.ts
+// so validators and generated types stay consistent even when gen:indexer is run
+// without gen:types first.
+// ============================================================
+
+async function applyLexiconPatches(): Promise<void> {
+  const defsPath = join(LEXICONS_DIR, "app", "gainforest", "common", "defs.json");
+  try {
+    const raw = await readFile(defsPath, "utf8");
+    const defs = JSON.parse(raw) as Record<string, unknown>;
+    const audioDef = (defs as { defs?: { audio?: { properties?: { file?: { accept?: string[] } } } } })
+      .defs?.audio;
+    if (audioDef?.properties?.file?.accept) {
+      const accept = audioDef.properties.file.accept;
+      if (!accept.includes("audio/vnd.wave")) {
+        const wavIdx = accept.indexOf("audio/wav");
+        accept.splice(wavIdx + 1, 0, "audio/vnd.wave");
+        await writeFile(defsPath, JSON.stringify(defs, null, 4) + "\n", "utf8");
+        console.log('[generate-collections] Patch applied: added "audio/vnd.wave" to app.gainforest.common.defs#audio accept list');
+      }
+    }
+  } catch (e) {
+    console.warn(`[generate-collections] Skipping audio/vnd.wave patch: ${e}`);
+  }
+}
+
+// ============================================================
 // DISCOVERY
 // ============================================================
 
@@ -361,6 +389,7 @@ async function runLexBuild(excludedNsids: Set<string>): Promise<void> {
     "--indexFile",
     "--importExt", ".ts",
     "--clear",
+    "--allowLegacyBlobs",
   ];
 
   for (const nsid of excludedNsids) {
@@ -418,6 +447,8 @@ console.log(`\n[generate-collections] Wrote ${collectionsPath}`);
 
 await writeFile(validationPath, generateValidationTs(collections), "utf-8");
 console.log(`[generate-collections] Wrote ${validationPath}`);
+
+await applyLexiconPatches();
 
 // Run lex build to generate types into apps/indexer/src/generated/
 await runLexBuild(EXCLUDED_COLLECTIONS);

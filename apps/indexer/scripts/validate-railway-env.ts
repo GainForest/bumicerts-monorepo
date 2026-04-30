@@ -58,6 +58,8 @@ async function validateRailwayEnv(): Promise<void> {
   // Variables that don't apply to Railway (local dev only)
   const localOnly = new Set([
     "TAP_COLLECTION_FILTERS", // Set on Tap service, not indexer
+    "GRAPHQL_PORT", // Railway injects PORT for the public HTTP server
+    "HEALTH_PORT", // Separate health server can use its default internal port
   ]);
 
   // Optional variables that have defaults (don't report as missing)

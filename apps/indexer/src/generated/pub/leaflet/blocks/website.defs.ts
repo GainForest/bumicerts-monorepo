@@ -10,7 +10,7 @@ export { $nsid }
 
 type Main = {
   $type?: 'pub.leaflet.blocks.website'
-  previewImage?: l.BlobRef
+  previewImage?: l.BlobRef | l.LegacyBlobRef
   title?: string
   description?: string
   src: l.UriString
@@ -23,7 +23,7 @@ const main = l.typedObject<Main>(
   'main',
   l.object({
     previewImage: l.optional(
-      l.blob({ accept: ['image/*'], maxSize: 1000000, allowLegacy: false }),
+      l.blob({ accept: ['image/*'], maxSize: 1000000, allowLegacy: true }),
     ),
     title: l.optional(l.string()),
     description: l.optional(l.string()),

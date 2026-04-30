@@ -2,7 +2,7 @@ import { Data } from "effect";
 import type { ValidationIssue } from "../../../result";
 
 /**
- * Input failed validation against the app.bumicerts.link.evm lexicon.
+ * Input failed validation against the app.gainforest.link.evm lexicon.
  * Raised by create/update before any PDS call.
  */
 export class LinkEvmValidationError extends Data.TaggedError(

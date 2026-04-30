@@ -9,6 +9,7 @@ const $nsid = 'app.gainforest.ac.audio'
 
 export { $nsid }
 
+/** An audio recording record with technical metadata and optional links to occurrence, deployment, and site records. */
 type Main = {
   $type: 'app.gainforest.ac.audio'
 
@@ -80,6 +81,7 @@ type Main = {
 
 export type { Main }
 
+/** An audio recording record with technical metadata and optional links to occurrence, deployment, and site records. */
 const main = l.record<'tid', Main>(
   'tid',
   $nsid,

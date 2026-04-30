@@ -1,5 +1,5 @@
 /**
- * Custom resolver: app.bumicerts.link.evm
+ * Custom resolver: app.gainforest.link.evm
  *
  * Excluded from auto-generation because:
  *   1. Nested sub-objects (Eip712Proof, Eip712Message, Eip712PlatformAttestation)
@@ -10,8 +10,8 @@
  *      only that the signatures are cryptographically valid.
  *   3. A custom EvmLinkWhereInput extends WhereInput with a `valid` boolean filter.
  *
- * Attaches the `evm` field to the generated BumicertsLinkNS (created here)
- * and attaches `link` to the generated BumicertsNS.
+ * Creates a local GainforestLinkNS with the `evm` field
+ * and attaches `link` to the generated GainforestNS.
  */
 
 import { builder } from "../../builder.ts";
@@ -26,7 +26,7 @@ import { resolveActorToDid } from "../../identity.ts";
 import type { RecordRow } from "@/db/types.ts";
 import { verifyTypedData } from "viem";
 
-import { BumicertsNS } from "../generated.ts";
+import { GainforestNS } from "../generated.ts";
 
 // ── JSONB accessors ──────────────────────────────────────────────────────────
 
@@ -141,10 +141,10 @@ async function computeValid(p: Record<string, unknown>): Promise<boolean> {
 
     // Only handle the known eip712Proof variant
     if (
-      up["$type"] !== "app.bumicerts.link.evm#eip712Proof" &&
+      up["$type"] !== "app.gainforest.link.evm#eip712Proof" &&
       up["$type"] !== undefined // also accept untyped for backwards compat
     ) {
-      if (up["$type"] !== undefined && up["$type"] !== "app.bumicerts.link.evm#eip712Proof") {
+      if (up["$type"] !== undefined && up["$type"] !== "app.gainforest.link.evm#eip712Proof") {
         return false; // unknown userProof variant
       }
     }
@@ -174,7 +174,7 @@ async function computeValid(p: Record<string, unknown>): Promise<boolean> {
     // Only handle the known eip712PlatformAttestation variant
     if (
       pa["$type"] !== undefined &&
-      pa["$type"] !== "app.bumicerts.link.evm#eip712PlatformAttestation"
+      pa["$type"] !== "app.gainforest.link.evm#eip712PlatformAttestation"
     ) {
       return false; // unknown platformAttestation variant
     }
@@ -196,7 +196,7 @@ async function computeValid(p: Record<string, unknown>): Promise<boolean> {
 
 // ── Sub-types: EIP-712 message ────────────────────────────────────────────────
 
-export const BumicertsLinkEvmEip712MessageType = builder.simpleObject("BumicertsLinkEvmEip712Message", {
+export const GainforestLinkEvmEip712MessageType = builder.simpleObject("GainforestLinkEvmEip712Message", {
   description: "The EIP-712 typed data message signed by the user's EVM wallet.",
   fields: (t) => ({
     did:        t.string({ nullable: true, description: "The ATProto DID being linked." }),
@@ -209,17 +209,17 @@ export const BumicertsLinkEvmEip712MessageType = builder.simpleObject("Bumicerts
 
 // ── Sub-types: user proof ─────────────────────────────────────────────────────
 
-export const BumicertsLinkEvmEip712ProofType = builder.simpleObject("BumicertsLinkEvmEip712Proof", {
+export const GainforestLinkEvmEip712ProofType = builder.simpleObject("GainforestLinkEvmEip712Proof", {
   description: "EOA wallet ownership proof via EIP-712 typed data signature.",
   fields: (t) => ({
     signature: t.string({ nullable: true, description: "User's ECDSA signature (0x-prefixed hex)." }),
-    message:   t.field({ type: BumicertsLinkEvmEip712MessageType, nullable: true }),
+    message:   t.field({ type: GainforestLinkEvmEip712MessageType, nullable: true }),
   }),
 });
 
 // ── Sub-types: platform attestation ──────────────────────────────────────────
 
-export const BumicertsLinkEvmPlatformAttestationType = builder.simpleObject("BumicertsLinkEvmPlatformAttestation", {
+export const GainforestLinkEvmPlatformAttestationType = builder.simpleObject("GainforestLinkEvmPlatformAttestation", {
   description: "Platform's EIP-712 counter-signature attesting the link was created through a trusted service.",
   fields: (t) => ({
     signature:       t.string({ nullable: true, description: "Platform's ECDSA signature (0x-prefixed hex)." }),
@@ -230,7 +230,7 @@ export const BumicertsLinkEvmPlatformAttestationType = builder.simpleObject("Bum
 
 // ── Special metadata type — cryptographic validity beyond the standard envelope
 
-export const BumicertsLinkEvmSpecialMetadataType = builder.simpleObject("BumicertsLinkEvmSpecialMetadata", {
+export const GainforestLinkEvmSpecialMetadataType = builder.simpleObject("GainforestLinkEvmSpecialMetadata", {
   description:
     "Cryptographic validity metadata for a link.evm record, computed at query time.",
   fields: (t) => ({
@@ -245,38 +245,38 @@ export const BumicertsLinkEvmSpecialMetadataType = builder.simpleObject("Bumicer
 
 // ── Pure record type ──────────────────────────────────────────────────────────
 
-export const BumicertsLinkEvmRecordType = builder.simpleObject("BumicertsLinkEvmRecord", {
-  description: "Pure payload for app.bumicerts.link.evm — a DID–EVM wallet link record.",
+export const GainforestLinkEvmRecordType = builder.simpleObject("GainforestLinkEvmRecord", {
+  description: "Pure payload for app.gainforest.link.evm — a DID–EVM wallet link record.",
   fields: (t) => ({
     name:                t.string({ nullable: true, description: "Optional user-defined label for this wallet link." }),
     address:             t.string({ nullable: true, description: "EVM wallet address (0x-prefixed, checksummed)." }),
-    userProof:           t.field({ type: BumicertsLinkEvmEip712ProofType, nullable: true, description: "User's EIP-712 ownership proof." }),
-    platformAttestation: t.field({ type: BumicertsLinkEvmPlatformAttestationType, nullable: true, description: "Platform's EIP-712 counter-signature." }),
+    userProof:           t.field({ type: GainforestLinkEvmEip712ProofType, nullable: true, description: "User's EIP-712 ownership proof." }),
+    platformAttestation: t.field({ type: GainforestLinkEvmPlatformAttestationType, nullable: true, description: "Platform's EIP-712 counter-signature." }),
     createdAt:           t.field({ type: "DateTime", nullable: true }),
   }),
 });
 
 // ── Item + Page types ─────────────────────────────────────────────────────────
 
-export const BumicertsLinkEvmItemType = builder.simpleObject("BumicertsLinkEvmItem", {
-  description: "A DID–EVM wallet link record (app.bumicerts.link.evm).",
+export const GainforestLinkEvmItemType = builder.simpleObject("GainforestLinkEvmItem", {
+  description: "A DID–EVM wallet link record (app.gainforest.link.evm).",
   fields: (t) => ({
     metadata:        t.field({ type: RecordMetaType }),
     specialMetadata: t.field({
-      type: BumicertsLinkEvmSpecialMetadataType,
+      type: GainforestLinkEvmSpecialMetadataType,
       nullable: true,
       description:
         "Cryptographic validity metadata for this record, computed at query time. " +
         "Always present for link.evm records.",
     }),
     creatorInfo: t.field({ type: CreatorInfoType }),
-    record:      t.field({ type: BumicertsLinkEvmRecordType }),
+    record:      t.field({ type: GainforestLinkEvmRecordType }),
   }),
 });
 
-export const BumicertsLinkEvmPageType = builder.simpleObject("BumicertsLinkEvmPage", {
+export const GainforestLinkEvmPageType = builder.simpleObject("GainforestLinkEvmPage", {
   fields: (t) => ({
-    data:     t.field({ type: [BumicertsLinkEvmItemType] }),
+    data:     t.field({ type: [GainforestLinkEvmItemType] }),
     pageInfo: t.field({ type: PageInfoType }),
   }),
 });
@@ -296,7 +296,7 @@ const EvmLinkWhereInputRef = builder.inputRef<EvmLinkWhereInput>("EvmLinkWhereIn
 
 EvmLinkWhereInputRef.implement({
   description:
-    "Filter for app.bumicerts.link.evm records. " +
+    "Filter for app.gainforest.link.evm records. " +
     "Supports all standard identity filters (`did`, `handle`, `rkey`) plus " +
     "a `valid` boolean to filter by cryptographic signature validity.",
   fields: (t) => ({
@@ -327,7 +327,7 @@ EvmLinkWhereInputRef.implement({
 
 // ── Row mapper ────────────────────────────────────────────────────────────────
 
-export async function mapBumicertsLinkEvm(row: RecordRow) {
+export async function mapGainforestLinkEvm(row: RecordRow) {
   const p = payload(row);
 
   // ── Decode userProof ──────────────────────────────────────────────────────
@@ -397,17 +397,17 @@ export async function mapBumicertsLinkEvm(row: RecordRow) {
 // ── Local class for the link sub-namespace ────────────────────────────────────
 // (Not in generated.ts because all link.* collections are excluded)
 
-class BumicertsLinkNS {}
+class GainforestLinkNS {}
 
 // Register the link namespace type
-builder.objectType(BumicertsLinkNS, {
-  name: "BumicertsLinkNamespace",
-  description: "BumicertsLinkNamespace namespace (bumicerts.link.*).",
+builder.objectType(GainforestLinkNS, {
+  name: "GainforestLinkNamespace",
+  description: "GainforestLinkNamespace namespace (gainforest.link.*).",
   fields: (t) => ({
     evm: t.field({
-      type: BumicertsLinkEvmPageType,
+      type: GainforestLinkEvmPageType,
       description:
-        "Paginated list of app.bumicerts.link.evm records. " +
+        "Paginated list of app.gainforest.link.evm records. " +
         "Each record includes a `valid` field computed by verifying both " +
         "the user's EIP-712 ownership proof and the platform's counter-signature. " +
         "Use `where: { valid: true }` to fetch only cryptographically valid links.",
@@ -428,7 +428,7 @@ builder.objectType(BumicertsLinkNS, {
 
         // ── Fetch records ────────────────────────────────────────────────────
         const safeLimit = Math.min(Math.max(limit ?? 50, 1), 100);
-        const page = await getRecordsByCollection("app.bumicerts.link.evm", {
+        const page = await getRecordsByCollection("app.gainforest.link.evm", {
           cursor:    cursor ?? undefined,
           limit:     safeLimit,
           did:       resolvedDid,
@@ -438,7 +438,7 @@ builder.objectType(BumicertsLinkNS, {
         });
 
         // ── Map (includes per-record signature verification) ─────────────────
-        const data = await Promise.all(page.records.map(mapBumicertsLinkEvm));
+        const data = await Promise.all(page.records.map(mapGainforestLinkEvm));
 
         // ── Post-fetch: apply valid filter ───────────────────────────────────
         const filtered =
@@ -452,11 +452,11 @@ builder.objectType(BumicertsLinkNS, {
   }),
 });
 
-// ── Attach `link` to the generated BumicertsNS ───────────────────────────────
-builder.objectFields(BumicertsNS, (t) => ({
+// ── Attach `link` to the generated GainforestNS ──────────────────────────────
+builder.objectFields(GainforestNS, (t) => ({
   link: t.field({
-    type: BumicertsLinkNS,
-    description: "BumicertsLinkNamespace namespace.",
-    resolve: () => new BumicertsLinkNS(),
+    type: GainforestLinkNS,
+    description: "GainforestLinkNamespace namespace.",
+    resolve: () => new GainforestLinkNS(),
   }),
 }));

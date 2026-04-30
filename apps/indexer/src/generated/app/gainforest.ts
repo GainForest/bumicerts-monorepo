@@ -3,8 +3,11 @@
  */
 
 export * as ac from './gainforest/ac.ts'
+export * as asset from './gainforest/asset.ts'
 export * as common from './gainforest/common.ts'
 export * as dwc from './gainforest/dwc.ts'
 export * as evaluator from './gainforest/evaluator.ts'
+export * as funding from './gainforest/funding.ts'
 export * as gbif from './gainforest/gbif.ts'
+export * as link from './gainforest/link.ts'
 export * as organization from './gainforest/organization.ts'

@@ -37,8 +37,6 @@ type LexSchema = {
 };
 
 const SCHEMA_REGISTRY: Record<IndexedCollection, LexSchema> = {
-  "app.bumicerts.funding.config":                          generated.app.bumicerts.funding.config,
-  "app.bumicerts.link.evm":                                generated.app.bumicerts.link.evm,
   "app.certified.actor.organization":                      generated.app.certified.actor.organization,
   "app.certified.actor.profile":                           generated.app.certified.actor.profile,
   "app.certified.badge.award":                             generated.app.certified.badge.award,
@@ -49,6 +47,7 @@ const SCHEMA_REGISTRY: Record<IndexedCollection, LexSchema> = {
   "app.gainforest.ac.audio":                               generated.app.gainforest.ac.audio,
   "app.gainforest.ac.deployment":                          generated.app.gainforest.ac.deployment,
   "app.gainforest.ac.multimedia":                          generated.app.gainforest.ac.multimedia,
+  "app.gainforest.asset.file":                             generated.app.gainforest.asset.file,
   "app.gainforest.dwc.dataset":                            generated.app.gainforest.dwc.dataset,
   "app.gainforest.dwc.event":                              generated.app.gainforest.dwc.event,
   "app.gainforest.dwc.measurement":                        generated.app.gainforest.dwc.measurement,
@@ -56,7 +55,9 @@ const SCHEMA_REGISTRY: Record<IndexedCollection, LexSchema> = {
   "app.gainforest.evaluator.evaluation":                   generated.app.gainforest.evaluator.evaluation,
   "app.gainforest.evaluator.service":                      generated.app.gainforest.evaluator.service,
   "app.gainforest.evaluator.subscription":                 generated.app.gainforest.evaluator.subscription,
+  "app.gainforest.funding.config":                         generated.app.gainforest.funding.config,
   "app.gainforest.gbif.dataset":                           generated.app.gainforest.gbif.dataset,
+  "app.gainforest.link.evm":                               generated.app.gainforest.link.evm,
   "app.gainforest.organization.defaultSite":               generated.app.gainforest.organization.defaultSite,
   "app.gainforest.organization.donation":                  generated.app.gainforest.organization.donation,
   "app.gainforest.organization.info":                      generated.app.gainforest.organization.info,

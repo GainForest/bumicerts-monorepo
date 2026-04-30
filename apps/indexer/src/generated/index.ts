@@ -3,6 +3,6 @@
  */
 
 export * as app from './app.ts'
-export * as org from './org.ts'
 export * as com from './com.ts'
+export * as org from './org.ts'
 export * as pub from './pub.ts'

@@ -3,10 +3,42 @@
  */
 
 import { l } from '@atproto/lex'
+import * as RichtextFacet from '../../app/bsky/richtext/facet.defs.ts'
 
 const $nsid = 'org.hypercerts.defs'
 
 export { $nsid }
+
+/** An inline long-form description as plain text or markdown, with optional rich-text annotations. */
+type DescriptionString = {
+  $type?: 'org.hypercerts.defs#descriptionString'
+
+  /**
+   * The description text (plain text or markdown).
+   */
+  value: string
+
+  /**
+   * Rich text annotations for the description (mentions, URLs, hashtags, etc).
+   */
+  facets?: RichtextFacet.Main[]
+}
+
+export type { DescriptionString }
+
+/** An inline long-form description as plain text or markdown, with optional rich-text annotations. */
+const descriptionString = l.typedObject<DescriptionString>(
+  $nsid,
+  'descriptionString',
+  l.object({
+    value: l.string({ maxLength: 250000, maxGraphemes: 25000 }),
+    facets: l.optional(
+      l.array(l.ref<RichtextFacet.Main>((() => RichtextFacet.main) as any)),
+    ),
+  }),
+)
+
+export { descriptionString }
 
 /** Object containing a URI to external data */
 type Uri = {

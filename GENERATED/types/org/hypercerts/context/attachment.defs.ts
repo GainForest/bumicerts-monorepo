@@ -57,9 +57,13 @@ type Main = {
   shortDescriptionFacets?: RichtextFacet.Main[]
 
   /**
-   * Rich-text description, represented as a Leaflet linear document.
+   * Long-form description of the attachment. An inline string for plain text or markdown, a Leaflet linear document for rich-text content, or a strong reference to an external description record.
    */
-  description?: PagesLinearDocument.Main
+  description?:
+    | l.$Typed<HypercertsDefs.DescriptionString>
+    | l.$Typed<PagesLinearDocument.Main>
+    | l.$Typed<RepoStrongRef.Main>
+    | l.Unknown$TypedObject
 
   /**
    * A strong reference to the location where this attachment's subject matter occurred. The record referenced must conform with the lexicon app.certified.location.
@@ -118,7 +122,18 @@ const main = l.record<'tid', Main>(
       l.array(l.ref<RichtextFacet.Main>((() => RichtextFacet.main) as any)),
     ),
     description: l.optional(
-      l.ref<PagesLinearDocument.Main>((() => PagesLinearDocument.main) as any),
+      l.typedUnion(
+        [
+          l.typedRef<HypercertsDefs.DescriptionString>(
+            (() => HypercertsDefs.descriptionString) as any,
+          ),
+          l.typedRef<PagesLinearDocument.Main>(
+            (() => PagesLinearDocument.main) as any,
+          ),
+          l.typedRef<RepoStrongRef.Main>((() => RepoStrongRef.main) as any),
+        ],
+        false,
+      ),
     ),
     location: l.optional(
       l.ref<RepoStrongRef.Main>((() => RepoStrongRef.main) as any),
