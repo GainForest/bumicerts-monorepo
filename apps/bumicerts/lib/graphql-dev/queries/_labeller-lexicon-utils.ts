@@ -1,8 +1,16 @@
-type LinearDocument = {
-  blocks?: Array<{
-    block?: { $type?: string; [key: string]: unknown } | undefined;
-  }>;
-};
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function getStringProperty(record: Record<string, unknown>, key: string): string | undefined {
+  const value = record[key];
+  return typeof value === "string" ? value : undefined;
+}
+
+function getArrayProperty(record: Record<string, unknown>, key: string): unknown[] | undefined {
+  const value = record[key];
+  return Array.isArray(value) ? value : undefined;
+}
 
 /**
  * Extracts plain text from the current Hypercerts description union for use in
@@ -16,48 +24,52 @@ type LinearDocument = {
 export function extractDescriptionText(
   description: unknown,
 ): string {
-  if (!description || typeof description !== "object") return "";
+  if (!isRecord(description)) return "";
 
-  const typed = description as { $type?: string };
+  const type = getStringProperty(description, "$type");
+  const value = description.value;
 
-  const value = (description as { value?: unknown }).value;
   if (
-    typed.$type === "org.hypercerts.defs#descriptionString" ||
+    type === "org.hypercerts.defs#descriptionString" ||
     typeof value === "string"
   ) {
     return typeof value === "string" ? value : "";
   }
 
-  if (typed.$type === "com.atproto.repo.strongRef") {
+  if (type === "com.atproto.repo.strongRef") {
     return "";
   }
 
-  const maybeBlocks = (description as { blocks?: unknown }).blocks;
-  if (
-    typed.$type !== "pub.leaflet.pages.linearDocument" &&
-    !Array.isArray(maybeBlocks)
-  ) {
+  const blocks = getArrayProperty(description, "blocks");
+  if (type !== "pub.leaflet.pages.linearDocument" && !blocks) {
     return "";
   }
-
-  const doc = description as LinearDocument;
 
   const parts: string[] = [];
 
-  for (const wrapper of doc.blocks ?? []) {
-    collectBlockText(wrapper.block, parts);
+  for (const wrapper of blocks ?? []) {
+    if (!isRecord(wrapper)) {
+      continue;
+    }
+
+    const block = wrapper.block;
+    if (!isRecord(block)) {
+      continue;
+    }
+
+    collectBlockText(block, parts);
   }
 
   return parts.join("\n");
 }
 
 function collectBlockText(
-  block: { $type?: string; [key: string]: unknown } | undefined,
+  block: Record<string, unknown> | undefined,
   out: string[],
 ): void {
-  if (!block || typeof block !== "object") return;
+  if (!block) return;
 
-  const type = block.$type;
+  const type = getStringProperty(block, "$type");
 
   // All text-bearing leaf blocks share the `plaintext` field
   if (
@@ -66,9 +78,9 @@ function collectBlockText(
     type === "pub.leaflet.blocks.blockquote" ||
     type === "pub.leaflet.blocks.code"
   ) {
-    const pt = block.plaintext;
-    if (typeof pt === "string" && pt.length > 0) {
-      out.push(pt);
+    const plaintext = getStringProperty(block, "plaintext");
+    if (plaintext && plaintext.length > 0) {
+      out.push(plaintext);
     }
     return;
   }
@@ -78,42 +90,35 @@ function collectBlockText(
     type === "pub.leaflet.blocks.unorderedList" ||
     type === "pub.leaflet.blocks.orderedList"
   ) {
-    const children = block.children;
-    if (Array.isArray(children)) {
+    const children = getArrayProperty(block, "children");
+    if (children) {
       for (const child of children) {
-        if (child && typeof child === "object") {
-          // Each list item has a `content` which is a typed union of block types
+        if (!isRecord(child)) {
+          continue;
+        }
+
+        const content = child.content;
+        if (isRecord(content)) {
+          collectBlockText(content, out);
+        }
+
+        const nestedUnordered = getArrayProperty(child, "children");
+        if (nestedUnordered) {
           collectBlockText(
-            (child as { content?: unknown }).content as {
-              $type?: string;
-              [key: string]: unknown;
+            {
+              $type: "pub.leaflet.blocks.unorderedList",
+              children: nestedUnordered,
             },
             out,
           );
+        }
 
-          const nestedUnordered = (child as { children?: unknown }).children;
-          if (Array.isArray(nestedUnordered)) {
-            collectBlockText(
-              {
-                $type: "pub.leaflet.blocks.unorderedList",
-                children: nestedUnordered,
-              },
-              out,
-            );
-          }
-
-          const nestedOrdered = (child as { orderedListChildren?: unknown })
-            .orderedListChildren;
-          if (nestedOrdered && typeof nestedOrdered === "object") {
-            collectBlockText(
-              nestedOrdered as { $type?: string; [key: string]: unknown },
-              out,
-            );
-          }
+        const nestedOrdered = child.orderedListChildren;
+        if (isRecord(nestedOrdered)) {
+          collectBlockText(nestedOrdered, out);
         }
       }
     }
-    return;
   }
 
   // All other block types (image, iframe, horizontalRule, bskyPost, math,

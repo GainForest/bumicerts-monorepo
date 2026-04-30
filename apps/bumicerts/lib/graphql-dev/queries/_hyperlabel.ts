@@ -27,7 +27,11 @@ const tierActivityCache = new Map<string, Promise<HyperlabelRecentActivity[]>>()
 
 async function loadRecentLabelsForTier(tier: string): Promise<HyperlabelRecentActivity[]> {
   const response = await fetch(
-    `https://hyperlabel-production.up.railway.app/api/recent?limit=2000&offset=0&tier=${encodeURIComponent(tier)}`,
+    links.external.hyperlabel.recent({
+      limit: 2000,
+      offset: 0,
+      tier,
+    }),
   );
 
   if (!response.ok) {
@@ -59,7 +63,10 @@ export async function fetchHyperlabelActivitiesForTier(tier: string): Promise<
     }));
   }
 
-  const promise = loadRecentLabelsForTier(tier);
+  const promise = loadRecentLabelsForTier(tier).catch((error: unknown) => {
+    tierActivityCache.delete(tier);
+    throw error;
+  });
   tierActivityCache.set(tier, promise);
   const activities = await promise;
 
@@ -98,9 +105,13 @@ async function loadRecentLabels(): Promise<Map<string, ActivityLabelInfo>> {
 
 export async function fetchHyperlabelForDid(did: string): Promise<ActivityLabelInfo | null> {
   if (!recentLabelCache) {
-    recentLabelCache = loadRecentLabels();
+    recentLabelCache = loadRecentLabels().catch((error: unknown) => {
+      recentLabelCache = null;
+      throw error;
+    });
   }
 
   const map = await recentLabelCache;
   return map.get(did) ?? null;
 }
+import { links } from "@/lib/links";

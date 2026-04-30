@@ -11,6 +11,7 @@ import type { BlobLike, ConnectionResult } from "../_migration-helpers";
 import { connectionPageInfo, pluckConnectionNodes, toResolvedLegacyBlob } from "../_migration-helpers";
 
 const PAGE_SIZE = 200;
+const MAX_PAGES = 50;
 
 const byDidDocument = /* GraphQL */ `
   query CertifiedLocationsByDid($did: String!, $first: Int!, $after: String) {
@@ -179,8 +180,10 @@ export async function fetch(params: Params): Promise<Result> {
 
   const nodes: CertifiedLocationNode[] = [];
   let after: string | null = null;
+  const seenCursors = new Set<string>();
+  let exceededMaxPages = true;
 
-  while (true) {
+  for (let pageIndex = 0; pageIndex < MAX_PAGES; pageIndex += 1) {
     const res = await graphqlClient.request<CertifiedLocationResponse>(byDidDocument, {
       did: params.did,
       first: PAGE_SIZE,
@@ -191,12 +194,24 @@ export async function fetch(params: Params): Promise<Result> {
     nodes.push(...pluckConnectionNodes(connection));
 
     const page = connectionPageInfo(connection);
-    if (!page.hasNextPage) break;
+    if (!page.hasNextPage) {
+      exceededMaxPages = false;
+      break;
+    }
     if (!page.endCursor) {
       throw new Error("appCertifiedLocation reported hasNextPage without an endCursor");
     }
 
+    if (page.endCursor === after || seenCursors.has(page.endCursor)) {
+      throw new Error(`appCertifiedLocation repeated cursor ${page.endCursor}`);
+    }
+
+    seenCursors.add(page.endCursor);
     after = page.endCursor;
+  }
+
+  if (exceededMaxPages) {
+    throw new Error(`appCertifiedLocation exceeded ${MAX_PAGES} pages for ${params.did}`);
   }
 
   return Promise.all(nodes.map(normalizeLocation));

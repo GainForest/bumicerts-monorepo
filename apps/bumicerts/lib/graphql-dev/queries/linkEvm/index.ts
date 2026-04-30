@@ -10,7 +10,13 @@ import { verifyTypedData, verifyMessage } from "viem";
 import type { ConnectionResult } from "../_migration-helpers";
 import { pluckConnectionNodes } from "../_migration-helpers";
 
-const graphqlClient = new GraphQLClient(process.env.NEXT_PUBLIC_INDEXER_URL ?? "", {
+const indexerUrl = process.env.NEXT_PUBLIC_INDEXER_URL;
+
+if (!indexerUrl) {
+  throw new Error("NEXT_PUBLIC_INDEXER_URL must be set for linkEvm queries");
+}
+
+const graphqlClient = new GraphQLClient(indexerUrl, {
   headers: {
     "ngrok-skip-browser-warning": "true",
   },
@@ -112,6 +118,10 @@ type LinkResponse = {
   appGainforestLinkEvm?: ConnectionResult<LinkNode> | null;
 };
 
+function normalizeHex(value: string): string {
+  return value.toLowerCase();
+}
+
 export type EvmLink = {
   metadata: {
     uri: string | null;
@@ -157,14 +167,21 @@ async function verifyUserProof(address: string, userProof: NonNullable<LinkUserP
   }).catch(() => false);
 }
 
-async function verifyPlatformAttestation(attestation: NonNullable<LinkPlatformAttestation>): Promise<boolean> {
+async function verifyPlatformAttestation(
+  attestation: NonNullable<LinkPlatformAttestation>,
+  signedData: string,
+): Promise<boolean> {
   if (!attestation.platformAddress || !attestation.signature || !attestation.signedData) {
+    return false;
+  }
+
+  if (normalizeHex(attestation.signedData) !== normalizeHex(signedData)) {
     return false;
   }
 
   return verifyMessage({
     address: attestation.platformAddress as `0x${string}`,
-    message: { raw: attestation.signedData as `0x${string}` },
+    message: { raw: signedData as `0x${string}` },
     signature: attestation.signature as `0x${string}`,
   }).catch(() => false);
 }
@@ -183,6 +200,24 @@ async function computeValid(node: LinkNode): Promise<boolean> {
     return false;
   }
 
+  const userProofMessage = userProof.message;
+  const userSignature = userProof.signature;
+
+  if (!userProofMessage || !userSignature) {
+    return false;
+  }
+
+  if (userProofMessage.did !== node.did) {
+    return false;
+  }
+
+  if (
+    !userProofMessage.evmAddress
+    || normalizeHex(userProofMessage.evmAddress) !== normalizeHex(node.address)
+  ) {
+    return false;
+  }
+
   const userProofOk = await verifyUserProof(node.address, userProof);
   if (!userProofOk) {
     return false;
@@ -197,7 +232,7 @@ async function computeValid(node: LinkNode): Promise<boolean> {
     return false;
   }
 
-  return verifyPlatformAttestation(platformAttestation);
+  return verifyPlatformAttestation(platformAttestation, userSignature);
 }
 
 async function normalizeLink(node: LinkNode): Promise<EvmLink> {

@@ -52,7 +52,8 @@ type PlcDirectoryDocument = {
   }>;
 };
 
-const pdsHostCache = new Map<string, Promise<string | null>>();
+const pdsHostCache = new Map<string, string>();
+const pendingPdsHostLookups = new Map<string, Promise<string | null>>();
 
 export function pluckConnectionNodes<Node>(connection: ConnectionResult<Node> | null | undefined): Node[] {
   return (connection?.edges ?? []).flatMap((edge) => {
@@ -134,8 +135,11 @@ export function normalizeBskyFacets(facets: Array<BskyFacet | null> | null | und
 }
 
 export async function resolvePdsHostForDid(did: string): Promise<string | null> {
-  const existing = pdsHostCache.get(did);
-  if (existing) return existing;
+  const cachedHost = pdsHostCache.get(did);
+  if (cachedHost) return cachedHost;
+
+  const pendingLookup = pendingPdsHostLookups.get(did);
+  if (pendingLookup) return pendingLookup;
 
   const promise = (async () => {
     try {
@@ -152,8 +156,19 @@ export async function resolvePdsHostForDid(did: string): Promise<string | null> 
     }
   })();
 
-  pdsHostCache.set(did, promise);
-  return promise;
+  pendingPdsHostLookups.set(did, promise);
+
+  try {
+    const host = await promise;
+
+    if (host) {
+      pdsHostCache.set(did, host);
+    }
+
+    return host;
+  } finally {
+    pendingPdsHostLookups.delete(did);
+  }
 }
 
 export async function toResolvedLegacyBlob(blob: BlobLike | null | undefined, did: string): Promise<{

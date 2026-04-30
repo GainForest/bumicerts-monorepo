@@ -550,6 +550,12 @@ export async function fetch(params: Params): Promise<Result> {
       allMeasurements.push(...pluckConnectionNodes(measurement).map(toMeasurementItem));
 
       const pageInfo = connectionPageInfo(measurement);
+      if (pageInfo.hasNextPage && !pageInfo.endCursor) {
+        throw new Error(
+          `appGainforestDwcMeasurement for ${params.did} reported hasNextPage without an endCursor on page ${page + 1}`,
+        );
+      }
+
       if (pageInfo.hasNextPage && pageInfo.endCursor) {
         if (page === MAX_PAGES - 1) {
           console.warn(

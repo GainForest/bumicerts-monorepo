@@ -4,7 +4,11 @@ import type {
   ScoreBreakdown,
   LabelTier,
 } from "./_labeller-types.ts";
-import { TEST_PATTERNS, SCORE_THRESHOLDS } from "./_labeller-constants.ts";
+import {
+  QUALITY_LABEL_IDENTIFIERS,
+  TEST_PATTERNS,
+  SCORE_THRESHOLDS,
+} from "./_labeller-constants.ts";
 import { extractDescriptionText } from "./_labeller-lexicon-utils.ts";
 
 interface RepetitionResult {
@@ -37,6 +41,53 @@ export function detectRepetition(text: string): RepetitionResult {
     lineCounts.size > 0 ? Math.max(...lineCounts.values()) : 0;
 
   return { lineRepeatRatio, wordRepeatRatio, maxLineRepeats };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+type DefsUriImage = {
+  $type: "org.hypercerts.defs#uri";
+  uri?: string | null;
+};
+
+type DefsSmallImage = {
+  $type: "org.hypercerts.defs#smallImage";
+  image?: unknown;
+};
+
+type WorkScopeCel = {
+  $type: "org.hypercerts.workscope.cel";
+  expression?: string | null;
+};
+
+type WorkScopeString = {
+  $type: "org.hypercerts.claim.activity#workScopeString";
+  scope?: string | null;
+};
+
+function hasType<T extends string>(
+  value: unknown,
+  type: T,
+): value is Record<string, unknown> & { $type: T } {
+  return isRecord(value) && value.$type === type;
+}
+
+function isDefsUriImage(value: unknown): value is DefsUriImage {
+  return hasType(value, "org.hypercerts.defs#uri");
+}
+
+function isDefsSmallImage(value: unknown): value is DefsSmallImage {
+  return hasType(value, "org.hypercerts.defs#smallImage");
+}
+
+function isWorkScopeCel(value: unknown): value is WorkScopeCel {
+  return hasType(value, "org.hypercerts.workscope.cel");
+}
+
+function isWorkScopeString(value: unknown): value is WorkScopeString {
+  return hasType(value, "org.hypercerts.claim.activity#workScopeString");
 }
 
 export function scoreActivity(record: ActivityRecord): ScoreResult {
@@ -159,15 +210,13 @@ export function scoreActivity(record: ActivityRecord): ScoreResult {
   // Both variants are discriminated by $type
   const image = record.image;
   let hasImage = 0;
-  if (image) {
-    const imageType = (image as { $type?: string }).$type;
-    if (imageType === "org.hypercerts.defs#uri") {
-      const uri = (image as { uri?: string }).uri;
-      if (typeof uri === "string" && uri.length > 0) hasImage = 10;
-    } else if (imageType === "org.hypercerts.defs#smallImage") {
-      // blob presence — if the field exists the image was uploaded
-      if ((image as { image?: unknown }).image) hasImage = 10;
+  if (isDefsUriImage(image)) {
+    if (typeof image.uri === "string" && image.uri.length > 0) {
+      hasImage = 10;
     }
+  } else if (isDefsSmallImage(image) && image.image) {
+    // blob presence — if the field exists the image was uploaded
+    hasImage = 10;
   }
 
   // 5. hasWorkScope (0-10)
@@ -176,18 +225,16 @@ export function scoreActivity(record: ActivityRecord): ScoreResult {
   //   org.hypercerts.claim.activity#workScopeString → {scope: string}
   const workScope = record.workScope;
   let hasWorkScope = 0;
-  if (workScope) {
-    const wsType = (workScope as { $type?: string }).$type;
-    if (wsType === "org.hypercerts.workscope.cel") {
-      // CEL scope always has `expression` — structured, high-quality signal
-      hasWorkScope = 10;
-    } else if (wsType === "org.hypercerts.claim.activity#workScopeString") {
-      const scope = (workScope as { scope?: string }).scope;
-      if (typeof scope === "string" && scope.length > 0) hasWorkScope = 10;
-    } else if (wsType !== undefined) {
-      // Unknown future variant — treat as present
+  if (isWorkScopeCel(workScope)) {
+    // CEL scope always has `expression` — structured, high-quality signal
+    hasWorkScope = 10;
+  } else if (isWorkScopeString(workScope)) {
+    if (typeof workScope.scope === "string" && workScope.scope.length > 0) {
       hasWorkScope = 10;
     }
+  } else if (isRecord(workScope) && typeof workScope.$type === "string") {
+    // Unknown future variant — treat as present
+    hasWorkScope = 10;
   }
 
   // 6. contributorQuality (0-15)
@@ -326,10 +373,8 @@ export function scoreActivity(record: ActivityRecord): ScoreResult {
 
 export function tierForScore(score: number, testSignals: string[]): LabelTier {
   if (testSignals.length > 0) return "likely-test";
-  for (const [tier, { min, max }] of Object.entries(SCORE_THRESHOLDS) as [
-    LabelTier,
-    { min: number; max: number },
-  ][]) {
+  for (const tier of QUALITY_LABEL_IDENTIFIERS) {
+    const { min, max } = SCORE_THRESHOLDS[tier];
     if (score >= min && score <= max) return tier;
   }
   return "likely-test";

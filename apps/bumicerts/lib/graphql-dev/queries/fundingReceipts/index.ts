@@ -88,6 +88,27 @@ type TextUnion = { value: string };
 type DidUnion = { did: string };
 type FundingUnion = TextUnion | DidUnion | StrongRefLike | null;
 
+export type FundingReceiptTextParty = {
+  $type: "org.hypercerts.funding.receipt#text";
+  value: string;
+};
+
+export type FundingReceiptDidParty = {
+  $type: "app.certified.defs#did";
+  did: string;
+};
+
+export type FundingReceiptStrongRefParty = {
+  uri: string | null;
+  cid: string | null;
+};
+
+export type FundingReceiptParty =
+  | FundingReceiptTextParty
+  | FundingReceiptDidParty
+  | FundingReceiptStrongRefParty
+  | null;
+
 type FundingReceiptNode = {
   did: string;
   uri: string;
@@ -120,8 +141,8 @@ export type FundingReceiptItem = {
     indexedAt: string | null;
   };
   record: {
-    from: unknown;
-    to: unknown;
+    from: FundingReceiptParty;
+    to: FundingReceiptParty;
     amount: string;
     currency: string;
     paymentRail: string | null;
@@ -140,7 +161,7 @@ export type Result = FundingReceiptItem[];
 const PAGE_SIZE = 200;
 const MAX_PAGES = 50;
 
-function normalizeFundingUnion(value: FundingUnion): unknown {
+function normalizeFundingUnion(value: FundingUnion): FundingReceiptParty {
   if (!value) return null;
   if ("value" in value && typeof value.value === "string") {
     return { $type: "org.hypercerts.funding.receipt#text", value: value.value };
@@ -195,8 +216,20 @@ export async function fetch(params: Params): Promise<Result> {
     allReceipts.push(...pluckConnectionNodes(receiptConnection).map(normalizeReceipt));
 
     const pageInfo = connectionPageInfo(receiptConnection);
-    if (pageInfo.hasNextPage && pageInfo.endCursor) {
-      cursor = pageInfo.endCursor;
+    if (pageInfo.hasNextPage && !pageInfo.endCursor) {
+      throw new Error(
+        `orgHypercertsFundingReceipt for ${params.did} reported hasNextPage without an endCursor`,
+      );
+    }
+
+    if (pageInfo.hasNextPage && page === MAX_PAGES - 1) {
+      throw new Error(
+        `orgHypercertsFundingReceipt for ${params.did} exceeded ${MAX_PAGES} pages`,
+      );
+    }
+
+    if (pageInfo.hasNextPage) {
+      cursor = pageInfo.endCursor ?? undefined;
       continue;
     }
 

@@ -48,6 +48,6 @@ export interface ScoreBreakdown {
 }
 
 export interface LabelDefinition {
-  identifier: string;
+  identifier: LabelTier;
   locales: Array<{ lang: string; name: string; description: string }>;
 }

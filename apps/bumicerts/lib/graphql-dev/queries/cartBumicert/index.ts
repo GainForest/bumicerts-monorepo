@@ -103,21 +103,28 @@ export async function fetch(params: Params): Promise<CartBumicertItem | null> {
   const rkey = params.id.slice(firstDash + 1);
   if (!did || !rkey) return null;
 
-  const [activityRes, orgRes, fundingConfigRes] = await Promise.all([
-    graphqlClient.request<ActivityResponse>(activityDocument, {
-      uri: buildActivityUri(did, rkey),
-    }),
-    graphqlClient.request<OrgResponse>(orgDocument, { did }),
-    graphqlClient.request<FundingConfigResponse>(fundingConfigDocument, {
-      uri: buildFundingConfigUri(did, rkey),
-    }),
-  ]);
+  const activityRes = await graphqlClient.request<ActivityResponse>(activityDocument, {
+    uri: buildActivityUri(did, rkey),
+  });
 
   const activity = activityRes.orgHypercertsClaimActivityByUri ?? null;
   if (!activity) return null;
 
-  const org = pluckConnectionNodes(orgRes.appGainforestOrganizationInfo)[0] ?? null;
-  const rawFc = fundingConfigRes.appGainforestFundingConfigByUri;
+  const [orgRes, fundingConfigRes] = await Promise.allSettled([
+    graphqlClient.request<OrgResponse>(orgDocument, { did: activity.did }),
+    graphqlClient.request<FundingConfigResponse>(fundingConfigDocument, {
+      uri: buildFundingConfigUri(activity.did, activity.rkey),
+    }),
+  ]);
+
+  const org =
+    orgRes.status === "fulfilled"
+      ? (pluckConnectionNodes(orgRes.value.appGainforestOrganizationInfo)[0] ?? null)
+      : null;
+  const rawFc =
+    fundingConfigRes.status === "fulfilled"
+      ? fundingConfigRes.value.appGainforestFundingConfigByUri
+      : null;
 
   return {
     id: params.id,

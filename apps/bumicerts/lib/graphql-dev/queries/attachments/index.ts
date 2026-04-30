@@ -16,6 +16,7 @@ import {
 } from "../_migration-helpers";
 
 const PAGE_SIZE = 100;
+const MAX_PAGES = 50;
 
 const indexerUrl = process.env.NEXT_PUBLIC_INDEXER_URL;
 
@@ -271,27 +272,40 @@ function normalizeLeafletBlock(value: LeafletBlockNode): unknown {
   return block;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isDescriptionStringNode(value: unknown): value is DescriptionStringNode {
+  return isRecord(value) && typeof value.value === "string";
+}
+
+function isStrongRefDescription(value: unknown): value is StrongRefLike {
+  return isRecord(value)
+    && (typeof value.uri === "string" || typeof value.cid === "string");
+}
+
+function isLeafletDocumentNode(value: unknown): value is LeafletDocumentNode {
+  return isRecord(value) && Array.isArray(value.blocks);
+}
+
 function normalizeAttachmentDescription(value: unknown): unknown {
-  if (!value || typeof value !== "object") return value;
-
-  const record = value as DescriptionStringNode & StrongRefLike & LeafletDocumentNode;
-
-  if (typeof record.value === "string") {
+  if (isDescriptionStringNode(value)) {
     return {
       $type: "org.hypercerts.defs#descriptionString",
-      value: record.value,
-      facets: normalizeBskyFacets(record.facets),
+      value: value.value,
+      facets: normalizeBskyFacets(value.facets),
     };
   }
 
-  if ("uri" in record || "cid" in record) {
-    return toLegacyStrongRef(record);
+  if (isStrongRefDescription(value)) {
+    return toLegacyStrongRef(value);
   }
 
-  if (Array.isArray(record.blocks)) {
+  if (isLeafletDocumentNode(value)) {
     return {
       $type: "pub.leaflet.pages.linearDocument",
-      blocks: record.blocks.map((block) => ({
+      blocks: (value.blocks ?? []).map((block) => ({
         $type: "pub.leaflet.pages.linearDocument#block",
         ...(block?.alignment ? { alignment: block.alignment } : {}),
         block: normalizeLeafletBlock(block ?? {}),
@@ -305,8 +319,9 @@ function normalizeAttachmentDescription(value: unknown): unknown {
 async function fetchAllAttachments(did: string): Promise<AttachmentNode[]> {
   const nodes: AttachmentNode[] = [];
   let after: string | null = null;
+  const seenCursors = new Set<string>();
 
-  while (true) {
+  for (let pageIndex = 0; pageIndex < MAX_PAGES; pageIndex += 1) {
     const res = await graphqlClient.request<AttachmentResponse>(byDidDocument, {
       did,
       first: PAGE_SIZE,
@@ -325,8 +340,19 @@ async function fetchAllAttachments(did: string): Promise<AttachmentNode[]> {
       throw new Error(`orgHypercertsContextAttachment for ${did} is missing endCursor while hasNextPage is true`);
     }
 
+    if (page.endCursor === after || seenCursors.has(page.endCursor)) {
+      throw new Error(
+        `orgHypercertsContextAttachment for ${did} repeated cursor ${page.endCursor}`,
+      );
+    }
+
+    seenCursors.add(page.endCursor);
     after = page.endCursor;
   }
+
+  throw new Error(
+    `orgHypercertsContextAttachment for ${did} exceeded ${MAX_PAGES} pages`,
+  );
 }
 
 export async function fetch(params: Params): Promise<Result> {

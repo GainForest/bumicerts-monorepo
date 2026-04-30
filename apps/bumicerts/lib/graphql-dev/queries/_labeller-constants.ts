@@ -117,4 +117,4 @@ export const QUALITY_LABEL_IDENTIFIERS = [
   "standard",
   "draft",
   "likely-test",
-];
+] as const satisfies readonly LabelTier[];

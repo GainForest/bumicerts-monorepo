@@ -71,10 +71,36 @@ const byDidDocument = /* GraphQL */ `
                   __typename
                   ... on PubLeafletBlocksText {
                     plaintext
+                    facets {
+                      index {
+                        byteStart
+                        byteEnd
+                      }
+                      features {
+                        __typename
+                        ... on PubLeafletRichtextFacetLink { uri }
+                        ... on PubLeafletRichtextFacetDidMention { did }
+                        ... on PubLeafletRichtextFacetAtMention { atURI href }
+                        ... on PubLeafletRichtextFacetId { id }
+                      }
+                    }
                   }
                   ... on PubLeafletBlocksHeader {
                     plaintext
                     level
+                    facets {
+                      index {
+                        byteStart
+                        byteEnd
+                      }
+                      features {
+                        __typename
+                        ... on PubLeafletRichtextFacetLink { uri }
+                        ... on PubLeafletRichtextFacetDidMention { did }
+                        ... on PubLeafletRichtextFacetAtMention { atURI href }
+                        ... on PubLeafletRichtextFacetId { id }
+                      }
+                    }
                   }
                   ... on PubLeafletBlocksImage {
                     alt
@@ -206,14 +232,40 @@ const activityByUriDocument = /* GraphQL */ `
           blocks {
             alignment
             block {
-              __typename
-              ... on PubLeafletBlocksText {
-                plaintext
-              }
-              ... on PubLeafletBlocksHeader {
-                plaintext
-                level
-              }
+                  __typename
+                  ... on PubLeafletBlocksText {
+                    plaintext
+                    facets {
+                      index {
+                        byteStart
+                        byteEnd
+                      }
+                      features {
+                        __typename
+                        ... on PubLeafletRichtextFacetLink { uri }
+                        ... on PubLeafletRichtextFacetDidMention { did }
+                        ... on PubLeafletRichtextFacetAtMention { atURI href }
+                        ... on PubLeafletRichtextFacetId { id }
+                      }
+                    }
+                  }
+                  ... on PubLeafletBlocksHeader {
+                    plaintext
+                    level
+                    facets {
+                      index {
+                        byteStart
+                        byteEnd
+                      }
+                      features {
+                        __typename
+                        ... on PubLeafletRichtextFacetLink { uri }
+                        ... on PubLeafletRichtextFacetDidMention { did }
+                        ... on PubLeafletRichtextFacetAtMention { atURI href }
+                        ... on PubLeafletRichtextFacetId { id }
+                      }
+                    }
+                  }
               ... on PubLeafletBlocksImage {
                 alt
                 image {
@@ -291,10 +343,36 @@ const orgInfoDocument = /* GraphQL */ `
                 __typename
                 ... on PubLeafletBlocksText {
                   plaintext
+                  facets {
+                    index {
+                      byteStart
+                      byteEnd
+                    }
+                    features {
+                      __typename
+                      ... on PubLeafletRichtextFacetLink { uri }
+                      ... on PubLeafletRichtextFacetDidMention { did }
+                      ... on PubLeafletRichtextFacetAtMention { atURI href }
+                      ... on PubLeafletRichtextFacetId { id }
+                    }
+                  }
                 }
                 ... on PubLeafletBlocksHeader {
                   plaintext
                   level
+                  facets {
+                    index {
+                      byteStart
+                      byteEnd
+                    }
+                    features {
+                      __typename
+                      ... on PubLeafletRichtextFacetLink { uri }
+                      ... on PubLeafletRichtextFacetDidMention { did }
+                      ... on PubLeafletRichtextFacetAtMention { atURI href }
+                      ... on PubLeafletRichtextFacetId { id }
+                    }
+                  }
                 }
                 ... on PubLeafletBlocksImage {
                   alt
@@ -342,6 +420,35 @@ type ActivityImageNode =
   | { __typename: "OrgHypercertsDefsSmallImage"; image?: BlobLike | null }
   | null;
 
+type LeafletRichtextFeature =
+  | { __typename: "PubLeafletRichtextFacetLink"; uri: string }
+  | { __typename: "PubLeafletRichtextFacetDidMention"; did: string }
+  | { __typename: "PubLeafletRichtextFacetAtMention"; atURI: string; href?: string | null }
+  | { __typename: "PubLeafletRichtextFacetBold" }
+  | { __typename: "PubLeafletRichtextFacetItalic" }
+  | { __typename: "PubLeafletRichtextFacetCode" }
+  | { __typename: "PubLeafletRichtextFacetStrikethrough" }
+  | { __typename: "PubLeafletRichtextFacetUnderline" }
+  | { __typename: "PubLeafletRichtextFacetHighlight" }
+  | { __typename: "PubLeafletRichtextFacetId"; id?: string | null };
+
+type LeafletFacet = {
+  index?: {
+    byteStart?: number | null;
+    byteEnd?: number | null;
+  } | null;
+  features?: Array<LeafletRichtextFeature | null> | null;
+};
+
+type LeafletBlockNode = {
+  __typename?: string;
+  plaintext?: string | null;
+  level?: number | null;
+  alt?: string | null;
+  image?: BlobLike | null;
+  facets?: Array<LeafletFacet | null> | null;
+};
+
 type ActivityListPageNode = {
   did: string;
   uri: string;
@@ -360,7 +467,23 @@ type ActivityDetailNode = {
   title: string;
   shortDescription: string;
   shortDescriptionFacets: Array<BskyFacet | null> | null;
-  description: unknown;
+  description:
+    | {
+        __typename?: "OrgHypercertsDefsDescriptionString";
+        value?: string | null;
+        facets?: Array<BskyFacet | null> | null;
+      }
+    | {
+        __typename?: "ComAtprotoRepoStrongRef";
+        uri?: string | null;
+        cid?: string | null;
+      }
+    | {
+        __typename?: "PubLeafletPagesLinearDocument";
+        id?: string | null;
+        blocks?: Array<{ alignment?: string | null; block?: LeafletBlockNode | null } | null> | null;
+      }
+    | null;
   image: ActivityImageNode;
   workScope: unknown;
   contributors: unknown;
@@ -506,6 +629,65 @@ function normalizeNullableBskyFacets(facets: Array<BskyFacet | null> | null | un
   return normalizeBskyFacets(facets);
 }
 
+function normalizeLeafletRichtextFacets(facets: Array<LeafletFacet | null> | null | undefined): unknown {
+  if (facets == null) return null;
+
+  type NormalizedLeafletFeature =
+    | { $type: "pub.leaflet.richtext.facet#link"; uri: string }
+    | { $type: "pub.leaflet.richtext.facet#didMention"; did: string }
+    | { $type: "pub.leaflet.richtext.facet#atMention"; atURI: string }
+    | { $type: "pub.leaflet.richtext.facet#bold" }
+    | { $type: "pub.leaflet.richtext.facet#italic" }
+    | { $type: "pub.leaflet.richtext.facet#code" }
+    | { $type: "pub.leaflet.richtext.facet#strikethrough" }
+    | { $type: "pub.leaflet.richtext.facet#underline" }
+    | { $type: "pub.leaflet.richtext.facet#highlight" }
+    | { $type: "pub.leaflet.richtext.facet#id"; id?: string };
+
+  return (facets ?? []).flatMap((facet) => {
+    if (!facet?.index) return [];
+
+    const features = (facet.features ?? []).flatMap((feature): NormalizedLeafletFeature[] => {
+      if (!feature) return [];
+
+      switch (feature.__typename) {
+        case "PubLeafletRichtextFacetLink":
+          return [{ $type: "pub.leaflet.richtext.facet#link", uri: feature.uri }];
+        case "PubLeafletRichtextFacetDidMention":
+          return [{ $type: "pub.leaflet.richtext.facet#didMention", did: feature.did }];
+        case "PubLeafletRichtextFacetAtMention":
+          return [{ $type: "pub.leaflet.richtext.facet#atMention", atURI: feature.atURI }];
+        case "PubLeafletRichtextFacetBold":
+          return [{ $type: "pub.leaflet.richtext.facet#bold" }];
+        case "PubLeafletRichtextFacetItalic":
+          return [{ $type: "pub.leaflet.richtext.facet#italic" }];
+        case "PubLeafletRichtextFacetCode":
+          return [{ $type: "pub.leaflet.richtext.facet#code" }];
+        case "PubLeafletRichtextFacetStrikethrough":
+          return [{ $type: "pub.leaflet.richtext.facet#strikethrough" }];
+        case "PubLeafletRichtextFacetUnderline":
+          return [{ $type: "pub.leaflet.richtext.facet#underline" }];
+        case "PubLeafletRichtextFacetHighlight":
+          return [{ $type: "pub.leaflet.richtext.facet#highlight" }];
+        case "PubLeafletRichtextFacetId":
+          return [{ $type: "pub.leaflet.richtext.facet#id", ...(feature.id != null ? { id: feature.id } : {}) }];
+        default:
+          return [];
+      }
+    });
+
+    return [
+      {
+        index: {
+          byteStart: facet.index.byteStart ?? 0,
+          byteEnd: facet.index.byteEnd ?? 0,
+        },
+        features,
+      },
+    ];
+  });
+}
+
 async function normalizeLegacyImage(image: ActivityImageNode, did: string): Promise<unknown> {
   if (!image) return null;
 
@@ -542,18 +724,25 @@ async function normalizeLeafletBlock(block: unknown, did: string): Promise<unkno
     level?: number | null;
     alt?: string | null;
     image?: BlobLike | null;
+    facets?: Array<LeafletFacet | null> | null;
   };
 
   if (value.__typename === "PubLeafletBlocksText") {
+    const facets = normalizeLeafletRichtextFacets(value.facets);
+
     return {
       $type: "pub.leaflet.blocks.text",
+      ...(facets != null ? { facets } : {}),
       plaintext: value.plaintext ?? null,
     };
   }
 
   if (value.__typename === "PubLeafletBlocksHeader") {
+    const facets = normalizeLeafletRichtextFacets(value.facets);
+
     return {
       $type: "pub.leaflet.blocks.header",
+      ...(facets != null ? { facets } : {}),
       plaintext: value.plaintext ?? null,
       level: value.level ?? null,
     };
@@ -844,6 +1033,12 @@ async function fetchFundingConfig(did: string, rkey: string): Promise<Activity["
   };
 }
 
+function mergeOrgMaps(target: Map<string, ActivityOrgInfo>, source: Map<string, ActivityOrgInfo>) {
+  for (const [did, orgInfo] of source) {
+    target.set(did, orgInfo);
+  }
+}
+
 async function normalizeActivities(nodes: ActivityDetailNode[], orgMap: Map<string, ActivityOrgInfo>): Promise<Activity[]> {
   return Promise.all(
     nodes.map(async (node) => {
@@ -1024,41 +1219,75 @@ export async function fetch<P extends Params>(params: P): Promise<Result<P>> {
   }
 
   const first = clampLegacyLimit(params.limit);
-  const res = await graphqlClient.request<ActivityListPageResponse>(activityListPageDocument, {
-    first,
-    after: params.cursor,
-  });
-  const nodes = pluckConnectionNodes(res.orgHypercertsClaimActivity);
-  const orgMap = await fetchOrgMap(nodes.map((item) => item.did));
-
   const filteredNodes: ActivityListPageNode[] = [];
+  const filteredOrgMap = new Map<string, ActivityOrgInfo>();
+  const seenCursors = new Set<string>();
+  let upstreamCursor = params.cursor;
+  let pageEndCursor: string | null = null;
+  let pageHasNextPage = false;
 
-  for (const node of nodes) {
-    const [labelInfo, normalizedImage] = await Promise.all([
-      fetchHyperlabelForDid(node.did),
-      normalizeLegacyImage(node.image, node.did),
-    ]);
+  while (filteredNodes.length < first) {
+    const res = await graphqlClient.request<ActivityListPageResponse>(activityListPageDocument, {
+      first,
+      after: upstreamCursor,
+    });
+    const connection = res.orgHypercertsClaimActivity;
+    const nodes = pluckConnectionNodes(connection);
+    const pageOrgMap =
+      params.hasOrganizationInfoRecord != null
+        ? await fetchOrgMap(nodes.map((item) => item.did))
+        : null;
 
-    if (params.labelTier != null && labelInfo?.labelTier !== params.labelTier) {
-      continue;
+    if (pageOrgMap) {
+      mergeOrgMaps(filteredOrgMap, pageOrgMap);
     }
 
-    if (params.hasImage != null) {
-      const hasImage = normalizedImage != null;
-      if (hasImage !== params.hasImage) continue;
+    for (const node of nodes) {
+      const normalizedImage = await normalizeLegacyImage(node.image, node.did);
+
+      if (params.hasImage != null) {
+        const hasImage = normalizedImage != null;
+        if (hasImage !== params.hasImage) continue;
+      }
+
+      if (params.hasOrganizationInfoRecord != null) {
+        const creatorInfo = normalizeCreatorInfo(node.did, pageOrgMap?.get(node.did));
+        const hasOrganizationInfoRecord = creatorInfo.organizationName != null;
+        if (hasOrganizationInfoRecord !== params.hasOrganizationInfoRecord) continue;
+      }
+
+      filteredNodes.push(node);
     }
 
-    if (params.hasOrganizationInfoRecord != null) {
-      const creatorInfo = normalizeCreatorInfo(node.did, orgMap.get(node.did));
-      const hasOrganizationInfoRecord = creatorInfo.organizationName != null;
-      if (hasOrganizationInfoRecord !== params.hasOrganizationInfoRecord) continue;
+    pageEndCursor = connection?.pageInfo?.endCursor ?? null;
+    pageHasNextPage = connection?.pageInfo?.hasNextPage ?? false;
+
+    if (!pageHasNextPage) {
+      break;
     }
 
-    filteredNodes.push(node);
+    if (!pageEndCursor) {
+      throw new Error(
+        "orgHypercertsClaimActivity list fetch reported hasNextPage without an endCursor",
+      );
+    }
+
+    if (pageEndCursor === upstreamCursor || seenCursors.has(pageEndCursor)) {
+      throw new Error(`orgHypercertsClaimActivity list fetch repeated cursor ${pageEndCursor}`);
+    }
+
+    seenCursors.add(pageEndCursor);
+    upstreamCursor = pageEndCursor;
   }
 
+  const nodesForDetails = filteredNodes.slice(0, first);
+  const orgMap =
+    params.hasOrganizationInfoRecord != null
+      ? filteredOrgMap
+      : await fetchOrgMap(nodesForDetails.map((item) => item.did));
+
   const detailNodes = await Promise.all(
-    filteredNodes.map(async (node) => {
+    nodesForDetails.map(async (node) => {
       const response = await graphqlClient.request<ActivityByUriResponse>(activityByUriDocument, {
         uri: node.uri,
       });
@@ -1075,9 +1304,9 @@ export async function fetch<P extends Params>(params: P): Promise<Result<P>> {
   const result = {
     data,
     pageInfo: toLegacyPageInfo(
-      res.orgHypercertsClaimActivity?.pageInfo?.endCursor,
-      res.orgHypercertsClaimActivity?.pageInfo?.hasNextPage,
-      filteredNodes.length,
+      pageEndCursor,
+      pageHasNextPage,
+      data.length,
     ),
   };
   return result as Result<P>;

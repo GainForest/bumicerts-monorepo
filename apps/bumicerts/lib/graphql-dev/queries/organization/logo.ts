@@ -32,7 +32,13 @@ const document = /* GraphQL */ `
   }
 `;
 
-const graphqlClient = new GraphQLClient(process.env.NEXT_PUBLIC_INDEXER_URL ?? "", {
+const indexerUrl = process.env.NEXT_PUBLIC_INDEXER_URL;
+
+if (!indexerUrl) {
+  throw new Error("NEXT_PUBLIC_INDEXER_URL must be set for organization logo queries");
+}
+
+const graphqlClient = new GraphQLClient(indexerUrl, {
   headers: {
     "ngrok-skip-browser-warning": "true",
   },

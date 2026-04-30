@@ -63,15 +63,10 @@ const singleOrgDocument = /* GraphQL */ `
                       byteEnd
                     }
                     features {
+                      __typename
                       ... on PubLeafletRichtextFacetLink { uri }
                       ... on PubLeafletRichtextFacetDidMention { did }
                       ... on PubLeafletRichtextFacetAtMention { atURI href }
-                      ... on PubLeafletRichtextFacetBold { empty }
-                      ... on PubLeafletRichtextFacetItalic { empty }
-                      ... on PubLeafletRichtextFacetCode { empty }
-                      ... on PubLeafletRichtextFacetStrikethrough { empty }
-                      ... on PubLeafletRichtextFacetUnderline { empty }
-                      ... on PubLeafletRichtextFacetHighlight { empty }
                       ... on PubLeafletRichtextFacetId { id }
                     }
                   }
@@ -85,15 +80,10 @@ const singleOrgDocument = /* GraphQL */ `
                       byteEnd
                     }
                     features {
+                      __typename
                       ... on PubLeafletRichtextFacetLink { uri }
                       ... on PubLeafletRichtextFacetDidMention { did }
                       ... on PubLeafletRichtextFacetAtMention { atURI href }
-                      ... on PubLeafletRichtextFacetBold { empty }
-                      ... on PubLeafletRichtextFacetItalic { empty }
-                      ... on PubLeafletRichtextFacetCode { empty }
-                      ... on PubLeafletRichtextFacetStrikethrough { empty }
-                      ... on PubLeafletRichtextFacetUnderline { empty }
-                      ... on PubLeafletRichtextFacetHighlight { empty }
                       ... on PubLeafletRichtextFacetId { id }
                     }
                   }
@@ -219,15 +209,10 @@ const activitiesByDidDocument = /* GraphQL */ `
                         byteEnd
                       }
                       features {
+                        __typename
                         ... on PubLeafletRichtextFacetLink { uri }
                         ... on PubLeafletRichtextFacetDidMention { did }
                         ... on PubLeafletRichtextFacetAtMention { atURI href }
-                        ... on PubLeafletRichtextFacetBold { empty }
-                        ... on PubLeafletRichtextFacetItalic { empty }
-                        ... on PubLeafletRichtextFacetCode { empty }
-                        ... on PubLeafletRichtextFacetStrikethrough { empty }
-                        ... on PubLeafletRichtextFacetUnderline { empty }
-                        ... on PubLeafletRichtextFacetHighlight { empty }
                         ... on PubLeafletRichtextFacetId { id }
                       }
                     }
@@ -241,15 +226,10 @@ const activitiesByDidDocument = /* GraphQL */ `
                         byteEnd
                       }
                       features {
+                        __typename
                         ... on PubLeafletRichtextFacetLink { uri }
                         ... on PubLeafletRichtextFacetDidMention { did }
                         ... on PubLeafletRichtextFacetAtMention { atURI href }
-                        ... on PubLeafletRichtextFacetBold { empty }
-                        ... on PubLeafletRichtextFacetItalic { empty }
-                        ... on PubLeafletRichtextFacetCode { empty }
-                        ... on PubLeafletRichtextFacetStrikethrough { empty }
-                        ... on PubLeafletRichtextFacetUnderline { empty }
-                        ... on PubLeafletRichtextFacetHighlight { empty }
                         ... on PubLeafletRichtextFacetId { id }
                       }
                     }
@@ -357,11 +337,16 @@ type LeafletFacet = {
     byteEnd?: number | null;
   } | null;
   features?: Array<
-    | { uri: string }
-    | { did: string }
-    | { atURI: string; href?: string | null }
-    | { empty?: boolean | null }
-    | { id?: string | null }
+    | { __typename: "PubLeafletRichtextFacetLink"; uri: string }
+    | { __typename: "PubLeafletRichtextFacetDidMention"; did: string }
+    | { __typename: "PubLeafletRichtextFacetAtMention"; atURI: string; href?: string | null }
+    | { __typename: "PubLeafletRichtextFacetBold" }
+    | { __typename: "PubLeafletRichtextFacetItalic" }
+    | { __typename: "PubLeafletRichtextFacetCode" }
+    | { __typename: "PubLeafletRichtextFacetStrikethrough" }
+    | { __typename: "PubLeafletRichtextFacetUnderline" }
+    | { __typename: "PubLeafletRichtextFacetHighlight" }
+    | { __typename: "PubLeafletRichtextFacetId"; id?: string | null }
     | null
   > | null;
 };
@@ -622,30 +607,44 @@ function normalizeLeafletRichtextFacets(facets: Array<LeafletFacet | null> | nul
     | { $type: "pub.leaflet.richtext.facet#link"; uri: string }
     | { $type: "pub.leaflet.richtext.facet#didMention"; did: string }
     | { $type: "pub.leaflet.richtext.facet#atMention"; atURI: string }
-    | { $type: "pub.leaflet.richtext.facet#id"; id?: string }
-    | { $type: "pub.leaflet.richtext.facet#bold" };
+    | { $type: "pub.leaflet.richtext.facet#bold" }
+    | { $type: "pub.leaflet.richtext.facet#italic" }
+    | { $type: "pub.leaflet.richtext.facet#code" }
+    | { $type: "pub.leaflet.richtext.facet#strikethrough" }
+    | { $type: "pub.leaflet.richtext.facet#underline" }
+    | { $type: "pub.leaflet.richtext.facet#highlight" }
+    | { $type: "pub.leaflet.richtext.facet#id"; id?: string };
 
   return (facets ?? []).flatMap((facet) => {
     if (!facet?.index) return [];
 
     const features = (facet.features ?? []).flatMap((feature): NormalizedLeafletFeature[] => {
       if (!feature) return [];
-      if ("uri" in feature && typeof feature.uri === "string") {
-        return [{ $type: "pub.leaflet.richtext.facet#link", uri: feature.uri }];
+
+      switch (feature.__typename) {
+        case "PubLeafletRichtextFacetLink":
+          return [{ $type: "pub.leaflet.richtext.facet#link", uri: feature.uri }];
+        case "PubLeafletRichtextFacetDidMention":
+          return [{ $type: "pub.leaflet.richtext.facet#didMention", did: feature.did }];
+        case "PubLeafletRichtextFacetAtMention":
+          return [{ $type: "pub.leaflet.richtext.facet#atMention", atURI: feature.atURI }];
+        case "PubLeafletRichtextFacetBold":
+          return [{ $type: "pub.leaflet.richtext.facet#bold" }];
+        case "PubLeafletRichtextFacetItalic":
+          return [{ $type: "pub.leaflet.richtext.facet#italic" }];
+        case "PubLeafletRichtextFacetCode":
+          return [{ $type: "pub.leaflet.richtext.facet#code" }];
+        case "PubLeafletRichtextFacetStrikethrough":
+          return [{ $type: "pub.leaflet.richtext.facet#strikethrough" }];
+        case "PubLeafletRichtextFacetUnderline":
+          return [{ $type: "pub.leaflet.richtext.facet#underline" }];
+        case "PubLeafletRichtextFacetHighlight":
+          return [{ $type: "pub.leaflet.richtext.facet#highlight" }];
+        case "PubLeafletRichtextFacetId":
+          return [{ $type: "pub.leaflet.richtext.facet#id", ...(feature.id != null ? { id: feature.id } : {}) }];
+        default:
+          return [];
       }
-      if ("did" in feature && typeof feature.did === "string") {
-        return [{ $type: "pub.leaflet.richtext.facet#didMention", did: feature.did }];
-      }
-      if ("atURI" in feature && typeof feature.atURI === "string") {
-        return [{ $type: "pub.leaflet.richtext.facet#atMention", atURI: feature.atURI }];
-      }
-      if ("id" in feature && typeof feature.id === "string") {
-        return [{ $type: "pub.leaflet.richtext.facet#id", id: feature.id }];
-      }
-      if ("empty" in feature) {
-        return [{ $type: "pub.leaflet.richtext.facet#bold" }];
-      }
-      return [];
     });
 
     return [
@@ -1070,7 +1069,7 @@ export async function fetch(params: ListParams): Promise<ListResult>;
 export async function fetch(params: Params): Promise<SingleResult | ListResult> {
   if ("did" in params) {
     const org = await fetchOrgByDid(params.did);
-    const activities = org ? await fetchActivitiesByDid(params.did, org) : [];
+    const activities = await fetchActivitiesByDid(params.did, org);
     return { org, activities };
   }
 
