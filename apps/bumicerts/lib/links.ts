@@ -6,6 +6,7 @@ const didCatcher = (callback: (did: string) => string): DidDynamicLink => {
 };
 
 const DEFAULT_GREEN_GLOBE_PREVIEW_BASE_URL = "https://gainforest.app";
+const BUMICERT_CREATE_PATH = "/bumicert/create";
 
 const GREEN_GLOBE_PREVIEW_BASE_URL =
   clientEnv.NEXT_PUBLIC_GREEN_GLOBE_URL?.trim().replace(/\/$/, "") ??
@@ -33,7 +34,7 @@ export const links = {
     edit: "/upload?mode=edit",
     sites: "/upload/sites",
     audio: "/upload/audio",
-    bumicerts: "/upload/bumicerts",
+    bumicerts: BUMICERT_CREATE_PATH,
     trees: "/upload/trees",
     treesUpload: "/upload/trees?mode=upload",
     treesFiltered: (options?: {
@@ -52,8 +53,8 @@ export const links = {
   user: didCatcher((did) => `/user/${did}`),
   explore: "/explore",
   bumicert: {
-    create: "/bumicert/create",
-    createWithDraftId: (draftId: string) => `/bumicert/create/${draftId}`,
+    create: BUMICERT_CREATE_PATH,
+    createWithDraftId: (draftId: string) => `${BUMICERT_CREATE_PATH}/${draftId}`,
     // View a bumicert by either:
     // 1. Full id (did-rkey format) - for backward compatibility
     // 2. Separate did and rkey parameters
@@ -67,7 +68,7 @@ export const links = {
     },
     api: {
       generateShortDescription:
-        "/bumicert/create/api/generate-short-description",
+        `${BUMICERT_CREATE_PATH}/api/generate-short-description`,
     },
   },
   external: {
