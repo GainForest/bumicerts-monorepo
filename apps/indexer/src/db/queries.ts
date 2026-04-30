@@ -47,13 +47,27 @@ const MAX_RECORDS_PER_BATCH = Math.floor(MAX_PARAMETERS / COLS_PER_ROW);
  * The VALUES clause uses $N placeholders via sql.unsafe() but all
  * values are still bound parameters (no injection risk).
  *
+ * De-duplicates records by URI before inserting. Tap can emit multiple events
+ * for the same repo record in a single flush window during backfill/replay; a
+ * multi-row INSERT ... ON CONFLICT statement cannot contain duplicate conflict
+ * keys because PostgreSQL would need to update the same target row twice.
+ * Keeping the last event for each URI preserves the newest value from the
+ * flushed event sequence.
+ *
  * Batches large inserts to respect PostgreSQL's 65534 parameter limit.
  * Uses a transaction to ensure atomicity — all batches commit or all roll back.
-  */
+ */
 export async function upsertRecords(records: RecordInsert[]): Promise<void> {
   if (records.length === 0) return;
 
-  const sorted = [...records].sort((a, b) => a.uri.localeCompare(b.uri));
+  const dedupedByUri = new Map<string, RecordInsert>();
+  for (const record of records) {
+    dedupedByUri.set(record.uri, record);
+  }
+
+  const sorted = [...dedupedByUri.values()].sort((a, b) =>
+    a.uri.localeCompare(b.uri)
+  );
 
   // Process in batches within a transaction for atomicity
   await sql.begin(async (tx) => {
