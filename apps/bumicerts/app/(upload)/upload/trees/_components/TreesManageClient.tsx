@@ -9,15 +9,19 @@ import {
   ChevronLeftIcon,
   CirclePlusIcon,
   DatabaseIcon,
+  ExternalLink,
   InfoIcon,
   Loader2,
   MapPin,
+  Pencil,
   RefreshCcw,
   SearchIcon,
   Trash2,
+  X,
 } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
 import { ATTACH_EXISTING_DWC_DATASET_MAX_OCCURRENCES } from "@gainforest/atproto-mutations-next";
+import type { UpdateAcMultimediaInput } from "@gainforest/atproto-mutations-next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import Container from "@/components/ui/container";
 import {
   Popover,
@@ -62,8 +67,11 @@ import {
 import GreenGlobeTreePreviewCard from "./GreenGlobeTreePreviewCard";
 import { ManageConfirmModal } from "./ManageConfirmModal";
 import { TreesManageSkeleton } from "./TreesManageSkeleton";
+import { TreeListPagination } from "./TreeListPagination";
 import {
   buildTreeManagerItems,
+  capCanopyCoverPercentInput,
+  CANOPY_COVER_PERCENT_MAX,
   formatEventDate,
   formatTreeSubtitle,
   getPhotoUrl,
@@ -83,6 +91,8 @@ import AddToDatasetModal from "./AddToDatasetModal";
 type TreesManageClientProps = {
   did: string;
 };
+
+type MultimediaUnsetField = NonNullable<UpdateAcMultimediaInput["unset"]>[number];
 
 type OccurrenceField = keyof TreeOccurrenceDraft;
 type OptionalOccurrenceField = Exclude<
@@ -124,6 +134,33 @@ const EMPTY_MEASUREMENT_DRAFT: TreeMeasurementDraft = {
 };
 
 const ATTACH_INVALIDATION_DELAY_MS = 1_000;
+const TREE_ITEMS_PER_PAGE = 10;
+
+function getTreePageFromQuery(value: string | null): number {
+  if (!value) {
+    return 1;
+  }
+
+  if (!/^\d+$/.test(value)) {
+    return 1;
+  }
+
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
+
+function getTotalPages(totalItems: number, pageSize: number): number {
+  return Math.max(1, Math.ceil(totalItems / pageSize));
+}
+
+function getBoundedPage(page: number, totalPages: number): number {
+  return Math.min(Math.max(page, 1), totalPages);
+}
+
+function toNullableQueryValue(value: string): string | null {
+  return value.length > 0 ? value : null;
+}
 
 function normalizeDraftValue(value: string): string {
   return value.trim();
@@ -264,6 +301,27 @@ function sameMeasurementSet(
   }
 
   return left.every((item, index) => sameMeasurementItem(item, right[index]!));
+}
+
+function sameMultimediaRecord(
+  left: MultimediaItem["record"],
+  right: MultimediaItem["record"],
+): boolean {
+  return (
+    left.occurrenceRef === right.occurrenceRef &&
+    left.siteRef === right.siteRef &&
+    left.subjectPart === right.subjectPart &&
+    left.subjectPartUri === right.subjectPartUri &&
+    left.subjectOrientation === right.subjectOrientation &&
+    sameJsonValue(left.file, right.file) &&
+    left.format === right.format &&
+    left.accessUri === right.accessUri &&
+    left.variantLiteral === right.variantLiteral &&
+    left.caption === right.caption &&
+    left.creator === right.creator &&
+    left.createDate === right.createDate &&
+    left.createdAt === right.createdAt
+  );
 }
 
 function createOptimisticMeasurementItem(
@@ -431,6 +489,10 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     "q",
     parseAsString.withDefault(""),
   );
+  const [treePageQuery, setTreePageQuery] = useQueryState(
+    "tree-page",
+    parseAsString,
+  );
   const [datasetSearchQuery, setDatasetSearchQuery] = useQueryState(
     "dataset-q",
     parseAsString.withDefault(""),
@@ -457,6 +519,7 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
   const createMeasurement = trpc.dwc.measurement.create.useMutation();
   const updateMeasurement = trpc.dwc.measurement.update.useMutation();
   const deleteMeasurement = trpc.dwc.measurement.delete.useMutation();
+  const updateMultimedia = trpc.ac.multimedia.update.useMutation();
   const deleteMultimedia = trpc.ac.multimedia.delete.useMutation();
 
   const [occurrenceDraft, setOccurrenceDraft] = useState<TreeOccurrenceDraft>(
@@ -477,6 +540,23 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
   const [datasetAttachFeedback, setDatasetAttachFeedback] = useState<
     string | null
   >(null);
+  const [editingPhotoCaptionRkey, setEditingPhotoCaptionRkey] = useState<
+    string | null
+  >(null);
+  const [photoCaptionDraft, setPhotoCaptionDraft] = useState("");
+  const [savingPhotoCaptionRkey, setSavingPhotoCaptionRkey] = useState<
+    string | null
+  >(null);
+  const [photoCaptionError, setPhotoCaptionError] = useState<{
+    rkey: string;
+    message: string;
+  } | null>(null);
+  const [photoCaptionFeedbackRkey, setPhotoCaptionFeedbackRkey] = useState<
+    string | null
+  >(null);
+  const [selectedUngroupedTreeRkeys, setSelectedUngroupedTreeRkeys] = useState<
+    string[]
+  >([]);
 
   const selectableEstablishmentMeansOptions = useMemo(
     () =>
@@ -501,6 +581,8 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
   const [optimisticAddedPhotos, setOptimisticAddedPhotos] = useState<
     Record<string, MultimediaItem[]>
   >({});
+  const [optimisticMultimediaRecords, setOptimisticMultimediaRecords] =
+    useState<Record<string, MultimediaItem["record"]>>({});
   const [optimisticDeletedPhotoRkeys, setOptimisticDeletedPhotoRkeys] =
     useState<Record<string, true>>({});
   const [
@@ -613,11 +695,26 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
         );
       });
 
-    return [...optimisticPhotos, ...basePhotos];
+    return [...optimisticPhotos, ...basePhotos].map((item) => {
+      const rkey = item.metadata?.rkey;
+      const optimisticRecord = rkey
+        ? optimisticMultimediaRecords[rkey]
+        : undefined;
+
+      if (!optimisticRecord || sameMultimediaRecord(item.record, optimisticRecord)) {
+        return item;
+      }
+
+      return {
+        ...item,
+        record: optimisticRecord,
+      };
+    });
   }, [
     multimediaQuery.data,
     optimisticAddedPhotos,
     optimisticDeletedPhotoRkeys,
+    optimisticMultimediaRecords,
   ]);
 
   const treeItems = useMemo(
@@ -703,6 +800,21 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     return trees;
   }, [datasetFilter, treeItems]);
 
+  const activeDatasetPreviewRef =
+    datasetFilter &&
+    datasetFilter !== UNGROUPED_DATASET_FILTER &&
+    activeDatasetCard &&
+    !activeDatasetCard.isUngrouped
+      ? datasetFilter
+      : null;
+  const activeDatasetPreviewName = activeDatasetPreviewRef
+    ? activeDatasetCard?.name ??
+      datasetLookup.get(activeDatasetPreviewRef)?.record?.name ??
+      null
+    : null;
+  const activeDatasetPreviewTreeCount = activeDatasetPreviewRef
+    ? datasetScopedTrees.length
+    : null;
   const filteredTrees = useMemo(() => {
     const trees = datasetScopedTrees;
 
@@ -745,6 +857,80 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     });
   }, [datasetLookup, datasetScopedTrees, searchQuery]);
 
+  const requestedTreePage = useMemo(
+    () => getTreePageFromQuery(treePageQuery),
+    [treePageQuery],
+  );
+  const totalTreePages = getTotalPages(
+    filteredTrees.length,
+    TREE_ITEMS_PER_PAGE,
+  );
+  const currentTreePage = getBoundedPage(requestedTreePage, totalTreePages);
+  const paginatedTrees = useMemo(() => {
+    const startIndex = (currentTreePage - 1) * TREE_ITEMS_PER_PAGE;
+
+    return filteredTrees.slice(startIndex, startIndex + TREE_ITEMS_PER_PAGE);
+  }, [currentTreePage, filteredTrees]);
+
+  const filteredUngroupedTreeRkeys = useMemo(() => {
+    if (datasetFilter !== UNGROUPED_DATASET_FILTER) {
+      return [];
+    }
+
+    return filteredTrees.flatMap((item) => {
+      if (!isUngroupedTree(item)) {
+        return [];
+      }
+
+      const rkey = item.occurrence.metadata?.rkey;
+      return typeof rkey === "string" && rkey.length > 0 ? [rkey] : [];
+    });
+  }, [datasetFilter, filteredTrees]);
+
+  const filteredUngroupedTreeRkeySet = useMemo(
+    () => new Set(filteredUngroupedTreeRkeys),
+    [filteredUngroupedTreeRkeys],
+  );
+  const selectedUngroupedTreeRkeySet = useMemo(
+    () => new Set(selectedUngroupedTreeRkeys),
+    [selectedUngroupedTreeRkeys],
+  );
+  const selectedUngroupedTrees = useMemo(
+    () =>
+      filteredTrees.filter((item) => {
+        const rkey = item.occurrence.metadata?.rkey;
+        return typeof rkey === "string" && selectedUngroupedTreeRkeySet.has(rkey);
+      }),
+    [filteredTrees, selectedUngroupedTreeRkeySet],
+  );
+  const selectedUngroupedTreeCount = selectedUngroupedTreeRkeys.length;
+  const hasFilteredUngroupedTrees = filteredUngroupedTreeRkeys.length > 0;
+  const allFilteredUngroupedTreesSelected =
+    hasFilteredUngroupedTrees &&
+    filteredUngroupedTreeRkeys.every((rkey) =>
+      selectedUngroupedTreeRkeySet.has(rkey),
+    );
+  const someFilteredUngroupedTreesSelected =
+    filteredUngroupedTreeRkeys.some((rkey) =>
+      selectedUngroupedTreeRkeySet.has(rkey),
+    );
+  const selectAllUngroupedChecked = allFilteredUngroupedTreesSelected
+    ? true
+    : someFilteredUngroupedTreesSelected
+      ? "indeterminate"
+      : false;
+
+  const selectedTreeFilteredIndex = useMemo(() => {
+    if (!selectedTreeRkey) {
+      return -1;
+    }
+
+    return filteredTrees.findIndex(
+      (item) => item.occurrence.metadata?.rkey === selectedTreeRkey,
+    );
+  }, [filteredTrees, selectedTreeRkey]);
+  const selectedTreeIsInFilteredTrees = selectedTreeFilteredIndex >= 0;
+
   const selectedTree = useMemo(() => {
     if (!selectedTreeRkey) {
       return null;
@@ -757,11 +943,27 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     );
   }, [selectedTreeRkey, treeItems]);
 
+  const selectedTreeIsOnCurrentPage = Boolean(
+    selectedTreeRkey &&
+      paginatedTrees.some(
+        (item) => item.occurrence.metadata?.rkey === selectedTreeRkey,
+      ),
+  );
+
   const activeTree = showDatasetLanding
     ? null
     : isDesktop
-      ? (selectedTree ?? filteredTrees[0] ?? null)
-      : selectedTree;
+      ? selectedTreeIsOnCurrentPage
+        ? (selectedTree ?? paginatedTrees[0] ?? null)
+        : (paginatedTrees[0] ?? null)
+      : selectedTreeIsInFilteredTrees
+        ? selectedTree
+        : null;
+  const activeDatasetPreviewFocusedTree =
+    activeDatasetPreviewRef &&
+    activeTree?.occurrence.record?.datasetRef === activeDatasetPreviewRef
+      ? activeTree
+      : null;
 
   useEffect(() => {
     if (!showDatasetLanding || !selectedTreeRkey) {
@@ -772,17 +974,88 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
   }, [selectedTreeRkey, setSelectedTreeRkey, showDatasetLanding]);
 
   useEffect(() => {
-    if (showDatasetLanding) {
+    const selectionPruneHandle = window.setTimeout(() => {
+      if (datasetFilter !== UNGROUPED_DATASET_FILTER) {
+        setSelectedUngroupedTreeRkeys([]);
+        return;
+      }
+
+      setSelectedUngroupedTreeRkeys((current) => {
+        const next = current.filter((rkey) =>
+          filteredUngroupedTreeRkeySet.has(rkey),
+        );
+        return next.length === current.length ? current : next;
+      });
+    }, 0);
+
+    return () => window.clearTimeout(selectionPruneHandle);
+  }, [datasetFilter, filteredUngroupedTreeRkeySet]);
+
+  useEffect(() => {
+    if (isLoading) {
       return;
     }
 
-    const firstVisibleRkey = getSelectedRkey(filteredTrees[0] ?? null);
-    const isSelectionVisible = Boolean(
-      selectedTreeRkey &&
-      filteredTrees.some(
-        (item) => item.occurrence.metadata?.rkey === selectedTreeRkey,
-      ),
+    const canonicalTreePageQuery =
+      currentTreePage === 1 ? null : String(currentTreePage);
+
+    if (
+      requestedTreePage === currentTreePage &&
+      treePageQuery === canonicalTreePageQuery
+    ) {
+      return;
+    }
+
+    void setTreePageQuery(canonicalTreePageQuery);
+  }, [
+    currentTreePage,
+    isLoading,
+    requestedTreePage,
+    setTreePageQuery,
+    treePageQuery,
+  ]);
+
+  useEffect(() => {
+    if (isLoading || showDatasetLanding) {
+      return;
+    }
+
+    if (
+      treePageQuery !== null ||
+      selectedTreeFilteredIndex < 0 ||
+      selectedTreeIsOnCurrentPage
+    ) {
+      return;
+    }
+
+    const selectedTreePage =
+      Math.floor(selectedTreeFilteredIndex / TREE_ITEMS_PER_PAGE) + 1;
+
+    if (selectedTreePage === currentTreePage) {
+      return;
+    }
+
+    void setTreePageQuery(
+      selectedTreePage === 1 ? null : String(selectedTreePage),
     );
+  }, [
+    currentTreePage,
+    isLoading,
+    selectedTreeFilteredIndex,
+    selectedTreeIsOnCurrentPage,
+    setTreePageQuery,
+    showDatasetLanding,
+    treePageQuery,
+  ]);
+
+  useEffect(() => {
+    if (isLoading || showDatasetLanding) {
+      return;
+    }
+
+    const firstVisibleRkey = getSelectedRkey(paginatedTrees[0] ?? null);
+    const canonicalTreePageQuery =
+      currentTreePage === 1 ? null : String(currentTreePage);
 
     if (isDesktop) {
       if (!selectedTreeRkey && firstVisibleRkey) {
@@ -790,21 +1063,37 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
         return;
       }
 
-      if (selectedTreeRkey && !isSelectionVisible) {
+      if (selectedTreeRkey && !selectedTreeIsInFilteredTrees) {
         void setSelectedTreeRkey(firstVisibleRkey);
+        return;
+      }
+
+      if (
+        selectedTreeRkey &&
+        selectedTreeIsInFilteredTrees &&
+        !selectedTreeIsOnCurrentPage &&
+        treePageQuery !== null &&
+        treePageQuery === canonicalTreePageQuery
+      ) {
+        void setSelectedTreeRkey(null);
       }
       return;
     }
 
-    if (selectedTreeRkey && !isSelectionVisible) {
+    if (selectedTreeRkey && !selectedTreeIsInFilteredTrees) {
       void setSelectedTreeRkey(null);
     }
   }, [
-    filteredTrees,
+    currentTreePage,
     isDesktop,
+    isLoading,
+    paginatedTrees,
+    selectedTreeIsInFilteredTrees,
+    selectedTreeIsOnCurrentPage,
     selectedTreeRkey,
     setSelectedTreeRkey,
     showDatasetLanding,
+    treePageQuery,
   ]);
 
   const activeTreeResetKey = activeTree?.occurrence.metadata?.rkey ?? null;
@@ -909,10 +1198,36 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
           ? (Object.fromEntries(remainingEntries) as typeof current)
           : current;
       });
+
+      setOptimisticMultimediaRecords((current) => {
+        let changed = false;
+        const serverByRkey = new Map(
+          (multimediaQuery.data ?? []).flatMap((item) => {
+            const rkey = item.metadata?.rkey;
+            return rkey ? [[rkey, item.record] as const] : [];
+          }),
+        );
+
+        const remainingEntries = Object.entries(current).filter(
+          ([rkey, optimisticRecord]) => {
+            const serverRecord = serverByRkey.get(rkey);
+            const keep =
+              !serverRecord || !sameMultimediaRecord(serverRecord, optimisticRecord);
+            if (!keep) {
+              changed = true;
+            }
+            return keep;
+          },
+        );
+
+        return changed
+          ? (Object.fromEntries(remainingEntries) as typeof current)
+          : current;
+      });
     }, 0);
 
     return () => window.clearTimeout(resetHandle);
-  }, [measurementsQuery.data, occurrencesQuery.data]);
+  }, [measurementsQuery.data, multimediaQuery.data, occurrencesQuery.data]);
 
   const occurrenceHasChanges = !isDraftEqual(
     occurrenceDraft,
@@ -948,15 +1263,89 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     ]);
   };
 
+  const handleTreePageChange = useCallback(
+    (nextPage: number) => {
+      const boundedPage = getBoundedPage(nextPage, totalTreePages);
+
+      void Promise.all([
+        setTreePageQuery(boundedPage === 1 ? null : String(boundedPage)),
+        setSelectedTreeRkey(null),
+      ]);
+    },
+    [setSelectedTreeRkey, setTreePageQuery, totalTreePages],
+  );
+
+  const handleTreeSearchChange = useCallback(
+    (value: string) => {
+      void Promise.all([
+        setSearchQuery(toNullableQueryValue(value)),
+        setTreePageQuery(null),
+        setSelectedTreeRkey(null),
+      ]);
+    },
+    [setSearchQuery, setSelectedTreeRkey, setTreePageQuery],
+  );
+
+  const handleClearTreeSearch = useCallback(() => {
+    void Promise.all([
+      setSearchQuery(null),
+      setTreePageQuery(null),
+      setSelectedTreeRkey(null),
+    ]);
+  }, [setSearchQuery, setSelectedTreeRkey, setTreePageQuery]);
+
+  const handleToggleUngroupedTreeSelection = useCallback((rkey: string) => {
+    setSelectedUngroupedTreeRkeys((current) => {
+      if (current.includes(rkey)) {
+        return current.filter((selectedRkey) => selectedRkey !== rkey);
+      }
+
+      return [...current, rkey];
+    });
+  }, []);
+
+  const handleToggleAllFilteredUngroupedTrees = useCallback(() => {
+    setSelectedUngroupedTreeRkeys((current) => {
+      if (allFilteredUngroupedTreesSelected) {
+        return current.filter(
+          (rkey) => !filteredUngroupedTreeRkeySet.has(rkey),
+        );
+      }
+
+      const next = new Set(current);
+      for (const rkey of filteredUngroupedTreeRkeys) {
+        next.add(rkey);
+      }
+      return Array.from(next);
+    });
+  }, [
+    allFilteredUngroupedTreesSelected,
+    filteredUngroupedTreeRkeySet,
+    filteredUngroupedTreeRkeys,
+  ]);
+
+  const handleActiveSearchChange = useCallback(
+    (value: string) => {
+      if (showDatasetLanding) {
+        void setDatasetSearchQuery(toNullableQueryValue(value));
+        return;
+      }
+
+      handleTreeSearchChange(value);
+    },
+    [handleTreeSearchChange, setDatasetSearchQuery, showDatasetLanding],
+  );
+
   const handleOpenDataset = useCallback(
     (nextDatasetFilter: string) => {
       void Promise.all([
         setDatasetFilter(nextDatasetFilter),
         setSearchQuery(null),
+        setTreePageQuery(null),
         setSelectedTreeRkey(null),
       ]);
     },
-    [setDatasetFilter, setSearchQuery, setSelectedTreeRkey],
+    [setDatasetFilter, setSearchQuery, setSelectedTreeRkey, setTreePageQuery],
   );
 
   const handleReturnToDatasets = useCallback(() => {
@@ -964,9 +1353,16 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
       setManagerView(null),
       setDatasetFilter(null),
       setSearchQuery(null),
+      setTreePageQuery(null),
       setSelectedTreeRkey(null),
     ]);
-  }, [setManagerView, setDatasetFilter, setSearchQuery, setSelectedTreeRkey]);
+  }, [
+    setManagerView,
+    setDatasetFilter,
+    setSearchQuery,
+    setSelectedTreeRkey,
+    setTreePageQuery,
+  ]);
 
   const handleDatasetFilterChange = useCallback(
     (value: string) => {
@@ -974,6 +1370,7 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
         void Promise.all([
           setManagerView("trees"),
           setDatasetFilter(null),
+          setTreePageQuery(null),
           setSelectedTreeRkey(null),
         ]);
         return;
@@ -982,10 +1379,11 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
       void Promise.all([
         setManagerView("trees"),
         setDatasetFilter(value),
+        setTreePageQuery(null),
         setSelectedTreeRkey(null),
       ]);
     },
-    [setManagerView, setDatasetFilter, setSelectedTreeRkey],
+    [setManagerView, setDatasetFilter, setSelectedTreeRkey, setTreePageQuery],
   );
 
   const handleAttachTreesToDataset = useCallback(
@@ -1129,6 +1527,9 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
         setDatasetAttachFeedback(feedbackMessage);
 
         if (attachedCount > 0 && datasetFilter === UNGROUPED_DATASET_FILTER) {
+          setSelectedUngroupedTreeRkeys((current) =>
+            current.filter((rkey) => !successfulAttachmentRkeys.includes(rkey)),
+          );
           void setSelectedTreeRkey(null);
         }
 
@@ -1147,6 +1548,7 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
       datasetFilter,
       indexerUtils,
       setSelectedTreeRkey,
+      setSelectedUngroupedTreeRkeys,
       treeByOccurrenceRkey,
     ],
   );
@@ -1214,7 +1616,12 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     field: keyof TreeMeasurementDraft,
     value: string,
   ) => {
-    setMeasurementDraft((current) => ({ ...current, [field]: value }));
+    const nextValue =
+      field === "canopyCoverPercent"
+        ? capCanopyCoverPercentInput(value)
+        : value;
+
+    setMeasurementDraft((current) => ({ ...current, [field]: nextValue }));
     setMeasurementFeedback(null);
     setMeasurementError(null);
   };
@@ -1406,6 +1813,111 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
     }
   };
 
+  const handleStartEditPhotoCaption = (photo: MultimediaItem) => {
+    if (savingPhotoCaptionRkey) {
+      return;
+    }
+
+    const rkey = photo.metadata?.rkey;
+    if (!rkey) {
+      return;
+    }
+
+    setEditingPhotoCaptionRkey(rkey);
+    setPhotoCaptionDraft(photo.record.caption ?? "");
+    setPhotoCaptionError(null);
+    setPhotoCaptionFeedbackRkey(null);
+  };
+
+  const handleCancelEditPhotoCaption = () => {
+    setEditingPhotoCaptionRkey(null);
+    setPhotoCaptionDraft("");
+    setPhotoCaptionError(null);
+  };
+
+  const handleSavePhotoCaption = async (photo: MultimediaItem) => {
+    const rkey = photo.metadata?.rkey;
+    if (!rkey) {
+      return;
+    }
+
+    const normalizedCaption = normalizeDraftValue(photoCaptionDraft);
+    const currentCaption = normalizeDraftValue(photo.record.caption ?? "");
+
+    if (normalizedCaption === currentCaption) {
+      setEditingPhotoCaptionRkey(null);
+      setPhotoCaptionDraft("");
+      setPhotoCaptionFeedbackRkey(null);
+      setPhotoCaptionError(null);
+      return;
+    }
+
+    try {
+      setSavingPhotoCaptionRkey(rkey);
+      setPhotoCaptionError(null);
+      const nextCaption = normalizedCaption.length > 0 ? normalizedCaption : null;
+      const applyOptimisticCaptionToCache = () => {
+        indexerUtils.multimedia.list.setData({ did }, (previous) => {
+          if (!previous) {
+            return previous;
+          }
+
+          let changed = false;
+          const next = previous.map((item) => {
+            if (item.metadata?.rkey !== rkey) {
+              return item;
+            }
+
+            if (item.record.caption === nextCaption) {
+              return item;
+            }
+
+            changed = true;
+            return {
+              ...item,
+              record: {
+                ...item.record,
+                caption: nextCaption,
+              },
+            };
+          });
+
+          return changed ? next : previous;
+        });
+      };
+      const unsetCaption: MultimediaUnsetField[] = ["caption"];
+      await updateMultimedia.mutateAsync({
+        rkey,
+        data: normalizedCaption.length > 0 ? { caption: normalizedCaption } : {},
+        ...(normalizedCaption.length === 0 ? { unset: unsetCaption } : {}),
+      });
+
+      setOptimisticMultimediaRecords((current) => ({
+        ...current,
+        [rkey]: {
+          ...photo.record,
+          caption: nextCaption,
+        },
+      }));
+      applyOptimisticCaptionToCache();
+      setEditingPhotoCaptionRkey(null);
+      setPhotoCaptionDraft("");
+      setPhotoCaptionFeedbackRkey(rkey);
+      setPhotoCaptionError(null);
+      try {
+        await indexerUtils.multimedia.list.invalidate({ did });
+        applyOptimisticCaptionToCache();
+      } catch {
+        applyOptimisticCaptionToCache();
+      }
+    } catch (error) {
+      setPhotoCaptionError({ rkey, message: formatError(error) });
+      setPhotoCaptionFeedbackRkey(null);
+    } finally {
+      setSavingPhotoCaptionRkey(null);
+    }
+  };
+
   const openAddPhotoModal = () => {
     const occurrenceUri = getOccurrenceUri(activeTree);
     const speciesName = activeTree?.occurrence.record?.scientificName ?? "tree";
@@ -1483,6 +1995,18 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
                 ...current,
                 [photoRkey]: true,
               }));
+              setOptimisticMultimediaRecords((current) => {
+                const remaining: typeof current = {};
+                for (const [rkey, record] of Object.entries(current)) {
+                  if (rkey !== photoRkey) {
+                    remaining[rkey] = record;
+                  }
+                }
+                return remaining;
+              });
+              if (editingPhotoCaptionRkey === photoRkey) {
+                handleCancelEditPhotoCaption();
+              }
               await indexerUtils.multimedia.list.invalidate();
             }}
           />
@@ -1539,12 +2063,11 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
   const hasUngroupedDatasetCard = datasetCards.some(
     (datasetCard) => datasetCard.id === UNGROUPED_DATASET_FILTER,
   );
-  const canAttachActiveTreeToDataset =
-    Boolean(activeTree && isUngroupedTree(activeTree)) &&
-    Boolean(activeTree?.occurrence.metadata?.rkey) &&
-    attachableDatasets.length > 0;
   const canBulkAttachUngroupedTrees =
     ungroupedTrees.length > 0 && attachableDatasets.length > 0;
+  const canAttachActiveTreeToDataset =
+    Boolean(activeTree && isUngroupedTree(activeTree)) &&
+    attachableDatasets.length > 0;
   const canDeleteTree =
     Boolean(activeTree?.occurrence.metadata?.rkey) &&
     (activeTree?.photos.length ?? 0) === 0 &&
@@ -1556,14 +2079,16 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
       : "Search by species, locality, recorder, or date";
   const searchQueryTrimmed = searchQuery.trim();
   const activeSearchQuery = showDatasetLanding ? datasetSearchQuery : searchQuery;
-  const activeSearchSetter = showDatasetLanding
-    ? setDatasetSearchQuery
-    : setSearchQuery;
   const counterLabel = isPendingDatasetFilter
     ? "Dataset still indexing"
     : showDatasetLanding
       ? `${filteredDatasetCards.length} of ${datasetCards.length} dataset${datasetCards.length === 1 ? "" : "s"}`
       : `${filteredTrees.length} of ${datasetScopedTrees.length} tree record${datasetScopedTrees.length === 1 ? "" : "s"}`;
+  const selectedUngroupedTreeLabel = `${selectedUngroupedTreeCount} selected`;
+  const addSelectedUngroupedTreesLabel =
+    selectedUngroupedTreeCount > 1
+      ? `Add ${selectedUngroupedTreeCount} to a dataset`
+      : "Add to a dataset";
 
   if (isLoading) {
     return <TreesManageSkeleton />;
@@ -1651,7 +2176,7 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
             <Input
               value={activeSearchQuery}
               onChange={(event) =>
-                void activeSearchSetter(event.target.value || null)
+                handleActiveSearchChange(event.target.value)
               }
               placeholder={searchPlaceholder}
               className="pl-9"
@@ -1693,22 +2218,27 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
           )}
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-          {!showDatasetLanding && isViewingUngroupedDataset && canBulkAttachUngroupedTrees ? (
-            <Button
-              variant="outline"
-              onClick={() => openAddToDatasetModal(ungroupedTrees)}
-              disabled={attachExistingOccurrences.isPending}
-              className="shrink-0"
-            >
-              <DatabaseIcon />
-              Add all ungrouped
-            </Button>
-          ) : null}
           <p className="text-sm text-muted-foreground shrink-0 sm:text-right">
             {counterLabel}
           </p>
         </div>
       </div>
+
+      {activeDatasetPreviewRef ? (
+        <GreenGlobeTreePreviewCard
+          did={did}
+          datasetRef={activeDatasetPreviewRef}
+          datasetName={activeDatasetPreviewName}
+          datasetTreeCount={activeDatasetPreviewTreeCount}
+          treeUri={
+            activeDatasetPreviewFocusedTree?.occurrence.metadata?.uri ?? null
+          }
+          treeName={
+            activeDatasetPreviewFocusedTree?.occurrence.record?.scientificName ??
+            null
+          }
+        />
+      ) : null}
 
       {datasetCards.length === 0 &&
       treeItems.length === 0 &&
@@ -1720,23 +2250,10 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
             <div className="flex items-start gap-3">
               <InfoIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
-                Click a dataset to review or edit its trees
-                {canBulkAttachUngroupedTrees
-                  ? `, or add ${ungroupedTrees.length} ungrouped tree${ungroupedTrees.length === 1 ? "" : "s"} to an existing dataset.`
-                  : "."}
+                Click a dataset to review or edit its trees. Open ungrouped trees
+                to select records and add them to an existing dataset.
               </p>
             </div>
-            {canBulkAttachUngroupedTrees ? (
-              <Button
-                variant="outline"
-                onClick={() => openAddToDatasetModal(ungroupedTrees)}
-                disabled={attachExistingOccurrences.isPending}
-                className="shrink-0"
-              >
-                <DatabaseIcon />
-                Add all ungrouped
-              </Button>
-            ) : null}
           </div>
 
           {filteredDatasetCards.length === 0 ? (
@@ -1796,7 +2313,7 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
               ) : null}
             </div>
           ) : searchQueryTrimmed ? (
-            <Button variant="outline" onClick={() => void setSearchQuery(null)}>
+            <Button variant="outline" onClick={handleClearTreeSearch}>
               Clear search
             </Button>
           ) : (
@@ -1809,18 +2326,54 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
           {(isDesktop || !activeTree) && (
             <section className="rounded-2xl border border-border bg-background overflow-hidden">
-              <div className="border-b border-border px-4 py-3">
-                <p className="text-sm font-medium text-foreground">
-                  Uploaded trees
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Select a record to review its details, measurements, and
-                  photos.
-                </p>
+              <div className="border-b border-border px-4 py-3 space-y-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Uploaded trees
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {isViewingUngroupedDataset
+                      ? "Select trees to add them to a dataset, or open a record to review details."
+                      : "Select a record to review its details, measurements, and photos."}
+                  </p>
+                </div>
+
+                {isViewingUngroupedDataset ? (
+                  <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted/20 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Checkbox
+                        checked={selectAllUngroupedChecked}
+                        onCheckedChange={handleToggleAllFilteredUngroupedTrees}
+                        disabled={!hasFilteredUngroupedTrees}
+                        aria-label="Select all filtered ungrouped trees"
+                      />
+                      <span>Select all</span>
+                      {selectedUngroupedTreeCount > 0 ? (
+                        <span className="font-medium text-foreground">
+                          {selectedUngroupedTreeLabel}
+                        </span>
+                      ) : null}
+                    </label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openAddToDatasetModal(selectedUngroupedTrees)}
+                      disabled={
+                        selectedUngroupedTreeCount === 0 ||
+                        !canBulkAttachUngroupedTrees ||
+                        attachExistingOccurrences.isPending
+                      }
+                      className="w-full sm:w-auto"
+                    >
+                      <DatabaseIcon />
+                      {addSelectedUngroupedTreesLabel}
+                    </Button>
+                  </div>
+                ) : null}
               </div>
 
               <div className="divide-y divide-border">
-                {filteredTrees.map((item) => {
+                {paginatedTrees.map((item) => {
                   const record = item.occurrence.record;
                   const metadata = item.occurrence.metadata;
                   if (!record || !metadata?.rkey) {
@@ -1829,75 +2382,105 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
 
                   const isSelected =
                     activeTree?.occurrence.metadata?.rkey === metadata.rkey;
+                  const canSelectUngroupedTree =
+                    isViewingUngroupedDataset && isUngroupedTree(item);
+                  const isUngroupedTreeSelected =
+                    selectedUngroupedTreeRkeySet.has(metadata.rkey);
 
                   return (
-                    <button
+                    <div
                       key={metadata.uri ?? metadata.rkey}
-                      type="button"
-                      onClick={() => void setSelectedTreeRkey(metadata.rkey)}
                       className={cn(
-                        "w-full px-4 py-3 text-left transition-colors",
-                        isSelected ? "bg-primary/5" : "hover:bg-muted/35",
+                        "flex items-start gap-3 px-4 py-3 transition-colors",
+                        isSelected || isUngroupedTreeSelected
+                          ? "bg-primary/5"
+                          : "hover:bg-muted/35",
                       )}
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 space-y-1">
-                          <p
-                            className="text-lg leading-none truncate"
-                            style={{ fontFamily: "var(--font-garamond-var)" }}
-                          >
-                            {record.scientificName ?? "Untitled tree"}
-                          </p>
-                          {record.vernacularName ? (
-                            <p className="text-xs italic text-muted-foreground truncate">
-                              {record.vernacularName}
+                      {canSelectUngroupedTree ? (
+                        <Checkbox
+                          checked={isUngroupedTreeSelected}
+                          onCheckedChange={() =>
+                            handleToggleUngroupedTreeSelection(metadata.rkey)
+                          }
+                          aria-label={`Select ${record.scientificName ?? "tree"}`}
+                          className="mt-0.5"
+                        />
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void setSelectedTreeRkey(metadata.rkey);
+                        }}
+                        className="min-w-0 flex-1 text-left"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 space-y-1">
+                            <p
+                              className="text-lg leading-none truncate"
+                              style={{ fontFamily: "var(--font-garamond-var)" }}
+                            >
+                              {record.scientificName ?? "Untitled tree"}
                             </p>
-                          ) : null}
-                          <p className="flex items-center gap-1 text-xs text-muted-foreground truncate">
-                            <MapPin className="size-3" />
-                            {formatTreeSubtitle(item)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatEventDate(record.eventDate)}
-                          </p>
-                        </div>
+                            {record.vernacularName ? (
+                              <p className="text-xs italic text-muted-foreground truncate">
+                                {record.vernacularName}
+                              </p>
+                            ) : null}
+                            <p className="flex items-center gap-1 text-xs text-muted-foreground truncate">
+                              <MapPin className="size-3" />
+                              {formatTreeSubtitle(item)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatEventDate(record.eventDate)}
+                            </p>
+                          </div>
 
-                        <div className="flex flex-col items-end gap-1 shrink-0">
-                          {(() => {
-                            const dsRef = record.datasetRef;
-                            const dsName =
-                              typeof dsRef === "string"
-                                ? datasetLookup.get(dsRef)?.record?.name
-                                : null;
-                            return dsName ? (
-                              <Badge
-                                variant="outline"
-                                className="max-w-[10rem] truncate text-[10px]"
-                              >
-                                <DatabaseIcon className="size-2.5 shrink-0 mr-0.5" />
-                                {dsName}
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            {(() => {
+                              const dsRef = record.datasetRef;
+                              const dsName =
+                                typeof dsRef === "string"
+                                  ? datasetLookup.get(dsRef)?.record?.name
+                                  : null;
+                              return dsName ? (
+                                <Badge
+                                  variant="outline"
+                                  className="max-w-[10rem] truncate text-[10px]"
+                                >
+                                  <DatabaseIcon className="size-2.5 shrink-0 mr-0.5" />
+                                  {dsName}
+                                </Badge>
+                              ) : null;
+                            })()}
+                            {item.photos.length > 0 ? (
+                              <Badge variant="outline">
+                                {item.photos.length} photos
                               </Badge>
-                            ) : null;
-                          })()}
-                          {item.photos.length > 0 ? (
-                            <Badge variant="outline">
-                              {item.photos.length} photos
-                            </Badge>
-                          ) : null}
-                          {item.hasDuplicateBundledMeasurements ? (
-                            <Badge variant="secondary">Needs cleanup</Badge>
-                          ) : item.floraMeasurement ? (
-                            <Badge variant="success">Measurements</Badge>
-                          ) : item.hasLegacyMeasurements ||
-                            item.hasUnsupportedMeasurements ? (
-                            <Badge variant="secondary">Migration needed</Badge>
-                          ) : null}
+                            ) : null}
+                            {item.hasDuplicateBundledMeasurements ? (
+                              <Badge variant="secondary">Needs cleanup</Badge>
+                            ) : item.floraMeasurement ? (
+                              <Badge variant="success">Measurements</Badge>
+                            ) : item.hasLegacyMeasurements ||
+                              item.hasUnsupportedMeasurements ? (
+                              <Badge variant="secondary">Migration needed</Badge>
+                            ) : null}
+                          </div>
                         </div>
-                      </div>
-                    </button>
+                      </button>
+                    </div>
                   );
                 })}
               </div>
+
+              <TreeListPagination
+                currentPage={currentTreePage}
+                totalPages={totalTreePages}
+                totalItems={filteredTrees.length}
+                pageSize={TREE_ITEMS_PER_PAGE}
+                onPageChange={handleTreePageChange}
+              />
             </section>
           )}
 
@@ -1962,6 +2545,26 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
                   </div>
 
                   <div className="flex flex-wrap gap-2 shrink-0">
+                    {!activeDatasetPreviewRef &&
+                    activeTree.occurrence.metadata?.uri ? (
+                      <Button asChild variant="outline">
+                        <Link
+                          href={links.external.greenGlobeTreePreview(did, {
+                            treeUri: activeTree.occurrence.metadata.uri,
+                            datasetRef:
+                              typeof activeTree.occurrence.record?.datasetRef ===
+                              "string"
+                                ? activeTree.occurrence.record.datasetRef
+                                : null,
+                          })}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <ExternalLink />
+                          Open in Green Globe
+                        </Link>
+                      </Button>
+                    ) : null}
                     {canAttachActiveTreeToDataset ? (
                       <Button
                         variant="outline"
@@ -1996,17 +2599,6 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
                   </div>
                 ) : null}
               </section>
-
-              {activeTree.occurrence.metadata?.uri ? (
-                <GreenGlobeTreePreviewCard
-                  did={did}
-                  treeUri={activeTree.occurrence.metadata.uri}
-                  datasetRef={typeof activeTree.occurrence.record?.datasetRef === "string"
-                    ? activeTree.occurrence.record.datasetRef
-                    : null}
-                  treeName={activeTree.occurrence.record?.scientificName ?? null}
-                />
-              ) : null}
 
               <SectionCard
                 title="Tree details"
@@ -2264,6 +2856,11 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
                       </Field>
                       <Field label="Canopy cover (%)">
                         <Input
+                          type="number"
+                          min={0}
+                          max={CANOPY_COVER_PERCENT_MAX}
+                          step="any"
+                          inputMode="decimal"
                           value={measurementDraft.canopyCoverPercent}
                           onChange={(event) =>
                             handleMeasurementFieldChange(
@@ -2357,6 +2954,24 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
                         photo.record.subjectPart,
                         photo.record.caption,
                       );
+                      const isEditingCaption =
+                        editingPhotoCaptionRkey === metadata.rkey;
+                      const normalizedCaptionDraft = normalizeDraftValue(
+                        photoCaptionDraft,
+                      );
+                      const normalizedCurrentCaption = normalizeDraftValue(
+                        photo.record.caption ?? "",
+                      );
+                      const isSavingCaption = savingPhotoCaptionRkey === metadata.rkey;
+                      const captionSaveDisabled =
+                        isSavingCaption ||
+                        normalizedCaptionDraft === normalizedCurrentCaption;
+                      const photoCaptionErrorMessage =
+                        photoCaptionError?.rkey === metadata.rkey
+                          ? photoCaptionError.message
+                          : null;
+                      const captionEditorId = `photo-caption-${metadata.rkey}`;
+                      const captionErrorId = `photo-caption-error-${metadata.rkey}`;
 
                       return (
                         <article
@@ -2383,18 +2998,98 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
 
                           <div className="space-y-3 p-3">
                             <div className="flex items-start justify-between gap-3">
-                              <div className="space-y-1 min-w-0">
+                              <div className="space-y-2 min-w-0 flex-1">
                                 <Badge variant="outline">
                                   {formatSubjectPart(photo.record.subjectPart)}
                                 </Badge>
-                                {photo.record.caption ? (
-                                  <p className="text-sm text-foreground break-words">
-                                    {photo.record.caption}
-                                  </p>
+
+                                {isEditingCaption ? (
+                                  <div className="space-y-2">
+                                    <Textarea
+                                      id={captionEditorId}
+                                      aria-label="Photo caption"
+                                      aria-describedby={
+                                        photoCaptionErrorMessage
+                                          ? captionErrorId
+                                          : undefined
+                                      }
+                                      value={photoCaptionDraft}
+                                      onChange={(event) => {
+                                        setPhotoCaptionDraft(event.target.value);
+                                        setPhotoCaptionError(null);
+                                      }}
+                                      placeholder="Describe the photo…"
+                                      disabled={isSavingCaption}
+                                      rows={3}
+                                      className="resize-none text-sm"
+                                    />
+                                    {photoCaptionErrorMessage ? (
+                                      <p
+                                        id={captionErrorId}
+                                        className="text-xs text-destructive"
+                                        role="alert"
+                                      >
+                                        {photoCaptionErrorMessage}
+                                      </p>
+                                    ) : null}
+                                    <div className="flex flex-wrap gap-2">
+                                      <Button
+                                        size="sm"
+                                        onClick={() => {
+                                          void handleSavePhotoCaption(photo);
+                                        }}
+                                        disabled={captionSaveDisabled}
+                                      >
+                                        {isSavingCaption ? (
+                                          <Loader2 className="animate-spin" />
+                                        ) : null}
+                                        Save caption
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={handleCancelEditPhotoCaption}
+                                        disabled={isSavingCaption}
+                                      >
+                                        <X />
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                  </div>
                                 ) : (
-                                  <p className="text-sm text-muted-foreground">
-                                    No caption added.
-                                  </p>
+                                  <div className="space-y-2">
+                                    {photo.record.caption ? (
+                                      <p className="text-sm text-foreground break-words">
+                                        {photo.record.caption}
+                                      </p>
+                                    ) : (
+                                      <p className="text-sm text-muted-foreground">
+                                        No caption added.
+                                      </p>
+                                    )}
+                                    {photoCaptionFeedbackRkey === metadata.rkey ? (
+                                      <p
+                                        className="text-xs text-muted-foreground"
+                                        aria-live="polite"
+                                      >
+                                        Caption saved.
+                                      </p>
+                                    ) : null}
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() =>
+                                        handleStartEditPhotoCaption(photo)
+                                      }
+                                      disabled={savingPhotoCaptionRkey !== null}
+                                    >
+                                      <Pencil />
+                                      {photo.record.caption
+                                        ? "Edit caption"
+                                        : "Add caption"}
+                                    </Button>
+                                  </div>
                                 )}
                               </div>
 
@@ -2402,11 +3097,12 @@ export function TreesManageClient({ did }: TreesManageClientProps) {
                                 variant="ghost"
                                 size="icon-sm"
                                 className="text-muted-foreground hover:text-destructive"
+                                aria-label="Delete photo"
                                 onClick={() =>
                                   openDeletePhotoModal(metadata.rkey)
                                 }
                               >
-                                <Trash2 className="size-4" />
+                                <Trash2 />
                               </Button>
                             </div>
 
