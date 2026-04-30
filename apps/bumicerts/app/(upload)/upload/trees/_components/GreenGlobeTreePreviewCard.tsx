@@ -1,25 +1,68 @@
+"use client";
+
 import Link from "next/link";
 import { ExternalLink, Globe2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { links } from "@/lib/links";
 
+const GREEN_GLOBE_PREVIEW_FOCUS_MESSAGE_TYPE =
+  "gainforest.greenGlobePreview.focusTree";
+
 type GreenGlobeTreePreviewCardProps = {
   did: string;
-  treeUri: string;
-  datasetRef?: string | null;
+  datasetRef: string;
+  datasetName?: string | null;
+  datasetTreeCount?: number | null;
+  treeUri?: string | null;
   treeName?: string | null;
 };
 
 export function GreenGlobeTreePreviewCard({
   did,
-  treeUri,
   datasetRef,
+  datasetName,
+  datasetTreeCount,
+  treeUri,
   treeName,
 }: GreenGlobeTreePreviewCardProps) {
-  const previewUrl = links.external.greenGlobeTreePreview(did, {
-    treeUri,
+  const datasetPreviewUrl = links.external.greenGlobeTreePreview(did, {
     datasetRef,
   });
+  const focusedDatasetPreviewUrl = treeUri
+    ? links.external.greenGlobeTreePreview(did, {
+        treeUri,
+        datasetRef,
+      })
+    : datasetPreviewUrl;
+  const datasetLabel = datasetName?.trim() || "selected dataset";
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const targetOrigin = useMemo(() => {
+    try {
+      return new URL(datasetPreviewUrl).origin;
+    } catch {
+      return "*";
+    }
+  }, [datasetPreviewUrl]);
+  const postPreviewFocusMessage = useCallback(() => {
+    const targetWindow = iframeRef.current?.contentWindow;
+    if (!targetWindow) {
+      return;
+    }
+
+    targetWindow.postMessage(
+      {
+        type: GREEN_GLOBE_PREVIEW_FOCUS_MESSAGE_TYPE,
+        datasetRef,
+        treeUri: treeUri ?? null,
+      },
+      targetOrigin,
+    );
+  }, [datasetRef, targetOrigin, treeUri]);
+
+  useEffect(() => {
+    postPreviewFocusMessage();
+  }, [postPreviewFocusMessage]);
 
   return (
     <section className="rounded-2xl border border-border bg-background p-4 md:p-5 space-y-4">
@@ -30,36 +73,53 @@ export function GreenGlobeTreePreviewCard({
             style={{ fontFamily: "var(--font-garamond-var)" }}
           >
             <Globe2 />
-            Green Globe preview
+            Green Globe dataset preview
           </h3>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            View this tree in Green Globe. Pink dots represent the uploaded trees,
-            and the selected tree is highlighted.
-            {datasetRef
-              ? " This preview is filtered to the same upload dataset."
-              : " This preview shows the surrounding organization tree context."}
+            View all trees in {datasetLabel} in Green Globe. Pink dots represent
+            the trees in this dataset. Selecting a tree focuses the preview on
+            that tree while keeping the full dataset visible.
           </p>
+          {typeof datasetTreeCount === "number" ? (
+            <p className="text-xs text-muted-foreground">
+              {datasetTreeCount} tree{datasetTreeCount === 1 ? "" : "s"} loaded
+              from this dataset.
+            </p>
+          ) : null}
           {treeName ? (
             <p className="text-xs text-muted-foreground">
-              Focused tree: <span className="font-medium text-foreground">{treeName}</span>
+              Focused tree on map:{" "}
+              <span className="font-medium text-foreground">{treeName}</span>
             </p>
           ) : null}
         </div>
 
-        <Button asChild variant="outline" className="shrink-0">
-          <Link href={previewUrl} target="_blank" rel="noreferrer">
-            <ExternalLink />
-            Open in Green Globe
-          </Link>
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row md:flex-col lg:flex-row">
+          <Button asChild variant="outline" className="shrink-0">
+            <Link href={datasetPreviewUrl} target="_blank" rel="noreferrer">
+              <ExternalLink />
+              Open dataset
+            </Link>
+          </Button>
+          {treeUri ? (
+            <Button asChild variant="ghost" className="shrink-0">
+              <Link href={focusedDatasetPreviewUrl} target="_blank" rel="noreferrer">
+                <ExternalLink />
+                Open selected tree
+              </Link>
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-border bg-muted/20">
         <iframe
-          title="Green Globe tree preview"
-          src={previewUrl}
-          className="h-[420px] w-full border-0"
+          ref={iframeRef}
+          title="Green Globe dataset preview"
+          src={datasetPreviewUrl}
+          className="h-[320px] w-full border-0 md:h-[420px]"
           loading="lazy"
+          onLoad={postPreviewFocusMessage}
           referrerPolicy="strict-origin-when-cross-origin"
         />
       </div>

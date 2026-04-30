@@ -8,6 +8,8 @@ import type {
 const FLORA_MEASUREMENT_TYPE =
   "app.gainforest.dwc.measurement#floraMeasurement";
 
+export const CANOPY_COVER_PERCENT_MAX = 100;
+
 export type TreeOccurrenceDraft = {
   scientificName: string;
   vernacularName: string;
@@ -271,6 +273,18 @@ export function hasAnyMeasurementValue(draft: TreeMeasurementDraft): boolean {
   return Object.values(draft).some((value) => value.trim().length > 0);
 }
 
+export function capCanopyCoverPercentInput(value: string): string {
+  if (!value.trim()) {
+    return value;
+  }
+
+  const numericValue = Number(value);
+
+  return Number.isFinite(numericValue) && numericValue > CANOPY_COVER_PERCENT_MAX
+    ? String(CANOPY_COVER_PERCENT_MAX)
+    : value;
+}
+
 export function toFloraMeasurementPayload(
   draft: TreeMeasurementDraft
 ): FloraMeasurement | null {
@@ -326,24 +340,60 @@ export function validateOccurrenceDraft(
 export function validateMeasurementDraft(
   draft: TreeMeasurementDraft
 ): string | null {
-  const fields: Array<[string, string, number]> = [
-    ["DBH", draft.dbh, 0],
-    ["Height", draft.totalHeight, 0],
-    ["Diameter", draft.diameter, 0],
-    ["Canopy cover", draft.canopyCoverPercent, -1],
+  const fields: Array<{
+    label: string;
+    rawValue: string;
+    minimumInclusive?: number;
+    minimumExclusive?: number;
+    maximumInclusive?: number;
+  }> = [
+    { label: "DBH", rawValue: draft.dbh, minimumExclusive: 0 },
+    { label: "Height", rawValue: draft.totalHeight, minimumExclusive: 0 },
+    { label: "Diameter", rawValue: draft.diameter, minimumExclusive: 0 },
+    {
+      label: "Canopy cover",
+      rawValue: draft.canopyCoverPercent,
+      minimumInclusive: 0,
+      maximumInclusive: CANOPY_COVER_PERCENT_MAX,
+    },
   ];
 
-  for (const [label, rawValue, minimumExclusive] of fields) {
+  for (const {
+    label,
+    rawValue,
+    minimumInclusive,
+    minimumExclusive,
+    maximumInclusive,
+  } of fields) {
     const value = rawValue.trim();
     if (!value) {
       continue;
     }
 
     const numericValue = Number(value);
-    if (!Number.isFinite(numericValue) || numericValue <= minimumExclusive) {
-      return label === "Canopy cover"
-        ? `${label} must be a number greater than or equal to 0.`
-        : `${label} must be a positive number.`;
+    if (!Number.isFinite(numericValue)) {
+      return `${label} must be a valid number.`;
+    }
+
+    if (
+      minimumInclusive !== undefined &&
+      numericValue < minimumInclusive
+    ) {
+      return `${label} must be a number greater than or equal to ${minimumInclusive}.`;
+    }
+
+    if (
+      minimumExclusive !== undefined &&
+      numericValue <= minimumExclusive
+    ) {
+      return `${label} must be a positive number.`;
+    }
+
+    if (
+      maximumInclusive !== undefined &&
+      numericValue > maximumInclusive
+    ) {
+      return `${label} must be a number less than or equal to ${maximumInclusive}.`;
     }
   }
 
