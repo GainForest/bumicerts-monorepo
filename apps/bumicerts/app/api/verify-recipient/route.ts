@@ -2,7 +2,7 @@
  * GET /api/verify-recipient?did=<orgDid>
  *
  * Checks whether an organization has a valid linked EVM wallet by querying
- * the indexer for app.bumicerts.link.evm records authored by that DID,
+ * the indexer for app.gainforest.link.evm records authored by that DID,
  * filtered to only cryptographically valid ones (valid: true).
  *
  * Response:
@@ -19,12 +19,12 @@ export const dynamic = "force-dynamic";
 const INDEXER_URL = clientEnv.NEXT_PUBLIC_INDEXER_URL;
 
 // ---------------------------------------------------------------------------
-// GraphQL query — queries app.bumicerts.link.evm with valid:true filter
+// GraphQL query — queries app.gainforest.link.evm with valid:true filter
 // ---------------------------------------------------------------------------
 
 const LINK_EVM_QUERY = `
   query VerifyRecipient($did: String!) {
-    bumicerts {
+    gainforest {
       link {
         evm(
           limit: 1
@@ -42,7 +42,7 @@ const LINK_EVM_QUERY = `
 `;
 
 type LinkEvmQueryResult = {
-  bumicerts: {
+  gainforest: {
     link: {
       evm: {
         data: Array<{
@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
       { did }
     );
 
-    const records = data?.bumicerts?.link?.evm?.data ?? [];
+    const records = data?.gainforest?.link?.evm?.data ?? [];
 
     if (records.length === 0 || !records[0].record.address) {
       return Response.json({ hasAttestation: false });

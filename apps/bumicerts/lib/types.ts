@@ -76,8 +76,8 @@ export type BumicertData = {
 // ── Funding Config ────────────────────────────────────────────────────────────
 
 /**
- * Serialisation-safe shape of a BumicertsFundingConfigRecord.
- * Mirrors the indexer's `BumicertsFundingConfigRecord` GraphQL type
+ * Serialisation-safe shape of a GainforestFundingConfigRecord.
+ * Mirrors the indexer's `GainforestFundingConfigRecord` GraphQL type
  * and can be passed server → client without JSON issues.
  */
 export type FundingConfigData = {

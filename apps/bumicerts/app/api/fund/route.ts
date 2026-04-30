@@ -35,7 +35,7 @@ export const dynamic = "force-dynamic";
 
 const ATTESTATION_QUERY = `
   query VerifyRecipient($did: String!) {
-    bumicerts {
+    gainforest {
       link {
         evm(limit: 1, where: { did: $did, valid: true }) {
           data {
@@ -50,7 +50,7 @@ const ATTESTATION_QUERY = `
 `;
 
 type AttestationQueryResult = {
-  bumicerts: {
+  gainforest: {
     link: {
       evm: {
         data: Array<{
@@ -93,7 +93,7 @@ async function resolveRecipientWallet(
       ATTESTATION_QUERY,
       { did: orgDid }
     );
-    const records = data?.bumicerts?.link?.evm?.data ?? [];
+    const records = data?.gainforest?.link?.evm?.data ?? [];
     const resolvedAddress = records[0]?.record.address;
     if (!resolvedAddress || !isHexAddress(resolvedAddress)) {
       return null;

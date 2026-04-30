@@ -77,163 +77,6 @@ type BlobRef {
   uri: String
 }
 
-"""A record from app.bumicerts.funding.config."""
-type BumicertsFundingConfigItem {
-  creatorInfo: CreatorInfo
-  metadata: RecordMeta
-  record: BumicertsFundingConfigRecord
-}
-
-type BumicertsFundingConfigPage {
-  data: [BumicertsFundingConfigItem!]
-  pageInfo: PageInfo
-}
-
-"""
-Pure payload for app.bumicerts.funding.config. The funding / donations configuration for a given bumicert.
-"""
-type BumicertsFundingConfigRecord {
-  """
-  An optional field to determine if donations are accepted post the goal reach. Defaults to true (overselling is allowed).
-  """
-  allowOversell: Boolean
-
-  """Client-declared timestamp when this record was originally created."""
-  createdAt: DateTime
-
-  """An optional field to set a fundraising goal in USD (e.g. '1000.50')."""
-  goalInUSD: String
-
-  """
-  Optional maximum donation amount in USD (e.g. '10000.00'). Donations above this amount will be rejected.
-  """
-  maxDonationInUSD: String
-
-  """
-  Optional minimum donation amount in USD (e.g. '1.00'). Donations below this amount will be rejected.
-  """
-  minDonationInUSD: String
-
-  """
-  Reference to the wallet link record where funds should be received. Open union to support future wallet types (e.g. Solana, Cosmos).
-  """
-  receivingWallet: JSON
-
-  """The current status of the listing. Defaults to 'open'."""
-  status: String
-
-  """Client-declared timestamp when this record was last updated."""
-  updatedAt: DateTime
-}
-
-"""BumicertsFundingNamespace namespace (bumicerts.funding.*)."""
-type BumicertsFundingNamespace {
-  """Paginated list of app.bumicerts.funding.config records."""
-  config(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): BumicertsFundingConfigPage
-}
-
-"""The EIP-712 typed data message signed by the user's EVM wallet."""
-type BumicertsLinkEvmEip712Message {
-  """EVM chain ID (bigint serialized as string)."""
-  chainId: String
-
-  """The ATProto DID being linked."""
-  did: String
-
-  """The EVM wallet address (must match top-level address)."""
-  evmAddress: String
-
-  """Replay-protection nonce."""
-  nonce: String
-
-  """Unix timestamp when the attestation was created."""
-  timestamp: String
-}
-
-"""EOA wallet ownership proof via EIP-712 typed data signature."""
-type BumicertsLinkEvmEip712Proof {
-  message: BumicertsLinkEvmEip712Message
-
-  """User's ECDSA signature (0x-prefixed hex)."""
-  signature: String
-}
-
-"""A DID–EVM wallet link record (app.bumicerts.link.evm)."""
-type BumicertsLinkEvmItem {
-  creatorInfo: CreatorInfo
-  metadata: RecordMeta
-  record: BumicertsLinkEvmRecord
-
-  """
-  Cryptographic validity metadata for this record, computed at query time. Always present for link.evm records.
-  """
-  specialMetadata: BumicertsLinkEvmSpecialMetadata
-}
-
-type BumicertsLinkEvmPage {
-  data: [BumicertsLinkEvmItem!]
-  pageInfo: PageInfo
-}
-
-"""
-Platform's EIP-712 counter-signature attesting the link was created through a trusted service.
-"""
-type BumicertsLinkEvmPlatformAttestation {
-  """The platform's signing wallet address."""
-  platformAddress: String
-
-  """Platform's ECDSA signature (0x-prefixed hex)."""
-  signature: String
-
-  """The user signature that the platform signed over."""
-  signedData: String
-}
-
-"""
-Pure payload for app.bumicerts.link.evm — a DID–EVM wallet link record.
-"""
-type BumicertsLinkEvmRecord {
-  """EVM wallet address (0x-prefixed, checksummed)."""
-  address: String
-  createdAt: DateTime
-
-  """Optional user-defined label for this wallet link."""
-  name: String
-
-  """Platform's EIP-712 counter-signature."""
-  platformAttestation: BumicertsLinkEvmPlatformAttestation
-
-  """User's EIP-712 ownership proof."""
-  userProof: BumicertsLinkEvmEip712Proof
-}
-
-"""
-Cryptographic validity metadata for a link.evm record, computed at query time.
-"""
-type BumicertsLinkEvmSpecialMetadata {
-  """
-  True if both the user's EIP-712 ownership proof and the platform's counter-signature are cryptographically valid at query time. Stateless: does not check if platformAddress is a specific trusted wallet.
-  """
-  valid: Boolean
-}
-
-"""BumicertsLinkNamespace namespace (bumicerts.link.*)."""
-type BumicertsLinkNamespace {
-  """
-  Paginated list of app.bumicerts.link.evm records. Each record includes a `valid` field computed by verifying both the user's EIP-712 ownership proof and the platform's counter-signature. Use `where: { valid: true }` to fetch only cryptographically valid links.
-  """
-  evm(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: EvmLinkWhereInput): BumicertsLinkEvmPage
-}
-
-"""BumicertsNamespace namespace (bumicerts.*)."""
-type BumicertsNamespace {
-  """BumicertsFundingNamespace namespace."""
-  funding: BumicertsFundingNamespace
-
-  """BumicertsLinkNamespace namespace."""
-  link: BumicertsLinkNamespace
-}
-
 """CertifiedActorNamespace namespace (certified.actor.*)."""
 type CertifiedActorNamespace {
   """Paginated list of app.certified.actor.organization records."""
@@ -273,6 +116,11 @@ type CertifiedActorOrganizationRecord {
   location: StrongRef
 
   """
+  Long-form description of the organization, such as its mission, history, or detailed project narrative. An inline string for plain text or markdown, a Leaflet linear document record embedded directly, or a strong reference to an existing document record.
+  """
+  longDescription: JSON
+
+  """
   Legal or operational structures of the organization (e.g. 'nonprofit', 'ngo', 'government', 'social-enterprise', 'cooperative').
   """
   organizationType: [String!]
@@ -281,6 +129,11 @@ type CertifiedActorOrganizationRecord {
   Additional reference URLs (social media profiles, contact pages, donation links, etc.) with a display label for each URL.
   """
   urls: JSON
+
+  """
+  Controls whether the organization or project is publicly discoverable on platforms that honor this setting.
+  """
+  visibility: String
 }
 
 """A record from app.certified.actor.profile."""
@@ -569,7 +422,7 @@ type CreatorInfo {
 scalar DateTime
 
 """
-Filter for app.bumicerts.link.evm records. Supports all standard identity filters (`did`, `handle`, `rkey`) plus a `valid` boolean to filter by cryptographic signature validity.
+Filter for app.gainforest.link.evm records. Supports all standard identity filters (`did`, `handle`, `rkey`) plus a `valid` boolean to filter by cryptographic signature validity.
 """
 input EvmLinkWhereInput {
   """All child filters must match."""
@@ -610,7 +463,9 @@ type GainforestAcAudioPage {
   pageInfo: PageInfo
 }
 
-"""Pure payload for app.gainforest.ac.audio."""
+"""
+Pure payload for app.gainforest.ac.audio. An audio recording record with technical metadata and optional links to occurrence, deployment, and site records.
+"""
 type GainforestAcAudioRecord {
   """The audio file blob stored on the PDS."""
   blob: JSON
@@ -678,7 +533,9 @@ type GainforestAcDeploymentPage {
   pageInfo: PageInfo
 }
 
-"""Pure payload for app.gainforest.ac.deployment."""
+"""
+Pure payload for app.gainforest.ac.deployment. A passive acoustic monitoring device deployment record describing recorder setup, placement, and timing.
+"""
 type GainforestAcDeploymentRecord {
   """
   Altitude of the deployment location in meters above sea level (e.g., '312').
@@ -797,7 +654,9 @@ type GainforestAcMultimediaPage {
   pageInfo: PageInfo
 }
 
-"""Pure payload for app.gainforest.ac.multimedia."""
+"""
+Pure payload for app.gainforest.ac.multimedia. A multimedia evidence record associated with a biodiversity occurrence.
+"""
 type GainforestAcMultimediaRecord {
   """
   URI to the original full-resolution media resource (e.g. S3 URL). The PDS blob is a compressed variant; this points to the archival original.
@@ -865,6 +724,78 @@ type GainforestAcNamespace {
 
   """Paginated list of app.gainforest.ac.multimedia records."""
   multimedia(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): GainforestAcMultimediaPage
+}
+
+"""A record from app.gainforest.asset.file."""
+type GainforestAssetFileItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: GainforestAssetFileRecord
+}
+
+type GainforestAssetFilePage {
+  data: [GainforestAssetFileItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for app.gainforest.asset.file. A durable asset anchor record for an uploaded blob and optional tags.
+"""
+type GainforestAssetFileRecord {
+  """Timestamp of record creation in the ATProto PDS."""
+  createdAt: DateTime
+
+  """
+  Uploaded file blob. This record can be used as a durable anchor so temporary uploads are not garbage-collected before final attachment.
+  """
+  file: JSON
+
+  """Optional machine-readable tags for quick checks and filtering."""
+  tags: [String!]
+}
+
+"""GainforestAssetNamespace namespace (gainforest.asset.*)."""
+type GainforestAssetNamespace {
+  """Paginated list of app.gainforest.asset.file records."""
+  file(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): GainforestAssetFilePage
+}
+
+"""A record from app.gainforest.dwc.dataset."""
+type GainforestDwcDatasetItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: GainforestDwcDatasetRecord
+}
+
+type GainforestDwcDatasetPage {
+  data: [GainforestDwcDatasetItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for app.gainforest.dwc.dataset. A user-named dataset representing a batch of uploaded occurrence records.
+"""
+type GainforestDwcDatasetRecord {
+  """Timestamp of dataset creation in the ATProto PDS."""
+  createdAt: DateTime
+
+  """Optional description of the dataset contents, methodology, or purpose."""
+  description: String
+
+  """
+  Batch-level establishment means for all records in this dataset. Uses the GBIF controlled vocabulary.
+  """
+  establishmentMeans: String
+
+  """
+  User-given name for the dataset (e.g. 'March 2025 Danum Valley Survey').
+  """
+  name: String
+
+  """
+  Number of occurrence records in this dataset. Set after upload completes.
+  """
+  recordCount: Int
 }
 
 """A record from app.gainforest.dwc.event."""
@@ -1109,6 +1040,9 @@ type GainforestDwcMeasurementRecord {
 
 """GainforestDwcNamespace namespace (gainforest.dwc.*)."""
 type GainforestDwcNamespace {
+  """Paginated list of app.gainforest.dwc.dataset records."""
+  dataset(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): GainforestDwcDatasetPage
+
   """Paginated list of app.gainforest.dwc.event records."""
   event(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): GainforestDwcEventPage
 
@@ -1151,11 +1085,13 @@ type GainforestDwcOccurrenceRecord {
   createdAt: DateTime
   dataGeneralizations: String
   datasetName: String
+  datasetRef: String
   dateIdentified: String
   dcType: String
   decimalLatitude: String
   decimalLongitude: String
   dynamicProperties: String
+  establishmentMeans: String
   eventDate: String
   eventID: String
   eventRef: String
@@ -1347,6 +1283,61 @@ type GainforestEvaluatorSubscriptionRecord {
   evaluator: String
 }
 
+"""A record from app.gainforest.funding.config."""
+type GainforestFundingConfigItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: GainforestFundingConfigRecord
+}
+
+type GainforestFundingConfigPage {
+  data: [GainforestFundingConfigItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Pure payload for app.gainforest.funding.config. The funding / donations configuration for a given bumicert.
+"""
+type GainforestFundingConfigRecord {
+  """
+  An optional field to determine if donations are accepted post the goal reach. Defaults to true (overselling is allowed).
+  """
+  allowOversell: Boolean
+
+  """Client-declared timestamp when this record was originally created."""
+  createdAt: DateTime
+
+  """An optional field to set a fundraising goal in USD (e.g. '1000.50')."""
+  goalInUSD: String
+
+  """
+  Optional maximum donation amount in USD (e.g. '10000.00'). Donations above this amount will be rejected.
+  """
+  maxDonationInUSD: String
+
+  """
+  Optional minimum donation amount in USD (e.g. '1.00'). Donations below this amount will be rejected.
+  """
+  minDonationInUSD: String
+
+  """
+  Reference to the wallet link record where funds should be received. Open union to support future wallet types (e.g. Solana, Cosmos).
+  """
+  receivingWallet: JSON
+
+  """The current status of the listing. Defaults to 'open'."""
+  status: String
+
+  """Client-declared timestamp when this record was last updated."""
+  updatedAt: DateTime
+}
+
+"""GainforestFundingNamespace namespace (gainforest.funding.*)."""
+type GainforestFundingNamespace {
+  """Paginated list of app.gainforest.funding.config records."""
+  config(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): GainforestFundingConfigPage
+}
+
 """A record from app.gainforest.gbif.dataset."""
 type GainforestGbifDatasetItem {
   creatorInfo: CreatorInfo
@@ -1402,10 +1393,106 @@ type GainforestGbifNamespace {
   dataset(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: WhereInput): GainforestGbifDatasetPage
 }
 
+"""The EIP-712 typed data message signed by the user's EVM wallet."""
+type GainforestLinkEvmEip712Message {
+  """EVM chain ID (bigint serialized as string)."""
+  chainId: String
+
+  """The ATProto DID being linked."""
+  did: String
+
+  """The EVM wallet address (must match top-level address)."""
+  evmAddress: String
+
+  """Replay-protection nonce."""
+  nonce: String
+
+  """Unix timestamp when the attestation was created."""
+  timestamp: String
+}
+
+"""EOA wallet ownership proof via EIP-712 typed data signature."""
+type GainforestLinkEvmEip712Proof {
+  message: GainforestLinkEvmEip712Message
+
+  """User's ECDSA signature (0x-prefixed hex)."""
+  signature: String
+}
+
+"""A DID–EVM wallet link record (app.gainforest.link.evm)."""
+type GainforestLinkEvmItem {
+  creatorInfo: CreatorInfo
+  metadata: RecordMeta
+  record: GainforestLinkEvmRecord
+
+  """
+  Cryptographic validity metadata for this record, computed at query time. Always present for link.evm records.
+  """
+  specialMetadata: GainforestLinkEvmSpecialMetadata
+}
+
+type GainforestLinkEvmPage {
+  data: [GainforestLinkEvmItem!]
+  pageInfo: PageInfo
+}
+
+"""
+Platform's EIP-712 counter-signature attesting the link was created through a trusted service.
+"""
+type GainforestLinkEvmPlatformAttestation {
+  """The platform's signing wallet address."""
+  platformAddress: String
+
+  """Platform's ECDSA signature (0x-prefixed hex)."""
+  signature: String
+
+  """The user signature that the platform signed over."""
+  signedData: String
+}
+
+"""
+Pure payload for app.gainforest.link.evm — a DID–EVM wallet link record.
+"""
+type GainforestLinkEvmRecord {
+  """EVM wallet address (0x-prefixed, checksummed)."""
+  address: String
+  createdAt: DateTime
+
+  """Optional user-defined label for this wallet link."""
+  name: String
+
+  """Platform's EIP-712 counter-signature."""
+  platformAttestation: GainforestLinkEvmPlatformAttestation
+
+  """User's EIP-712 ownership proof."""
+  userProof: GainforestLinkEvmEip712Proof
+}
+
+"""
+Cryptographic validity metadata for a link.evm record, computed at query time.
+"""
+type GainforestLinkEvmSpecialMetadata {
+  """
+  True if both the user's EIP-712 ownership proof and the platform's counter-signature are cryptographically valid at query time. Stateless: does not check if platformAddress is a specific trusted wallet.
+  """
+  valid: Boolean
+}
+
+"""GainforestLinkNamespace namespace (gainforest.link.*)."""
+type GainforestLinkNamespace {
+  """
+  Paginated list of app.gainforest.link.evm records. Each record includes a `valid` field computed by verifying both the user's EIP-712 ownership proof and the platform's counter-signature. Use `where: { valid: true }` to fetch only cryptographically valid links.
+  """
+  evm(cursor: String, limit: Int, order: SortOrder, sortBy: SortField, where: EvmLinkWhereInput): GainforestLinkEvmPage
+}
+
 """GainforestNamespace namespace (gainforest.*)."""
 type GainforestNamespace {
   """GainforestAcNamespace namespace."""
   ac: GainforestAcNamespace
+
+  """GainforestAssetNamespace namespace."""
+  asset: GainforestAssetNamespace
 
   """GainforestDwcNamespace namespace."""
   dwc: GainforestDwcNamespace
@@ -1413,8 +1500,14 @@ type GainforestNamespace {
   """GainforestEvaluatorNamespace namespace."""
   evaluator: GainforestEvaluatorNamespace
 
+  """GainforestFundingNamespace namespace."""
+  funding: GainforestFundingNamespace
+
   """GainforestGbifNamespace namespace."""
   gbif: GainforestGbifNamespace
+
+  """GainforestLinkNamespace namespace."""
+  link: GainforestLinkNamespace
 
   """GainforestOrganizationNamespace namespace."""
   organization: GainforestOrganizationNamespace
@@ -2032,7 +2125,7 @@ type HyperboardsBoardRecord {
   createdAt: DateTime
 
   """
-  Reference to the org.hypercerts.claim.activity or org.hypercerts.claim.collection this board visualizes.
+  Reference to the org.hypercerts.claim.activity or org.hypercerts.collection this board visualizes.
   """
   subject: StrongRef
 }
@@ -2095,9 +2188,9 @@ type HypercertsClaimActivityItem {
   creatorInfo: CreatorInfo
 
   """
-  The associated funding / donations configuration for this activity (app.bumicerts.funding.config record with the same rkey). Null if no funding configuration has been created for this activity.
+  The associated funding / donations configuration for this activity (app.gainforest.funding.config record with the same rkey). Null if no funding configuration has been created for this activity.
   """
-  fundingConfig: BumicertsFundingConfigRecord
+  fundingConfig: GainforestFundingConfigRecord
   metadata: RecordMeta
   record: HypercertsClaimActivityRecord
 
@@ -2323,7 +2416,9 @@ type HypercertsCollectionRecord {
   """Client-declared timestamp when this record was originally created"""
   createdAt: DateTime
 
-  """Rich-text description, represented as a Leaflet linear document."""
+  """
+  Long-form description of the collection. An inline string for plain text or markdown, a Leaflet linear document for rich-text content, or a strong reference to an external description record.
+  """
   description: JSON
 
   """Array of items in this collection with optional weights."""
@@ -2416,7 +2511,9 @@ type HypercertsContextAttachmentRecord {
   """Client-declared timestamp when this record was originally created."""
   createdAt: DateTime
 
-  """Rich-text description, represented as a Leaflet linear document."""
+  """
+  Long-form description of the attachment. An inline string for plain text or markdown, a Leaflet linear document for rich-text content, or a strong reference to an external description record.
+  """
   description: JSON
 
   """
@@ -2764,6 +2861,33 @@ type Mutation {
   ): Boolean
 
   """
+  Discover DIDs via relay collections, probe repos for records created in [startIso, endIso], then force Tap-native backfill (remove + add) for matched DIDs. Returns number of DIDs backfilled (or matched in dryRun).
+  """
+  backfillWindowByCollections(
+    """
+    Optional collection NSIDs to scope discovery. Defaults to all indexed collections.
+    """
+    collections: [String!]
+
+    """If true, do not trigger Tap backfill; only return matched DID count."""
+    dryRun: Boolean
+
+    """Window end (ISO datetime)"""
+    endIso: String!
+
+    """Maximum number of discovered DIDs to scan (safety cap). Default: 2000."""
+    maxDids: Int
+
+    """
+    Max listRecords pages to scan per DID+collection while probing the window. Default: 15.
+    """
+    maxPagesPerCollection: Int
+
+    """Window start (ISO datetime)"""
+    startIso: String!
+  ): Int
+
+  """
   Discover all DIDs that have records for the given collection NSID via the relay, then wipe and re-backfill each. Returns the number of DIDs reindexed.
   """
   reindexRepoByCollection(
@@ -2842,8 +2966,10 @@ type PageInfo {
 
 """GainForest AT Protocol record index."""
 type Query {
-  """All BumicertsNamespace indexed records."""
-  bumicerts: BumicertsNamespace
+  """
+  Compatibility alias for GainforestNamespace so older Bumicerts clients keep working during the migration.
+  """
+  bumicerts: GainforestNamespace @deprecated(reason: "Temporary compatibility alias during the bumicerts → gainforest GraphQL migration. Use gainforest instead.")
 
   """All CertifiedNamespace indexed records."""
   certified: CertifiedNamespace

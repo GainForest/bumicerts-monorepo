@@ -12,7 +12,7 @@
  *     specialMetadata – per-collection extras (labelTier/label for activities)
  *     creatorInfo     – org name + logo resolved inline by the indexer
  *     record          – pure lexicon payload fields
- *     fundingConfig   – joined BumicertsFundingConfigRecord (activities only)
+ *     fundingConfig   – joined GainforestFundingConfigRecord (activities only)
  */
 
 import { graphql } from "./tada";

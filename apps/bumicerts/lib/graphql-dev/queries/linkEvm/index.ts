@@ -1,7 +1,7 @@
 /**
  * linkEvm query module.
  *
- * Fetches app.bumicerts.link.evm records (linked wallets) authored by a given DID.
+ * Fetches app.gainforest.link.evm records (linked wallets) authored by a given DID.
  * Used on the bumicert owner view to populate the receiving wallet dropdown
  * in the funding config modal.
  */
@@ -14,7 +14,7 @@ import type { QueryModule } from "@/lib/graphql-dev/create-query";
 
 const byDidDocument = graphql(`
   query LinkEvmByDid($did: String!) {
-    bumicerts {
+    gainforest {
       link {
         evm(where: { did: $did }, limit: 20, order: DESC, sortBy: CREATED_AT) {
           data {
@@ -76,7 +76,7 @@ export type Params = { did: string };
 
 export async function fetch(params: Params): Promise<EvmLink[]> {
   const res = await graphqlClient.request(byDidDocument, { did: params.did });
-  const raw = res.bumicerts?.link?.evm?.data;
+  const raw = res.gainforest?.link?.evm?.data;
   if (!raw) return [];
   return raw as EvmLink[];
 }
