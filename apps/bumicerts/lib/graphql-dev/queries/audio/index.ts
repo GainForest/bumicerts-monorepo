@@ -1,73 +1,279 @@
 /**
  * Audio recordings query module.
  *
- * Params:
- *   { did }  → AudioRecordingItem[]  (all audio recordings for a DID)
- *
- * Leaf: queries.audio
- *
- * Schema shape:
- *   gainforest.ac.audio(...) { data { metadata creatorInfo record } pageInfo }
+ * Scratch migration target:
+ *   appGainforestAcAudio(...) { edges { node { ... } } }
  */
 
-import { graphqlClient } from "@/lib/graphql-dev/client";
-import { graphql } from "@/lib/graphql-dev/tada";
-import type { ResultOf } from "@/lib/graphql-dev/tada";
+import { GraphQLClient } from "graphql-request";
 import type { QueryModule } from "@/lib/graphql-dev/create-query";
+import type { BskyFacet, BlobLike, ConnectionResult } from "../_migration-helpers";
+import { connectionPageInfo, normalizeBskyFacets, pluckConnectionNodes, toResolvedLegacyBlob } from "../_migration-helpers";
 
-// ── Document ──────────────────────────────────────────────────────────────────
+const indexerUrl = process.env.NEXT_PUBLIC_INDEXER_URL;
 
-const document = graphql(`
-  query AudioRecordingsByDid($did: String!) {
-    gainforest {
-      ac {
-        audio(where: { did: $did }, order: DESC, sortBy: CREATED_AT) {
-          data {
-            metadata {
-              did
-              uri
-              rkey
-              cid
+if (!indexerUrl) {
+  throw new Error("NEXT_PUBLIC_INDEXER_URL must be set for audio queries");
+}
+
+const graphqlClient = new GraphQLClient(indexerUrl, {
+  headers: {
+    "ngrok-skip-browser-warning": "true",
+  },
+});
+
+const document = /* GraphQL */ `
+  query AudioRecordingsByDid($did: String!, $first: Int, $after: String) {
+    appGainforestAcAudio(
+      where: { did: { eq: $did } }
+      first: $first
+      after: $after
+      sortDirection: DESC
+      sortBy: createdAt
+    ) {
+      edges {
+        node {
+          did
+          uri
+          rkey
+          cid
+          createdAt
+          name
+          description {
+            text
+            facets {
+              index {
+                byteStart
+                byteEnd
+              }
+              features {
+                ... on AppBskyRichtextFacetMention {
+                  did
+                }
+                ... on AppBskyRichtextFacetLink {
+                  uri
+                }
+                ... on AppBskyRichtextFacetTag {
+                  tag
+                }
+              }
             }
-            record {
-              name
-              description
-              createdAt
-              blob
-              metadata
+          }
+          blob {
+            file {
+              ref
+              mimeType
+              size
             }
+          }
+          metadata {
+            bitDepth
+            channels
+            codec
+            duration
+            fileFormat
+            fileSizeBytes
+            filterHighPassHz
+            filterLowPassHz
+            maxFrequencyHz
+            minFrequencyHz
+            recordedAt
+            sampleRate
+            signalToNoiseRatio
           }
         }
       }
+      pageInfo {
+        endCursor
+        hasNextPage
+      }
+      totalCount
     }
   }
-`);
+`;
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+type AudioNode = {
+  did: string;
+  uri: string;
+  rkey: string;
+  cid: string;
+  createdAt: string;
+  name: string | null;
+  description: { text?: string; facets?: Array<BskyFacet | null> | null } | null;
+  blob: { file?: BlobLike | null } | null;
+  metadata:
+    | {
+        bitDepth?: number | null;
+        channels?: number | null;
+        codec?: string | null;
+        duration?: string | null;
+        fileFormat?: string | null;
+        fileSizeBytes?: number | null;
+        filterHighPassHz?: number | null;
+        filterLowPassHz?: number | null;
+        maxFrequencyHz?: number | null;
+        minFrequencyHz?: number | null;
+        recordedAt?: string | null;
+        sampleRate?: number | null;
+        signalToNoiseRatio?: number | null;
+      }
+    | null;
+};
 
-type _Result = ResultOf<typeof document>;
-type _GainforestAc = NonNullable<NonNullable<_Result["gainforest"]>["ac"]>;
-type _AudioData = NonNullable<NonNullable<_GainforestAc["audio"]>["data"]>;
-type _AudioDataArr = NonNullable<_AudioData> extends readonly (infer T)[] ? T : never;
-export type AudioRecordingItem = NonNullable<_AudioDataArr>;
+type AudioResponse = {
+  appGainforestAcAudio?: ConnectionResult<AudioNode> | null;
+};
+
+export type AudioRecordingItem = {
+  metadata: {
+    did: string;
+    uri: string;
+    rkey: string;
+    cid: string;
+  };
+  record: {
+    name: string | null;
+    description: unknown;
+    createdAt: string | null;
+    blob: unknown;
+    metadata: unknown;
+  };
+};
 
 export type Params = { did: string };
 export type Result = AudioRecordingItem[];
 
-// ── Fetch ─────────────────────────────────────────────────────────────────────
+const PAGE_SIZE = 200;
+const MAX_PAGES = 50;
 
-export async function fetch(params: Params): Promise<Result> {
-  const res = await graphqlClient.request(document, { did: params.did });
-  return (res.gainforest?.ac?.audio?.data ?? []) as Result;
+function withDefinedValue<Key extends string, Value>(record: Record<Key, Value>, key: Key, value: Value | null | undefined) {
+  if (value !== null && value !== undefined) {
+    record[key] = value;
+  }
 }
 
-// ── Default options ───────────────────────────────────────────────────────────
+function normalizeAudioDescription(description: AudioNode["description"]): unknown {
+  if (!description) {
+    return null;
+  }
+
+  const normalizedFacets = normalizeBskyFacets(description.facets);
+  const normalized: Record<string, unknown> = {
+    text: description.text ?? "",
+    $type: "app.gainforest.common.defs#richtext",
+  };
+
+  if (normalizedFacets.length > 0) {
+    normalized.facets = normalizedFacets;
+  }
+
+  return normalized;
+}
+
+function normalizeAudioBlob(blob: Awaited<ReturnType<typeof toResolvedLegacyBlob>>): unknown {
+  if (!blob) {
+    return null;
+  }
+
+  return {
+    file: {
+      $type: "blob",
+      uri: blob.uri,
+      cid: blob.cid,
+      mimeType: blob.mimeType,
+      size: blob.size,
+    },
+    $type: "app.gainforest.common.defs#audio",
+  };
+}
+
+function normalizeAudioMetadata(metadata: AudioNode["metadata"]): unknown {
+  if (!metadata) {
+    return null;
+  }
+
+  const normalized: Record<string, unknown> = {
+    $type: "app.gainforest.ac.audio#metadata",
+  };
+
+  withDefinedValue(normalized, "codec", metadata.codec);
+  withDefinedValue(normalized, "channels", metadata.channels);
+  withDefinedValue(normalized, "duration", metadata.duration);
+  withDefinedValue(normalized, "recordedAt", metadata.recordedAt);
+  withDefinedValue(normalized, "sampleRate", metadata.sampleRate);
+  withDefinedValue(normalized, "bitDepth", metadata.bitDepth);
+  withDefinedValue(normalized, "fileFormat", metadata.fileFormat);
+  withDefinedValue(normalized, "fileSizeBytes", metadata.fileSizeBytes);
+  withDefinedValue(normalized, "filterHighPassHz", metadata.filterHighPassHz);
+  withDefinedValue(normalized, "filterLowPassHz", metadata.filterLowPassHz);
+  withDefinedValue(normalized, "maxFrequencyHz", metadata.maxFrequencyHz);
+  withDefinedValue(normalized, "minFrequencyHz", metadata.minFrequencyHz);
+  withDefinedValue(normalized, "signalToNoiseRatio", metadata.signalToNoiseRatio);
+
+  return normalized;
+}
+
+async function normalizeAudio(node: AudioNode): Promise<AudioRecordingItem> {
+  const resolvedBlob = await toResolvedLegacyBlob(node.blob?.file ?? null, node.did);
+
+  return {
+    metadata: {
+      did: node.did,
+      uri: node.uri,
+      rkey: node.rkey,
+      cid: node.cid,
+    },
+    record: {
+      name: node.name,
+      description: normalizeAudioDescription(node.description),
+      createdAt: node.createdAt,
+      blob: normalizeAudioBlob(resolvedBlob),
+      metadata: normalizeAudioMetadata(node.metadata),
+    },
+  };
+}
+
+export async function fetch(params: Params): Promise<Result> {
+  const allAudio: AudioRecordingItem[] = [];
+  let cursor: string | undefined;
+  let hasMorePages = false;
+
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const res = await graphqlClient.request<AudioResponse>(document, {
+      did: params.did,
+      first: PAGE_SIZE,
+      after: cursor,
+    });
+
+    const audio = res.appGainforestAcAudio;
+    allAudio.push(...(await Promise.all(pluckConnectionNodes(audio).map(normalizeAudio))));
+
+    const pageInfo = connectionPageInfo(audio);
+    hasMorePages = pageInfo.hasNextPage;
+
+    if (pageInfo.hasNextPage && !pageInfo.endCursor) {
+      throw new Error("appGainforestAcAudio returned hasNextPage=true without endCursor");
+    }
+
+    if (pageInfo.hasNextPage && pageInfo.endCursor) {
+      cursor = pageInfo.endCursor;
+      continue;
+    }
+
+    cursor = undefined;
+    break;
+  }
+
+  if (hasMorePages && cursor) {
+    throw new Error(`appGainforestAcAudio pagination exceeded ${MAX_PAGES} pages`);
+  }
+
+  return allAudio;
+}
 
 export const defaultOptions = {
-  staleTime: 30 * 1_000, // 30 seconds
+  staleTime: 30 * 1_000,
 } satisfies QueryModule<Params, Result>["defaultOptions"];
-
-// ── Enabled ───────────────────────────────────────────────────────────────────
 
 export function enabled(params: Params): boolean {
   return !!params.did;

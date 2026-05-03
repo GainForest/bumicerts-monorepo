@@ -32,6 +32,7 @@
       "@gainforest/atproto-auth-next/stores": ["../../packages/atproto-auth-next/src/stores.ts"],
       "@gainforest/atproto-mutations-core": ["../../packages/atproto-mutations-core/src/index.ts"],
       "@gainforest/atproto-mutations-next": ["../../packages/atproto-mutations-next/src/index.ts"],
+      "@gainforest/atproto-mutations-next/trpc": ["../../packages/atproto-mutations-next/src/trpc/index.ts"],
       "@gainforest/atproto-mutations-next/client": ["../../packages/atproto-mutations-next/src/client/index.ts"],
       "@gainforest/atproto-mutations-next/server": ["../../packages/atproto-mutations-next/src/server/index.ts"],
       "@gainforest/atproto-mutations-next/actions": ["../../packages/atproto-mutations-next/src/actions/index.ts"],

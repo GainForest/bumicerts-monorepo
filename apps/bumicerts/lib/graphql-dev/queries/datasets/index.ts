@@ -1,41 +1,46 @@
 /**
  * Datasets query module.
  *
- * Params:
- *   { did } → DatasetItem[] (all dwc.dataset records for a DID)
- *
- * Leaf: queries.datasets
- *
- * Note: this query is written as a raw GraphQL string instead of gql.tada
- * because the checked-in `graphql-env.d.ts` schema snapshot does not yet
- * include `gainforest.dwc.dataset`, even though the live indexer does.
+ * Scratch migration target:
+ *   appGainforestDwcDataset(...) { edges { node { ... } } }
  */
 
-import { graphqlClient } from "@/lib/graphql-dev/client";
+import { GraphQLClient } from "graphql-request";
 import type { QueryModule } from "@/lib/graphql-dev/create-query";
-import { ClientError } from "graphql-request";
+import type { ConnectionResult } from "../_migration-helpers";
+import { pluckConnectionNodes } from "../_migration-helpers";
+
+const indexerUrl = process.env.NEXT_PUBLIC_INDEXER_URL;
+
+if (!indexerUrl) {
+  throw new Error("NEXT_PUBLIC_INDEXER_URL must be set for datasets queries");
+}
+
+const graphqlClient = new GraphQLClient(indexerUrl, {
+  headers: {
+    "ngrok-skip-browser-warning": "true",
+  },
+});
 
 const document = /* GraphQL */ `
   query DatasetsByDid($did: String!) {
-    gainforest {
-      dwc {
-        dataset(where: { did: $did }, order: DESC, sortBy: CREATED_AT) {
-          data {
-            metadata {
-              did
-              uri
-              rkey
-              cid
-              createdAt
-            }
-            record {
-              name
-              description
-              recordCount
-              establishmentMeans
-              createdAt
-            }
-          }
+    appGainforestDwcDataset(
+      where: { did: { eq: $did } }
+      first: 200
+      sortDirection: DESC
+      sortBy: createdAt
+    ) {
+      edges {
+        node {
+          did
+          uri
+          rkey
+          cid
+          createdAt
+          name
+          description
+          recordCount
+          establishmentMeans
         }
       }
     }
@@ -59,61 +64,50 @@ export type DatasetItem = {
   };
 };
 
+type DatasetNode = {
+  did: string;
+  uri: string;
+  rkey: string;
+  cid: string;
+  createdAt: string;
+  name: string;
+  description: string | null;
+  recordCount: number | null;
+  establishmentMeans: string | null;
+};
+
 type DatasetResponse = {
-  gainforest?: {
-    dwc?: {
-      dataset?: {
-        data?: DatasetItem[] | null;
-      } | null;
-    } | null;
-  } | null;
+  appGainforestDwcDataset?: ConnectionResult<DatasetNode> | null;
 };
 
 export type Params = { did: string };
 export type Result = DatasetItem[];
 
-let hasWarnedMissingDatasetSchema = false;
-
-function isUnsupportedDatasetQueryError(error: unknown): boolean {
-  if (!(error instanceof ClientError)) {
-    return false;
-  }
-
-  return error.response.errors?.some((item) => {
-    const message = item.message.toLowerCase();
-
-    return (
-      (message.includes("cannot query field") && message.includes("dataset")) ||
-      (message.includes("unknown field") && message.includes("dataset")) ||
-      (message.includes("gainforestdwcnamespace") && message.includes("dataset"))
-    );
-  }) ?? false;
+function normalizeDataset(node: DatasetNode): DatasetItem {
+  return {
+    metadata: {
+      did: node.did,
+      uri: node.uri,
+      rkey: node.rkey,
+      cid: node.cid,
+      createdAt: node.createdAt,
+    },
+    record: {
+      name: node.name,
+      description: node.description,
+      recordCount: node.recordCount,
+      establishmentMeans: node.establishmentMeans,
+      createdAt: node.createdAt,
+    },
+  };
 }
 
 export async function fetch(params: Params): Promise<Result> {
-  try {
-    const res = await graphqlClient.request<DatasetResponse>(document, {
-      did: params.did,
-    });
+  const res = await graphqlClient.request<DatasetResponse>(document, {
+    did: params.did,
+  });
 
-    return res.gainforest?.dwc?.dataset?.data ?? [];
-  } catch (error) {
-    if (isUnsupportedDatasetQueryError(error)) {
-      if (
-        process.env.NODE_ENV !== "production" &&
-        !hasWarnedMissingDatasetSchema
-      ) {
-        hasWarnedMissingDatasetSchema = true;
-        console.warn(
-          "Indexer schema does not expose gainforest.dwc.dataset yet; returning an empty dataset list."
-        );
-      }
-
-      return [];
-    }
-
-    throw error;
-  }
+  return pluckConnectionNodes(res.appGainforestDwcDataset).map(normalizeDataset);
 }
 
 export const defaultOptions = {

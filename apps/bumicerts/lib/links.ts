@@ -7,6 +7,7 @@ const didCatcher = (callback: (did: string) => string): DidDynamicLink => {
 
 const DEFAULT_GREEN_GLOBE_PREVIEW_BASE_URL = "https://gainforest.app";
 const BUMICERT_CREATE_PATH = "/bumicert/create";
+const HYPERLABEL_BASE_URL = "https://hyperlabel-production.up.railway.app";
 
 const GREEN_GLOBE_PREVIEW_BASE_URL =
   clientEnv.NEXT_PUBLIC_GREEN_GLOBE_URL?.trim().replace(/\/$/, "") ??
@@ -140,6 +141,18 @@ export const links = {
     docs: "https://docs.fund.gainforest.app/",
     gbifPublisher:
       "https://www.gbif.org/publisher/c02486e8-eb54-4e94-81d8-1038cc58e208",
+    hyperlabel: {
+      baseUrl: HYPERLABEL_BASE_URL,
+      recent: (options: { limit: number; offset: number; tier: string }) => {
+        const searchParams = new URLSearchParams({
+          limit: String(options.limit),
+          offset: String(options.offset),
+          tier: options.tier,
+        });
+
+        return `${HYPERLABEL_BASE_URL}/api/recent?${searchParams.toString()}`;
+      },
+    },
   },
   public: {
     icon: "/assets/media/images/app-icon.png",
@@ -166,6 +179,9 @@ export const links = {
       upload: {
         image: "/api/aws/upload/image",
       },
+    },
+    indexer: {
+      addRepos: "/api/indexer/add-repos",
     },
     searchActors: (q: string, limit: number = 5) =>
       `https://public.api.bsky.app/xrpc/app.bsky.actor.searchActors?q=${encodeURIComponent(q)}&limit=${limit}`,

@@ -1,127 +1,150 @@
 /**
  * cartBumicert query module.
  *
- * Fetches the minimal data needed to display and validate a single bumicert
- * inside the CartModal. Each cart item is identified by a bumicert ID with
- * the format "{ownerDid}-{rkey}".
- *
- * Returns: title, organizationName, organizationDid, rkey, fundingConfig
- * (status + receivingWallet URI) — everything needed to group items into
- * "accepting donations" vs "unavailable".
- *
- * Note: wallet validity (specialMetadata + platformAttestation) is checked
- * separately via the linkEvm query, exactly as on the bumicert page.
+ * Scratch migration target:
+ *   orgHypercertsClaimActivity + appGainforestFundingConfigByUri + appGainforestOrganizationInfo
  */
 
 import { graphqlClient } from "@/lib/graphql-dev/client";
-import { graphql } from "@/lib/graphql-dev/tada";
 import type { QueryModule } from "@/lib/graphql-dev/create-query";
 import type { FundingConfigData } from "@/lib/types";
+import type { ConnectionResult } from "../_migration-helpers";
+import { pluckConnectionNodes } from "../_migration-helpers";
 
-// ── Document ──────────────────────────────────────────────────────────────────
+const activityDocument = /* GraphQL */ `
+  query CartBumicertActivity($uri: String!) {
+    orgHypercertsClaimActivityByUri(uri: $uri) {
+      did
+      rkey
+      title
+    }
+  }
+`;
 
-const cartItemDocument = graphql(`
-  query CartBumicert($did: String!, $rkey: String!) {
-    hypercerts {
-      claim {
-        activity(where: { did: $did, rkey: $rkey }, limit: 1) {
-          data {
-            metadata {
-              did
-              rkey
-            }
-            creatorInfo {
-              organizationName
-            }
-            record {
-              title
-            }
-            fundingConfig {
-              receivingWallet
-              status
-            }
-          }
+const orgDocument = /* GraphQL */ `
+  query CartBumicertOrg($did: String!) {
+    appGainforestOrganizationInfo(where: { did: { eq: $did } }, first: 1) {
+      edges {
+        node {
+          displayName
         }
       }
     }
   }
-`);
+`;
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+const fundingConfigDocument = /* GraphQL */ `
+  query CartBumicertFundingConfig($uri: String!) {
+    appGainforestFundingConfigByUri(uri: $uri) {
+      receivingWallet {
+        ... on AppGainforestFundingConfigEvmLinkRef {
+          uri
+        }
+      }
+      status
+      goalInUSD
+      minDonationInUSD
+      maxDonationInUSD
+      allowOversell
+      createdAt
+      updatedAt
+    }
+  }
+`;
 
-export type Params = { id: string }; // "{ownerDid}-{rkey}"
+type ActivityNode = { did: string; rkey: string; title: string };
+type OrgNode = { displayName: string };
+
+type ActivityResponse = {
+  orgHypercertsClaimActivityByUri?: ActivityNode | null;
+};
+
+type OrgResponse = {
+  appGainforestOrganizationInfo?: ConnectionResult<OrgNode> | null;
+};
+
+type FundingConfigResponse = {
+  appGainforestFundingConfigByUri?: {
+    receivingWallet?: { uri?: string | null } | null;
+    status?: FundingConfigData["status"];
+    goalInUSD?: string | null;
+    minDonationInUSD?: string | null;
+    maxDonationInUSD?: string | null;
+    allowOversell?: boolean | null;
+    createdAt?: string | null;
+    updatedAt?: string | null;
+  } | null;
+};
+
+export type Params = { id: string };
 
 export type CartBumicertItem = {
-  /** The full bumicert ID, e.g. "did:plc:abc-self123key" */
   id: string;
-  /** ATProto record key */
   rkey: string;
-  /** Owner/org DID */
   organizationDid: string;
-  /** Display title */
   title: string;
-  /** Organization display name */
   organizationName: string;
-  /**
-   * Funding config fields needed to determine acceptability.
-   * null means no funding config exists.
-   */
   fundingConfig: Pick<FundingConfigData, "receivingWallet" | "status"> | null;
 };
 
-// ── Fetch ─────────────────────────────────────────────────────────────────────
+function buildFundingConfigUri(did: string, rkey: string): string {
+  return `at://${did}/app.gainforest.funding.config/${rkey}`;
+}
+
+function buildActivityUri(did: string, rkey: string): string {
+  return `at://${did}/org.hypercerts.claim.activity/${rkey}`;
+}
 
 export async function fetch(params: Params): Promise<CartBumicertItem | null> {
-  // ID format: "{did}-{rkey}". The DID itself may contain hyphens, so we split
-  // on the LAST hyphen-separated segment that looks like an rkey.
-  // Safer: split on first "-" only if DID is "did:method:..." format.
   const firstDash = params.id.indexOf("-");
   if (firstDash === -1) return null;
 
-  // The rkey is everything after the first "-" that follows the DID.
-  // DID format: "did:method:identifier" — identifier may contain colons but not hyphens.
-  // So the first "-" separates did from rkey.
   const did = params.id.slice(0, firstDash);
   const rkey = params.id.slice(firstDash + 1);
-
   if (!did || !rkey) return null;
 
-  const res = await graphqlClient.request(cartItemDocument, { did, rkey });
-  const item = res.hypercerts?.claim?.activity?.data?.[0];
-  if (!item) return null;
+  const activityRes = await graphqlClient.request<ActivityResponse>(activityDocument, {
+    uri: buildActivityUri(did, rkey),
+  });
 
-  const rawFc = item.fundingConfig;
-  const fundingConfig: CartBumicertItem["fundingConfig"] = rawFc
-    ? {
-        receivingWallet: (() => {
-          const rw = rawFc.receivingWallet;
-          if (rw && typeof rw === "object" && "uri" in (rw as object)) {
-            return { uri: (rw as { uri: string }).uri };
-          }
-          return null;
-        })(),
-        status: (rawFc.status ?? null) as FundingConfigData["status"],
-      }
-    : null;
+  const activity = activityRes.orgHypercertsClaimActivityByUri ?? null;
+  if (!activity) return null;
+
+  const [orgRes, fundingConfigRes] = await Promise.allSettled([
+    graphqlClient.request<OrgResponse>(orgDocument, { did: activity.did }),
+    graphqlClient.request<FundingConfigResponse>(fundingConfigDocument, {
+      uri: buildFundingConfigUri(activity.did, activity.rkey),
+    }),
+  ]);
+
+  const org =
+    orgRes.status === "fulfilled"
+      ? (pluckConnectionNodes(orgRes.value.appGainforestOrganizationInfo)[0] ?? null)
+      : null;
+  const rawFc =
+    fundingConfigRes.status === "fulfilled"
+      ? fundingConfigRes.value.appGainforestFundingConfigByUri
+      : null;
 
   return {
     id: params.id,
-    rkey: item.metadata?.rkey ?? rkey,
-    organizationDid: item.metadata?.did ?? did,
-    title: item.record?.title ?? "",
-    organizationName: item.creatorInfo?.organizationName ?? "",
-    fundingConfig,
+    rkey: activity.rkey,
+    organizationDid: activity.did,
+    title: activity.title,
+    organizationName: org?.displayName ?? "",
+    fundingConfig: rawFc
+      ? {
+          receivingWallet: rawFc.receivingWallet?.uri ? { uri: rawFc.receivingWallet.uri } : null,
+          status: rawFc.status ?? null,
+        }
+      : null,
   };
 }
 
-// ── Default options ───────────────────────────────────────────────────────────
-
 export const defaultOptions = {
-  staleTime: 60 * 1_000, // 1 minute — config changes are infrequent
+  staleTime: 60 * 1_000,
   retry: false,
 } satisfies QueryModule<Params, CartBumicertItem | null>["defaultOptions"];
-
-// ── Enabled ───────────────────────────────────────────────────────────────────
 
 export function enabled(params: Params): boolean {
   return !!params.id;

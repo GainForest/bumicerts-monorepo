@@ -11,50 +11,9 @@
  */
 
 import { NextRequest } from "next/server";
-import { clientEnv } from "@/lib/env/client";
-import { GraphQLClient } from "graphql-request";
+import { fetchVerifiedAddress } from "@/lib/graphql-dev/queries/linkEvm";
 
 export const dynamic = "force-dynamic";
-
-const INDEXER_URL = clientEnv.NEXT_PUBLIC_INDEXER_URL;
-
-// ---------------------------------------------------------------------------
-// GraphQL query — queries app.gainforest.link.evm with valid:true filter
-// ---------------------------------------------------------------------------
-
-const LINK_EVM_QUERY = `
-  query VerifyRecipient($did: String!) {
-    gainforest {
-      link {
-        evm(
-          limit: 1
-          where: { did: $did, valid: true }
-        ) {
-          data {
-            record {
-              address
-            }
-          }
-        }
-      }
-    }
-  }
-`;
-
-type LinkEvmQueryResult = {
-  gainforest: {
-    link: {
-      evm: {
-        data: Array<{
-          record: {
-            address: string | null;
-          };
-        }>;
-      };
-    };
-  };
-};
-
 // ---------------------------------------------------------------------------
 // Route handler
 // ---------------------------------------------------------------------------
@@ -69,22 +28,10 @@ export async function GET(req: NextRequest) {
 
   // --- Query indexer for valid link.evm records ---
   try {
-    const client = new GraphQLClient(INDEXER_URL, {
-      headers: { "ngrok-skip-browser-warning": "true" },
-    });
-
-    const data = await client.request<LinkEvmQueryResult>(
-      LINK_EVM_QUERY,
-      { did }
-    );
-
-    const records = data?.gainforest?.link?.evm?.data ?? [];
-
-    if (records.length === 0 || !records[0].record.address) {
+    const address = await fetchVerifiedAddress(did);
+    if (!address) {
       return Response.json({ hasAttestation: false });
     }
-
-    const { address } = records[0].record;
 
     return Response.json({
       hasAttestation: true,

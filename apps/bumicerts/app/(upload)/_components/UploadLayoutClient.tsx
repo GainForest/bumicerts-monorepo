@@ -6,6 +6,7 @@ import { HeaderProvider } from "@/app/(marketplace)/_components/Header/context";
 import { ManageHeader } from "./Header/UploadHeader";
 import { UnifiedSidebar } from "@/components/layout/UnifiedSidebar";
 import { MobileNavDrawer } from "@/components/ui/MobileNavDrawer";
+import { addReposViaLocalRoute } from "@/lib/graphql-dev/mutations/add-repos";
 
 interface ManageLayoutClientProps {
   did: string;
@@ -35,14 +36,7 @@ function ManageLayoutInner({
     if (!did) return;
 
     // Fire-and-forget: track the user's repo in the indexer when they enter MANAGE
-    fetch("/api/indexer/trpc", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        query: "mutation AddRepos($dids: [String!]!) { addRepos(dids: $dids) }",
-        variables: { dids: [did] },
-      }),
-    }).catch(() => {
+    addReposViaLocalRoute([did]).catch(() => {
       // No-op: don't track if it failed or passed
     });
   }, [did]);

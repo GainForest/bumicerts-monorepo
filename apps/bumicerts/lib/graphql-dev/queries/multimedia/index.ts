@@ -10,52 +10,67 @@
  * include `gainforest.ac.multimedia`, even though the live indexer does.
  */
 
-import { graphqlClient } from "@/lib/graphql-dev/client";
-import type { QueryModule } from "@/lib/graphql-dev/create-query";
+import { GraphQLClient } from "graphql-request";
+import type { QueryModule } from "../../create-query";
 import { ClientError } from "graphql-request";
+import type { BlobLike, ConnectionResult } from "../_migration-helpers";
+import {
+  connectionPageInfo,
+  pluckConnectionNodes,
+  toResolvedLegacyBlob,
+} from "../_migration-helpers";
+
+const indexerUrl = process.env.NEXT_PUBLIC_INDEXER_URL;
+
+if (!indexerUrl) {
+  throw new Error("NEXT_PUBLIC_INDEXER_URL must be set for multimedia queries");
+}
+
+const graphqlClient = new GraphQLClient(indexerUrl, {
+  headers: {
+    "ngrok-skip-browser-warning": "true",
+  },
+});
 
 const document = /* GraphQL */ `
-  query MultimediaByDid($did: String!, $limit: Int, $cursor: String) {
-    gainforest {
-      ac {
-        multimedia(
-          where: { did: $did }
-          limit: $limit
-          cursor: $cursor
-          order: DESC
-          sortBy: CREATED_AT
-        ) {
-          data {
-            metadata {
-              did
-              uri
-              rkey
-              cid
-              createdAt
-            }
-            record {
-              occurrenceRef
-              siteRef
-              subjectPart
-              subjectPartUri
-              subjectOrientation
-              file
-              format
-              accessUri
-              variantLiteral
-              caption
-              creator
-              createDate
-              createdAt
-            }
+  query MultimediaByDid($did: String!, $first: Int, $after: String) {
+    appGainforestAcMultimedia(
+      where: { did: { eq: $did } }
+      first: $first
+      after: $after
+      sortDirection: DESC
+      sortBy: createdAt
+    ) {
+      edges {
+        node {
+          did
+          uri
+          rkey
+          cid
+          createdAt
+          occurrenceRef
+          siteRef
+          subjectPart
+          subjectPartUri
+          subjectOrientation
+          file {
+            ref
+            mimeType
+            size
           }
-          pageInfo {
-            endCursor
-            hasNextPage
-            count
-          }
+          format
+          accessUri
+          variantLiteral
+          caption
+          creator
+          createDate
         }
       }
+      pageInfo {
+        endCursor
+        hasNextPage
+      }
+      totalCount
     }
   }
 `;
@@ -85,21 +100,28 @@ export type MultimediaItem = {
   };
 };
 
-type PageInfo = {
-  endCursor: string | null;
-  hasNextPage: boolean;
-  count: number;
+type MultimediaNode = {
+  did: string;
+  uri: string;
+  rkey: string;
+  cid: string;
+  createdAt: string;
+  occurrenceRef: string | null;
+  siteRef: string | null;
+  subjectPart: string;
+  subjectPartUri: string | null;
+  subjectOrientation: string | null;
+  file: BlobLike | null;
+  format: string | null;
+  accessUri: string | null;
+  variantLiteral: string | null;
+  caption: string | null;
+  creator: string | null;
+  createDate: string | null;
 };
 
 type MultimediaResponse = {
-  gainforest?: {
-    ac?: {
-      multimedia?: {
-        data?: MultimediaItem[] | null;
-        pageInfo?: PageInfo | null;
-      } | null;
-    } | null;
-  } | null;
+  appGainforestAcMultimedia?: ConnectionResult<MultimediaNode> | null;
 };
 
 export type Params = { did: string };
@@ -131,6 +153,43 @@ function isUnsupportedMultimediaQueryError(error: unknown): boolean {
   );
 }
 
+async function normalizeMultimedia(node: MultimediaNode): Promise<MultimediaItem> {
+  const file = await toResolvedLegacyBlob(node.file, node.did);
+
+  return {
+    metadata: {
+      did: node.did,
+      uri: node.uri,
+      rkey: node.rkey,
+      cid: node.cid,
+      createdAt: node.createdAt,
+    },
+    record: {
+      occurrenceRef: node.occurrenceRef,
+      siteRef: node.siteRef,
+      subjectPart: node.subjectPart,
+      subjectPartUri: node.subjectPartUri,
+      subjectOrientation: node.subjectOrientation,
+      file: file
+        ? {
+            $type: "blob",
+            uri: file.uri,
+            cid: file.cid,
+            mimeType: file.mimeType,
+            size: file.size,
+          }
+        : null,
+      format: node.format,
+      accessUri: node.accessUri,
+      variantLiteral: node.variantLiteral,
+      caption: node.caption,
+      creator: node.creator,
+      createDate: node.createDate,
+      createdAt: node.createdAt,
+    },
+  };
+}
+
 export async function fetch(params: Params): Promise<Result> {
   try {
     const allMultimedia: MultimediaItem[] = [];
@@ -139,16 +198,14 @@ export async function fetch(params: Params): Promise<Result> {
     for (let page = 0; page < MAX_PAGES; page++) {
       const res = await graphqlClient.request<MultimediaResponse>(document, {
         did: params.did,
-        limit: PAGE_SIZE,
-        cursor,
+        first: PAGE_SIZE,
+        after: cursor,
       });
 
-      const multimedia = res.gainforest?.ac?.multimedia;
-      if (multimedia?.data) {
-        allMultimedia.push(...multimedia.data);
-      }
+       const multimedia = res.appGainforestAcMultimedia;
+       allMultimedia.push(...(await Promise.all(pluckConnectionNodes(multimedia).map(normalizeMultimedia))));
 
-      const pageInfo = multimedia?.pageInfo;
+      const pageInfo = connectionPageInfo(multimedia);
       if (pageInfo?.hasNextPage && pageInfo.endCursor) {
         if (page === MAX_PAGES - 1) {
           console.warn(
@@ -173,9 +230,9 @@ export async function fetch(params: Params): Promise<Result> {
       ) {
         hasWarnedMissingMultimediaSchema = true;
         console.warn(
-          "Indexer schema does not expose gainforest.ac.multimedia yet; returning an empty multimedia list.",
-        );
-      }
+           "Indexer schema does not expose appGainforestAcMultimedia yet; returning an empty multimedia list.",
+         );
+       }
 
       return [];
     }

@@ -48,6 +48,7 @@ import { textToLinearDocument } from "@/lib/utils/linearDocument";
 import { extractTextFromLinearDocument } from "@/lib/adapters";
 import type { LeafletLinearDocument } from "@gainforest/leaflet-react";
 import type { LinearDocument } from "@gainforest/atproto-mutations-next";
+import { addReposViaLocalRoute } from "@/lib/graphql-dev/mutations/add-repos";
 import { trpc } from "@/lib/trpc/client";
 import { formatError } from "@/lib/utils/trpc-errors";
 import { toSerializableFile } from "@/lib/mutations-utils";
@@ -363,15 +364,7 @@ export function OrgSetupPage({ did, onSetupSaved }: OrgSetupPageProps) {
       });
 
       // Fire-and-forget: track the user's repo in the indexer when they enter MANAGE
-      fetch("/api/indexer/trpc", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query:
-            "mutation AddRepos($dids: [String!]!) { addRepos(dids: $dids) }",
-          variables: { dids: [did] },
-        }),
-      }).catch(() => {
+      addReposViaLocalRoute([did]).catch(() => {
         // No-op: don't track if it failed or passed
       });
 
