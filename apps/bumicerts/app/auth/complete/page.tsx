@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAtprotoStore } from "@/components/stores/atproto";
 import Container from "@/components/ui/container";
@@ -94,7 +88,9 @@ export default function AuthCompletePage() {
     ? false
     : hasWaitedEnough
       ? true
-      : false;
+      : userDid
+        ? getHasSeenOnboardingInPast(userDid)
+        : false;
 
   useEffect(() => {
     if (shouldRedirect) {
@@ -118,7 +114,12 @@ export default function AuthCompletePage() {
         <Loader2Icon className="animate-spin size-6 text-primary" />
         Signing you in...
         {shouldRedirect && (
-          <Button size={"sm"} variant={"link"} className="mt-2" onClick={redirect}>
+          <Button
+            size={"sm"}
+            variant={"link"}
+            className="mt-2"
+            onClick={redirect}
+          >
             Taking too long? Click here to redirect.
           </Button>
         )}
