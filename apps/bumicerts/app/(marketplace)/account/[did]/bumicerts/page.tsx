@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import {
   buildOrganizationDataFromOrganizationAccount,
 } from "@/lib/account/server";
 import { OrgBumicertsGrid } from "./_components/OrgBumicertsGrid";
 import ErrorPage from "@/components/error-page";
 import Container from "@/components/ui/container";
-import { links } from "@/lib/links";
 import { getIndexerCaller } from "@/lib/trpc/indexer/server";
 import { requirePublicUrl } from "@/lib/url";
 import { activitiesToBumicertDataArray } from "@/lib/adapters";
 import type { BumicertData } from "@/lib/types";
 import * as activitiesModule from "@/lib/graphql-dev/queries/activities";
+import { OrgTabBar } from "../_components/OrgTabBar";
 
 export async function generateMetadata({
   params,
@@ -30,15 +30,19 @@ export async function generateMetadata({
     return { title: "Bumicerts — Bumicerts" };
   }
 
-  if (account.kind !== "organization") {
+  if (account.kind === "unknown") {
     return { title: "Bumicerts — Bumicerts" };
   }
 
-  const organization = buildOrganizationDataFromOrganizationAccount(account);
   const displayName =
-    organization.displayName.trim().length > 0
-      ? organization.displayName
-      : (account.profile.displayName ?? "Account");
+    account.kind === "organization"
+      ? (() => {
+          const organization = buildOrganizationDataFromOrganizationAccount(account);
+          return organization.displayName.trim().length > 0
+            ? organization.displayName
+            : (account.profile.displayName ?? "Account");
+        })()
+      : (account.profile.displayName ?? did);
 
   return {
     title: `${displayName} Bumicerts — Bumicerts`,
@@ -79,10 +83,6 @@ export default async function AccountBumicertsPage({
     notFound();
   }
 
-  if (account.kind === "user") {
-    redirect(links.account.byDid(did));
-  }
-
   let bumicerts: BumicertData[];
 
   try {
@@ -98,6 +98,19 @@ export default async function AccountBumicertsPage({
           error={error}
         />
       </Container>
+    );
+  }
+
+  if (account.kind === "user") {
+    return (
+      <>
+        <Container className="pt-4">
+          <OrgTabBar did={did} />
+        </Container>
+        <Container className="pb-8">
+          <OrgBumicertsGrid bumicerts={bumicerts} />
+        </Container>
+      </>
     );
   }
 

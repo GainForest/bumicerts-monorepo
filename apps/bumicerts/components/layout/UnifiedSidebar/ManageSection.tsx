@@ -35,6 +35,14 @@ function useManageItems(): NavLeafItem[] {
         href: links.manage.home,
         pathCheck: { startsWith: links.manage.home },
       },
+      {
+        kind: "leaf",
+        id: "bumicerts-manage",
+        text: "Bumicerts",
+        Icon: BumicertIcon,
+        href: links.manage.bumicerts,
+        pathCheck: { startsWith: links.manage.bumicerts },
+      },
     ];
   }
 

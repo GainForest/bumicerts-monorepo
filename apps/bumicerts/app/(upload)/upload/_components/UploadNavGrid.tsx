@@ -95,6 +95,14 @@ export function ManageNavGrid({
             href: links.manage.edit,
             Icon: PencilIcon,
           },
+          {
+            id: "bumicerts",
+            label: "Bumicerts",
+            description:
+              "Create and manage verified impact certificates for your work.",
+            href: links.manage.bumicerts,
+            Icon: BumicertIcon,
+          },
         ];
 
   return (

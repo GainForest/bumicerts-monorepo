@@ -2,7 +2,7 @@
 import Container from "@/components/ui/container";
 import ErrorPage from "@/components/error-page";
 import React from "react";
-import { BuildingIcon, Loader2Icon } from "lucide-react";
+import { Loader2Icon, UserIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AtprotoSignInButton from "@/components/global/Header/AtprotoSignInButton";
 import { Button } from "@/components/ui/button";
@@ -25,11 +25,12 @@ const AuthWrapper = ({
   const isAuthenticated = auth.status === "AUTHENTICATED";
   const isUnauthenticated = auth.status === "UNAUTHENTICATED";
   const isResuming = auth.status === "RESUMING";
-  const isLoadingOrganizationInfo = isAuthenticated && query.isLoading;
+  const isLoadingAccount = isAuthenticated && query.isLoading;
   const hasAccountError = !!query.error;
-  const hasOrganizationAccount = account?.kind === "organization";
+  const hasBumicertAccount =
+    account?.kind === "user" || account?.kind === "organization";
   const isContentReady =
-    isAuthenticated && hasOrganizationAccount && !isLoadingOrganizationInfo && !hasAccountError;
+    isAuthenticated && hasBumicertAccount && !isLoadingAccount && !hasAccountError;
   const shouldShowOverlay = !isContentReady;
 
   const renderOverlayContent = () => {
@@ -56,17 +57,17 @@ const AuthWrapper = ({
       );
     }
 
-    if (isAuthenticated && !hasOrganizationAccount && !isLoadingOrganizationInfo) {
+    if (isAuthenticated && !hasBumicertAccount && !isLoadingAccount) {
       return (
         <ErrorPage
-          title="Your organization is not set up yet."
-          description="Please complete your organization information to create a bumicert."
+          title="Your account is not set up yet."
+          description="Please complete your account information to create a bumicert."
           showRefreshButton={false}
           cta={
             <Link href={links.manage.home}>
               <Button>
-                <BuildingIcon />
-                Manage my organization
+                <UserIcon />
+                Manage my account
               </Button>
             </Link>
           }
@@ -74,7 +75,7 @@ const AuthWrapper = ({
       );
     }
 
-    if (isResuming || isLoadingOrganizationInfo) {
+    if (isResuming || isLoadingAccount) {
       return (
         <div className="flex flex-col items-center justify-center">
           <Loader2Icon className="animate-spin text-primary" />

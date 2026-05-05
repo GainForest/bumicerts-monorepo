@@ -48,8 +48,7 @@ const BumicertPreviewCard = () => {
               <UploadIcon className="size-4" />
             </button>
             <span className="text-sm text-pretty mr-3">
-              Your organization doesn&apos;t have a logo. Do you want to add
-              one?
+              Your account doesn&apos;t have a logo. Do you want to add one?
             </span>
           </div>
         )}

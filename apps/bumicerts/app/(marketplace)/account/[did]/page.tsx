@@ -5,9 +5,11 @@ import {
 } from "@/lib/account/server";
 import { getIndexerCaller } from "@/lib/trpc/indexer/server";
 import { OrgAbout } from "./_components/OrgAbout";
+import { OrgTabBar } from "./_components/OrgTabBar";
 import { requirePublicUrl } from "@/lib/url";
 import ErrorPage from "@/components/error-page";
 import LegacyUserProfilePage from "../../user/[did]/page";
+import Container from "@/components/ui/container";
 
 export async function generateMetadata({
   params,
@@ -125,7 +127,14 @@ export default async function AccountByDidPage({
   }
 
   if (account.kind === "user") {
-    return <LegacyUserProfilePage params={Promise.resolve({ did: encodedDid })} />;
+    return (
+      <>
+        <Container className="pt-4">
+          <OrgTabBar did={did} />
+        </Container>
+        <LegacyUserProfilePage params={Promise.resolve({ did: encodedDid })} />
+      </>
+    );
   }
 
   const organization = buildOrganizationDataFromOrganizationAccount(account);

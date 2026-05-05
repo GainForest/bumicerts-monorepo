@@ -42,7 +42,7 @@ export function OrgBumicertsGrid({ bumicerts }: OrgBumicertsGridProps) {
             fontStyle: "italic",
           }}
         >
-          This organization hasn&apos;t published any Bumicerts yet.
+          This account hasn&apos;t published any Bumicerts yet.
         </p>
       </div>
     );

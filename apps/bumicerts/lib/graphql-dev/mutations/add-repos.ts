@@ -10,11 +10,13 @@ const addReposDocument = graphql(`
 
 export async function addRepos(dids: string[]): Promise<boolean> {
   const client = createGraphQLClient();
-  const response = await client.request(addReposDocument, {
+
+  // Fire and forget
+  client.request(addReposDocument, {
     dids,
   });
 
-  return response.addRepos === true;
+  return true;
 }
 
 export async function addReposViaLocalRoute(dids: string[]): Promise<void> {

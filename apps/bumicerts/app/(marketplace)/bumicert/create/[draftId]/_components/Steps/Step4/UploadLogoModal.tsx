@@ -97,11 +97,11 @@ export const UploadLogoModal = () => {
       >
         <ModalTitle>Upload Logo</ModalTitle>
         <ModalDescription>
-          Upload a logo for your organization.
+          Upload a logo for your account.
         </ModalDescription>
       </ModalHeader>
       <FileInput
-        placeholder="Upload a logo for your organization"
+        placeholder="Upload a logo for your account"
         supportedFileTypes={[...BUMICERT_COVER_IMAGE_SUPPORTED_TYPES]}
         maxSizeInMB={BUMICERT_COVER_IMAGE_MAX_SIZE_MB}
         value={logo}
