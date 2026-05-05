@@ -27,19 +27,20 @@ type FieldDoc = {
 const TEMPLATE_DOWNLOADS = [
   {
     href: links.assets.treeDataBasicTemplate,
-    download: "tree-data-basic-template.csv",
-    label: "Download basic CSV",
+    download: "tree-data-basic-xlsform.xlsx",
+    label: "Download basic XLSForm",
   },
   {
     href: links.assets.treeDataDetailedTemplate,
-    download: "tree-data-detailed-template.csv",
-    label: "Download detailed CSV",
+    download: "tree-data-detailed-xlsform.xlsx",
+    label: "Download detailed XLSForm",
   },
 ] as const;
 
 /**
- * Fields shown in the documentation table. Names match the CSV template
- * column headers (e.g. `height`, not the internal `totalHeight`).
+ * Fields shown in the documentation table. Names match the XLSForm question
+ * names and exported CSV/TSV column headers (e.g. `height`, not the internal
+ * `totalHeight`).
  */
 const FIELD_DOCS: FieldDoc[] = [
   {
@@ -155,7 +156,7 @@ export default function TreeDataGuide() {
     <Accordion type="single" collapsible className="rounded-lg border">
       <AccordionItem value="guide" className="border-b-0">
         <AccordionTrigger className="px-4 hover:no-underline">
-          New to tree data? See accepted fields and download templates
+          New to tree data? See accepted fields and download XLSForms
         </AccordionTrigger>
 
         <AccordionContent className="px-4">
@@ -165,9 +166,11 @@ export default function TreeDataGuide() {
             <span className="font-semibold text-foreground">
               GBIF Darwin Core standards
             </span>
-            . Use the fields below to plan your data collection form or clean
-            your data before uploading. You may add extra fields for your own
-            use&nbsp;&mdash; just remove them before uploading.
+            . Use the XLSForm templates below to create a KoboToolBox project
+            for field data collection. The question names match the fields this
+            uploader expects, so Kobo CSV/TSV exports can be uploaded here with
+            minimal mapping. You may add extra fields for your own use&nbsp;&mdash;
+            leave them unmapped before uploading.
           </p>
 
           {/* Download templates */}

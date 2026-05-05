@@ -159,8 +159,8 @@ export const links = {
   },
   assets: {
     treeDataTemplate: "/templates/tree-data-template.csv",
-    treeDataBasicTemplate: "/templates/tree-data-basic-template.csv",
-    treeDataDetailedTemplate: "/templates/tree-data-detailed-template.csv",
+    treeDataBasicTemplate: "/templates/tree-data-basic-xlsform.xlsx",
+    treeDataDetailedTemplate: "/templates/tree-data-detailed-xlsform.xlsx",
   },
   api: {
     upload: {
