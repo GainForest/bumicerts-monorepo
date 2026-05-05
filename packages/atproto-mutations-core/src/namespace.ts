@@ -15,6 +15,20 @@
 // The mutations object is statically typed and tree-shakeable.
 
 // ---------------------------------------------------------------------------
+// actor.profile
+// ---------------------------------------------------------------------------
+import { createActorProfile } from "./mutations/actor.profile/create";
+import { updateActorProfile } from "./mutations/actor.profile/update";
+import { upsertActorProfile } from "./mutations/actor.profile/upsert";
+
+// ---------------------------------------------------------------------------
+// actor.organization
+// ---------------------------------------------------------------------------
+import { createActorOrganization } from "./mutations/actor.organization/create";
+import { updateActorOrganization } from "./mutations/actor.organization/update";
+import { upsertActorOrganization } from "./mutations/actor.organization/upsert";
+
+// ---------------------------------------------------------------------------
 // organization.info
 // ---------------------------------------------------------------------------
 import { createOrganizationInfo } from "./mutations/organization.info/create";
@@ -165,6 +179,18 @@ export const mutations = {
     },
   },
   certified: {
+    actor: {
+      profile: {
+        create: createActorProfile,
+        update: updateActorProfile,
+        upsert: upsertActorProfile,
+      },
+      organization: {
+        create: createActorOrganization,
+        update: updateActorOrganization,
+        upsert: upsertActorOrganization,
+      },
+    },
     location: {
       create: createCertifiedLocation,
       update: updateCertifiedLocation,

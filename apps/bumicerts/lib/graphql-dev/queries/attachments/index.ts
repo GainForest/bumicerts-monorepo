@@ -1,11 +1,13 @@
 /**
  * Attachments query module.
  *
- * Scratch migration target:
- *   orgHypercertsContextAttachment(...) + appGainforestOrganizationInfo(...)
+ * Current read path:
+ *   orgHypercertsContextAttachment(...) + Certified actor account enrichment
  */
 
 import { GraphQLClient } from "graphql-request";
+import { readOrganizationAccountsByDids } from "@/lib/account/list";
+import { resolveAccountMediaUrl } from "@/lib/account/media";
 import type { BlobLike, ConnectionResult, StrongRefLike } from "../_migration-helpers";
 import {
   connectionPageInfo,
@@ -107,20 +109,6 @@ const byDidDocument = /* GraphQL */ `
   }
 `;
 
-const orgInfoDocument = /* GraphQL */ `
-  query AttachmentOrgInfo($did: String!) {
-    appGainforestOrganizationInfo(where: { did: { eq: $did } }, first: 1) {
-      edges {
-        node {
-          did
-          displayName
-          logo { image { ref mimeType size } }
-        }
-      }
-    }
-  }
-`;
-
 type AttachmentNode = {
   did: string;
   uri: string;
@@ -162,18 +150,8 @@ type LeafletDocumentNode = {
   blocks?: Array<LeafletBlockNode | null> | null;
 };
 
-type OrgNode = {
-  did: string;
-  displayName: string;
-  logo: { image?: BlobLike | null } | null;
-};
-
 type AttachmentResponse = {
   orgHypercertsContextAttachment?: ConnectionResult<AttachmentNode> | null;
-};
-
-type OrgResponse = {
-  appGainforestOrganizationInfo?: ConnectionResult<OrgNode> | null;
 };
 
 export type AttachmentItem = {
@@ -203,6 +181,21 @@ export type AttachmentItem = {
 
 export type Params = { did: string };
 export type Result = AttachmentItem[];
+
+function buildCreatorInfo(did: string, displayName: string | null, logoUrl: string | null) {
+  return {
+    did,
+    organizationName: displayName,
+    organizationLogo: logoUrl
+      ? {
+          uri: logoUrl,
+          cid: null,
+          mimeType: null,
+          size: null,
+        }
+      : null,
+  };
+}
 
 async function normalizeContent(items: AttachmentNode["content"], did: string): Promise<unknown> {
   return Promise.all((items ?? []).map(async (item) => {
@@ -356,18 +349,18 @@ async function fetchAllAttachments(did: string): Promise<AttachmentNode[]> {
 }
 
 export async function fetch(params: Params): Promise<Result> {
-  const [res, orgRes] = await Promise.all([
+  const [res, accountMap] = await Promise.all([
     fetchAllAttachments(params.did),
-    graphqlClient.request<OrgResponse>(orgInfoDocument, { did: params.did }),
+    readOrganizationAccountsByDids([params.did]),
   ]);
 
-  const org = pluckConnectionNodes(orgRes.appGainforestOrganizationInfo)[0] ?? null;
-  const creatorInfo = org
-    ? {
-        did: org.did,
-        organizationName: org.displayName,
-        organizationLogo: await toResolvedLegacyBlob(org.logo?.image ?? null, org.did),
-      }
+  const account = accountMap.get(params.did) ?? null;
+  const creatorInfo = account
+    ? buildCreatorInfo(
+        account.did,
+        account.profile.displayName ?? account.did,
+        resolveAccountMediaUrl(account.profile.avatar),
+      )
     : null;
 
   return Promise.all(

@@ -10,6 +10,7 @@ import { LeafletEditor } from "@/components/ui/leaflet-editor";
 
 interface EditableAboutProps {
   organization: OrganizationData;
+  enabled?: boolean;
 }
 
 /**
@@ -18,7 +19,10 @@ interface EditableAboutProps {
  * - View mode: renders as a styled Leaflet document.
  * - Edit mode: WYSIWYG Leaflet editor that buffers changes in the store.
  */
-export function EditableAbout({ organization }: EditableAboutProps) {
+export function EditableAbout({
+  organization,
+  enabled = true,
+}: EditableAboutProps) {
   const [mode] = useManageMode();
   const isEditing = mode === "edit";
 
@@ -27,6 +31,8 @@ export function EditableAbout({ organization }: EditableAboutProps) {
 
   const longDescription = edits.longDescription ?? organization.longDescription;
   const hasContent = longDescription.blocks.length > 0;
+
+  if (!enabled) return null;
 
   if (!isEditing && !hasContent) return null;
 

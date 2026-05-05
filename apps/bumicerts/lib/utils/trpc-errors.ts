@@ -102,7 +102,7 @@ export function isErrorCode(error: unknown, code: string): boolean {
  *
  * @example
  * ```tsx
- * const mutation = trpc.organization.info.update.useMutation({
+ * const mutation = trpc.certified.actor.profile.update.useMutation({
  *   onError: (err) => {
  *     const formatted = getFormattedErrors(err);
  *     setError(formatted[0]?.userMessage); // "Organization name must be at least 8 characters"

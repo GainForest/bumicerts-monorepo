@@ -27,6 +27,7 @@ import BumicertIcon from "@/icons/BumicertIcon";
 import { links } from "@/lib/links";
 import type { ComponentType } from "react";
 import type { LucideIcon } from "lucide-react";
+import type { AccountKind } from "@/lib/account";
 
 interface NavCard {
   id: string;
@@ -77,11 +78,29 @@ const NAV_CARDS: NavCard[] = [
   },
 ];
 
-export function ManageNavGrid() {
+export function ManageNavGrid({
+  accountKind = "organization",
+}: {
+  accountKind?: AccountKind;
+}) {
+  const cards =
+    accountKind === "organization"
+      ? NAV_CARDS
+      : [
+          {
+            id: "edit",
+            label: "Edit Profile",
+            description:
+              "Update your account name, description, website, and avatar.",
+            href: links.manage.edit,
+            Icon: PencilIcon,
+          },
+        ];
+
   return (
     <div className="pt-4 pb-2">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-        {NAV_CARDS.map((card, i) => {
+        {cards.map((card, i) => {
           const Icon = card.Icon;
           return (
             <motion.div

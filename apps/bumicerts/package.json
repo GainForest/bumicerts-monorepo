@@ -23,6 +23,7 @@
     "@base-ui/react": "^1.2.0",
     "@gainforest/atproto-auth-next": "workspace:*",
     "@gainforest/atproto-mutations-next": "workspace:*",
+    "@gainforest/generated": "workspace:*",
     "@gainforest/leaflet-react": "workspace:*",
     "@google/generative-ai": "^0.24.1",
     "@radix-ui/react-accordion": "^1.2.12",

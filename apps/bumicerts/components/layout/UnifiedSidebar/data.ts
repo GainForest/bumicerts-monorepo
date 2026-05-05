@@ -58,7 +58,7 @@ export const NAV_ITEMS: NavItem[] = [
         text: "Organizations",
         Icon: Building2Icon,
         href: links.allOrganizations,
-        pathCheck: { startsWith: "/organization/all" },
+        pathCheck: { startsWith: "/organizations" },
       },
       {
         kind: "leaf",

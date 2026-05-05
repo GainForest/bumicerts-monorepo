@@ -1,8 +1,8 @@
 /**
  * cartBumicert query module.
  *
- * Scratch migration target:
- *   orgHypercertsClaimActivity + appGainforestFundingConfigByUri + appGainforestOrganizationInfo
+ * Current read path:
+ *   orgHypercertsClaimActivity + appGainforestFundingConfigByUri + appCertifiedActorProfile
  */
 
 import { graphqlClient } from "@/lib/graphql-dev/client";
@@ -21,9 +21,9 @@ const activityDocument = /* GraphQL */ `
   }
 `;
 
-const orgDocument = /* GraphQL */ `
-  query CartBumicertOrg($did: String!) {
-    appGainforestOrganizationInfo(where: { did: { eq: $did } }, first: 1) {
+const actorProfileDocument = /* GraphQL */ `
+  query CartBumicertActorProfile($did: String!) {
+    appCertifiedActorProfile(where: { did: { eq: $did } }, first: 1, sortDirection: DESC, sortBy: createdAt) {
       edges {
         node {
           displayName
@@ -53,14 +53,14 @@ const fundingConfigDocument = /* GraphQL */ `
 `;
 
 type ActivityNode = { did: string; rkey: string; title: string };
-type OrgNode = { displayName: string };
+type ActorProfileNode = { displayName?: string | null };
 
 type ActivityResponse = {
   orgHypercertsClaimActivityByUri?: ActivityNode | null;
 };
 
-type OrgResponse = {
-  appGainforestOrganizationInfo?: ConnectionResult<OrgNode> | null;
+type ActorProfileResponse = {
+  appCertifiedActorProfile?: ConnectionResult<ActorProfileNode> | null;
 };
 
 type FundingConfigResponse = {
@@ -110,16 +110,18 @@ export async function fetch(params: Params): Promise<CartBumicertItem | null> {
   const activity = activityRes.orgHypercertsClaimActivityByUri ?? null;
   if (!activity) return null;
 
-  const [orgRes, fundingConfigRes] = await Promise.allSettled([
-    graphqlClient.request<OrgResponse>(orgDocument, { did: activity.did }),
+  const [profileRes, fundingConfigRes] = await Promise.allSettled([
+    graphqlClient.request<ActorProfileResponse>(actorProfileDocument, {
+      did: activity.did,
+    }),
     graphqlClient.request<FundingConfigResponse>(fundingConfigDocument, {
       uri: buildFundingConfigUri(activity.did, activity.rkey),
     }),
   ]);
 
-  const org =
-    orgRes.status === "fulfilled"
-      ? (pluckConnectionNodes(orgRes.value.appGainforestOrganizationInfo)[0] ?? null)
+  const profile =
+    profileRes.status === "fulfilled"
+      ? (pluckConnectionNodes(profileRes.value.appCertifiedActorProfile)[0] ?? null)
       : null;
   const rawFc =
     fundingConfigRes.status === "fulfilled"
@@ -131,7 +133,7 @@ export async function fetch(params: Params): Promise<CartBumicertItem | null> {
     rkey: activity.rkey,
     organizationDid: activity.did,
     title: activity.title,
-    organizationName: org?.displayName ?? "",
+    organizationName: profile?.displayName ?? activity.did,
     fundingConfig: rawFc
       ? {
           receivingWallet: rawFc.receivingWallet?.uri ? { uri: rawFc.receivingWallet.uri } : null,

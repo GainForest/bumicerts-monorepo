@@ -8,13 +8,15 @@ import {
 import FileInput from "../../../../../../../../components/ui/FileInput";
 import { useState } from "react";
 import { Loader2Icon, UploadIcon } from "lucide-react";
+import type { AuthenticatedAccountState } from "@/lib/account";
 import { Button } from "@/components/ui/button";
 import { useAtprotoStore } from "@/components/stores/atproto";
 import { useModal } from "@/components/ui/modal/context";
 import { toSerializableFile } from "@/lib/mutations-utils";
-import { trpc } from "@/lib/trpc/client";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
+import { trpc } from "@/lib/trpc/client";
 import { formatError } from "@/lib/utils/trpc-errors";
+import { useCurrentAccountIdentity } from "@/hooks/use-current-account-identity";
 import {
   BUMICERT_COVER_IMAGE_MAX_SIZE_MB,
   BUMICERT_COVER_IMAGE_SUPPORTED_TYPES,
@@ -28,43 +30,41 @@ export const UploadLogoModal = () => {
   const [logo, setLogo] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const auth = useAtprotoStore((state) => state.auth);
-  const indexerUtils = indexerTrpc.useUtils();
+  const accountUtils = indexerTrpc.useUtils();
+  const { account } = useCurrentAccountIdentity();
 
   const {
     mutate: _updateMutation,
     isPending: isUploadingLogo,
     isSuccess: isUploaded,
-  } = trpc.organization.info.update.useMutation({
-    onSuccess: () => {
+  } = trpc.certified.actor.profile.update.useMutation({
+    onSuccess: (result) => {
       setUploadError(null);
       const did = auth.user?.did;
-      if (did && logo) {
-        const optimisticLogoUrl = URL.createObjectURL(logo);
-        indexerUtils.organization.logo.setData({ did }, optimisticLogoUrl);
-        indexerUtils.organization.byDid.setData({ did }, (prev) => {
-          if (!prev?.org?.record) return prev;
 
-          return {
-            ...prev,
-            org: {
-              ...prev.org,
-              record: {
-                ...prev.org.record,
-                logo: {
-                  cid: prev.org.record.logo?.cid ?? null,
-                  mimeType:
-                    logo.type.trim().length > 0
-                      ? logo.type
-                      : (prev.org.record.logo?.mimeType ?? null),
-                  size: logo.size ?? prev.org.record.logo?.size ?? null,
-                  uri: optimisticLogoUrl,
-                },
-              },
+      if (
+        did &&
+        logo &&
+        account &&
+        (account.kind === "user" || account.kind === "organization")
+      ) {
+        const optimisticLogoUrl = URL.createObjectURL(logo);
+        const optimisticLogoUri = optimisticLogoUrl as `${string}:${string}`;
+
+        const nextAccount: AuthenticatedAccountState = {
+          ...account,
+          profile: {
+            ...result.record,
+            avatar: {
+              $type: "org.hypercerts.defs#uri",
+              uri: optimisticLogoUri,
             },
-          };
-        });
+          },
+        };
+
+        accountUtils.account.current.setData(undefined, nextAccount);
+        accountUtils.account.byDid.setData({ did }, nextAccount);
       }
-      void indexerUtils.organization.invalidate();
     },
     onError: (err) => {
       setUploadError(formatError(err));
@@ -77,8 +77,7 @@ export const UploadLogoModal = () => {
     const logoFile = await toSerializableFile(logo);
     _updateMutation({
       data: {
-        logo: {
-          $type: "org.hypercerts.defs#smallImage" as const,
+        avatar: {
           image: logoFile,
         },
       },

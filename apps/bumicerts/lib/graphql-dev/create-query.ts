@@ -7,21 +7,21 @@
  *   .key(params?)                — returns the queryKey so callers can invalidate precisely
  *
  * Key convention:
- *   createQuery(["organization", "logo"], module)
- *   → .key({ did })  ≡  ["organization", "logo", { did }]
- *   → .key()         ≡  ["organization", "logo"]   (namespace-level; invalidates all logo queries)
+ *   createQuery(["activities"], module)
+ *   → .key({ did })  ≡  ["activities", { did }]
+ *   → .key()         ≡  ["activities"]
  *
  * Usage:
  *   // Client component
- *   const { data } = queries.organization.logo.useQuery({ did });
- *   const { data } = queries.organization.logo.useQuery({ did }, { staleTime: 5_000 });
+ *   const { data } = queries.activities.useQuery({ did });
+ *   const { data } = queries.activities.useQuery({ did }, { staleTime: 5_000 });
  *
  *   // Server component / route handler
- *   const logoUrl = await queries.organization.logo.fetch({ did });
+ *   const items = await queries.activities.fetch({ did });
  *
  *   // Invalidation (after mutation)
- *   queryClient.invalidateQueries({ queryKey: queries.organization.logo.key({ did }) });
- *   queryClient.invalidateQueries({ queryKey: queries.organization.key() }); // all org queries
+ *   queryClient.invalidateQueries({ queryKey: queries.activities.key({ did }) });
+ *   queryClient.invalidateQueries({ queryKey: queries.activities.key() });
  */
 
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";

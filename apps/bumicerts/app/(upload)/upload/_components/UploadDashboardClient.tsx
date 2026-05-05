@@ -1,440 +1,908 @@
 "use client";
 
-/**
- * ManageDashboardClient
- *
- * Mode is driven entirely by the `?mode=` URL param (via nuqs):
- *
- * /manage          → view mode  (OrgHero + OrgAbout, read-only)
- * /manage?mode=edit → edit mode  (EditableHero + EditableAbout + EditBar)
- *
- * nuqs is the single source of truth — no Zustand isEditing flag, no
- * useEffect sync, no re-trigger bugs. Cancel simply clears the param.
- *
- * Save uses `organization.info.update` (not upsert) because the record is
- * guaranteed to exist when the user reaches /manage. The update mutation
- * fetches the existing record server-side and applies a partial patch, so
- * we only send the fields that actually changed. This means:
- *   - logo / coverImage are preserved from the PDS record when not re-uploaded
- *   - website / startDate are preserved unless explicitly changed
- *
- * On success:
- *   1. The query cache is updated immediately via setQueryData with optimistic
- *      data (text fields from the mutation result + object URLs for new images).
- *      This ensures the user never sees stale data, even across URL changes.
- *   2. The mode param is cleared (returns to view mode).
- *   3. The query is invalidated after a delay so a background refetch replaces
- *      the optimistic data with real CDN URLs once the indexer has processed it.
- */
-
-import { useMemo, useCallback, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { trpc } from "@/lib/trpc/client";
-import { indexerTrpc } from "@/lib/trpc/indexer/client";
-import { orgInfoToOrganizationData } from "@/lib/adapters";
-import type { GraphQLOrgInfoItem } from "@/lib/adapters";
+import { useCallback, useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
+import { Building2Icon } from "lucide-react";
 import type { OrganizationData } from "@/lib/types";
-import type { Richtext } from "@gainforest/atproto-mutations-next";
-import { toSerializableFile } from "@gainforest/atproto-mutations-next";
-import { $parse as parseLinearDocument } from "@gainforest/generated/pub/leaflet/pages/linearDocument.defs";
+import type { AuthenticatedAccountState } from "@/lib/account";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
+import { trpc } from "@/lib/trpc/client";
 import { formatError } from "@/lib/utils/trpc-errors";
-
+import { toSerializableFile } from "@gainforest/atproto-mutations-next";
 import Container from "@/components/ui/container";
-import ErrorPage from "@/components/error-page";
-import { OrgHero } from "@/app/(marketplace)/organization/[did]/_components/OrgHero";
-import { OrgAbout } from "@/app/(marketplace)/organization/[did]/_components/OrgAbout";
-import { EditableHero, EditBar } from "./EditableHero/index";
+import { HeaderContent } from "@/app/(marketplace)/_components/Header/HeaderContent";
+import { Button } from "@/components/ui/button";
+import { links } from "@/lib/links";
+import { countries } from "@/lib/countries";
+import { OrgHero } from "@/app/(marketplace)/account/[did]/_components/OrgHero";
+import { OrgAbout } from "@/app/(marketplace)/account/[did]/_components/OrgAbout";
+import { EditableHero, EditBar } from "./EditableHero";
 import { EditableAbout } from "./EditableAbout";
 import { ManageNavGrid } from "./UploadNavGrid";
 import { ManageDashboardSkeleton } from "./UploadDashboardSkeleton";
-import { useManageDashboardState } from "./store";
+import {
+  buildUploadAccountPageDataFromAccount,
+  type UploadAccountPageData,
+} from "./uploadAccountPageData";
+import {
+  isUnchangedEdit,
+  UNCHANGED_EDIT,
+  useManageDashboardState,
+  type EditableFields,
+} from "./store";
 import { useManageMode } from "../_hooks/useUploadMode";
-import { OrgSetupPage } from "./OrgSetupPage";
+import { AccountSetupPage } from "./AccountSetupPage";
+import {
+  hasMeaningfulOrganizationLongDescription,
+  organizationLongDescriptionsMatch,
+} from "./organizationLongDescription";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+const RECONCILIATION_INVALIDATE_DELAY_MS = 8_000;
+
+type ReconciliationChecks = {
+  kind: AuthenticatedAccountState["kind"];
+  kindChanged: boolean;
+  displayName?: string;
+  shortDescription?: string | null;
+  website?: `${string}:${string}` | null;
+  country?: string;
+  startDate?: string | null;
+  visibility?: OrganizationData["visibility"];
+  longDescription?: OrganizationData["longDescription"];
+};
+
+type PendingReconciliation = {
+  id: number;
+  checks: ReconciliationChecks;
+  revalidationRequestedAt: number | null;
+};
 
 interface ManageDashboardClientProps {
-  /** The authenticated user's DID — obtained from server-side session. */
   did: string;
+  initialAccount: AuthenticatedAccountState;
+  initialData: UploadAccountPageData;
 }
 
-/**
- * Delay before invalidating the query after a successful save.
- * Gives the indexer time to process the update so the first refetch is more
- * likely to return current data. Even if it doesn't, the optimistic data
- * in the query cache is preserved until a matching refetch arrives.
- */
-const INVALIDATION_DELAY_MS = 5_000;
-const SETUP_REFETCH_INTERVAL_MS = 1_000;
-const SETUP_REFETCH_MAX_ATTEMPTS = 15;
-
-function wait(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function buildWebsiteUri(value: string | null): `${string}:${string}` | undefined {
+  if (!value) return undefined;
+  return (value.startsWith("http") ? value : `https://${value}`) as `${string}:${string}`;
 }
 
-function normalizeLongDescriptionBlobRefs(
-  doc: OrganizationData["longDescription"],
-): OrganizationData["longDescription"] {
+function resolveEditValue<T>(
+  editValue: T | typeof UNCHANGED_EDIT,
+  currentValue: T,
+): T {
+  return isUnchangedEdit(editValue) ? currentValue : editValue;
+}
+
+function buildNextOrganizationData(options: {
+  current: OrganizationData;
+  edits: EditableFields;
+  nextKind: "user" | "organization";
+}): OrganizationData {
+  const nextLogoUrl = options.edits.logo
+    ? URL.createObjectURL(options.edits.logo)
+    : options.current.logoUrl;
+  const nextCoverUrl = options.edits.coverImage
+    ? URL.createObjectURL(options.edits.coverImage)
+    : options.current.coverImageUrl;
+  const nextShortDescription = resolveEditValue(
+    options.edits.shortDescription,
+    options.current.shortDescription,
+  );
+  const nextCountry = resolveEditValue(
+    options.edits.country,
+    options.current.country,
+  );
+
   return {
-    ...doc,
-    blocks: doc.blocks.map((wrapper) => {
-      const block = wrapper.block;
-      if (block.$type !== "pub.leaflet.blocks.image") return wrapper;
-
-      const image = block.image;
-      if (typeof image === "object" && image !== null && "ref" in image) {
-        const ref = image.ref;
-        if (
-          typeof ref === "object" &&
-          ref !== null &&
-          "$link" in ref &&
-          typeof ref.$link === "string" &&
-          ref.$link.length > 0
-        ) {
-          const mimeType =
-            "mimeType" in image && typeof image.mimeType === "string"
-              ? image.mimeType
-              : "application/octet-stream";
-          const size =
-            "size" in image && typeof image.size === "number"
-              ? image.size
-              : 0;
-
-          return {
-            ...wrapper,
-            block: {
-              ...block,
-              image: {
-                $type: "blob",
-                ref: ref.$link,
-                mimeType,
-                size,
-              },
-            },
-          };
-        }
-      }
-
-      return wrapper;
-    }),
+    ...options.current,
+    displayName: resolveEditValue(
+      options.edits.displayName,
+      options.current.displayName,
+    ),
+    shortDescription: nextShortDescription ?? "",
+    shortDescriptionFacets: resolveEditValue(
+      options.edits.shortDescriptionFacets,
+      options.current.shortDescriptionFacets,
+    ),
+    longDescription:
+      options.nextKind === "organization"
+        ? options.edits.longDescription ?? options.current.longDescription
+        : { blocks: [] },
+    logoUrl: nextLogoUrl,
+    coverImageUrl: nextCoverUrl,
+    country: options.nextKind === "organization" ? (nextCountry ?? "") : "",
+    website: resolveEditValue(options.edits.website, options.current.website),
+    startDate:
+      options.nextKind === "organization"
+        ? resolveEditValue(options.edits.startDate, options.current.startDate)
+        : null,
+    visibility:
+      options.nextKind === "organization"
+        ? resolveEditValue(options.edits.visibility, options.current.visibility)
+        : "Public",
   };
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
+function shouldUpgradeUserToOrganization(options: {
+  current: OrganizationData;
+  edits: {
+    country: EditableFields["country"];
+    startDate: EditableFields["startDate"];
+    longDescription: OrganizationData["longDescription"] | null;
+    visibility: EditableFields["visibility"];
+  };
+}): { shouldUpgrade: boolean; isComplete: boolean } {
+  const country = resolveEditValue(options.edits.country, options.current.country);
+  const longDescription =
+    options.edits.longDescription ?? options.current.longDescription;
+  const visibility = resolveEditValue(
+    options.edits.visibility,
+    options.current.visibility,
+  );
+  const startDate = resolveEditValue(
+    options.edits.startDate,
+    options.current.startDate,
+  );
 
-export function ManageDashboardClient({ did }: ManageDashboardClientProps) {
+  const touchedOrgFields =
+    !isUnchangedEdit(options.edits.country) ||
+    !isUnchangedEdit(options.edits.startDate) ||
+    options.edits.longDescription !== null ||
+    !isUnchangedEdit(options.edits.visibility);
+
+  const isComplete =
+    typeof country === "string" &&
+    country.length === 2 &&
+    country in countries &&
+    hasMeaningfulOrganizationLongDescription(longDescription) &&
+    (visibility === "Public" || visibility === "Unlisted" || visibility === null) &&
+    (startDate === null || startDate.length > 0);
+
+  return {
+    shouldUpgrade: touchedOrgFields,
+    isComplete,
+  };
+}
+
+function buildSaveReconciliationChecks(options: {
+  currentAccount: AuthenticatedAccountState;
+  currentOrganization: OrganizationData | null;
+  edits: EditableFields;
+  nextAccount: AuthenticatedAccountState;
+  nextOrganization: OrganizationData;
+}): ReconciliationChecks {
+  const checks: ReconciliationChecks = {
+    kind: options.nextAccount.kind,
+    kindChanged: options.currentAccount.kind !== options.nextAccount.kind,
+  };
+
+  if (!isUnchangedEdit(options.edits.displayName)) {
+    checks.displayName = options.edits.displayName;
+  }
+
+  if (!isUnchangedEdit(options.edits.shortDescription)) {
+    checks.shortDescription =
+      options.edits.shortDescription === null ||
+      options.edits.shortDescription.trim().length === 0
+        ? null
+        : options.edits.shortDescription;
+  }
+
+  if (!isUnchangedEdit(options.edits.website)) {
+    checks.website =
+      options.edits.website === null || options.edits.website.trim().length === 0
+        ? null
+        : (buildWebsiteUri(options.edits.website) ?? null);
+  }
+
+  if (
+    options.nextAccount.kind === "organization" &&
+    (options.currentAccount.kind !== "organization" ||
+      !isUnchangedEdit(options.edits.country))
+  ) {
+    checks.country = options.nextOrganization.country;
+  }
+
+  if (
+    options.nextAccount.kind === "organization" &&
+    (options.currentAccount.kind !== "organization" ||
+      !isUnchangedEdit(options.edits.startDate))
+  ) {
+    checks.startDate = options.nextOrganization.startDate;
+  }
+
+  if (
+    options.nextAccount.kind === "organization" &&
+    (options.currentAccount.kind !== "organization" ||
+      !isUnchangedEdit(options.edits.visibility))
+  ) {
+    checks.visibility = options.nextOrganization.visibility;
+  }
+
+  if (options.nextAccount.kind === "organization" && options.edits.longDescription !== null) {
+    checks.longDescription = options.nextOrganization.longDescription;
+  }
+
+  return checks;
+}
+
+function buildSetupReconciliationChecks(options: {
+  nextAccount: AuthenticatedAccountState;
+  nextOrganization: OrganizationData;
+}): ReconciliationChecks {
+  const checks: ReconciliationChecks = {
+    kind: options.nextAccount.kind,
+    kindChanged: true,
+    displayName: options.nextOrganization.displayName,
+    shortDescription: options.nextOrganization.shortDescription || null,
+    website: buildWebsiteUri(options.nextOrganization.website) ?? null,
+  };
+
+  if (options.nextAccount.kind === "organization") {
+    checks.country = options.nextOrganization.country;
+    checks.startDate = options.nextOrganization.startDate;
+    checks.visibility = options.nextOrganization.visibility;
+    checks.longDescription = options.nextOrganization.longDescription;
+  }
+
+  return checks;
+}
+
+function hasQueryCaughtUp(
+  account: AuthenticatedAccountState,
+  checks: ReconciliationChecks,
+): boolean {
+  if (account.kind !== checks.kind) {
+    return false;
+  }
+
+  let matchedObservableChange = checks.kindChanged;
+
+  if (checks.displayName !== undefined) {
+    if (account.kind === "unknown") return false;
+    if ((account.profile.displayName ?? "") !== checks.displayName) {
+      return false;
+    }
+    matchedObservableChange = true;
+  }
+
+  if (checks.shortDescription !== undefined) {
+    if (account.kind === "unknown") return false;
+    if ((account.profile.description ?? null) !== checks.shortDescription) {
+      return false;
+    }
+    matchedObservableChange = true;
+  }
+
+  if (checks.website !== undefined) {
+    if (account.kind === "unknown") return false;
+    if ((account.profile.website ?? null) !== checks.website) {
+      return false;
+    }
+    matchedObservableChange = true;
+  }
+
+  if (checks.country !== undefined) {
+    if (account.kind !== "organization") return false;
+    if (buildUploadAccountPageDataFromAccount(account).organization?.country !== checks.country) {
+      return false;
+    }
+    matchedObservableChange = true;
+  }
+
+  if (checks.startDate !== undefined) {
+    if (account.kind !== "organization") return false;
+    if ((account.organization.foundedDate ?? null) !== checks.startDate) {
+      return false;
+    }
+    matchedObservableChange = true;
+  }
+
+  if (checks.visibility !== undefined) {
+    if (account.kind !== "organization") return false;
+    if (buildUploadAccountPageDataFromAccount(account).organization?.visibility !== checks.visibility) {
+      return false;
+    }
+    matchedObservableChange = true;
+  }
+
+  if (checks.longDescription !== undefined) {
+    if (account.kind !== "organization") return false;
+    const nextLongDescription = buildUploadAccountPageDataFromAccount(account).organization?.longDescription;
+    if (
+      !nextLongDescription ||
+      !organizationLongDescriptionsMatch(nextLongDescription, checks.longDescription)
+    ) {
+      return false;
+    }
+    matchedObservableChange = true;
+  }
+
+  return matchedObservableChange;
+}
+
+function hasReconciliationWork(checks: ReconciliationChecks): boolean {
+  return (
+    checks.kindChanged ||
+    checks.displayName !== undefined ||
+    checks.shortDescription !== undefined ||
+    checks.website !== undefined ||
+    checks.country !== undefined ||
+    checks.startDate !== undefined ||
+    checks.visibility !== undefined ||
+    checks.longDescription !== undefined
+  );
+}
+
+function mergeRefetchedPageData(options: {
+  currentPageData: UploadAccountPageData;
+  nextAccount: AuthenticatedAccountState;
+  checks?: ReconciliationChecks;
+}): UploadAccountPageData {
+  const nextPageData = buildUploadAccountPageDataFromAccount(options.nextAccount);
+  const currentOrganization = options.currentPageData.organization;
+  const nextOrganization = nextPageData.organization;
+
+  if (!currentOrganization || !nextOrganization) {
+    return nextPageData;
+  }
+
+  const shouldPreserveLogo =
+    currentOrganization.logoUrl?.startsWith("blob:") &&
+    nextOrganization.logoUrl === null;
+  const shouldPreserveCoverImage =
+    currentOrganization.coverImageUrl?.startsWith("blob:") &&
+    nextOrganization.coverImageUrl === null;
+  const shouldPreserveVisibility = options.checks?.visibility !== undefined;
+  const shouldPreserveLongDescription = options.checks?.longDescription !== undefined;
+
+  if (
+    !shouldPreserveLogo &&
+    !shouldPreserveCoverImage &&
+    !shouldPreserveVisibility &&
+    !shouldPreserveLongDescription
+  ) {
+    return nextPageData;
+  }
+
+  return {
+    ...nextPageData,
+    organization: {
+      ...nextOrganization,
+      logoUrl: shouldPreserveLogo ? currentOrganization.logoUrl : nextOrganization.logoUrl,
+      coverImageUrl: shouldPreserveCoverImage
+        ? currentOrganization.coverImageUrl
+        : nextOrganization.coverImageUrl,
+      visibility: shouldPreserveVisibility
+        ? currentOrganization.visibility
+        : nextOrganization.visibility,
+      longDescription: shouldPreserveLongDescription
+        ? currentOrganization.longDescription
+        : nextOrganization.longDescription,
+    },
+  };
+}
+
+function RegisterOrganizationButton() {
+  return (
+    <Button asChild>
+      <Link href={links.manage.edit}>
+        <Building2Icon />
+        Register as an Organization
+      </Link>
+    </Button>
+  );
+}
+
+export function ManageDashboardClient({
+  did,
+  initialAccount,
+  initialData,
+}: ManageDashboardClientProps) {
   const indexerUtils = indexerTrpc.useUtils();
   const [mode, setMode] = useManageMode();
   const isEditing = mode === "edit";
-
-  // Refs for object URLs that need cleanup
-  const objectUrlsRef = useRef<string[]>([]);
-
-  // Guard: when true, the query is in the optimistic protection window.
-  // During this period, refetchOnWindowFocus is disabled and we control
-  // refetches explicitly via the delayed invalidation.
-  const [optimisticGuard, setOptimisticGuard] = useState(false);
-
-  // ── Store (edit-only state) ────────────────────────────────────────────────
-  const isSaving = useManageDashboardState((s) => s.isSaving);
-  const setSaving = useManageDashboardState((s) => s.setSaving);
-  const setSaveError = useManageDashboardState((s) => s.setSaveError);
-  const onSaveSuccess = useManageDashboardState((s) => s.onSaveSuccess);
-  const edits = useManageDashboardState((s) => s.edits);
-  const hasChanges = useManageDashboardState((s) => s.hasChanges);
-
-  // ── Data fetch ─────────────────────────────────────────────────────────────
-  const {
-    data: orgData,
-    isLoading,
-    error,
-    refetch,
-  } = indexerTrpc.organization.byDid.useQuery(
+  const [displayAccount, setDisplayAccount] = useState(initialAccount);
+  const [pageData, setPageData] = useState(initialData);
+  const [pendingReconciliation, setPendingReconciliation] =
+    useState<PendingReconciliation | null>(null);
+  const currentAccountQuery = indexerTrpc.account.byDid.useQuery(
     { did },
     {
-      // Override the global staleTime: 0 so that optimistic data set via
-      // setQueryData is treated as fresh and doesn't trigger an immediate
-      // background refetch on the next render (e.g. after URL change).
-      staleTime: optimisticGuard ? Infinity : 10_000,
-      // Disable automatic refetches during the optimistic protection window.
-      // Without this, React Query can schedule a background refetch that races
-      // against our setQueryData and overwrites optimistic data with stale
-      // indexer results.
-      refetchOnWindowFocus: !optimisticGuard,
-      refetchOnMount: !optimisticGuard,
-      refetchOnReconnect: !optimisticGuard,
+      initialData: initialAccount,
+      refetchOnMount: "always",
+      staleTime: 0,
+      refetchOnWindowFocus: false,
     },
   );
-  const hasFetchedOrg = orgData?.org !== null && orgData?.org !== undefined;
 
-  const handleSetupSaved = useCallback(async (): Promise<boolean> => {
-    for (let attempt = 0; attempt < SETUP_REFETCH_MAX_ATTEMPTS; attempt += 1) {
-      const queryResult = await refetch();
-      if (queryResult.data?.org) {
-        return true;
-      }
+  const edits = useManageDashboardState((state) => state.edits);
+  const hasChanges = useManageDashboardState((state) => state.hasChanges);
+  const isSaving = useManageDashboardState((state) => state.isSaving);
+  const setSaving = useManageDashboardState((state) => state.setSaving);
+  const setSaveError = useManageDashboardState((state) => state.setSaveError);
+  const onSaveSuccess = useManageDashboardState((state) => state.onSaveSuccess);
 
-      if (attempt < SETUP_REFETCH_MAX_ATTEMPTS - 1) {
-        await wait(SETUP_REFETCH_INTERVAL_MS);
-      }
+  const updateProfile = trpc.certified.actor.profile.update.useMutation();
+  const updateOrganization =
+    trpc.certified.actor.organization.update.useMutation();
+  const upsertOrganization =
+    trpc.certified.actor.organization.upsert.useMutation();
+  const updateProfileAndOrganization =
+    trpc.certified.actor.profileAndOrganizationSave.useMutation();
+
+  const currentAccount = displayAccount;
+  const currentKind = currentAccount.kind;
+  const hasBufferedChanges = hasChanges();
+
+  const currentOrganization = pageData.organization;
+  const canEditOrganizationFields =
+    currentKind === "organization" || currentKind === "user";
+  const pendingReconciliationId = pendingReconciliation?.id ?? null;
+
+  useEffect(() => {
+    if (pendingReconciliation || isEditing || hasBufferedChanges) {
+      return;
     }
 
-    return false;
-  }, [refetch]);
+    const nextAccount = currentAccountQuery.data ?? initialAccount;
+    setDisplayAccount(nextAccount);
+    setPageData((currentPageData) =>
+      mergeRefetchedPageData({
+        currentPageData,
+        nextAccount,
+      }),
+    );
+  }, [currentAccountQuery.data, hasBufferedChanges, initialAccount, isEditing, pendingReconciliation]);
 
-  // Derive OrganizationData from the query cache — single source of truth.
-  // No useEffect sync, no Zustand serverData. When setQueryData updates the
-  // cache, this memo recomputes and the component re-renders with new data.
-  const serverData = useMemo(() => {
-    if (!orgData?.org) return null;
-    return orgInfoToOrganizationData(orgData.org as GraphQLOrgInfoItem, 0);
-  }, [orgData]);
+  useEffect(() => {
+    if (!pendingReconciliation || pendingReconciliation.revalidationRequestedAt === null) {
+      return;
+    }
 
-  // ── Mutations ──────────────────────────────────────────────────────────────
-  const updateMutation = trpc.organization.info.update.useMutation();
+    const nextAccount = currentAccountQuery.data;
+    if (!nextAccount) {
+      return;
+    }
 
-  // ── Save handler ───────────────────────────────────────────────────────────
+    if (
+      currentAccountQuery.dataUpdatedAt < pendingReconciliation.revalidationRequestedAt
+    ) {
+      return;
+    }
+
+    if (!hasQueryCaughtUp(nextAccount, pendingReconciliation.checks)) {
+      return;
+    }
+
+    setDisplayAccount(nextAccount);
+    setPageData((currentPageData) =>
+      mergeRefetchedPageData({
+        currentPageData,
+        nextAccount,
+        checks: pendingReconciliation.checks,
+      }),
+    );
+    setPendingReconciliation(null);
+  }, [currentAccountQuery.data, currentAccountQuery.dataUpdatedAt, pendingReconciliation]);
+
+  useEffect(() => {
+    if (pendingReconciliationId === null) {
+      return;
+    }
+
+    const pendingId = pendingReconciliationId;
+    const invalidateTimer = window.setInterval(() => {
+      const requestedAt = Date.now();
+      setPendingReconciliation((currentPending) =>
+        currentPending?.id === pendingId
+          ? {
+              ...currentPending,
+              revalidationRequestedAt: requestedAt,
+            }
+          : currentPending,
+      );
+      void indexerUtils.account.current.invalidate();
+      void indexerUtils.account.byDid.invalidate({ did });
+    }, RECONCILIATION_INVALIDATE_DELAY_MS);
+
+    return () => {
+      window.clearInterval(invalidateTimer);
+    };
+  }, [did, indexerUtils, pendingReconciliationId]);
+
+  const startReconciliation = useCallback(
+    (options: {
+      nextAccount: AuthenticatedAccountState;
+      nextPageData: UploadAccountPageData;
+      checks: ReconciliationChecks;
+    }) => {
+      setDisplayAccount(options.nextAccount);
+      setPageData(options.nextPageData);
+
+      if (!hasReconciliationWork(options.checks)) {
+        setPendingReconciliation(null);
+        return;
+      }
+
+      setPendingReconciliation({
+        id: Date.now(),
+        checks: options.checks,
+        revalidationRequestedAt: null,
+      });
+    },
+    [],
+  );
+
+  const handleSetupCompleted = useCallback(
+    async (
+      nextAccount: AuthenticatedAccountState,
+      nextOrganization: OrganizationData,
+    ) => {
+      await Promise.all([
+        indexerUtils.account.current.cancel(),
+        indexerUtils.account.byDid.cancel({ did }),
+      ]);
+      indexerUtils.account.current.setData(undefined, nextAccount);
+      indexerUtils.account.byDid.setData({ did }, nextAccount);
+      startReconciliation({
+        nextAccount,
+        nextPageData: {
+          did,
+          kind: nextAccount.kind,
+          organization: nextOrganization,
+        },
+        checks: buildSetupReconciliationChecks({
+          nextAccount,
+          nextOrganization,
+        }),
+      });
+    },
+    [did, indexerUtils, startReconciliation],
+  );
+
   const handleSave = useCallback(async () => {
-    if (!serverData || !hasChanges() || isSaving) return;
+    if (!currentOrganization || !hasChanges() || isSaving) return;
 
     setSaving(true);
     setSaveError(null);
 
     try {
-      // Build partial data — only include fields that were actually edited.
-      // The update mutation fetches the existing record from the PDS and merges
-      // this patch, so omitted fields are preserved automatically.
-      const data: Record<string, unknown> = {};
-
-      if (edits.displayName !== null) {
-        data.displayName = edits.displayName;
+      if (currentAccount.kind === "unknown") {
+        throw new Error("Account data is not ready to save yet.");
       }
 
-      if (edits.shortDescription !== null) {
-        const resolvedFacets =
-          edits.shortDescriptionFacets ?? serverData.shortDescriptionFacets;
-        // Our Facet[] (from leaflet-react) and the generated RichtextFacet.Main[] are
-        // structurally identical at runtime (same app.bsky.richtext.facet JSON shape).
-        // Cast at this mutation boundary — safe by structural equivalence.
-        const shortDescriptionInput: Richtext = {
-          text: edits.shortDescription,
-          facets:
-            resolvedFacets.length > 0
-              ? (resolvedFacets as unknown as Richtext["facets"])
-              : undefined,
-        };
-        data.shortDescription = shortDescriptionInput;
+      let pendingUpgrade:
+        | {
+            country: { uri: string; cid: string };
+            longDescription: OrganizationData["longDescription"];
+            startDate: string | null;
+            visibility: OrganizationData["visibility"];
+        }
+        | null = null;
+      let nextProfile = currentAccount.profile;
+
+      if (currentKind === "user") {
+        const { shouldUpgrade, isComplete } = shouldUpgradeUserToOrganization({
+          current: currentOrganization,
+          edits: {
+            country: edits.country,
+            startDate: edits.startDate,
+            longDescription: edits.longDescription,
+            visibility: edits.visibility,
+          },
+        });
+
+        if (shouldUpgrade) {
+          if (!isComplete) {
+            throw new Error(
+              "Complete the organization fields before registering as an organization.",
+            );
+          }
+
+          const nextCountryCode = resolveEditValue(
+            edits.country,
+            currentOrganization.country,
+          );
+          const nextCountry = nextCountryCode ? countries[nextCountryCode] : null;
+          if (!nextCountry) {
+            throw new Error("Country is required to register as an organization.");
+          }
+
+          pendingUpgrade = {
+            country: { uri: nextCountry.uri, cid: nextCountry.cid },
+            longDescription:
+              edits.longDescription ?? currentOrganization.longDescription,
+            startDate: resolveEditValue(
+              edits.startDate,
+              currentOrganization.startDate,
+            ),
+            visibility: resolveEditValue(
+              edits.visibility,
+              currentOrganization.visibility,
+            ),
+          };
+        }
       }
 
-      if (edits.longDescription !== null) {
-        const normalizedLongDescription = normalizeLongDescriptionBlobRefs(
-          edits.longDescription,
-        );
-        // Parse through generated lexicon validator client-side so this payload is
-        // guaranteed to match mutation input shape before we send it.
-        data.longDescription = parseLinearDocument(normalizedLongDescription);
+      const profileData: Record<string, unknown> = {};
+      const profileUnset: string[] = [];
+
+      if (!isUnchangedEdit(edits.displayName)) {
+        profileData.displayName = edits.displayName;
       }
 
-      if (edits.country !== null) {
-        data.country = edits.country;
+      if (!isUnchangedEdit(edits.shortDescription)) {
+        if (edits.shortDescription === null || edits.shortDescription.trim().length === 0) {
+          profileUnset.push("description");
+        } else {
+          profileData.description = edits.shortDescription;
+        }
       }
 
-      if (edits.visibility !== null) {
-        data.visibility = edits.visibility;
+      if (!isUnchangedEdit(edits.website)) {
+        if (edits.website === null || edits.website.trim().length === 0) {
+          profileUnset.push("website");
+        } else {
+          profileData.website = buildWebsiteUri(edits.website);
+        }
       }
 
-      // null in store = "unchanged" — omit from the patch so the update
-      // mutation preserves the existing PDS value automatically.
-      if (edits.website !== null) {
-        data.website = edits.website as `${string}:${string}`;
-      }
-
-      if (edits.startDate !== null) {
-        // Convert YYYY-MM-DD to full ISO datetime format
-        data.startDate =
-          `${edits.startDate}T00:00:00.000Z` as `${string}-${string}-${string}T${string}:${string}:${string}Z`;
-      }
-
-      // Images must be wrapped in SmallImage shape { image: SerializableFile }
-      // so that resolveFileInputs can upload the file and replace it with a BlobRef.
       if (edits.logo !== null) {
-        data.logo = { image: await toSerializableFile(edits.logo) };
+        profileData.avatar = { image: await toSerializableFile(edits.logo) };
       }
 
       if (edits.coverImage !== null) {
-        data.coverImage = { image: await toSerializableFile(edits.coverImage) };
-      }
-
-      // ── Send mutation and handle result inline ──────────────────────────
-      // Using mutateAsync (instead of mutate + onSuccess) so we can properly
-      // await cancel() before writing optimistic data to the cache.
-      const result = await updateMutation.mutateAsync({ data });
-
-      // ── Apply optimistic update to query cache ──────────────────────────
-      const cachedQueryData = indexerUtils.organization.byDid.getData({ did });
-      const cachedOrg = cachedQueryData?.org as
-        | GraphQLOrgInfoItem
-        | null
-        | undefined;
-      if (!cachedOrg?.record) {
-        // Shouldn't happen, but fall back to just clearing edit mode
-        onSaveSuccess();
-        setMode(null);
-        void indexerUtils.organization.byDid.invalidate({ did });
-        return;
-      }
-
-      // Clean up any previous object URLs to avoid memory leaks.
-      for (const url of objectUrlsRef.current) {
-        URL.revokeObjectURL(url);
-      }
-      objectUrlsRef.current = [];
-
-      const currentRecord = cachedOrg.record;
-      let optimisticLogo = currentRecord.logo;
-      let optimisticCoverImage = currentRecord.coverImage;
-
-      if (edits.logo) {
-        const logoUrl = URL.createObjectURL(edits.logo);
-        objectUrlsRef.current.push(logoUrl);
-        optimisticLogo = {
-          cid: currentRecord.logo?.cid ?? null,
-          mimeType: (edits.logo.type || currentRecord.logo?.mimeType) ?? null,
-          size: edits.logo.size ?? currentRecord.logo?.size ?? null,
-          uri: logoUrl,
+        profileData.banner = {
+          image: await toSerializableFile(edits.coverImage),
         };
       }
 
-      if (edits.coverImage) {
-        const coverUrl = URL.createObjectURL(edits.coverImage);
-        objectUrlsRef.current.push(coverUrl);
-        optimisticCoverImage = {
-          cid: currentRecord.coverImage?.cid ?? null,
-          mimeType:
-            (edits.coverImage.type || currentRecord.coverImage?.mimeType) ??
-            null,
-          size: edits.coverImage.size ?? currentRecord.coverImage?.size ?? null,
-          uri: coverUrl,
+      const hasProfileChanges =
+        Object.keys(profileData).length > 0 || profileUnset.length > 0;
+
+      const organizationData: Record<string, unknown> = {};
+      const organizationUnset: string[] = [];
+
+      if (currentKind === "organization") {
+        if (!isUnchangedEdit(edits.country)) {
+          const selectedCountry = edits.country ? countries[edits.country] : null;
+          if (selectedCountry) {
+            organizationData.location = {
+              uri: selectedCountry.uri,
+              cid: selectedCountry.cid,
+            };
+          } else {
+            organizationUnset.push("location");
+          }
+        }
+
+        if (!isUnchangedEdit(edits.startDate)) {
+          if (edits.startDate) {
+            organizationData.foundedDate = `${edits.startDate}T00:00:00.000Z`;
+          } else {
+            organizationUnset.push("foundedDate");
+          }
+        }
+
+        if (edits.longDescription !== null) {
+          organizationData.longDescription = edits.longDescription;
+        }
+
+        if (!isUnchangedEdit(edits.visibility)) {
+          organizationData.visibility =
+            edits.visibility === "Unlisted" ? "unlisted" : "public";
+        }
+      }
+
+      const hasOrganizationChanges =
+        Object.keys(organizationData).length > 0 || organizationUnset.length > 0;
+
+      const hasMixedRecordChanges =
+        hasProfileChanges && (hasOrganizationChanges || pendingUpgrade !== null);
+
+      let nextAccount: AuthenticatedAccountState;
+
+      if (currentKind === "organization" && currentAccount.kind === "organization") {
+        nextAccount = {
+          kind: "organization",
+          did,
+          profile: nextProfile,
+          organization: currentAccount.organization,
+        };
+      } else {
+        nextAccount = {
+          kind: "user",
+          did,
+          profile: nextProfile,
+          organization: null,
         };
       }
 
-      const rec = result.record;
-
-      // 1. Enable the optimistic guard BEFORE cancelling/setting data.
-      //    This flips the query options to staleTime: Infinity and disables
-      //    all automatic refetches, so React Query cannot schedule any
-      //    background fetches that would overwrite our optimistic data.
-      setOptimisticGuard(true);
-
-      // 2. Await cancel() — this ensures any in-flight refetch is fully
-      //    aborted before we write to the cache. The previous approach used
-      //    `void cancel()` (fire-and-forget), which allowed in-flight fetches
-      //    to resolve and overwrite optimistic data almost immediately.
-      await indexerUtils.organization.byDid.cancel({ did });
-
-      // 3. Update the query cache directly — single source of truth.
-      indexerUtils.organization.byDid.setData({ did }, (prev) => {
-        if (!prev?.org?.record) return prev;
-        const prevRecord = prev.org.record;
-        return {
-          ...prev,
-          org: {
-            ...prev.org,
+      if (pendingUpgrade && hasProfileChanges) {
+        const combinedResult = await updateProfileAndOrganization.mutateAsync({
+          profile: {
+            data: profileData,
+            ...(profileUnset.length > 0 ? { unset: profileUnset } : {}),
+          },
+          organization: {
+            operation: "upsert",
             record: {
-              ...prevRecord,
-              displayName: rec.displayName ?? prevRecord.displayName,
-              shortDescription:
-                rec.shortDescription ?? prevRecord.shortDescription,
-              longDescription:
-                rec.longDescription ?? prevRecord.longDescription,
-              country: rec.country ?? prevRecord.country,
-              website: rec.website ?? prevRecord.website,
-              startDate: rec.startDate ?? prevRecord.startDate,
-              visibility: rec.visibility ?? prevRecord.visibility,
-              logo: optimisticLogo,
-              coverImage: optimisticCoverImage,
+              location: pendingUpgrade.country,
+              ...(pendingUpgrade.startDate
+                ? { foundedDate: `${pendingUpgrade.startDate}T00:00:00.000Z` }
+                : {}),
+              longDescription: pendingUpgrade.longDescription,
+              visibility:
+                pendingUpgrade.visibility === "Unlisted" ? "unlisted" : "public",
             },
           },
+        });
+        nextProfile = combinedResult.profile;
+        nextAccount = {
+          kind: "organization",
+          did,
+          profile: combinedResult.profile,
+          organization: combinedResult.organization,
         };
+      } else if (currentKind === "organization" && hasMixedRecordChanges) {
+        const combinedResult = await updateProfileAndOrganization.mutateAsync({
+          profile: {
+            data: profileData,
+            ...(profileUnset.length > 0 ? { unset: profileUnset } : {}),
+          },
+          organization: {
+            operation: "update",
+            data: organizationData,
+            ...(organizationUnset.length > 0 ? { unset: organizationUnset } : {}),
+          },
+        });
+        nextProfile = combinedResult.profile;
+        nextAccount = {
+          kind: "organization",
+          did,
+          profile: combinedResult.profile,
+          organization: combinedResult.organization,
+        };
+      } else if (currentKind === "organization" && hasOrganizationChanges) {
+        const organizationResult = await updateOrganization.mutateAsync({
+          data: organizationData,
+          ...(organizationUnset.length > 0 ? { unset: organizationUnset } : {}),
+        });
+
+        nextAccount = {
+          kind: "organization",
+          did,
+          profile: nextProfile,
+          organization: organizationResult.record,
+        };
+      } else if (hasProfileChanges) {
+        const profileResult = await updateProfile.mutateAsync({
+          data: profileData,
+          ...(profileUnset.length > 0 ? { unset: profileUnset } : {}),
+        });
+        nextProfile = profileResult.record;
+
+        nextAccount =
+          currentKind === "organization" && currentAccount.kind === "organization"
+            ? {
+                kind: "organization",
+                did,
+                profile: profileResult.record,
+                organization: currentAccount.organization,
+              }
+            : {
+                kind: "user",
+                did,
+                profile: profileResult.record,
+                organization: null,
+              };
+      }
+
+      if (pendingUpgrade && !hasProfileChanges) {
+        const organizationResult = await upsertOrganization.mutateAsync({
+          location: pendingUpgrade.country,
+          foundedDate: pendingUpgrade.startDate
+            ? `${pendingUpgrade.startDate}T00:00:00.000Z`
+            : undefined,
+          longDescription: pendingUpgrade.longDescription,
+          visibility:
+            pendingUpgrade.visibility === "Unlisted" ? "unlisted" : "public",
+        });
+
+        nextAccount = {
+          kind: "organization",
+          did,
+          profile: nextProfile,
+          organization: organizationResult.record,
+        };
+      }
+
+      const nextKind = nextAccount.kind === "organization" ? "organization" : "user";
+      const nextOrganizationData = buildNextOrganizationData({
+        current: currentOrganization,
+        edits,
+        nextKind,
       });
 
-      // 4. Reset edit state and clear edit mode.
-      onSaveSuccess();
-      setMode(null);
+      await Promise.all([
+        indexerUtils.account.current.cancel(),
+        indexerUtils.account.byDid.cancel({ did }),
+      ]);
+      indexerUtils.account.current.setData(undefined, nextAccount);
+      indexerUtils.account.byDid.setData({ did }, nextAccount);
+      startReconciliation({
+        nextAccount,
+        nextPageData: {
+          did,
+          kind: nextAccount.kind,
+          organization: nextOrganizationData,
+        },
+        checks: buildSaveReconciliationChecks({
+          currentAccount,
+          currentOrganization,
+          edits,
+          nextAccount,
+          nextOrganization: nextOrganizationData,
+        }),
+      });
 
-      // 5. Lift the optimistic guard after a generous delay, then invalidate
-      //    so the cache is refreshed with real CDN URLs from the indexer.
-      //    The guard ensures no automatic refetch can race against our
-      //    optimistic data during this window.
-      setTimeout(() => {
-        setOptimisticGuard(false);
-        void indexerUtils.organization.byDid.invalidate({ did });
-      }, INVALIDATION_DELAY_MS);
-    } catch (err) {
+      setMode(null);
+      onSaveSuccess();
+    } catch (error) {
       setSaving(false);
-      setSaveError(formatError(err));
+      setSaveError(formatError(error));
     }
   }, [
-    serverData,
+    currentOrganization,
+    currentKind,
+    currentAccount,
+    did,
     edits,
     hasChanges,
+    indexerUtils,
     isSaving,
-    setSaving,
-    setSaveError,
     onSaveSuccess,
     setMode,
-    updateMutation,
-    indexerUtils,
-    did,
+    setSaveError,
+    setSaving,
+    startReconciliation,
+    updateOrganization,
+    updateProfile,
+    updateProfileAndOrganization,
+    upsertOrganization,
   ]);
 
-  // ── Render states ──────────────────────────────────────────────────────────
-
-  if (isLoading) {
+  if (currentAccountQuery.isLoading && pageData.kind === "unknown") {
     return <ManageDashboardSkeleton />;
   }
 
-  if (error) {
+  if (currentKind === "unknown" || !currentOrganization) {
     return (
       <Container className="pt-4">
-        <ErrorPage
-          title="Couldn't load your organization"
-          description="We had trouble fetching your organization data. Please try refreshing."
-          error={error}
-          showRefreshButton
-          showHomeButton={false}
-        />
+        <AccountSetupPage did={did} onCompleted={handleSetupCompleted} />
       </Container>
     );
   }
-
-  // Organization doesn't exist yet — show the user the form to set it up
-  if (!hasFetchedOrg && !serverData) {
-    return (
-      <Container className="pt-4">
-        <OrgSetupPage did={did} onSetupSaved={handleSetupSaved} />
-      </Container>
-    );
-  }
-
-  // Still waiting for serverData to be derived from query
-  if (!serverData) {
-    return <ManageDashboardSkeleton />;
-  }
-
-  // ── Edit mode ──────────────────────────────────────────────────────────────
 
   if (isEditing) {
     return (
       <form
         id="manage-dashboard-save-form"
-        onSubmit={(e) => {
-          e.preventDefault();
+        onSubmit={(event) => {
+          event.preventDefault();
           void handleSave();
         }}
       >
+        {currentKind === "user" && <HeaderContent right={<RegisterOrganizationButton />} />}
         <Container className="pt-4 pb-8 space-y-2">
-          <EditableHero organization={serverData} />
+          <EditableHero
+            organization={currentOrganization}
+            enableOrganizationFields={canEditOrganizationFields}
+          />
 
           <AnimatePresence>
             <motion.div
@@ -449,19 +917,23 @@ export function ManageDashboardClient({ did }: ManageDashboardClientProps) {
             </motion.div>
           </AnimatePresence>
 
-          <EditableAbout organization={serverData} />
+          <EditableAbout
+            organization={currentOrganization}
+            enabled={canEditOrganizationFields}
+          />
         </Container>
       </form>
     );
   }
 
-  // ── View mode ──────────────────────────────────────────────────────────────
-
   return (
-    <Container className="pt-4 pb-8 space-y-2">
-      <OrgHero organization={serverData} showEditButton />
-      <OrgAbout organization={serverData} />
-      <ManageNavGrid />
-    </Container>
+    <>
+      {currentKind === "user" && <HeaderContent right={<RegisterOrganizationButton />} />}
+      <Container className="pt-4 pb-8 space-y-2">
+        <OrgHero organization={currentOrganization} showEditButton />
+        <OrgAbout organization={currentOrganization} />
+        <ManageNavGrid accountKind={currentKind} />
+      </Container>
+    </>
   );
 }

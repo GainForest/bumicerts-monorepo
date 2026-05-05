@@ -16,20 +16,20 @@ const GREEN_GLOBE_PREVIEW_BASE_URL =
 export const links = {
   root: "/",
   home: "/home",
-  onboarding: "/onboarding",
   leaderboard: "/leaderboard",
   dashboard: "/dashboard",
   checkout: "/checkout",
   myOrganization: (did?: string) =>
-    did ? `/organization/${encodeURIComponent(did)}` : "/organization",
-  allOrganizations: "/organization/all",
+    did ? `/account/${encodeURIComponent(did)}` : "/account",
+  allOrganizations: "/organizations",
 
-  /** Tab routes for an organization profile page. */
-  organization: {
-    home: (did: string) => `/organization/${encodeURIComponent(did)}`,
+  account: {
+    self: "/account",
+    byDid: (did: string) => `/account/${encodeURIComponent(did)}`,
     bumicerts: (did: string) =>
-      `/organization/${encodeURIComponent(did)}/bumicerts`,
+      `/account/${encodeURIComponent(did)}/bumicerts`,
   },
+
   manage: {
     home: "/upload",
     edit: "/upload?mode=edit",
@@ -51,7 +51,6 @@ export const links = {
       return `/upload/trees${queryString ? `?${queryString}` : ""}`;
     },
   },
-  user: didCatcher((did) => `/user/${did}`),
   explore: "/explore",
   bumicert: {
     create: BUMICERT_CREATE_PATH,
@@ -163,17 +162,13 @@ export const links = {
     treeDataDetailedTemplate: "/templates/tree-data-detailed-xlsform.xlsx",
   },
   api: {
+    brand: {
+      fetchInfo: "/api/brand/fetch-info",
+    },
     upload: {
       trees: {
         datasets: "/api/upload/trees/datasets",
       },
-    },
-    onboarding: {
-      sendVerificationCode: "/onboarding/api/send-verification-code",
-      verifyEmailCode: "/onboarding/api/verify-email-code",
-      generateShortDescription: "/onboarding/api/generate-short-description",
-      fetchBrandInfo: "/onboarding/api/fetch-brand-info",
-      onboard: "/onboarding/api/onboard",
     },
     aws: {
       upload: {

@@ -36,6 +36,7 @@ export const FIELD_LABELS: Record<string, string> = {
   measurementDate: "Measurement date",
   recordedAt: "Recording date",
   timestamp: "Timestamp",
+  foundedDate: "Founded date",
   workTimeframeStart: "Work start date",
   workTimeframeEnd: "Work end date",
   impactTimeframeStart: "Impact start date",
@@ -49,6 +50,8 @@ export const FIELD_LABELS: Record<string, string> = {
   shapefile: "Shapefile",
   logo: "Logo",
   image: "Image",
+  avatar: "Avatar",
+  banner: "Banner",
 
   // Rich content
   facets: "Text formatting",
@@ -58,6 +61,8 @@ export const FIELD_LABELS: Record<string, string> = {
   uri: "URI",
   cid: "Content ID",
   url: "URL",
+  urls: "URLs",
+  label: "Label",
   accessUri: "Access URL",
   occurrenceID: "Occurrence ID",
   datasetID: "Dataset ID",
@@ -86,6 +91,7 @@ export const FIELD_LABELS: Record<string, string> = {
   locality: "Locality",
   country: "Country",
   countryCode: "Country code",
+  pronouns: "Pronouns",
   samplingProtocol: "Sampling protocol",
   license: "License",
   projectRef: "Project reference",
@@ -161,6 +167,7 @@ export const FIELD_LABELS: Record<string, string> = {
   socialLinks: "Social links",
   certifications: "Certifications",
   type: "Type",
+  organizationType: "Organization type",
   visibility: "Visibility",
 
   // Link (EVM)

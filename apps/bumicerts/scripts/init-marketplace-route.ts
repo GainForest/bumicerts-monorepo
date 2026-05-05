@@ -52,7 +52,7 @@ function toPascalCase(str: string): string {
  *
  * Examples:
  *   .../explore                    → Explore
- *   .../organization/all           → All
+ *   .../organizations              → All
  *   .../organization/[did]         → Organization
  *   .../organization/[did]/bumicerts → Bumicerts
  *   .../a/b/c/[id]                 → C

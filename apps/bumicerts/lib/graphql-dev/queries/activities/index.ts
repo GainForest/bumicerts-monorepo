@@ -1,12 +1,15 @@
 /**
  * Activities query module.
  *
- * Scratch migration target:
- *   orgHypercertsClaimActivity(...) + appGainforestOrganizationInfo + appGainforestFundingConfigByUri
+ * Current read path:
+ *   orgHypercertsClaimActivity(...) + Certified actor account enrichment + appGainforestFundingConfigByUri
  */
 
 import { graphqlClient } from "@/lib/graphql-dev/client";
 import type { QueryModule } from "@/lib/graphql-dev/create-query";
+import type { OrganizationAccountState } from "@/lib/account";
+import { readOrganizationAccountsByDids } from "@/lib/account/list";
+import { buildOrganizationDataFromOrganizationAccount } from "@/lib/account/organization-data";
 import type { BskyFacet, BlobLike, ConnectionResult, StrongRefLike } from "../_migration-helpers";
 import { normalizeBskyFacets, pluckConnectionNodes, toLegacyStrongRef, toResolvedLegacyBlob } from "../_migration-helpers";
 import { fetchHyperlabelActivitiesForTier, fetchHyperlabelForDid } from "../_hyperlabel";
@@ -314,91 +317,6 @@ const activityByUriDocument = /* GraphQL */ `
   }
 `;
 
-const orgInfoDocument = /* GraphQL */ `
-  query ActivityOrgInfo($did: String!) {
-    appGainforestOrganizationInfo(where: { did: { eq: $did } }, first: 1) {
-      edges {
-        node {
-          did
-          uri
-          rkey
-          cid
-          createdAt
-          displayName
-          shortDescription {
-            text
-            facets {
-              index { byteStart byteEnd }
-              features {
-                ... on AppBskyRichtextFacetMention { did }
-                ... on AppBskyRichtextFacetLink { uri }
-                ... on AppBskyRichtextFacetTag { tag }
-              }
-            }
-          }
-          longDescription {
-            id
-            blocks {
-              alignment
-              block {
-                __typename
-                ... on PubLeafletBlocksText {
-                  plaintext
-                  facets {
-                    index {
-                      byteStart
-                      byteEnd
-                    }
-                    features {
-                      __typename
-                      ... on PubLeafletRichtextFacetLink { uri }
-                      ... on PubLeafletRichtextFacetDidMention { did }
-                      ... on PubLeafletRichtextFacetAtMention { atURI href }
-                      ... on PubLeafletRichtextFacetId { id }
-                    }
-                  }
-                }
-                ... on PubLeafletBlocksHeader {
-                  plaintext
-                  level
-                  facets {
-                    index {
-                      byteStart
-                      byteEnd
-                    }
-                    features {
-                      __typename
-                      ... on PubLeafletRichtextFacetLink { uri }
-                      ... on PubLeafletRichtextFacetDidMention { did }
-                      ... on PubLeafletRichtextFacetAtMention { atURI href }
-                      ... on PubLeafletRichtextFacetId { id }
-                    }
-                  }
-                }
-                ... on PubLeafletBlocksImage {
-                  alt
-                  image {
-                    ref
-                    mimeType
-                    size
-                  }
-                }
-              }
-            }
-          }
-          logo { image { ref mimeType size } }
-          coverImage { image { ref mimeType size } }
-          objectives
-          country
-          website
-          startDate
-          visibility
-        }
-      }
-    }
-  }
-`;
-
 const fundingConfigDocument = /* GraphQL */ `
   query ActivityFundingConfig($uri: String!) {
     appGainforestFundingConfigByUri(uri: $uri) {
@@ -493,28 +411,9 @@ type ActivityDetailNode = {
   locations: Array<StrongRefLike | null> | null;
 };
 
-type OrgNode = {
-  did: string;
-  uri: string;
-  rkey: string;
-  cid: string;
-  createdAt: string;
-  displayName: string;
-  shortDescription: { text: string; facets?: Array<BskyFacet | null> | null };
-  longDescription: unknown;
-  logo: { image?: BlobLike | null } | null;
-  coverImage: { image?: BlobLike | null } | null;
-  objectives: string[];
-  country: string;
-  website: string | null;
-  startDate: string | null;
-  visibility: string | null;
-};
-
 type ActivityResponse = { orgHypercertsClaimActivity?: ConnectionResult<ActivityDetailNode> | null };
 type ActivityListPageResponse = { orgHypercertsClaimActivity?: ConnectionResult<ActivityListPageNode> | null };
 type ActivityByUriResponse = { orgHypercertsClaimActivityByUri?: ActivityDetailNode | null };
-type OrgResponse = { appGainforestOrganizationInfo?: ConnectionResult<OrgNode> | null };
 type FundingConfigResponse = {
   appGainforestFundingConfigByUri?: {
     receivingWallet?: { uri?: string | null } | null;
@@ -911,102 +810,75 @@ function normalizeCreatorInfo(did: string, orgInfo: ActivityOrgInfo | undefined)
   };
 }
 
-function orderLegacyMediaObject(
-  media: { uri: string | null; cid: string | null; mimeType: string | null; size: number | null } | null,
-): { cid: string | null; mimeType: string | null; size: number | null; uri: string | null } | null {
-  if (!media) return null;
+function toActivityMedia(
+  uri: string | null,
+): {
+  cid: string | null;
+  mimeType: string | null;
+  size: number | null;
+  uri: string | null;
+} | null {
+  if (!uri) return null;
 
   return {
-    cid: media.cid,
-    mimeType: media.mimeType,
-    size: media.size,
-    uri: media.uri,
+    cid: null,
+    mimeType: null,
+    size: null,
+    uri,
   };
 }
 
-function stripLeafletContainerTypes(value: unknown): unknown {
-  if (!value || typeof value !== "object") return value;
-
-  const record = value as {
-    blocks?: Array<{ block?: unknown; $type?: string } | null> | null;
-    $type?: string;
-    id?: string | null;
-  };
-
-  if (!Array.isArray(record.blocks)) return value;
-
-  return {
-    ...(record.id != null ? { id: record.id } : {}),
-    blocks: record.blocks.map((block) => {
-      if (!block || typeof block !== "object") return block;
-
-      return {
-        ...(block.block !== undefined ? { block: block.block } : {}),
-      };
-    }),
-  };
-}
-
-async function normalizeOrg(node: OrgNode): Promise<ActivityOrgInfo> {
-  const [logo, coverImage, normalizedLongDescription] = await Promise.all([
-    toResolvedLegacyBlob(node.logo?.image ?? null, node.did),
-    toResolvedLegacyBlob(node.coverImage?.image ?? null, node.did),
-    normalizeDescriptionForDid(node.longDescription, node.did),
-  ]);
-  const shortDescriptionFacets = normalizeNullableBskyFacets(node.shortDescription.facets);
-  const longDescription = stripLeafletContainerTypes(normalizedLongDescription);
-  const orderedLogo = orderLegacyMediaObject(logo);
-  const orderedCoverImage = orderLegacyMediaObject(coverImage);
+function buildActivityOrgInfoFromAccount(
+  account: OrganizationAccountState,
+): ActivityOrgInfo {
+  const organization = buildOrganizationDataFromOrganizationAccount(account);
+  const displayName =
+    organization.displayName.trim().length > 0
+      ? organization.displayName
+      : account.did;
+  const createdAt = account.organization.createdAt ?? account.profile.createdAt;
+  const logo = toActivityMedia(organization.logoUrl);
+  const coverImage = toActivityMedia(organization.coverImageUrl);
 
   return {
     metadata: {
-      did: node.did,
-      uri: node.uri,
-      rkey: node.rkey,
-      cid: node.cid,
-      createdAt: node.createdAt,
+      did: account.did,
+      uri: `at://${account.did}/app.certified.actor.organization/self`,
+      rkey: "self",
+      cid: null,
+      createdAt,
       indexedAt: null,
     },
     creatorInfo: {
-      did: node.did,
-      organizationName: node.displayName,
-      organizationLogo: orderedLogo,
+      did: account.did,
+      organizationName: displayName,
+      organizationLogo: logo,
     },
     record: {
-      displayName: node.displayName,
-      shortDescription:
-        shortDescriptionFacets == null
-          ? {
-              text: node.shortDescription.text,
-            }
-          : {
-              text: node.shortDescription.text,
-              facets: shortDescriptionFacets,
-            },
-      longDescription,
-      logo: orderedLogo,
-      coverImage: orderedCoverImage,
-      objectives: node.objectives,
-      country: node.country,
-      website: node.website,
-      startDate: node.startDate,
-      visibility: node.visibility,
-      createdAt: node.createdAt,
+      displayName,
+      shortDescription: { text: organization.shortDescription },
+      longDescription: organization.longDescription,
+      logo,
+      coverImage,
+      objectives: organization.objectives,
+      country: organization.country,
+      website: organization.website,
+      startDate: organization.startDate,
+      visibility: organization.visibility,
+      createdAt,
     },
   };
 }
 
 async function fetchOrgMap(dids: string[]): Promise<Map<string, ActivityOrgInfo>> {
-  const uniqueDids = Array.from(new Set(dids.filter(Boolean)));
-  const entries = await Promise.all(
-    uniqueDids.map(async (did) => {
-      const res = await graphqlClient.request<OrgResponse>(orgInfoDocument, { did });
-      const node = pluckConnectionNodes(res.appGainforestOrganizationInfo)[0];
-      return [did, node ? await normalizeOrg(node) : null] as const;
-    }),
-  );
+  const accountMap = await readOrganizationAccountsByDids(dids);
+  const orgMap = new Map<string, ActivityOrgInfo>();
 
-  return new Map(entries.filter((entry): entry is readonly [string, ActivityOrgInfo] => !!entry[1]));
+  for (const [did, account] of accountMap) {
+    orgMap.set(did, buildActivityOrgInfoFromAccount(account));
+  }
+
+  return orgMap;
 }
 
 async function fetchFundingConfig(did: string, rkey: string): Promise<Activity["fundingConfig"]> {
@@ -1214,8 +1086,8 @@ export async function fetch<P extends Params>(params: P): Promise<Result<P>> {
       }
 
       if (params.hasOrganizationInfoRecord != null) {
-        const hasOrganizationInfoRecord = item.creatorInfo.organizationName != null;
-        if (hasOrganizationInfoRecord !== params.hasOrganizationInfoRecord) return false;
+        const hasOrganizationAccount = item.creatorInfo.organizationName != null;
+        if (hasOrganizationAccount !== params.hasOrganizationInfoRecord) return false;
       }
 
       return true;
@@ -1268,8 +1140,8 @@ export async function fetch<P extends Params>(params: P): Promise<Result<P>> {
 
       if (params.hasOrganizationInfoRecord != null) {
         const creatorInfo = normalizeCreatorInfo(node.did, pageOrgMap?.get(node.did));
-        const hasOrganizationInfoRecord = creatorInfo.organizationName != null;
-        if (hasOrganizationInfoRecord !== params.hasOrganizationInfoRecord) continue;
+        const hasOrganizationAccount = creatorInfo.organizationName != null;
+        if (hasOrganizationAccount !== params.hasOrganizationInfoRecord) continue;
       }
 
       filteredNodes.push(node);

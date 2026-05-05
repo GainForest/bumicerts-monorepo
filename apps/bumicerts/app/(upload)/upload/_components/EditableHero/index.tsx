@@ -45,14 +45,15 @@ import CountrySelectorModal from "@/components/modals/country-selector";
 import { WebsiteEditorModal } from "../../_modals/WebsiteEditorModal";
 import { StartDateSelectorModal } from "../../_modals/StartDateSelectorModal";
 import { VisibilitySelectorModal } from "../../_modals/VisibilitySelectorModal";
-import { useManageDashboardState } from "../store";
+import {
+  isUnchangedEdit,
+  UNCHANGED_EDIT,
+  useManageDashboardState,
+} from "../store";
 import { useManageMode } from "../../_hooks/useUploadMode";
 import type { OrganizationData } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { BskyRichTextDisplay } from "@/components/ui/bsky-richtext-display";
-import { BskyRichTextEditor } from "@/components/ui/bsky-richtext-editor";
-import type { Facet } from "@gainforest/leaflet-react/richtext";
-import type { app } from "@gainforest/generated";
 import { countries } from "@/lib/countries";
 import { formatOrganizationSinceDate } from "@/lib/date";
 
@@ -60,6 +61,13 @@ import { formatOrganizationSinceDate } from "@/lib/date";
 
 function formatWebsite(url: string): string {
   return url.replace(/^https?:\/\//, "").replace(/\/$/, "");
+}
+
+function resolveEditValue<T>(
+  editValue: T | typeof UNCHANGED_EDIT,
+  currentValue: T,
+): T {
+  return isUnchangedEdit(editValue) ? currentValue : editValue;
 }
 
 // ── EditChip ──────────────────────────────────────────────────────────────────
@@ -119,9 +127,13 @@ function EditChip({
 
 interface EditableHeroProps {
   organization: OrganizationData;
+  enableOrganizationFields?: boolean;
 }
 
-export function EditableHero({ organization }: EditableHeroProps) {
+export function EditableHero({
+  organization,
+  enableOrganizationFields = true,
+}: EditableHeroProps) {
   const { pushModal, show } = useModal();
   const [mode] = useManageMode();
   const isEditing = mode === "edit";
@@ -130,15 +142,19 @@ export function EditableHero({ organization }: EditableHeroProps) {
   const setEdit = useManageDashboardState((s) => s.setEdit);
 
   // Resolved display values — edit buffer takes priority over server data
-  const displayName = edits.displayName ?? organization.displayName;
-  const shortDescription =
-    edits.shortDescription ?? organization.shortDescription;
-  const shortDescriptionFacets =
-    edits.shortDescriptionFacets ?? organization.shortDescriptionFacets;
-  const country = edits.country ?? organization.country;
-  const website = edits.website ?? organization.website;
-  const startDate = edits.startDate ?? organization.startDate;
-  const visibility = edits.visibility ?? organization.visibility;
+  const displayName = resolveEditValue(edits.displayName, organization.displayName);
+  const shortDescription = resolveEditValue(
+    edits.shortDescription,
+    organization.shortDescription,
+  );
+  const shortDescriptionFacets = resolveEditValue(
+    edits.shortDescriptionFacets,
+    organization.shortDescriptionFacets,
+  );
+  const country = resolveEditValue(edits.country, organization.country);
+  const website = resolveEditValue(edits.website, organization.website);
+  const startDate = resolveEditValue(edits.startDate, organization.startDate);
+  const visibility = resolveEditValue(edits.visibility, organization.visibility);
 
   // Image sources — use object URL for newly selected files.
   // Memoized so the blob: URL is only (re-)created when the File reference changes,
@@ -174,12 +190,12 @@ export function EditableHero({ organization }: EditableHeroProps) {
   const sinceDate = formatOrganizationSinceDate(startDate);
   const sinceLabel = sinceDate.label;
   const countryName = country ? (countries[country]?.name ?? country) : null;
-  const countryFlag = countries[country]?.emoji ?? "";
+  const countryFlag = country ? (countries[country]?.emoji ?? "") : "";
 
   const hasPillRow =
     isEditing ||
-    sinceDate.state === "valid" ||
-    countryName !== null ||
+    (enableOrganizationFields && sinceDate.state === "valid") ||
+    (enableOrganizationFields && countryName !== null) ||
     organization.objectives.length > 0 ||
     website !== null;
 
@@ -224,7 +240,7 @@ export function EditableHero({ organization }: EditableHeroProps) {
         content: (
           <CountrySelectorModal
             initialCountryCode={country ?? ""}
-            onCountryChange={(code) => setEdit("country", code)}
+            onCountryChange={(code) => setEdit("country", code || null)}
           />
         ),
       },
@@ -279,6 +295,17 @@ export function EditableHero({ organization }: EditableHeroProps) {
       true,
     );
     show();
+  };
+
+  const handleShortDescriptionChange = (value: string) => {
+    if (value === organization.shortDescription) {
+      setEdit("shortDescription", UNCHANGED_EDIT);
+      setEdit("shortDescriptionFacets", UNCHANGED_EDIT);
+      return;
+    }
+
+    setEdit("shortDescription", value);
+    setEdit("shortDescriptionFacets", []);
   };
 
   return (
@@ -350,7 +377,7 @@ export function EditableHero({ organization }: EditableHeroProps) {
               <input
                 type="text"
                 value={displayName}
-                onChange={(e) => setEdit("displayName", e.target.value || null)}
+                onChange={(e) => setEdit("displayName", e.target.value)}
                 placeholder="Organization name"
                 className={cn(
                   "text-3xl sm:text-4xl md:text-5xl font-light tracking-[-0.02em] leading-none",
@@ -371,69 +398,69 @@ export function EditableHero({ organization }: EditableHeroProps) {
 
           {/* Short description */}
           {isEditing ? (
-            <BskyRichTextEditor
-              initialValue={{
-                text: shortDescription ?? "",
-                // app.bsky.richtext.facet.Main and our Facet type are structurally
-                // identical at runtime — this cast is safe and documented.
-                facets:
-                  shortDescriptionFacets as unknown as app.bsky.richtext.facet.Main[],
-              }}
-              onChange={(text, facets) => {
-                setEdit("shortDescription", text || null);
-                // Reverse cast: same structural identity in the other direction.
-                setEdit(
-                  "shortDescriptionFacets",
-                  facets && facets.length > 0
-                    ? (facets as unknown as Facet[])
-                    : null,
-                );
-              }}
+            <input
+              type="text"
+              value={shortDescription ?? ""}
+              onChange={(e) => handleShortDescriptionChange(e.target.value)}
               placeholder="Short description…"
-              className="text-sm md:text-base max-w-2xl"
+              className={cn(
+                "text-sm md:text-base max-w-2xl leading-relaxed",
+                "bg-transparent border-b border-white/30 focus:border-primary/60 outline-none",
+                "text-foreground/75 placeholder:text-foreground/40 w-full transition-colors",
+              )}
             />
           ) : (
             shortDescription && (
-              <BskyRichTextDisplay
-                text={shortDescription}
-                facets={shortDescriptionFacets}
-                className="text-sm md:text-base text-foreground/75 max-w-2xl leading-relaxed"
-              />
+              shortDescriptionFacets.length > 0 ? (
+                <BskyRichTextDisplay
+                  text={shortDescription}
+                  facets={shortDescriptionFacets}
+                  className="text-sm md:text-base text-foreground/75 max-w-2xl leading-relaxed"
+                />
+              ) : (
+                <p className="text-sm md:text-base text-foreground/75 max-w-2xl leading-relaxed">
+                  {shortDescription}
+                </p>
+              )
             )
           )}
 
           {/* Pills row */}
           {hasPillRow && (
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <EditChip
-                onClick={openCountry}
-                isEditing={isEditing}
-                isEmpty={!countryName}
-              >
-                {countryFlag && (
-                  <span className="text-sm leading-none" aria-hidden="true">
-                    {countryFlag}
-                  </span>
-                )}
-                {countryName ?? "Add country"}
-              </EditChip>
+              {enableOrganizationFields && (
+                <>
+                  <EditChip
+                    onClick={openCountry}
+                    isEditing={isEditing}
+                    isEmpty={!countryName}
+                  >
+                    {countryFlag && (
+                      <span className="text-sm leading-none" aria-hidden="true">
+                        {countryFlag}
+                      </span>
+                    )}
+                    {countryName ?? "Add country"}
+                  </EditChip>
 
-              <EditChip
-                onClick={openStartDate}
-                isEditing={isEditing}
-                isEmpty={
-                  isEditing
-                    ? sinceDate.state === "empty"
-                    : sinceDate.state !== "valid"
-                }
-              >
-                <CalendarIcon className="h-3 w-3 shrink-0" />
-                {sinceDate.state === "valid"
-                  ? `Since ${sinceLabel}`
-                  : isEditing && sinceDate.state === "invalid"
-                    ? "Invalid Date"
-                    : "Add start date"}
-              </EditChip>
+                  <EditChip
+                    onClick={openStartDate}
+                    isEditing={isEditing}
+                    isEmpty={
+                      isEditing
+                        ? sinceDate.state === "empty"
+                        : sinceDate.state !== "valid"
+                    }
+                  >
+                    <CalendarIcon className="h-3 w-3 shrink-0" />
+                    {sinceDate.state === "valid"
+                      ? `Since ${sinceLabel}`
+                      : isEditing && sinceDate.state === "invalid"
+                        ? "Invalid Date"
+                        : "Add start date"}
+                  </EditChip>
+                </>
+              )}
 
               <EditChip
                 onClick={openWebsite}
@@ -454,7 +481,7 @@ export function EditableHero({ organization }: EditableHeroProps) {
                   </span>
                 ))}
 
-              {(isEditing || visibility === "Unlisted") && (
+              {enableOrganizationFields && (isEditing || visibility === "Unlisted") && (
                 <EditChip
                   onClick={openVisibility}
                   isEditing={isEditing}

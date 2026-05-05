@@ -5,6 +5,7 @@ import Link from "next/link";
 import { blo } from "blo";
 import { cn } from "@/lib/utils";
 import { useCopy } from "@/hooks/use-copy";
+import { useAccountByDid } from "@/hooks/use-account";
 import { useProfile, type AtprotoProfile } from "@/hooks/use-profile";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -91,6 +92,7 @@ export function UserChip({
   textClassName,
 }: UserChipProps) {
   const { copy, isCopied } = useCopy();
+  const { data: account, isLoading: accountLoading } = useAccountByDid(did);
 
   // Fetch profile only if not provided
   const { data: fetchedProfile, isLoading } = useProfile(did, {
@@ -98,14 +100,18 @@ export function UserChip({
   });
 
   const profile = providedProfile ?? fetchedProfile;
+  const accountDisplayName =
+    account?.kind === "user" || account?.kind === "organization"
+      ? account.profile.displayName
+      : null;
   const displayName =
-    profile?.displayName ?? profile?.handle ?? truncateDid(did);
+    accountDisplayName ?? profile?.displayName ?? profile?.handle ?? truncateDid(did);
   const truncatedDid = truncateDid(did);
 
   // Determine link href
   let href: string | undefined;
   if (linkMode === "user-page") {
-    href = links.user(did);
+    href = links.account.byDid(did);
   } else if (linkMode === "bluesky") {
     href = `https://bsky.app/profile/${did}`;
   }
@@ -135,12 +141,12 @@ export function UserChip({
             "min-w-0 flex-1 truncate text-xs relative",
             href &&
               "cursor-pointer group-hover/user-chip:text-primary group-hover/user-chip:underline",
-            isLoading &&
+            (isLoading || accountLoading) &&
               "animate-shimmer bg-gradient-to-r from-muted-foreground/60 via-foreground to-muted-foreground/60 bg-[length:200%_100%] bg-clip-text text-transparent",
             textClassName,
           )}
         >
-          {isLoading ? truncatedDid : displayName}
+          {isLoading || accountLoading ? truncatedDid : displayName}
         </span>
       </div>
 

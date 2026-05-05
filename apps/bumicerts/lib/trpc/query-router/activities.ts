@@ -6,6 +6,9 @@
  *   { did }          → Activity[]                 (my bumicerts)
  *   { limit?, cursor?, labelTier?, hasImage?,
  *     hasOrganizationInfoRecord? }                → { data, pageInfo }  (explore feed)
+ *
+ * `hasOrganizationInfoRecord` is a compatibility name; it now effectively means
+ * “creator resolves to a Certified organization account”.
  */
 
 import { z } from "zod";

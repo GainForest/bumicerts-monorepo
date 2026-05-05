@@ -1,7 +1,11 @@
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { activityToBumicertData, extractTextFromLinearDocument, type GraphQLHcActivityItem, type GraphQLOrgInfoItem } from "@/lib/adapters";
+import { activityToBumicertData, extractTextFromLinearDocument } from "@/lib/adapters";
+import type {
+  Activity,
+  ActivityOrgInfo,
+} from "@/lib/graphql-dev/queries/activities";
 import type { FundingConfigData } from "@/lib/types";
 import { BumicertDetail } from "./_components/BumicertDetail";
 import ErrorPage from "@/components/error-page";
@@ -13,7 +17,10 @@ import { getIndexerCaller } from "@/lib/trpc/indexer/server";
 const getActivityData = cache(async (did: string) => {
   try {
     const caller = await getIndexerCaller();
-    const data = await caller.activities.list({ did, orgDid: did }) as { activities: GraphQLHcActivityItem[]; org: GraphQLOrgInfoItem | null };
+    const data = (await caller.activities.list({ did, orgDid: did })) as {
+      activities: Activity[];
+      org: ActivityOrgInfo | null;
+    };
     return { data, error: null };
   } catch (error) {
     return { data: null, error };
@@ -149,7 +156,7 @@ export default async function BumicertDetailPage({
     author: {
       "@type": "Organization",
       name: bumicert.organizationName,
-      url: `${requirePublicUrl()}/organization/${encodeURIComponent(bumicert.organizationDid)}`,
+      url: `${requirePublicUrl()}/account/${encodeURIComponent(bumicert.organizationDid)}`,
     },
     ...(bumicert.coverImageUrl
       ? { image: { "@type": "ImageObject", url: bumicert.coverImageUrl } }
