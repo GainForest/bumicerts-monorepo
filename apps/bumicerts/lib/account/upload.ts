@@ -2,8 +2,8 @@ import "server-only";
 
 import type { OrganizationData } from "@/lib/types";
 import type { AuthenticatedAccountState } from "./types";
-import { resolveAccountMediaUrl } from "./media";
 import {
+  buildOrganizationDataFromUserAccount,
   buildOrganizationDataFromOrganizationAccount,
 } from "./organization-data";
 
@@ -24,29 +24,11 @@ export async function buildUploadAccountPageData(
     };
   }
 
-  const logoUrl = resolveAccountMediaUrl(account.profile.avatar);
-  const coverImageUrl = resolveAccountMediaUrl(account.profile.banner);
-
   if (account.kind === "user") {
     return {
       kind: "user",
       did: account.did,
-      organization: {
-        did: account.did,
-        displayName: account.profile.displayName ?? "",
-        shortDescription: account.profile.description ?? "",
-        shortDescriptionFacets: [],
-        longDescription: { blocks: [] },
-        logoUrl,
-        coverImageUrl,
-        objectives: [],
-        country: "",
-        website: account.profile.website ?? null,
-        startDate: null,
-        visibility: "Public",
-        createdAt: account.profile.createdAt,
-        bumicertCount: 0,
-      },
+      organization: buildOrganizationDataFromUserAccount(account),
     };
   }
 

@@ -114,7 +114,11 @@ type ActivityAdapterInput = Pick<
 function extractWorkScopeObjectives(workScope: unknown): string[] {
   if (!workScope) return [];
   // WorkScopeString format: { scope: string }
-  if (typeof workScope === "object" && "scope" in workScope && typeof workScope.scope === "string") {
+  if (
+    typeof workScope === "object" &&
+    "scope" in workScope &&
+    typeof workScope.scope === "string"
+  ) {
     return workScope.scope
       .split(",")
       .map((s: string) => s.trim())
@@ -131,9 +135,12 @@ function isFacetFeature(val: unknown): val is FacetFeature {
   if (!val || typeof val !== "object") return false;
   const obj = val as Record<string, unknown>;
   const t = obj["$type"];
-  if (t === "app.bsky.richtext.facet#mention") return typeof obj["did"] === "string";
-  if (t === "app.bsky.richtext.facet#link") return typeof obj["uri"] === "string";
-  if (t === "app.bsky.richtext.facet#tag") return typeof obj["tag"] === "string";
+  if (t === "app.bsky.richtext.facet#mention")
+    return typeof obj["did"] === "string";
+  if (t === "app.bsky.richtext.facet#link")
+    return typeof obj["uri"] === "string";
+  if (t === "app.bsky.richtext.facet#tag")
+    return typeof obj["tag"] === "string";
   return false;
 }
 
@@ -147,7 +154,11 @@ function isFacet(val: unknown): val is Facet {
   const idx = obj["index"];
   if (!idx || typeof idx !== "object") return false;
   const index = idx as Record<string, unknown>;
-  if (typeof index["byteStart"] !== "number" || typeof index["byteEnd"] !== "number") return false;
+  if (
+    typeof index["byteStart"] !== "number" ||
+    typeof index["byteEnd"] !== "number"
+  )
+    return false;
   if (!Array.isArray(obj["features"])) return false;
   return true;
 }
@@ -191,12 +202,15 @@ function parseLinearDocument(raw: unknown): LeafletLinearDocument {
   // Legacy: plain string stored before LinearDocument was adopted
   if (typeof raw === "string" && raw.trim()) {
     return {
-      blocks: raw.split(/\n\n+/).filter((p) => p.trim()).map((paragraph) => ({
-        block: {
-          $type: "pub.leaflet.blocks.text" as const,
-          plaintext: paragraph.trim(),
-        },
-      })),
+      blocks: raw
+        .split(/\n\n+/)
+        .filter((p) => p.trim())
+        .map((paragraph) => ({
+          block: {
+            $type: "pub.leaflet.blocks.text" as const,
+            plaintext: paragraph.trim(),
+          },
+        })),
     };
   }
   return { blocks: [] };
@@ -208,7 +222,9 @@ function parseLinearDocument(raw: unknown): LeafletLinearDocument {
  * This is the ONLY legitimate use of extracting text from a LinearDocument.
  * For display, always use <LeafletRenderer> instead.
  */
-export function extractTextFromLinearDocument(doc: LeafletLinearDocument): string {
+export function extractTextFromLinearDocument(
+  doc: LeafletLinearDocument,
+): string {
   const extractTextFromListItems = (value: unknown): string[] => {
     if (!Array.isArray(value)) return [];
 
@@ -281,7 +297,9 @@ function extractContributors(raw: unknown): BumicertContributor[] {
  * Org name and logo come from `item.creatorInfo`, which the indexer resolves
  * inline at query time — no separate org lookup needed.
  */
-export function activityToBumicertData(item: ActivityAdapterInput): BumicertData {
+export function activityToBumicertData(
+  item: ActivityAdapterInput,
+): BumicertData {
   const metadata = item.metadata;
   const record = item.record;
   const creatorInfo = item.creatorInfo;
@@ -310,7 +328,10 @@ export function activityToBumicertData(item: ActivityAdapterInput): BumicertData
 
   // Extract location strong refs — keep only entries that have a non-null uri
   const locationRefs = (record?.locations ?? [])
-    .filter((ref): ref is { uri: string; cid: string | null } => typeof ref?.uri === "string")
+    .filter(
+      (ref): ref is { uri: string; cid: string | null } =>
+        typeof ref?.uri === "string",
+    )
     .map((ref) => ({ uri: ref.uri, cid: ref.cid ?? null }));
 
   return {
@@ -324,7 +345,7 @@ export function activityToBumicertData(item: ActivityAdapterInput): BumicertData
     description: parseLinearDocument(record?.description),
     coverImageUrl,
     logoUrl,
-    organizationName: creatorInfo?.organizationName ?? "",
+    organizationName: creatorInfo?.organizationName ?? "Unknown",
     country: "", // country is on the org record, not the activity — populated via org query if needed
     objectives: extractWorkScopeObjectives(record?.workScope),
     contributors: extractContributors(record?.contributors),
@@ -344,7 +365,7 @@ export function activityToBumicertData(item: ActivityAdapterInput): BumicertData
  * needed since the indexer resolves it inline per item.
  */
 export function activitiesToBumicertDataArray(
-  activities: ActivityAdapterInput[]
+  activities: ActivityAdapterInput[],
 ): BumicertData[] {
   return activities.map((item) => activityToBumicertData(item));
 }

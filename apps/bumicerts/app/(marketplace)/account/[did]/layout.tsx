@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import {
+  buildOrganizationDataFromUserAccount,
   buildOrganizationDataFromOrganizationAccount,
 } from "@/lib/account/server";
 import { getIndexerCaller } from "@/lib/trpc/indexer/server";
@@ -59,9 +60,19 @@ export default async function AccountLayout({
   }
 
   if (account.kind === "user") {
+    const userProfile = buildOrganizationDataFromUserAccount(account, {
+      displayNameFallback: did,
+    });
+
     return (
       <OrganizationLayoutClient did={did}>
-        <main className="w-full">{children}</main>
+        <main className="w-full">
+          <Container className="pt-4 pb-8">
+            <OrgHero organization={userProfile} showEditButton={isOwner} />
+            <OrgTabBar did={did} accountKind="user" />
+            {children}
+          </Container>
+        </main>
       </OrganizationLayoutClient>
     );
   }
@@ -72,7 +83,7 @@ export default async function AccountLayout({
       <main className="w-full">
         <Container className="pt-4 pb-8">
           <OrgHero organization={organization} showEditButton={isOwner} />
-          <OrgTabBar did={organization.did} />
+          <OrgTabBar did={organization.did} accountKind="organization" />
           {children}
         </Container>
       </main>

@@ -3,6 +3,8 @@ import { listOrganizationData } from "@/lib/account/server";
 import ErrorPage from "@/components/error-page";
 import type { OrganizationData } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Organizations — Bumicerts",
   description:

@@ -4,18 +4,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAtprotoStore } from "@/components/stores/atproto";
 import Container from "@/components/ui/container";
-import Image from "next/image";
 import { links } from "@/lib/links";
 import {
   Building2Icon,
   ChevronRight,
   HandHeartIcon,
   Loader2Icon,
-  LucideIcon,
   XIcon,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import {
+  BumicertsMark,
+  OnboardingRoleSelector,
+} from "@/components/auth/OnboardingRoleSelector";
 
 const HAS_SEEN_ONBOARDING_IN_PAST_KEY = (did: string) =>
   `has-${did}-seen-onboarding-in-past`;
@@ -101,7 +103,7 @@ export default function AuthCompletePage() {
 
   return (
     <Container className="flex flex-col items-center justify-center min-h-screen">
-      <LayoutBumicertsIcon showAnimations />
+      <BumicertsMark showAnimations />
       <motion.div
         initial={{ scale: 0.2, filter: "blur(20px)", opacity: 0.5 }}
         animate={{ scale: 1, filter: "blur(0px)", opacity: 1 }}
@@ -155,40 +157,37 @@ export default function AuthCompletePage() {
               >
                 <XIcon />
               </Button>
-              <div className="flex flex-col items-center p-4 pt-8">
-                <LayoutBumicertsIcon />
-                <h1 className="font-medium text-xl mt-3">
-                  How will you use Bumicerts?
-                </h1>
-                <p className="text-muted-foreground text-sm">
-                  Choose your role to get started...
-                </p>
-                <div className="grid grid-rows-2 gap-2 mt-4 w-full">
-                  <OnboardingOption
-                    onClick={() =>
-                      handleOnboardingOptionClick(getRedirectToUriCached())
-                    }
-                    Icon={HandHeartIcon}
-                    optionName="Funder"
-                    optionDescription="Explore and fund impactful regenerative projects"
-                  />
-                  <OnboardingOption
-                    onClick={() =>
-                      handleOnboardingOptionClick(links.manage.home)
-                    }
-                    Icon={Building2Icon}
-                    optionName="Nature Steward"
-                    optionDescription="Manage your organization, issue Bumicerts and upload supporting evidence"
-                  />
-                </div>
-                <Button
-                  className="mt-4 w-full"
-                  variant={"ghost"}
-                  onClick={() => setDidUserCancelOnboarding(true)}
-                >
-                  I&apos;ll decide later <ChevronRight />
-                </Button>
-              </div>
+              <OnboardingRoleSelector
+                title="How will you use Bumicerts?"
+                description="Choose your role to get started..."
+                options={[
+                  {
+                    onClick: () =>
+                      handleOnboardingOptionClick(getRedirectToUriCached()),
+                    Icon: HandHeartIcon,
+                    optionName: "Funder",
+                    optionDescription:
+                      "Explore and fund impactful regenerative projects",
+                  },
+                  {
+                    onClick: () =>
+                      handleOnboardingOptionClick(links.manage.home),
+                    Icon: Building2Icon,
+                    optionName: "Nature Steward",
+                    optionDescription:
+                      "Manage your organization, issue Bumicerts and upload supporting evidence",
+                  },
+                ]}
+                footer={
+                  <Button
+                    className="mt-4 w-full"
+                    variant="ghost"
+                    onClick={() => setDidUserCancelOnboarding(true)}
+                  >
+                    I&apos;ll decide later <ChevronRight />
+                  </Button>
+                }
+              />
             </motion.div>
           </motion.div>
         )}
@@ -196,64 +195,3 @@ export default function AuthCompletePage() {
     </Container>
   );
 }
-
-const LayoutBumicertsIcon = ({
-  showAnimations = false,
-}: {
-  showAnimations?: boolean;
-}) => {
-  return (
-    <motion.div
-      className="relative h-20 w-20"
-      transition={{
-        duration: 0.75,
-        type: "spring",
-      }}
-      layoutId="bumicerts-icon"
-      {...(showAnimations
-        ? {
-            initial: { scale: 0.2, filter: "blur(20px)", opacity: 0 },
-            animate: { scale: 1, filter: "blur(0px", opacity: 1 },
-          }
-        : {})}
-    >
-      <Image
-        className="drop-shadow-2xl"
-        src={links.public.icon}
-        fill
-        alt={"Bumicerts Icon"}
-      />
-    </motion.div>
-  );
-};
-
-const OnboardingOption = ({
-  onClick,
-  Icon,
-  optionName,
-  optionDescription,
-}: {
-  onClick: () => void;
-  Icon: LucideIcon;
-  optionName: string;
-  optionDescription: string;
-}) => {
-  return (
-    <Button
-      variant={"secondary"}
-      className="group relative w-full h-auto flex flex-col items-start justify-between max-w-md rounded-xl shadow-none hover:bg-primary/10"
-      onClick={onClick}
-    >
-      <span className="flex items-center font-instrument italic text-2xl gap-1.5">
-        <Icon className="text-primary opacity-50 size-6" />
-        {optionName}
-      </span>
-      <span className="text-muted-foreground text-left text-pretty">
-        {optionDescription}
-      </span>
-      <span className="absolute top-3 right-3 text-primary transition-all opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0">
-        <ChevronRight className="size-5" />
-      </span>
-    </Button>
-  );
-};

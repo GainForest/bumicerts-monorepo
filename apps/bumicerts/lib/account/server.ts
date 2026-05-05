@@ -6,6 +6,7 @@ export {
 } from "./errors";
 
 export {
+  buildOrganizationDataFromUserAccount,
   buildOrganizationDataFromOrganizationAccount,
 } from "./organization-data";
 

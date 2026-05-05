@@ -28,11 +28,15 @@ export const links = {
     byDid: (did: string) => `/account/${encodeURIComponent(did)}`,
     bumicerts: (did: string) =>
       `/account/${encodeURIComponent(did)}/bumicerts`,
+    donations: (did: string) =>
+      `/account/${encodeURIComponent(did)}/donations`,
   },
 
   manage: {
     home: "/upload",
     edit: "/upload?mode=edit",
+    onboardUser: "/upload?mode=onboard-user",
+    onboardOrganization: "/upload?mode=onboard-org",
     sites: "/upload/sites",
     audio: "/upload/audio",
     bumicerts: BUMICERT_CREATE_PATH,

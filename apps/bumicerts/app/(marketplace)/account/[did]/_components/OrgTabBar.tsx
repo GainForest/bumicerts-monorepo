@@ -2,8 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { HomeIcon, BadgeIcon } from "lucide-react";
+import { HomeIcon, BadgeIcon, HeartIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { links } from "@/lib/links";
 
@@ -15,7 +14,26 @@ interface Tab {
   exact: boolean;
 }
 
-function buildTabs(did: string): Tab[] {
+type AccountTabBarKind = "organization" | "user";
+
+function buildTabs(did: string, accountKind: AccountTabBarKind): Tab[] {
+  if (accountKind === "user") {
+    return [
+      {
+        label: "Bumicerts",
+        href: links.account.bumicerts(did),
+        icon: BadgeIcon,
+        exact: false,
+      },
+      {
+        label: "Donation History",
+        href: links.account.donations(did),
+        icon: HeartIcon,
+        exact: false,
+      },
+    ];
+  }
+
   return [
     {
       label: "Home",
@@ -34,13 +52,25 @@ function buildTabs(did: string): Tab[] {
 
 interface OrgTabBarProps {
   did: string;
+  accountKind?: AccountTabBarKind;
 }
 
-export function OrgTabBar({ did }: OrgTabBarProps) {
+export function OrgTabBar({
+  did,
+  accountKind = "organization",
+}: OrgTabBarProps) {
   const pathname = usePathname();
-  const tabs = buildTabs(did);
+  const tabs = buildTabs(did, accountKind);
 
   function isActive(tab: Tab): boolean {
+    if (
+      accountKind === "user" &&
+      tab.href === links.account.bumicerts(did) &&
+      pathname === links.account.byDid(did)
+    ) {
+      return true;
+    }
+
     return tab.exact ? pathname === tab.href : pathname.startsWith(tab.href);
   }
 

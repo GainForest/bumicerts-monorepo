@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { Building2Icon } from "lucide-react";
 import type { OrganizationData } from "@/lib/types";
@@ -17,8 +16,9 @@ import { links } from "@/lib/links";
 import { countries } from "@/lib/countries";
 import { OrgHero } from "@/app/(marketplace)/account/[did]/_components/OrgHero";
 import { OrgAbout } from "@/app/(marketplace)/account/[did]/_components/OrgAbout";
-import { EditableHero, EditBar } from "./EditableHero";
+import { EditableHero } from "./EditableHero";
 import { EditableAbout } from "./EditableAbout";
+import { ManageEditHeaderContent } from "./ManageEditHeaderContent";
 import { ManageNavGrid } from "./UploadNavGrid";
 import { ManageDashboardSkeleton } from "./UploadDashboardSkeleton";
 import {
@@ -37,6 +37,7 @@ import {
   hasMeaningfulOrganizationLongDescription,
   organizationLongDescriptionsMatch,
 } from "./organizationLongDescription";
+import { normalizeLinearDocumentForRecord } from "@/lib/utils/linearDocument";
 
 const RECONCILIATION_INVALIDATE_DELAY_MS = 8_000;
 
@@ -64,9 +65,13 @@ interface ManageDashboardClientProps {
   initialData: UploadAccountPageData;
 }
 
-function buildWebsiteUri(value: string | null): `${string}:${string}` | undefined {
+function buildWebsiteUri(
+  value: string | null,
+): `${string}:${string}` | undefined {
   if (!value) return undefined;
-  return (value.startsWith("http") ? value : `https://${value}`) as `${string}:${string}`;
+  return (
+    value.startsWith("http") ? value : `https://${value}`
+  ) as `${string}:${string}`;
 }
 
 function resolveEditValue<T>(
@@ -109,7 +114,7 @@ function buildNextOrganizationData(options: {
     ),
     longDescription:
       options.nextKind === "organization"
-        ? options.edits.longDescription ?? options.current.longDescription
+        ? (options.edits.longDescription ?? options.current.longDescription)
         : { blocks: [] },
     logoUrl: nextLogoUrl,
     coverImageUrl: nextCoverUrl,
@@ -135,7 +140,10 @@ function shouldUpgradeUserToOrganization(options: {
     visibility: EditableFields["visibility"];
   };
 }): { shouldUpgrade: boolean; isComplete: boolean } {
-  const country = resolveEditValue(options.edits.country, options.current.country);
+  const country = resolveEditValue(
+    options.edits.country,
+    options.current.country,
+  );
   const longDescription =
     options.edits.longDescription ?? options.current.longDescription;
   const visibility = resolveEditValue(
@@ -158,7 +166,9 @@ function shouldUpgradeUserToOrganization(options: {
     country.length === 2 &&
     country in countries &&
     hasMeaningfulOrganizationLongDescription(longDescription) &&
-    (visibility === "Public" || visibility === "Unlisted" || visibility === null) &&
+    (visibility === "Public" ||
+      visibility === "Unlisted" ||
+      visibility === null) &&
     (startDate === null || startDate.length > 0);
 
   return {
@@ -193,7 +203,8 @@ function buildSaveReconciliationChecks(options: {
 
   if (!isUnchangedEdit(options.edits.website)) {
     checks.website =
-      options.edits.website === null || options.edits.website.trim().length === 0
+      options.edits.website === null ||
+      options.edits.website.trim().length === 0
         ? null
         : (buildWebsiteUri(options.edits.website) ?? null);
   }
@@ -222,7 +233,10 @@ function buildSaveReconciliationChecks(options: {
     checks.visibility = options.nextOrganization.visibility;
   }
 
-  if (options.nextAccount.kind === "organization" && options.edits.longDescription !== null) {
+  if (
+    options.nextAccount.kind === "organization" &&
+    options.edits.longDescription !== null
+  ) {
     checks.longDescription = options.nextOrganization.longDescription;
   }
 
@@ -287,7 +301,10 @@ function hasQueryCaughtUp(
 
   if (checks.country !== undefined) {
     if (account.kind !== "organization") return false;
-    if (buildUploadAccountPageDataFromAccount(account).organization?.country !== checks.country) {
+    if (
+      buildUploadAccountPageDataFromAccount(account).organization?.country !==
+      checks.country
+    ) {
       return false;
     }
     matchedObservableChange = true;
@@ -303,7 +320,10 @@ function hasQueryCaughtUp(
 
   if (checks.visibility !== undefined) {
     if (account.kind !== "organization") return false;
-    if (buildUploadAccountPageDataFromAccount(account).organization?.visibility !== checks.visibility) {
+    if (
+      buildUploadAccountPageDataFromAccount(account).organization
+        ?.visibility !== checks.visibility
+    ) {
       return false;
     }
     matchedObservableChange = true;
@@ -311,10 +331,15 @@ function hasQueryCaughtUp(
 
   if (checks.longDescription !== undefined) {
     if (account.kind !== "organization") return false;
-    const nextLongDescription = buildUploadAccountPageDataFromAccount(account).organization?.longDescription;
+    const nextLongDescription =
+      buildUploadAccountPageDataFromAccount(account).organization
+        ?.longDescription;
     if (
       !nextLongDescription ||
-      !organizationLongDescriptionsMatch(nextLongDescription, checks.longDescription)
+      !organizationLongDescriptionsMatch(
+        nextLongDescription,
+        checks.longDescription,
+      )
     ) {
       return false;
     }
@@ -342,7 +367,9 @@ function mergeRefetchedPageData(options: {
   nextAccount: AuthenticatedAccountState;
   checks?: ReconciliationChecks;
 }): UploadAccountPageData {
-  const nextPageData = buildUploadAccountPageDataFromAccount(options.nextAccount);
+  const nextPageData = buildUploadAccountPageDataFromAccount(
+    options.nextAccount,
+  );
   const currentOrganization = options.currentPageData.organization;
   const nextOrganization = nextPageData.organization;
 
@@ -357,7 +384,8 @@ function mergeRefetchedPageData(options: {
     currentOrganization.coverImageUrl?.startsWith("blob:") &&
     nextOrganization.coverImageUrl === null;
   const shouldPreserveVisibility = options.checks?.visibility !== undefined;
-  const shouldPreserveLongDescription = options.checks?.longDescription !== undefined;
+  const shouldPreserveLongDescription =
+    options.checks?.longDescription !== undefined;
 
   if (
     !shouldPreserveLogo &&
@@ -372,7 +400,9 @@ function mergeRefetchedPageData(options: {
     ...nextPageData,
     organization: {
       ...nextOrganization,
-      logoUrl: shouldPreserveLogo ? currentOrganization.logoUrl : nextOrganization.logoUrl,
+      logoUrl: shouldPreserveLogo
+        ? currentOrganization.logoUrl
+        : nextOrganization.logoUrl,
       coverImageUrl: shouldPreserveCoverImage
         ? currentOrganization.coverImageUrl
         : nextOrganization.coverImageUrl,
@@ -388,8 +418,8 @@ function mergeRefetchedPageData(options: {
 
 function RegisterOrganizationButton() {
   return (
-    <Button asChild>
-      <Link href={links.manage.edit}>
+    <Button asChild variant="secondary">
+      <Link href={links.manage.onboardOrganization}>
         <Building2Icon />
         Register as an Organization
       </Link>
@@ -405,6 +435,8 @@ export function ManageDashboardClient({
   const indexerUtils = indexerTrpc.useUtils();
   const [mode, setMode] = useManageMode();
   const isEditing = mode === "edit";
+  const isOnboardingMode = mode === "onboard-user" || mode === "onboard-org";
+  const isOrganizationOnboardingMode = mode === "onboard-org";
   const [displayAccount, setDisplayAccount] = useState(initialAccount);
   const [pageData, setPageData] = useState(initialData);
   const [pendingReconciliation, setPendingReconciliation] =
@@ -439,9 +471,24 @@ export function ManageDashboardClient({
   const hasBufferedChanges = hasChanges();
 
   const currentOrganization = pageData.organization;
-  const canEditOrganizationFields =
-    currentKind === "organization" || currentKind === "user";
+  const canEditOrganizationFields = currentKind === "organization";
   const pendingReconciliationId = pendingReconciliation?.id ?? null;
+
+  useEffect(() => {
+    if (currentKind === "unknown" && mode === "edit") {
+      setMode(null);
+      return;
+    }
+
+    if (currentKind === "user" && mode === "onboard-user") {
+      setMode(null);
+      return;
+    }
+
+    if (currentKind === "organization" && isOnboardingMode) {
+      setMode(null);
+    }
+  }, [currentKind, isOnboardingMode, mode, setMode]);
 
   useEffect(() => {
     if (pendingReconciliation || isEditing || hasBufferedChanges) {
@@ -456,10 +503,19 @@ export function ManageDashboardClient({
         nextAccount,
       }),
     );
-  }, [currentAccountQuery.data, hasBufferedChanges, initialAccount, isEditing, pendingReconciliation]);
+  }, [
+    currentAccountQuery.data,
+    hasBufferedChanges,
+    initialAccount,
+    isEditing,
+    pendingReconciliation,
+  ]);
 
   useEffect(() => {
-    if (!pendingReconciliation || pendingReconciliation.revalidationRequestedAt === null) {
+    if (
+      !pendingReconciliation ||
+      pendingReconciliation.revalidationRequestedAt === null
+    ) {
       return;
     }
 
@@ -469,7 +525,8 @@ export function ManageDashboardClient({
     }
 
     if (
-      currentAccountQuery.dataUpdatedAt < pendingReconciliation.revalidationRequestedAt
+      currentAccountQuery.dataUpdatedAt <
+      pendingReconciliation.revalidationRequestedAt
     ) {
       return;
     }
@@ -487,7 +544,11 @@ export function ManageDashboardClient({
       }),
     );
     setPendingReconciliation(null);
-  }, [currentAccountQuery.data, currentAccountQuery.dataUpdatedAt, pendingReconciliation]);
+  }, [
+    currentAccountQuery.data,
+    currentAccountQuery.dataUpdatedAt,
+    pendingReconciliation,
+  ]);
 
   useEffect(() => {
     if (pendingReconciliationId === null) {
@@ -575,14 +636,12 @@ export function ManageDashboardClient({
         throw new Error("Account data is not ready to save yet.");
       }
 
-      let pendingUpgrade:
-        | {
-            country: { uri: string; cid: string };
-            longDescription: OrganizationData["longDescription"];
-            startDate: string | null;
-            visibility: OrganizationData["visibility"];
-        }
-        | null = null;
+      let pendingUpgrade: {
+        country: { uri: string; cid: string };
+        longDescription: OrganizationData["longDescription"];
+        startDate: string | null;
+        visibility: OrganizationData["visibility"];
+      } | null = null;
       let nextProfile = currentAccount.profile;
 
       if (currentKind === "user") {
@@ -607,9 +666,13 @@ export function ManageDashboardClient({
             edits.country,
             currentOrganization.country,
           );
-          const nextCountry = nextCountryCode ? countries[nextCountryCode] : null;
+          const nextCountry = nextCountryCode
+            ? countries[nextCountryCode]
+            : null;
           if (!nextCountry) {
-            throw new Error("Country is required to register as an organization.");
+            throw new Error(
+              "Country is required to register as an organization.",
+            );
           }
 
           pendingUpgrade = {
@@ -636,7 +699,10 @@ export function ManageDashboardClient({
       }
 
       if (!isUnchangedEdit(edits.shortDescription)) {
-        if (edits.shortDescription === null || edits.shortDescription.trim().length === 0) {
+        if (
+          edits.shortDescription === null ||
+          edits.shortDescription.trim().length === 0
+        ) {
           profileUnset.push("description");
         } else {
           profileData.description = edits.shortDescription;
@@ -652,11 +718,15 @@ export function ManageDashboardClient({
       }
 
       if (edits.logo !== null) {
-        profileData.avatar = { image: await toSerializableFile(edits.logo) };
+        profileData.avatar = {
+          $type: "org.hypercerts.defs#smallImage",
+          image: await toSerializableFile(edits.logo),
+        };
       }
 
       if (edits.coverImage !== null) {
         profileData.banner = {
+          $type: "org.hypercerts.defs#largeImage",
           image: await toSerializableFile(edits.coverImage),
         };
       }
@@ -669,7 +739,9 @@ export function ManageDashboardClient({
 
       if (currentKind === "organization") {
         if (!isUnchangedEdit(edits.country)) {
-          const selectedCountry = edits.country ? countries[edits.country] : null;
+          const selectedCountry = edits.country
+            ? countries[edits.country]
+            : null;
           if (selectedCountry) {
             organizationData.location = {
               uri: selectedCountry.uri,
@@ -689,7 +761,9 @@ export function ManageDashboardClient({
         }
 
         if (edits.longDescription !== null) {
-          organizationData.longDescription = edits.longDescription;
+          organizationData.longDescription = normalizeLinearDocumentForRecord(
+            edits.longDescription,
+          );
         }
 
         if (!isUnchangedEdit(edits.visibility)) {
@@ -699,14 +773,19 @@ export function ManageDashboardClient({
       }
 
       const hasOrganizationChanges =
-        Object.keys(organizationData).length > 0 || organizationUnset.length > 0;
+        Object.keys(organizationData).length > 0 ||
+        organizationUnset.length > 0;
 
       const hasMixedRecordChanges =
-        hasProfileChanges && (hasOrganizationChanges || pendingUpgrade !== null);
+        hasProfileChanges &&
+        (hasOrganizationChanges || pendingUpgrade !== null);
 
       let nextAccount: AuthenticatedAccountState;
 
-      if (currentKind === "organization" && currentAccount.kind === "organization") {
+      if (
+        currentKind === "organization" &&
+        currentAccount.kind === "organization"
+      ) {
         nextAccount = {
           kind: "organization",
           did,
@@ -735,9 +814,13 @@ export function ManageDashboardClient({
               ...(pendingUpgrade.startDate
                 ? { foundedDate: `${pendingUpgrade.startDate}T00:00:00.000Z` }
                 : {}),
-              longDescription: pendingUpgrade.longDescription,
+              longDescription: normalizeLinearDocumentForRecord(
+                pendingUpgrade.longDescription,
+              ),
               visibility:
-                pendingUpgrade.visibility === "Unlisted" ? "unlisted" : "public",
+                pendingUpgrade.visibility === "Unlisted"
+                  ? "unlisted"
+                  : "public",
             },
           },
         });
@@ -757,7 +840,9 @@ export function ManageDashboardClient({
           organization: {
             operation: "update",
             data: organizationData,
-            ...(organizationUnset.length > 0 ? { unset: organizationUnset } : {}),
+            ...(organizationUnset.length > 0
+              ? { unset: organizationUnset }
+              : {}),
           },
         });
         nextProfile = combinedResult.profile;
@@ -787,7 +872,8 @@ export function ManageDashboardClient({
         nextProfile = profileResult.record;
 
         nextAccount =
-          currentKind === "organization" && currentAccount.kind === "organization"
+          currentKind === "organization" &&
+          currentAccount.kind === "organization"
             ? {
                 kind: "organization",
                 did,
@@ -808,7 +894,9 @@ export function ManageDashboardClient({
           foundedDate: pendingUpgrade.startDate
             ? `${pendingUpgrade.startDate}T00:00:00.000Z`
             : undefined,
-          longDescription: pendingUpgrade.longDescription,
+          longDescription: normalizeLinearDocumentForRecord(
+            pendingUpgrade.longDescription,
+          ),
           visibility:
             pendingUpgrade.visibility === "Unlisted" ? "unlisted" : "public",
         });
@@ -821,7 +909,8 @@ export function ManageDashboardClient({
         };
       }
 
-      const nextKind = nextAccount.kind === "organization" ? "organization" : "user";
+      const nextKind =
+        nextAccount.kind === "organization" ? "organization" : "user";
       const nextOrganizationData = buildNextOrganizationData({
         current: currentOrganization,
         edits,
@@ -880,7 +969,11 @@ export function ManageDashboardClient({
     return <ManageDashboardSkeleton />;
   }
 
-  if (currentKind === "unknown" || !currentOrganization) {
+  if (
+    currentKind === "unknown" ||
+    !currentOrganization ||
+    (currentKind === "user" && isOrganizationOnboardingMode)
+  ) {
     return (
       <Container className="pt-4">
         <AccountSetupPage did={did} onCompleted={handleSetupCompleted} />
@@ -897,25 +990,16 @@ export function ManageDashboardClient({
           void handleSave();
         }}
       >
-        {currentKind === "user" && <HeaderContent right={<RegisterOrganizationButton />} />}
+        <ManageEditHeaderContent
+          right={
+            currentKind === "user" ? <RegisterOrganizationButton /> : undefined
+          }
+        />
         <Container className="pt-4 pb-8 space-y-2">
           <EditableHero
             organization={currentOrganization}
             enableOrganizationFields={canEditOrganizationFields}
           />
-
-          <AnimatePresence>
-            <motion.div
-              key="edit-bar"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-              className="overflow-hidden"
-            >
-              <EditBar />
-            </motion.div>
-          </AnimatePresence>
 
           <EditableAbout
             organization={currentOrganization}
@@ -928,7 +1012,9 @@ export function ManageDashboardClient({
 
   return (
     <>
-      {currentKind === "user" && <HeaderContent right={<RegisterOrganizationButton />} />}
+      {currentKind === "user" && (
+        <HeaderContent right={<RegisterOrganizationButton />} />
+      )}
       <Container className="pt-4 pb-8 space-y-2">
         <OrgHero organization={currentOrganization} showEditButton />
         <OrgAbout organization={currentOrganization} />

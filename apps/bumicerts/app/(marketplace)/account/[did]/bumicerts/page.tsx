@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
   buildOrganizationDataFromOrganizationAccount,
+  buildOrganizationDataFromUserAccount,
 } from "@/lib/account/server";
 import { OrgBumicertsGrid } from "./_components/OrgBumicertsGrid";
 import ErrorPage from "@/components/error-page";
@@ -11,7 +12,28 @@ import { requirePublicUrl } from "@/lib/url";
 import { activitiesToBumicertDataArray } from "@/lib/adapters";
 import type { BumicertData } from "@/lib/types";
 import * as activitiesModule from "@/graphql/indexer/queries/activities";
-import { OrgTabBar } from "../_components/OrgTabBar";
+
+function withCreatorDisplayFallbacks(
+  bumicerts: BumicertData[],
+  options?: {
+    organizationName?: string;
+    logoUrl?: string | null;
+  },
+): BumicertData[] {
+  return bumicerts.map((bumicert) => {
+    const normalizedOrganizationName = bumicert.organizationName.trim();
+
+    return {
+      ...bumicert,
+      organizationName:
+        normalizedOrganizationName.length > 0 &&
+          normalizedOrganizationName.toLowerCase() !== "unknown"
+          ? bumicert.organizationName
+          : (options?.organizationName ?? "Unknown"),
+      logoUrl: bumicert.logoUrl ?? options?.logoUrl ?? null,
+    };
+  });
+}
 
 export async function generateMetadata({
   params,
@@ -37,7 +59,8 @@ export async function generateMetadata({
   const displayName =
     account.kind === "organization"
       ? (() => {
-          const organization = buildOrganizationDataFromOrganizationAccount(account);
+          const organization =
+            buildOrganizationDataFromOrganizationAccount(account);
           return organization.displayName.trim().length > 0
             ? organization.displayName
             : (account.profile.displayName ?? "Account");
@@ -89,7 +112,11 @@ export default async function AccountBumicertsPage({
     const activities = await activitiesModule.fetch({ did });
     bumicerts = activitiesToBumicertDataArray(activities);
   } catch (error) {
-    console.error("[AccountBumicertsPage] Error fetching activities", did, error);
+    console.error(
+      "[AccountBumicertsPage] Error fetching activities",
+      did,
+      error,
+    );
     return (
       <Container className="pt-4">
         <ErrorPage
@@ -102,17 +129,28 @@ export default async function AccountBumicertsPage({
   }
 
   if (account.kind === "user") {
+    const userProfile = buildOrganizationDataFromUserAccount(account, {
+      displayNameFallback: did,
+    });
+
     return (
-      <>
-        <Container className="pt-4">
-          <OrgTabBar did={did} />
-        </Container>
-        <Container className="pb-8">
-          <OrgBumicertsGrid bumicerts={bumicerts} />
-        </Container>
-      </>
+      <OrgBumicertsGrid
+        bumicerts={withCreatorDisplayFallbacks(bumicerts, {
+          organizationName: userProfile.displayName,
+          logoUrl: userProfile.logoUrl,
+        })}
+      />
     );
   }
 
-  return <OrgBumicertsGrid bumicerts={bumicerts} />;
+  const organization = buildOrganizationDataFromOrganizationAccount(account);
+
+  return (
+    <OrgBumicertsGrid
+      bumicerts={withCreatorDisplayFallbacks(bumicerts, {
+        organizationName: organization.displayName,
+        logoUrl: organization.logoUrl,
+      })}
+    />
+  );
 }

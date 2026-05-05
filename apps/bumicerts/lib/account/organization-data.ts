@@ -1,7 +1,11 @@
 import { countries } from "@/lib/countries";
 import type { OrganizationData } from "@/lib/types";
 import { textToLinearDocument } from "@/lib/utils/linearDocument";
-import type { AccountLocationRef, OrganizationAccountState } from "./types";
+import type {
+  AccountLocationRef,
+  OrganizationAccountState,
+  UserAccountState,
+} from "./types";
 import { resolveAccountMediaUrl } from "./media";
 
 export function normalizeAccountOrganizationVisibility(
@@ -55,6 +59,38 @@ function findCountryCodeByLocationRef(location: AccountLocationRef): string {
   }
 
   return "";
+}
+
+export function buildOrganizationDataFromUserAccount(
+  account: UserAccountState,
+  options?: {
+    displayNameFallback?: string;
+    bumicertCount?: number;
+  },
+): OrganizationData {
+  const logoUrl = resolveAccountMediaUrl(account.profile.avatar);
+  const coverImageUrl = resolveAccountMediaUrl(account.profile.banner);
+  const displayName = account.profile.displayName?.trim();
+
+  return {
+    did: account.did,
+    displayName:
+      displayName && displayName.length > 0
+        ? displayName
+        : (options?.displayNameFallback ?? ""),
+    shortDescription: account.profile.description ?? "",
+    shortDescriptionFacets: [],
+    longDescription: { blocks: [] },
+    logoUrl,
+    coverImageUrl,
+    objectives: [],
+    country: "",
+    website: account.profile.website ?? null,
+    startDate: null,
+    visibility: "Public",
+    createdAt: account.profile.createdAt,
+    bumicertCount: options?.bumicertCount ?? 0,
+  };
 }
 
 export function buildOrganizationDataFromOrganizationAccount(

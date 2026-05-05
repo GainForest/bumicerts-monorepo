@@ -1,15 +1,13 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   buildOrganizationDataFromOrganizationAccount,
 } from "@/lib/account/server";
 import { getIndexerCaller } from "@/lib/trpc/indexer/server";
 import { OrgAbout } from "./_components/OrgAbout";
-import { OrgTabBar } from "./_components/OrgTabBar";
 import { requirePublicUrl } from "@/lib/url";
 import ErrorPage from "@/components/error-page";
-import LegacyUserProfilePage from "../../user/[did]/page";
-import Container from "@/components/ui/container";
+import { links } from "@/lib/links";
 
 export async function generateMetadata({
   params,
@@ -127,14 +125,7 @@ export default async function AccountByDidPage({
   }
 
   if (account.kind === "user") {
-    return (
-      <>
-        <Container className="pt-4">
-          <OrgTabBar did={did} />
-        </Container>
-        <LegacyUserProfilePage params={Promise.resolve({ did: encodedDid })} />
-      </>
-    );
+    redirect(links.account.bumicerts(did));
   }
 
   const organization = buildOrganizationDataFromOrganizationAccount(account);

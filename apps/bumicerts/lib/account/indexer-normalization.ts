@@ -346,13 +346,10 @@ export async function normalizeProfileAvatarForRecord(
   if (record.__typename === "OrgHypercertsDefsSmallImage") {
     const resolved = await toResolvedLegacyBlob(record.image ?? null, did);
 
-    return resolved
+    return resolved?.uri
       ? {
-          $type: "org.hypercerts.defs#smallImage",
-          image: {
-            $type: "blob",
-            ...resolved,
-          },
+          $type: "org.hypercerts.defs#uri",
+          uri: resolved.uri,
         }
       : undefined;
   }
@@ -385,13 +382,10 @@ export async function normalizeProfileBannerForRecord(
   if (record.__typename === "OrgHypercertsDefsLargeImage") {
     const resolved = await toResolvedLegacyBlob(record.image ?? null, did);
 
-    return resolved
+    return resolved?.uri
       ? {
-          $type: "org.hypercerts.defs#largeImage",
-          image: {
-            $type: "blob",
-            ...resolved,
-          },
+          $type: "org.hypercerts.defs#uri",
+          uri: resolved.uri,
         }
       : undefined;
   }

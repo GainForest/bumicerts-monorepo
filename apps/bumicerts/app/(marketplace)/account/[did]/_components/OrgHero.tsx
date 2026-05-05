@@ -28,7 +28,6 @@ import {
 } from "lucide-react";
 import type { OrganizationData } from "@/lib/types";
 import { links } from "@/lib/links";
-import { BskyRichTextDisplay } from "@/components/ui/bsky-richtext-display";
 import { countries } from "@/lib/countries";
 import { formatOrganizationSinceDate } from "@/lib/date";
 
@@ -74,7 +73,7 @@ export function OrgHero({
   }
 
   return (
-    <section className="relative min-h-[260px] md:min-h-[320px] flex flex-col overflow-hidden rounded-2xl border border-border">
+    <section className="relative min-h-[260px] md:min-h-[320px] flex flex-col overflow-hidden rounded-t-4xl border-t border-border">
       {/* ── Cover image (Framer Motion — decorative) ── */}
       <div className="absolute inset-0">
         <motion.div
@@ -153,7 +152,7 @@ export function OrgHero({
           <Link
             href={links.manage.edit}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground border border-primary/20 shadow-lg transition-colors"
-            aria-label="Edit organization profile"
+            aria-label="Edit profile"
           >
             <PencilIcon className="h-3.5 w-3.5 shrink-0" />
             <span className="text-xs font-medium">Edit</span>
@@ -163,88 +162,77 @@ export function OrgHero({
 
       {/* ── Bottom content — SEO-critical, CSS animations ── */}
       <div className="relative z-10 flex-1 flex flex-col justify-end px-5 pb-6 pt-24">
-        <div className="max-w-3xl">
-          {/* Logo + Org name — same line, vertically centered */}
-          <div className="flex items-center gap-3 mb-3 org-animate org-fade-in-up org-delay-1">
-            <div className="relative h-9 w-9 rounded-full overflow-hidden bg-muted border border-white/15 shadow-sm shrink-0">
-              {organization.logoUrl ? (
-                <Image
-                  src={organization.logoUrl}
-                  alt={organization.displayName}
-                  fill
-                  className="object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-sm font-bold text-muted-foreground">
-                  {initial}
-                </div>
-              )}
-            </div>
-
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-3 mb-3 org-animate org-fade-in-up org-delay-1">
+          <div className="relative h-24 w-24 rounded-full overflow-hidden bg-muted border border-white/15 shadow-sm shrink-0">
+            {organization.logoUrl ? (
+              <Image
+                src={organization.logoUrl}
+                alt={organization.displayName}
+                fill
+                className="object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-sm font-bold text-muted-foreground">
+                {initial}
+              </div>
+            )}
+          </div>
+          <div className="max-w-3xl">
             {/* Org name — SEO h1 */}
-            <h1
-              className="text-3xl sm:text-4xl md:text-5xl font-light tracking-[-0.02em] leading-none text-foreground"
-              style={{ fontFamily: "var(--font-garamond-var)" }}
-            >
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-light tracking-[-0.02em] leading-none text-foreground font-instrument italic">
               {organization.displayName}
             </h1>
+            {/* Short description */}
+            <p className="text-muted-foreground line-clamp-4 md:line-clamp-2 mt-1">
+              {organization.shortDescription}
+            </p>
           </div>
-
-          {/* Short description */}
-          {organization.shortDescription && (
-            <BskyRichTextDisplay
-              text={organization.shortDescription}
-              facets={organization.shortDescriptionFacets}
-              className="text-sm md:text-base text-foreground/75 max-w-2xl leading-relaxed org-animate org-fade-in-up org-delay-2"
-            />
-          )}
-
-          {/* Pills row: Since · Country (with flag) · Objectives · Website */}
-          {hasPillRow && (
-            <div className="mt-4 flex flex-wrap items-center gap-2 org-animate org-fade-in-up org-delay-3">
-              {/* Since pill */}
-              {sinceLabel && (
-                <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.08em] text-foreground/60 bg-background/40 backdrop-blur-md border border-border/50 rounded-full px-2.5 py-1 font-medium">
-                  <CalendarIcon className="h-3 w-3 shrink-0" />
-                  Since {sinceLabel}
-                </span>
-              )}
-
-              {/* Country pill with flag */}
-              {country && (
-                <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.08em] text-foreground/60 bg-background/40 backdrop-blur-md border border-border/50 rounded-full px-2.5 py-1 font-medium">
-                  <span className="text-sm leading-none" aria-hidden="true">
-                    {country.emoji}
-                  </span>
-                  {country.name}
-                </span>
-              )}
-
-              {/* Objective pills */}
-              {organization.objectives.map((obj) => (
-                <span
-                  key={obj}
-                  className="text-[10px] uppercase tracking-[0.08em] text-foreground/60 bg-background/40 backdrop-blur-md border border-border/50 rounded-full px-2.5 py-1 font-medium"
-                >
-                  {obj}
-                </span>
-              ))}
-
-              {/* Website */}
-              {organization.website && (
-                <Link
-                  href={organization.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.08em] text-primary/80 hover:text-primary bg-background/40 backdrop-blur-md border border-primary/20 rounded-full px-2.5 py-1 font-medium transition-colors"
-                >
-                  <GlobeIcon className="h-3 w-3 shrink-0" />
-                  {formatWebsite(organization.website)}
-                </Link>
-              )}
-            </div>
-          )}
         </div>
+        {/* Pills row: Since · Country (with flag) · Objectives · Website */}
+        {hasPillRow && (
+          <div className="mt-4 flex flex-wrap items-center gap-2 org-animate org-fade-in-up org-delay-3">
+            {/* Since pill */}
+            {sinceLabel && (
+              <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.08em] text-foreground/60 bg-background/40 backdrop-blur-md border border-border/50 rounded-full px-2.5 py-1 font-medium">
+                <CalendarIcon className="h-3 w-3 shrink-0" />
+                Since {sinceLabel}
+              </span>
+            )}
+
+            {/* Country pill with flag */}
+            {country && (
+              <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.08em] text-foreground/60 bg-background/40 backdrop-blur-md border border-border/50 rounded-full px-2.5 py-1 font-medium">
+                <span className="text-sm leading-none" aria-hidden="true">
+                  {country.emoji}
+                </span>
+                {country.name}
+              </span>
+            )}
+
+            {/* Objective pills */}
+            {organization.objectives.map((obj) => (
+              <span
+                key={obj}
+                className="text-[10px] uppercase tracking-[0.08em] text-foreground/60 bg-background/40 backdrop-blur-md border border-border/50 rounded-full px-2.5 py-1 font-medium"
+              >
+                {obj}
+              </span>
+            ))}
+
+            {/* Website */}
+            {organization.website && (
+              <Link
+                href={organization.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.08em] text-primary/80 hover:text-primary bg-background/40 backdrop-blur-md border border-primary/20 rounded-full px-2.5 py-1 font-medium transition-colors"
+              >
+                <GlobeIcon className="h-3 w-3 shrink-0" />
+                {formatWebsite(organization.website)}
+              </Link>
+            )}
+          </div>
+        )}
       </div>
     </section>
   );
