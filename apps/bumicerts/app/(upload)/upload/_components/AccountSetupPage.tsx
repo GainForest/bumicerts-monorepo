@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import type { AuthenticatedAccountState } from "@/lib/account";
 import type { OrganizationData } from "@/lib/types";
+import { useAccountSetupStep } from "../_hooks/useAccountSetupStep";
 import { useManageMode } from "../_hooks/useUploadMode";
 import { AccountSetupChoiceStep } from "./onboarding/AccountSetupChoiceStep";
 import { AccountSetupForm } from "./onboarding/AccountSetupForm";
@@ -26,6 +27,7 @@ function resolveOnboardingKind(
 
 export function AccountSetupPage({ did, onCompleted }: AccountSetupPageProps) {
   const [mode, setMode] = useManageMode();
+  const [, setStep] = useAccountSetupStep();
   const onboardingKind = resolveOnboardingKind(mode);
 
   return (
@@ -47,7 +49,10 @@ export function AccountSetupPage({ did, onCompleted }: AccountSetupPageProps) {
             <AccountSetupForm
               did={did}
               kind={onboardingKind}
-              onBack={() => setMode(null)}
+              onBack={() => {
+                setStep(0);
+                setMode(null);
+              }}
               onCompleted={onCompleted}
             />
           </motion.div>
@@ -60,8 +65,14 @@ export function AccountSetupPage({ did, onCompleted }: AccountSetupPageProps) {
             transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
           >
             <AccountSetupChoiceStep
-              onChooseUser={() => setMode("onboard-user")}
-              onChooseOrganization={() => setMode("onboard-org")}
+              onChooseUser={() => {
+                setStep(0);
+                setMode("onboard-user");
+              }}
+              onChooseOrganization={() => {
+                setStep(0);
+                setMode("onboard-org");
+              }}
             />
           </motion.div>
         )}

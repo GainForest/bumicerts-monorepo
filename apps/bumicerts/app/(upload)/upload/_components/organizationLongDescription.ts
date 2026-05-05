@@ -224,6 +224,23 @@ export function organizationLongDescriptionsMatch(
   );
 }
 
+export function hasAnyOrganizationLongDescriptionContent(
+  document: LeafletLinearDocument,
+): boolean {
+  const textLength = document.blocks
+    .map((wrapper) => collectBlockText(wrapper.block))
+    .join("\n\n")
+    .trim().length;
+
+  if (textLength > 0) {
+    return true;
+  }
+
+  return document.blocks.some((wrapper) =>
+    blockHasMeaningfulNonTextContent(wrapper.block),
+  );
+}
+
 export function hasMeaningfulOrganizationLongDescription(
   document: LeafletLinearDocument,
 ): boolean {

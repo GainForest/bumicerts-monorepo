@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { toSerializableFile } from "@gainforest/atproto-mutations-next";
 import {
   ArrowLeftIcon,
@@ -13,9 +13,11 @@ import {
 import { z } from "zod";
 import type { AuthenticatedAccountState } from "@/lib/account";
 import { HeaderContent } from "@/app/(marketplace)/_components/Header/HeaderContent";
+import { useAtprotoStore } from "@/components/stores/atproto";
 import { countries } from "@/lib/countries";
 import { links } from "@/lib/links";
 import type { OrganizationData } from "@/lib/types";
+import { resolveAccountMediaUrl } from "@/lib/account/media";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -28,11 +30,17 @@ import {
   normalizeLinearDocumentForRecord,
   textToLinearDocument,
 } from "@/lib/utils/linearDocument";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { trpc } from "@/lib/trpc/client";
 import { formatError } from "@/lib/utils/trpc-errors";
 import { cn } from "@/lib/utils";
-import { hasMeaningfulOrganizationLongDescription } from "../organizationLongDescription";
+import {
+  hasAnyOrganizationLongDescriptionContent,
+  hasMeaningfulOrganizationLongDescription,
+} from "../organizationLongDescription";
+import { useAccountSetupStep } from "../../_hooks/useAccountSetupStep";
 import { OnboardingMediaField } from "./OnboardingMediaField";
+import { OrganizationSetupDetailsPanel } from "./OrganizationSetupDetailsPanel";
 import {
   EMPTY_ACCOUNT_SETUP_FORM,
   type AccountSetupFieldErrors,
@@ -101,6 +109,34 @@ function formatStartDate(
 ): `${string}-${string}-${string}T${string}:${string}:${string}.${string}Z` {
   return `${date}T00:00:00.000Z` as `${string}-${string}-${string}T${string}:${string}:${string}.${string}Z`;
 }
+
+function isUriString(value: string): value is `${string}:${string}` {
+  return value.includes(":");
+}
+
+function toOptimisticMediaUri(url: string | null) {
+  if (!url || !isUriString(url)) return undefined;
+
+  return {
+    $type: "org.hypercerts.defs#uri" as const,
+    uri: url,
+  };
+}
+
+const organizationStepVariants = {
+  enter: (direction: number) => ({
+    opacity: 0,
+    x: direction > 0 ? 24 : -24,
+  }),
+  center: {
+    opacity: 1,
+    x: 0,
+  },
+  exit: (direction: number) => ({
+    opacity: 0,
+    x: direction > 0 ? -24 : 24,
+  }),
+} satisfies Variants;
 
 function buildFieldErrors(
   kind: OnboardingKind,
@@ -201,6 +237,11 @@ export function AccountSetupForm({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isFetchingBrandInfo, setIsFetchingBrandInfo] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useAccountSetupStep();
+  const [stepDirection, setStepDirection] = useState<1 | -1>(1);
+  const auth = useAtprotoStore((state) => state.auth);
+  const setAuth = useAtprotoStore((state) => state.setAuth);
+  const indexerUtils = indexerTrpc.useUtils();
 
   const upsertProfile = trpc.certified.actor.profile.upsert.useMutation();
   const upsertOrganization =
@@ -218,6 +259,16 @@ export function AccountSetupForm({
     domain !== null &&
     !isFetchingBrandInfo;
   const canSubmit = Object.keys(fieldErrors).length === 0 && !isSubmitting;
+  const isOrganizationFlow = kind === "organization";
+  const isOrganizationDetailsStep =
+    isOrganizationFlow && onboardingStep === 1;
+  const isOrganizationOptionalStepEmpty = useMemo(
+    () =>
+      form.country.trim().length === 0 &&
+      form.startDate === null &&
+      !hasAnyOrganizationLongDescriptionContent(form.longDescription),
+    [form.country, form.longDescription, form.startDate],
+  );
 
   const updateForm = useCallback(
     <K extends keyof AccountSetupFormState>(
@@ -380,15 +431,41 @@ export function AccountSetupForm({
         ...(avatar ? { avatar } : {}),
         ...(banner ? { banner } : {}),
       });
+      const optimisticAvatar = toOptimisticMediaUri(primaryPreviewUrl);
+      const optimisticBanner = toOptimisticMediaUri(bannerPreviewUrl);
+      const nextProfileRecord = {
+        ...profileResult.record,
+        ...(optimisticAvatar ? { avatar: optimisticAvatar } : {}),
+        ...(optimisticBanner ? { banner: optimisticBanner } : {}),
+      };
 
       if (kind === "user") {
         const nextAccount: AuthenticatedAccountState = {
           kind: "user",
           did,
-          profile: profileResult.record,
+          profile: nextProfileRecord,
           organization: null,
         };
 
+        await Promise.all([
+          indexerUtils.account.current.cancel(),
+          indexerUtils.account.byDid.cancel({ did }),
+        ]);
+        indexerUtils.account.current.setData(undefined, nextAccount);
+        indexerUtils.account.byDid.setData({ did }, nextAccount);
+
+        if (auth.status === "AUTHENTICATED") {
+          setAuth({
+            ...auth.user,
+            displayName: nextProfileRecord.displayName ?? auth.user.displayName,
+            avatar:
+              primaryPreviewUrl ??
+              resolveAccountMediaUrl(nextProfileRecord.avatar) ??
+              auth.user.avatar,
+          });
+        }
+
+        setOnboardingStep(0);
         onCompleted(
           nextAccount,
           buildOrganizationPreviewData({
@@ -434,10 +511,29 @@ export function AccountSetupForm({
       const nextAccount: AuthenticatedAccountState = {
         kind: "organization",
         did,
-        profile: profileResult.record,
+        profile: nextProfileRecord,
         organization: organizationResult.record,
       };
 
+      await Promise.all([
+        indexerUtils.account.current.cancel(),
+        indexerUtils.account.byDid.cancel({ did }),
+      ]);
+      indexerUtils.account.current.setData(undefined, nextAccount);
+      indexerUtils.account.byDid.setData({ did }, nextAccount);
+
+      if (auth.status === "AUTHENTICATED") {
+        setAuth({
+          ...auth.user,
+          displayName: nextProfileRecord.displayName ?? auth.user.displayName,
+          avatar:
+            primaryPreviewUrl ??
+            resolveAccountMediaUrl(nextProfileRecord.avatar) ??
+            auth.user.avatar,
+        });
+      }
+
+      setOnboardingStep(0);
       onCompleted(
         nextAccount,
         buildOrganizationPreviewData({
@@ -461,11 +557,42 @@ export function AccountSetupForm({
     fieldErrors,
     form,
     kind,
+    auth,
+    indexerUtils.account,
     onCompleted,
     primaryPreviewUrl,
+    setAuth,
+    setOnboardingStep,
     upsertOrganization,
     upsertProfile,
   ]);
+
+  const handleOrganizationStepAdvance = useCallback(() => {
+    setTouchedFields({
+      displayName: true,
+      shortDescription: true,
+      website: true,
+    });
+
+    if (Object.keys(fieldErrors).length > 0) {
+      return;
+    }
+
+    setSubmitError(null);
+    setStepDirection(1);
+    setOnboardingStep(1);
+  }, [fieldErrors, setOnboardingStep]);
+
+  const handleBackClick = useCallback(() => {
+    if (isOrganizationDetailsStep) {
+      setStepDirection(-1);
+      setOnboardingStep(0);
+      return;
+    }
+
+    setOnboardingStep(0);
+    onBack();
+  }, [isOrganizationDetailsStep, onBack, setOnboardingStep]);
 
   const visibleWebsiteError =
     kind === "organization" && touchedFields.website
@@ -478,11 +605,105 @@ export function AccountSetupForm({
     ? fieldErrors.shortDescription
     : undefined;
 
+  const mainFormFields = (
+    <>
+      {kind === "organization" && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">Website</label>
+
+          <InputGroup className="rounded-full">
+            <InputGroupAddon>
+              <GlobeIcon />
+            </InputGroupAddon>
+            <InputGroupInput
+              type="url"
+              value={form.website}
+              onChange={(event) => updateForm("website", event.target.value)}
+              placeholder="https://your-organization.org"
+              aria-invalid={visibleWebsiteError ? true : undefined}
+            />
+            <InputGroupAddon align="inline-end">
+              <InputGroupButton
+                type="button"
+                variant="secondary"
+                size="xs"
+                className="rounded-full"
+                onClick={() => void handleFetchBrandInfo()}
+                disabled={!canFetchBrandInfo}
+              >
+                {isFetchingBrandInfo ? (
+                  <Loader2Icon className="animate-spin" />
+                ) : (
+                  <SparklesIcon />
+                )}
+                Prefill
+              </InputGroupButton>
+            </InputGroupAddon>
+          </InputGroup>
+
+          <div className="mt-3 space-y-2">
+            <FieldError error={visibleWebsiteError} />
+            {brandfetchFeedback && (
+              <p
+                className={cn("text-xs", {
+                  "text-primary": brandfetchFeedback.tone === "success",
+                  "text-muted-foreground": brandfetchFeedback.tone === "neutral",
+                  "text-destructive": brandfetchFeedback.tone === "destructive",
+                })}
+              >
+                {brandfetchFeedback.message}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      <OnboardingMediaField
+        kind={kind}
+        primaryImage={form.primaryImage}
+        bannerImage={form.bannerImage}
+        displayName={form.displayName}
+        displayNamePlaceholder={
+          kind === "organization" ? "Organization name" : "Your name"
+        }
+        displayNameError={visibleDisplayNameError}
+        onPrimaryImageChange={(image) => updateForm("primaryImage", image)}
+        onBannerImageChange={(image) => updateForm("bannerImage", image)}
+        onDisplayNameChange={(value) => updateForm("displayName", value)}
+      />
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-foreground">Bio</label>
+        <Textarea
+          value={form.shortDescription}
+          onChange={(event) =>
+            updateForm("shortDescription", event.target.value)
+          }
+          placeholder={
+            kind === "organization"
+              ? "A short introduction to your organization and the work you do."
+              : "A short introduction to who you are."
+          }
+          rows={4}
+          aria-invalid={visibleShortDescriptionError ? true : undefined}
+        />
+        <div>
+          <FieldError error={visibleShortDescriptionError} />
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <>
       <HeaderContent
         left={
-          <Button type="button" variant="ghost" size="sm" onClick={onBack}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleBackClick}
+          >
             <ArrowLeftIcon />
             Back
           </Button>
@@ -496,6 +717,12 @@ export function AccountSetupForm({
         transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
         onSubmit={(event) => {
           event.preventDefault();
+
+          if (kind === "organization" && onboardingStep === 0) {
+            handleOrganizationStepAdvance();
+            return;
+          }
+
           void handleSubmit();
         }}
       >
@@ -516,112 +743,84 @@ export function AccountSetupForm({
           </p>
         </div>
 
-        {kind === "organization" && (
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">
-              Website
-            </label>
+        {kind === "organization" ? (
+          <AnimatePresence custom={stepDirection} mode="wait" initial={false}>
+            <motion.div
+              key={
+                isOrganizationDetailsStep
+                  ? "organization-step-1"
+                  : "organization-step-0"
+              }
+              custom={stepDirection}
+              variants={organizationStepVariants}
+              className="mx-auto w-full max-w-xl space-y-5"
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+            >
+              {isOrganizationDetailsStep ? (
+                <OrganizationSetupDetailsPanel
+                  did={did}
+                  form={form}
+                  canSubmit={canSubmit}
+                  isSubmitting={isSubmitting}
+                  submitLabel={
+                    isOrganizationOptionalStepEmpty
+                      ? "Skip and Continue"
+                      : "Continue"
+                  }
+                  submitError={submitError}
+                  onBack={() => {
+                    setStepDirection(-1);
+                    setOnboardingStep(0);
+                  }}
+                  onCountryChange={(value) => updateForm("country", value)}
+                  onStartDateChange={(value) => updateForm("startDate", value)}
+                  onLongDescriptionChange={(value) =>
+                    updateForm("longDescription", value)
+                  }
+                />
+              ) : (
+                <>
+                  {mainFormFields}
 
-            <InputGroup className="rounded-full">
-              <InputGroupAddon>
-                <GlobeIcon />
-              </InputGroupAddon>
-              <InputGroupInput
-                type="url"
-                value={form.website}
-                onChange={(event) => updateForm("website", event.target.value)}
-                placeholder="https://your-organization.org"
-                aria-invalid={visibleWebsiteError ? true : undefined}
-              />
-              <InputGroupAddon align="inline-end">
-                <InputGroupButton
-                  type="button"
-                  variant="secondary"
-                  size="xs"
-                  className="rounded-full"
-                  onClick={() => void handleFetchBrandInfo()}
-                  disabled={!canFetchBrandInfo}
-                >
-                  {isFetchingBrandInfo ? (
-                    <Loader2Icon className="animate-spin" />
-                  ) : (
-                    <SparklesIcon />
-                  )}
-                  Prefill
-                </InputGroupButton>
-              </InputGroupAddon>
-            </InputGroup>
-
-            <div className="mt-3 space-y-2">
-              <FieldError error={visibleWebsiteError} />
-              {brandfetchFeedback && (
-                <p
-                  className={cn("text-xs", {
-                    "text-primary": brandfetchFeedback.tone === "success",
-                    "text-muted-foreground":
-                      brandfetchFeedback.tone === "neutral",
-                    "text-destructive":
-                      brandfetchFeedback.tone === "destructive",
-                  })}
-                >
-                  {brandfetchFeedback.message}
-                </p>
+                  <Button
+                    type="submit"
+                    size="lg"
+                    className="w-full"
+                    disabled={!canSubmit}
+                  >
+                    Continue
+                    <ArrowRightIcon />
+                  </Button>
+                </>
               )}
-            </div>
-          </div>
+            </motion.div>
+          </AnimatePresence>
+        ) : (
+          <>
+            {mainFormFields}
+
+            {submitError && (
+              <p className="text-sm text-destructive">{submitError}</p>
+            )}
+
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full"
+              disabled={!canSubmit}
+            >
+              Continue
+              {isSubmitting ? (
+                <Loader2Icon className="animate-spin" />
+              ) : (
+                <ArrowRightIcon />
+              )}
+            </Button>
+          </>
         )}
-
-        <OnboardingMediaField
-          kind={kind}
-          primaryImage={form.primaryImage}
-          bannerImage={form.bannerImage}
-          displayName={form.displayName}
-          displayNamePlaceholder={
-            kind === "organization" ? "Organization name" : "Your name"
-          }
-          displayNameError={visibleDisplayNameError}
-          onPrimaryImageChange={(image) => updateForm("primaryImage", image)}
-          onBannerImageChange={(image) => updateForm("bannerImage", image)}
-          onDisplayNameChange={(value) => updateForm("displayName", value)}
-        />
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground">Bio</label>
-          <Textarea
-            value={form.shortDescription}
-            onChange={(event) =>
-              updateForm("shortDescription", event.target.value)
-            }
-            placeholder={
-              kind === "organization"
-                ? "A short introduction to your organization and the work you do."
-                : "A short introduction to who you are."
-            }
-            rows={4}
-            aria-invalid={visibleShortDescriptionError ? true : undefined}
-          />
-          <div>
-            <FieldError error={visibleShortDescriptionError} />
-          </div>
-        </div>
-
-        {submitError && (
-          <p className="text-sm text-destructive">{submitError}</p>
-        )}
-
-        <Button
-          type="submit"
-          size="lg"
-          className="w-full"
-          disabled={!canSubmit}
-        >
-          Continue
-          {isSubmitting ? (
-            <Loader2Icon className="animate-spin" />
-          ) : (
-            <ArrowRightIcon />
-          )}
-        </Button>
       </motion.form>
     </>
   );

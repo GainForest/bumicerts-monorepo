@@ -75,7 +75,7 @@ export function OnboardingMediaField({
       <button
         type="button"
         onClick={() => openImageEditor("banner", bannerImage)}
-        className="relative block w-full overflow-hidden rounded-[24px] bg-muted/40 border text-left"
+        className="relative block w-full overflow-hidden rounded-t-[24px] mask-b-from-0 bg-muted/80 border-t text-left"
       >
         <div className="aspect-[16/6] w-full">
           {bannerImageUrl ? (
@@ -98,7 +98,7 @@ export function OnboardingMediaField({
           )}
         </div>
 
-        <span className="absolute bottom-3 right-3 rounded-full bg-background/75 px-2.5 py-1 text-xs text-foreground backdrop-blur-sm">
+        <span className="absolute top-3 right-3 rounded-full bg-background/75 px-2.5 py-1 text-xs text-foreground backdrop-blur-sm">
           {bannerImageUrl ? "Change banner" : "Add banner"}
         </span>
       </button>
