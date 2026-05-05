@@ -9,7 +9,7 @@ import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { clientEnv } from "@/lib/env/client";
 import Link from "next/link";
 import { links } from "@/lib/links";
-import type { FundingReceiptItem } from "@/lib/graphql-dev/queries/fundingReceipts";
+import type { FundingReceiptItem } from "@/graphql/indexer/queries/fundingReceipts";
 
 interface DonationHistoryProps {
   userDid: string;

@@ -1,4 +1,4 @@
-import type { AttachmentItem } from "@/lib/graphql-dev/queries/attachments";
+import type { AttachmentItem } from "@/graphql/indexer/queries/attachments";
 import { TimelineEntry } from "./TimelineEntry";
 
 interface TimelineEntryListProps {

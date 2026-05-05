@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { clientEnv } from "@/lib/env/client";
-import type { FundingReceiptItem } from "@/lib/graphql-dev/queries/fundingReceipts";
+import type { FundingReceiptItem } from "@/graphql/indexer/queries/fundingReceipts";
 import {
   filterByPeriod,
   computeKPIs,

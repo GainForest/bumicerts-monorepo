@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { DatasetItem } from "@/lib/graphql-dev/queries";
+import type { DatasetItem } from "@/graphql/indexer/queries";
 import {
   formatTreeSubtitle,
   type TreeManagerItem,

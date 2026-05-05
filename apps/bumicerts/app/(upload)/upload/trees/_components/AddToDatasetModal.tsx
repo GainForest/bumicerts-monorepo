@@ -13,7 +13,7 @@ import {
 import { useModal } from "@/components/ui/modal/context";
 import { debug } from "@/lib/logger";
 import { cn } from "@/lib/utils";
-import type { DatasetItem } from "@/lib/graphql-dev/queries";
+import type { DatasetItem } from "@/graphql/indexer/queries";
 
 type AddToDatasetModalProps = {
   datasets: DatasetItem[];

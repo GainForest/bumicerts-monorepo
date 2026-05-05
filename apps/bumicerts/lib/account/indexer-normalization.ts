@@ -1,11 +1,11 @@
 import type {
   BlobLike,
   BskyFacet,
-} from "@/lib/graphql-dev/queries/_migration-helpers";
+} from "@/graphql/indexer/queries/_migration-helpers";
 import {
   normalizeBskyFacets,
   toResolvedLegacyBlob,
-} from "@/lib/graphql-dev/queries/_migration-helpers";
+} from "@/graphql/indexer/queries/_migration-helpers";
 
 type LeafletFacetFeatureLike = {
   __typename?: string;

@@ -10,7 +10,7 @@
 
 import { z } from "zod";
 import { queryRouter, publicQueryProcedure } from "./init";
-import * as fundingReceiptsModule from "@/lib/graphql-dev/queries/fundingReceipts";
+import * as fundingReceiptsModule from "@/graphql/indexer/queries/fundingReceipts";
 
 export const fundingQueryRouter = queryRouter({
   receipts: publicQueryProcedure

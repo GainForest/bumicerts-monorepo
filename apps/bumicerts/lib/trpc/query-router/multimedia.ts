@@ -6,7 +6,7 @@
 
 import { z } from "zod";
 import { queryRouter, publicQueryProcedure } from "./init";
-import * as multimediaModule from "@/lib/graphql-dev/queries/multimedia";
+import * as multimediaModule from "@/graphql/indexer/queries/multimedia";
 
 export const multimediaRouter = queryRouter({
   list: publicQueryProcedure

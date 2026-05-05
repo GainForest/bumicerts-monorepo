@@ -13,7 +13,7 @@
 
 import { z } from "zod";
 import { queryRouter, publicQueryProcedure } from "./init";
-import * as activitiesModule from "@/lib/graphql-dev/queries/activities";
+import * as activitiesModule from "@/graphql/indexer/queries/activities";
 
 export const activitiesRouter = queryRouter({
   list: publicQueryProcedure
@@ -38,5 +38,5 @@ export const activitiesRouter = queryRouter({
         }),
       ])
     )
-    .query(({ input }) => activitiesModule.fetch(input)),
+    .query(({ input }) => activitiesModule.fetchAny(input)),
 });

@@ -1,4 +1,4 @@
-import type { AttachmentItem } from "@/lib/graphql-dev/queries/attachments";
+import type { AttachmentItem } from "@/graphql/indexer/queries/attachments";
 import { TimelineEntryList } from "./TimelineEntryList";
 import { TimelineEmpty } from "./shared/TimelineEmpty";
 import { TimelineSkeleton } from "./shared/TimelineSkeleton";

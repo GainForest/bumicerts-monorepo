@@ -5,7 +5,7 @@ import {
   fetchActorOrganizationNodeByDid,
   fetchActorProfileNodeByDid,
   fetchCertifiedLocationNodeByAtUri,
-} from "@/lib/graphql-dev/queries/account";
+} from "@/graphql/indexer/queries/account";
 import { $parse as parseActorOrganizationRecord } from "@gainforest/generated/app/certified/actor/organization.defs";
 import { $parse as parseActorProfileRecord } from "@gainforest/generated/app/certified/actor/profile.defs";
 import { $parse as parseCertifiedLocationRecord } from "@gainforest/generated/app/certified/location.defs";

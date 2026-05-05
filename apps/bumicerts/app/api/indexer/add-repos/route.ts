@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { addRepos } from "@/lib/graphql-dev/mutations/add-repos";
+import { addRepos } from "@/graphql/indexer/mutations/add-repos";
 import {
   checkRateLimit,
   getClientIp,

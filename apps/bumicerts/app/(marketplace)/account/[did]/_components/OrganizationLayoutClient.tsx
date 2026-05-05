@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { addReposViaLocalRoute } from "@/lib/graphql-dev/mutations/add-repos";
+import { addReposViaLocalRoute } from "@/graphql/indexer/mutations/add-repos";
 
 interface OrganizationLayoutClientProps {
   did: string;

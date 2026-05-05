@@ -10,7 +10,7 @@ import { trpc } from "@/lib/trpc/client";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { toSerializableFile } from "@/lib/mutations-utils";
 import { formatError } from "@/lib/utils/trpc-errors";
-import type { AudioRecordingItem } from "@/lib/graphql-dev/queries/audio";
+import type { AudioRecordingItem } from "@/graphql/indexer/queries/audio";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 

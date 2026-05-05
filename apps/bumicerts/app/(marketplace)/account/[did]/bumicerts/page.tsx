@@ -10,7 +10,7 @@ import { getIndexerCaller } from "@/lib/trpc/indexer/server";
 import { requirePublicUrl } from "@/lib/url";
 import { activitiesToBumicertDataArray } from "@/lib/adapters";
 import type { BumicertData } from "@/lib/types";
-import * as activitiesModule from "@/lib/graphql-dev/queries/activities";
+import * as activitiesModule from "@/graphql/indexer/queries/activities";
 import { OrgTabBar } from "../_components/OrgTabBar";
 
 export async function generateMetadata({

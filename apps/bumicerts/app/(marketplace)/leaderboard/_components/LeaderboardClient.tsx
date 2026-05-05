@@ -8,7 +8,7 @@ import { useLeaderboardPeriod } from "../_hooks/useLeaderboardPeriod";
 import { LeaderboardShell } from "./LeaderboardShell";
 import { LeaderboardGrid } from "./LeaderboardGrid";
 import { LeaderboardSkeleton } from "./LeaderboardSkeleton";
-import type { FundingReceiptItem } from "@/lib/graphql-dev/queries/fundingReceipts";
+import type { FundingReceiptItem } from "@/graphql/indexer/queries/fundingReceipts";
 
 export function LeaderboardClient() {
   const { period, setPeriod } = useLeaderboardPeriod();

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import type { AttachmentItem } from "@/lib/graphql-dev/queries/attachments";
+import type { AttachmentItem } from "@/graphql/indexer/queries/attachments";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { EvidenceAdder } from "../timeline/EvidenceAdder";
 import { TimelinePanel } from "../timeline/viewers/TimelinePanel";

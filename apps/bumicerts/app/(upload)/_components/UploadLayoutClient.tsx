@@ -6,7 +6,7 @@ import { HeaderProvider } from "@/app/(marketplace)/_components/Header/context";
 import { ManageHeader } from "./Header/UploadHeader";
 import { UnifiedSidebar } from "@/components/layout/UnifiedSidebar";
 import { MobileNavDrawer } from "@/components/ui/MobileNavDrawer";
-import { addReposViaLocalRoute } from "@/lib/graphql-dev/mutations/add-repos";
+import { addReposViaLocalRoute } from "@/graphql/indexer/mutations/add-repos";
 
 interface ManageLayoutClientProps {
   did: string;
