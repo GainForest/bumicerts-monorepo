@@ -22,6 +22,10 @@ import {
   normalizeProfileBannerForRecord,
 } from "./indexer-normalization";
 import {
+  normalizeActorOrganizationRecordCandidate,
+  normalizeActorProfileRecordCandidate,
+} from "./record-normalization";
+import {
   AccountIndexerReadError,
   AccountRecordValidationError,
 } from "./errors";
@@ -527,25 +531,26 @@ function parseOrganizationRecord(
   try {
     return {
       did: node.did,
-      record: parseActorOrganizationRecord({
-        $type: "app.certified.actor.organization",
-        organizationType: node.organizationType ?? undefined,
-        urls: node.urls ?? undefined,
-        location:
-          node.location?.uri && node.location?.cid
-            ? {
-                uri: node.location.uri,
-                cid: node.location.cid,
-              }
-            : undefined,
-        foundedDate: node.foundedDate ?? undefined,
-        longDescription:
-          normalizeOrganizationLongDescriptionForRecord(
-            node.longDescription,
-          ) ?? undefined,
-        visibility: node.visibility ?? undefined,
-        createdAt: node.createdAt,
-      }),
+      record: parseActorOrganizationRecord(
+        normalizeActorOrganizationRecordCandidate({
+          organizationType: node.organizationType ?? undefined,
+          urls: node.urls ?? undefined,
+          location:
+            node.location?.uri && node.location?.cid
+              ? {
+                  uri: node.location.uri,
+                  cid: node.location.cid,
+                }
+              : undefined,
+          foundedDate: node.foundedDate ?? undefined,
+          longDescription:
+            normalizeOrganizationLongDescriptionForRecord(
+              node.longDescription,
+            ) ?? undefined,
+          visibility: node.visibility ?? undefined,
+          createdAt: node.createdAt,
+        }),
+      ),
     };
   } catch (cause) {
     throw new AccountRecordValidationError({
@@ -575,16 +580,17 @@ async function parseProfileRecord(
 
     return {
       did: node.did,
-      record: parseActorProfileRecord({
-        $type: "app.certified.actor.profile",
-        displayName: node.displayName ?? undefined,
-        description: node.description ?? undefined,
-        pronouns: node.pronouns ?? undefined,
-        website: node.website ?? undefined,
-        avatar: avatar ?? undefined,
-        banner: banner ?? undefined,
-        createdAt: node.createdAt,
-      }),
+      record: parseActorProfileRecord(
+        normalizeActorProfileRecordCandidate({
+          displayName: node.displayName ?? undefined,
+          description: node.description ?? undefined,
+          pronouns: node.pronouns ?? undefined,
+          website: node.website ?? undefined,
+          avatar: avatar ?? undefined,
+          banner: banner ?? undefined,
+          createdAt: node.createdAt,
+        }),
+      ),
     };
   } catch (cause) {
     throw new AccountRecordValidationError({

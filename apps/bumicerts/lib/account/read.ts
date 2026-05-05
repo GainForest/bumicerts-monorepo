@@ -25,6 +25,10 @@ import {
   normalizeProfileAvatarForRecord,
   normalizeProfileBannerForRecord,
 } from "./indexer-normalization";
+import {
+  normalizeActorOrganizationRecordCandidate,
+  normalizeActorProfileRecordCandidate,
+} from "./record-normalization";
 
 type CountryEntry = [CountryCode, CountryDefinition];
 
@@ -51,16 +55,17 @@ export async function readActorProfileRecordByDid(did: string) {
     const avatar = await normalizeProfileAvatarForRecord(node.avatar, did);
     const banner = await normalizeProfileBannerForRecord(node.banner, did);
 
-    return parseActorProfileRecord({
-      $type: "app.certified.actor.profile",
-      displayName: node.displayName ?? undefined,
-      description: node.description ?? undefined,
-      pronouns: node.pronouns ?? undefined,
-      website: node.website ?? undefined,
-      avatar: avatar ?? undefined,
-      banner: banner ?? undefined,
-      createdAt: node.createdAt,
-    });
+    return parseActorProfileRecord(
+      normalizeActorProfileRecordCandidate({
+        displayName: node.displayName ?? undefined,
+        description: node.description ?? undefined,
+        pronouns: node.pronouns ?? undefined,
+        website: node.website ?? undefined,
+        avatar: avatar ?? undefined,
+        banner: banner ?? undefined,
+        createdAt: node.createdAt,
+      }),
+    );
   } catch (cause) {
     throw new AccountRecordValidationError({
       did,
@@ -89,25 +94,26 @@ export async function readActorOrganizationRecordByDid(did: string) {
   }
 
   try {
-    return parseActorOrganizationRecord({
-      $type: "app.certified.actor.organization",
-      organizationType: node.organizationType ?? undefined,
-      urls: node.urls ?? undefined,
-      location:
-        node.location?.uri && node.location?.cid
-          ? {
-              uri: node.location.uri,
-              cid: node.location.cid,
-            }
-          : undefined,
-      foundedDate: node.foundedDate ?? undefined,
-      longDescription:
-        normalizeOrganizationLongDescriptionForRecord(
-          node.longDescription,
-        ) ?? undefined,
-      visibility: node.visibility ?? undefined,
-      createdAt: node.createdAt,
-    });
+    return parseActorOrganizationRecord(
+      normalizeActorOrganizationRecordCandidate({
+        organizationType: node.organizationType ?? undefined,
+        urls: node.urls ?? undefined,
+        location:
+          node.location?.uri && node.location?.cid
+            ? {
+                uri: node.location.uri,
+                cid: node.location.cid,
+              }
+            : undefined,
+        foundedDate: node.foundedDate ?? undefined,
+        longDescription:
+          normalizeOrganizationLongDescriptionForRecord(
+            node.longDescription,
+          ) ?? undefined,
+        visibility: node.visibility ?? undefined,
+        createdAt: node.createdAt,
+      }),
+    );
   } catch (cause) {
     throw new AccountRecordValidationError({
       did,
