@@ -63,7 +63,7 @@ export function OnboardingRoleSelector({
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-col items-center p-4 pt-8", className)}>
+    <div className={cn("flex flex-col items-center pt-8", className)}>
       <BumicertsMark />
       <h1 className="mt-3 text-center text-xl font-medium">{title}</h1>
       <p className="text-center text-sm text-muted-foreground">{description}</p>
@@ -91,7 +91,10 @@ function OnboardingRoleOptionCard({
     >
       <span
         className="flex items-center gap-1.5 text-2xl italic"
-        style={{ fontFamily: "var(--font-instrument-serif-var)", fontStyle: "italic" }}
+        style={{
+          fontFamily: "var(--font-instrument-serif-var)",
+          fontStyle: "italic",
+        }}
       >
         <Icon className="text-primary opacity-50" />
         {optionName}

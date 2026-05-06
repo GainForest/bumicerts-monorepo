@@ -30,8 +30,10 @@ export function AccountSetupChoiceModal() {
   );
 
   return (
-    <ModalContent className="-m-4 sm:-m-6">
-      <ModalTitle className="sr-only">Choose how you will use Bumicerts</ModalTitle>
+    <ModalContent>
+      <ModalTitle className="sr-only">
+        Choose how you will use Bumicerts
+      </ModalTitle>
       <ModalDescription className="sr-only">
         Choose whether to continue onboarding as a funder or a nature steward.
       </ModalDescription>
@@ -47,7 +49,8 @@ export function AccountSetupChoiceModal() {
               "Explore and fund impactful regenerative projects",
           },
           {
-            onClick: () => void handleOptionClick(links.manage.onboardOrganization),
+            onClick: () =>
+              void handleOptionClick(links.manage.onboardOrganization),
             Icon: Building2Icon,
             optionName: "Nature Steward",
             optionDescription:

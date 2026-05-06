@@ -166,6 +166,9 @@ export const links = {
     treeDataDetailedTemplate: "/templates/tree-data-detailed-xlsform.xlsx",
   },
   api: {
+    atproto: {
+      ensureProfileRecords: "/api/atproto/ensure-profile-records",
+    },
     brand: {
       fetchInfo: "/api/brand/fetch-info",
     },

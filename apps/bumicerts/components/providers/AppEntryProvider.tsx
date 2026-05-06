@@ -5,7 +5,33 @@ import { AccountSetupChoiceModal } from "@/components/global/modals/account-setu
 import { MODAL_IDS } from "@/components/global/modals/ids";
 import { useModal } from "@/components/ui/modal/context";
 import { hasSeenAccountSetupChoiceInSession, markAccountSetupChoiceSeenInSession } from "@/lib/account-setup-session";
+import { links } from "@/lib/links";
 import { useAccount } from "./AccountProvider";
+
+function EnsureProfileRecordsEntryEffect() {
+  const { account, isResolved } = useAccount();
+  const attemptedDidSetRef = useRef(new Set<string>());
+
+  useEffect(() => {
+    if (!isResolved || typeof account?.did !== "string") {
+      return;
+    }
+
+    if (attemptedDidSetRef.current.has(account.did)) {
+      return;
+    }
+
+    attemptedDidSetRef.current.add(account.did);
+
+    void fetch(links.api.atproto.ensureProfileRecords, {
+      method: "POST",
+    }).catch(() => {
+      // Fire-and-forget on app entry. Best effort only.
+    });
+  }, [account, isResolved]);
+
+  return null;
+}
 
 function UnknownAccountSetupEntryEffect() {
   const { account, isResolved } = useAccount();
@@ -75,6 +101,7 @@ function UnknownAccountSetupEntryEffect() {
 export function AppEntryProvider({ children }: { children: ReactNode }) {
   return (
     <>
+      <EnsureProfileRecordsEntryEffect />
       <UnknownAccountSetupEntryEffect />
       {children}
     </>
