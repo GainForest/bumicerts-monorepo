@@ -54,8 +54,15 @@ export const upsertActorProfile = (
 
     const existing = yield* fetchRecord(COLLECTION, RKEY, $parse, makePdsError);
 
+    // Some app entry flows intentionally seed an empty invalid
+    // app.certified.actor.profile record so onboarding still appears before the
+    // first real save is indexed. When we encounter that placeholder here, it
+    // may be missing createdAt; treat it as uninitialized and synthesize the
+    // timestamp so onboarding can heal the record in place.
     const createdAt =
-      existing !== null ? existing.createdAt : new Date().toISOString();
+      typeof existing?.createdAt === "string"
+        ? existing.createdAt
+        : new Date().toISOString();
 
     const candidate = { $type: COLLECTION, ...input, createdAt };
 
