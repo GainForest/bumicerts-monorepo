@@ -10,7 +10,7 @@
  * 2. SIGN-IN domains  — dropdown options shown in the login modal.
  *    Users may authenticate from any ATProto PDS; we show the most common ones
  *    and also allow a custom "type your own" entry.
- *    - Production:        gainforest.id, certified.app, bsky.social
+ *    - Production:        gainforest.id, certified.one, bsky.social
  *    - Non-prod:          same + climateai.org (for internal testing accounts)
  *
  * Rule: "climateai.org" is NEVER shown to production users in any dropdown.
@@ -39,14 +39,14 @@ export const defaultSignupPdsDomain: string = signupPDSDomains[0];
 
 const COMMON_LOGIN_DOMAINS = [
   "gainforest.id",
-  "certified.app",
+  "certified.one",
   "bsky.social",
 ] as const;
 
 const DEV_LOGIN_DOMAINS = [
   "gainforest.id",
   "climateai.org",
-  "certified.app",
+  "certified.one",
   "bsky.social",
 ] as const;
 
