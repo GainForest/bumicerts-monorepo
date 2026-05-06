@@ -182,9 +182,6 @@ export const links = {
         image: "/api/aws/upload/image",
       },
     },
-    indexer: {
-      addRepos: "/api/indexer/add-repos",
-    },
     searchActors: (q: string, limit: number = 5) =>
       `https://public.api.bsky.app/xrpc/app.bsky.actor.searchActors?q=${encodeURIComponent(q)}&limit=${limit}`,
     getProfile: (actor: string) =>

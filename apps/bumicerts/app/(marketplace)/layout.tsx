@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { NavbarContextProvider } from "./_components/Navbar/context";
 import { HeaderProvider } from "./_components/Header/context";
-import { AppEntryProvider } from "@/components/providers/AppEntryProvider";
+import { MarketplaceEntryProvider } from "@/components/providers/MarketplaceEntryProvider";
 import { ModalProvider } from "@/components/ui/modal/context";
 import { WagmiProvider } from "@/components/providers/WagmiProvider";
 import { TopNavbar } from "./_components/Navbar/TopNavbar";
@@ -22,12 +22,12 @@ export default function MarketplaceLayout({
   if (isHomePage) {
     return (
       <NavbarContextProvider>
-        <AppEntryProvider>
+        <MarketplaceEntryProvider>
           <div className="min-h-screen flex flex-col">
             <TopNavbar />
             <main className="flex-1">{children}</main>
           </div>
-        </AppEntryProvider>
+        </MarketplaceEntryProvider>
       </NavbarContextProvider>
     );
   }
@@ -37,7 +37,7 @@ export default function MarketplaceLayout({
       <HeaderProvider>
         <WagmiProvider>
           <ModalProvider>
-            <AppEntryProvider>
+            <MarketplaceEntryProvider>
               {/* Desktop: sidebar + content */}
               <div className="hidden md:flex h-screen overflow-hidden">
                 <UnifiedSidebar />
@@ -58,7 +58,7 @@ export default function MarketplaceLayout({
                   {children}
                 </div>
               </div>
-            </AppEntryProvider>
+            </MarketplaceEntryProvider>
           </ModalProvider>
         </WagmiProvider>
       </HeaderProvider>

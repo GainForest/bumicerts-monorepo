@@ -7,7 +7,6 @@ import {
 import { getIndexerCaller } from "@/lib/trpc/indexer/server";
 import { OrgHero } from "./_components/OrgHero";
 import { OrgTabBar } from "./_components/OrgTabBar";
-import { OrganizationLayoutClient } from "./_components/OrganizationLayoutClient";
 import ErrorPage from "@/components/error-page";
 import Container from "@/components/ui/container";
 import { AccountOnboardingRequired } from "../_components/AccountOnboardingRequired";
@@ -31,15 +30,13 @@ export default async function AccountLayout({
   } catch (error) {
     console.error("[AccountLayout] Failed to read account", did, error);
     return (
-      <OrganizationLayoutClient did={did}>
-        <Container className="pt-4">
-          <ErrorPage
-            title="Couldn't load this account"
-            description="We had trouble fetching this account's data. Please try again."
-            error={error}
-          />
-        </Container>
-      </OrganizationLayoutClient>
+      <Container className="pt-4">
+        <ErrorPage
+          title="Couldn't load this account"
+          description="We had trouble fetching this account's data. Please try again."
+          error={error}
+        />
+      </Container>
     );
   }
 
@@ -51,11 +48,9 @@ export default async function AccountLayout({
     }
 
     return (
-      <OrganizationLayoutClient did={did}>
-        <main className="w-full">
-          <AccountOnboardingRequired />
-        </main>
-      </OrganizationLayoutClient>
+      <main className="w-full">
+        <AccountOnboardingRequired />
+      </main>
     );
   }
 
@@ -65,28 +60,24 @@ export default async function AccountLayout({
     });
 
     return (
-      <OrganizationLayoutClient did={did}>
-        <main className="w-full">
-          <Container className="pt-4 pb-8">
-            <OrgHero organization={userProfile} showEditButton={isOwner} />
-            <OrgTabBar did={did} accountKind="user" />
-            {children}
-          </Container>
-        </main>
-      </OrganizationLayoutClient>
+      <main className="w-full">
+        <Container className="pt-4 pb-8">
+          <OrgHero organization={userProfile} showEditButton={isOwner} />
+          <OrgTabBar did={did} accountKind="user" />
+          {children}
+        </Container>
+      </main>
     );
   }
   const organization = buildOrganizationDataFromOrganizationAccount(account);
 
   return (
-    <OrganizationLayoutClient did={did}>
-      <main className="w-full">
-        <Container className="pt-4 pb-8">
-          <OrgHero organization={organization} showEditButton={isOwner} />
-          <OrgTabBar did={organization.did} accountKind="organization" />
-          {children}
-        </Container>
-      </main>
-    </OrganizationLayoutClient>
+    <main className="w-full">
+      <Container className="pt-4 pb-8">
+        <OrgHero organization={organization} showEditButton={isOwner} />
+        <OrgTabBar did={organization.did} accountKind="organization" />
+        {children}
+      </Container>
+    </main>
   );
 }

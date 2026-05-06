@@ -145,7 +145,4 @@ export const RATE_LIMITS = {
   generateShortDescription: {
     byIp: { windowMs: 60 * 60 * 1000, maxAttempts: 15 },
   },
-  indexerAddRepos: {
-    byIp: { windowMs: 60 * 1000, maxAttempts: 30 },
-  },
 } as const;
