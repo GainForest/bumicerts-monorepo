@@ -48,11 +48,17 @@ export function BumicertCardVisual({
   className,
 }: BumicertCardVisualProps) {
   const imageSrc = coverImage ? resolveImageSrc(coverImage) : null;
+  const normalizedObjectives = objectives.filter(
+    (objective): objective is string =>
+      typeof objective === "string" && objective.trim().length > 0,
+  );
 
   const objectivesToDisplay = [
-    objectives[0],
-    objectives.length > 1 ? `+${objectives.length - 1}` : null,
-  ].filter((o) => o !== null);
+    normalizedObjectives[0],
+    normalizedObjectives.length > 1
+      ? `+${normalizedObjectives.length - 1}`
+      : null,
+  ].filter((objective): objective is string => typeof objective === "string");
 
   return (
     <div
@@ -84,21 +90,23 @@ export function BumicertCardVisual({
           )}
         </div>
         {/* Objective chips */}
-        <div className="w-full flex items-center gap-2 flex-wrap mt-4">
-          {objectivesToDisplay.map((obj) => {
-            return (
-              <span
-                key={obj}
-                className={cn(
-                  "text-sm text-muted-foreground bg-muted rounded-full px-2.5 py-1 font-medium",
-                  obj.startsWith("+") && "text-foreground",
-                )}
-              >
-                {obj}
-              </span>
-            );
-          })}
-        </div>
+        {objectivesToDisplay.length > 0 && (
+          <div className="w-full flex items-center gap-2 flex-wrap mt-4">
+            {objectivesToDisplay.map((obj) => {
+              return (
+                <span
+                  key={obj}
+                  className={cn(
+                    "text-sm text-muted-foreground bg-muted rounded-full px-2.5 py-1 font-medium",
+                    obj.startsWith("+") && "text-foreground",
+                  )}
+                >
+                  {obj}
+                </span>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Header overlay */}
