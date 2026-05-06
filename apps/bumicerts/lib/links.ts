@@ -79,6 +79,8 @@ export const links = {
     certifiedApp: {
       profileUrl: didCatcher((did) => `https://certified.app/profile/${did}`),
     },
+    codeOfConduct:
+      "https://gainforest.notion.site/GainForest-Community-Code-of-Conduct-23094a2f76b380118bc0dfe560df4a2e",
     polygonsAppUrl: (
       options?:
         | {

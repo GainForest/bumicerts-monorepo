@@ -28,6 +28,7 @@ type OrganizationSetupDetailsPanelProps = {
   did: string;
   form: AccountSetupFormState;
   canSubmit: boolean;
+  showAiGeneratedReviewNotice: boolean;
   isSubmitting: boolean;
   submitLabel: string;
   submitError: string | null;
@@ -43,6 +44,7 @@ export function OrganizationSetupDetailsPanel({
   did,
   form,
   canSubmit,
+  showAiGeneratedReviewNotice,
   isSubmitting,
   submitLabel,
   submitError,
@@ -174,12 +176,24 @@ export function OrganizationSetupDetailsPanel({
         <p className="text-sm text-destructive">{submitError}</p>
       ) : null}
 
+      {showAiGeneratedReviewNotice ? (
+        <p className="text-center text-muted-foreground">
+          Please review and edit the generated content to accurately represent
+          your organization before saving.
+        </p>
+      ) : null}
+
       <div className="flex items-center gap-3">
         <Button type="button" size="lg" variant="outline" onClick={onBack}>
           <ArrowLeftIcon />
           Back
         </Button>
-        <Button type="submit" size="lg" className="flex-1" disabled={!canSubmit}>
+        <Button
+          type="submit"
+          size="lg"
+          className="flex-1"
+          disabled={!canSubmit}
+        >
           {submitLabel}
           {isSubmitting ? (
             <Loader2Icon className="animate-spin" />

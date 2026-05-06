@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { toSerializableFile } from "@gainforest/atproto-mutations-next";
@@ -19,6 +20,7 @@ import { links } from "@/lib/links";
 import type { OrganizationData } from "@/lib/types";
 import { resolveAccountMediaUrl } from "@/lib/account/media";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import {
   InputGroup,
@@ -234,6 +236,8 @@ export function AccountSetupForm({
     tone: "neutral" | "success" | "destructive";
     message: string;
   } | null>(null);
+  const [hasAcceptedCodeOfConduct, setHasAcceptedCodeOfConduct] =
+    useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isFetchingBrandInfo, setIsFetchingBrandInfo] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -262,6 +266,7 @@ export function AccountSetupForm({
   const isOrganizationFlow = kind === "organization";
   const isOrganizationDetailsStep =
     isOrganizationFlow && onboardingStep === 1;
+  const hasSuccessfulPrefill = brandfetchFeedback?.tone === "success";
   const isOrganizationOptionalStepEmpty = useMemo(
     () =>
       form.country.trim().length === 0 &&
@@ -578,10 +583,14 @@ export function AccountSetupForm({
       return;
     }
 
+    if (!hasAcceptedCodeOfConduct) {
+      return;
+    }
+
     setSubmitError(null);
     setStepDirection(1);
     setOnboardingStep(1);
-  }, [fieldErrors, setOnboardingStep]);
+  }, [fieldErrors, hasAcceptedCodeOfConduct, setOnboardingStep]);
 
   const handleBackClick = useCallback(() => {
     if (isOrganizationDetailsStep) {
@@ -764,6 +773,7 @@ export function AccountSetupForm({
                   did={did}
                   form={form}
                   canSubmit={canSubmit}
+                  showAiGeneratedReviewNotice={hasSuccessfulPrefill}
                   isSubmitting={isSubmitting}
                   submitLabel={
                     isOrganizationOptionalStepEmpty
@@ -785,11 +795,37 @@ export function AccountSetupForm({
                 <>
                   {mainFormFields}
 
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      id="organization-code-of-conduct"
+                      checked={hasAcceptedCodeOfConduct}
+                      onCheckedChange={(checked) =>
+                        setHasAcceptedCodeOfConduct(checked === true)
+                      }
+                      className="mt-0.5 bg-background"
+                    />
+                    <label
+                      htmlFor="organization-code-of-conduct"
+                      className="text-sm text-muted-foreground"
+                    >
+                      I have reviewed and agree to the{" "}
+                      <Link
+                        href={links.external.codeOfConduct}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-foreground underline underline-offset-4"
+                      >
+                        Code of Conduct
+                      </Link>
+                      .
+                    </label>
+                  </div>
+
                   <Button
                     type="submit"
                     size="lg"
                     className="w-full"
-                    disabled={!canSubmit}
+                    disabled={!canSubmit || !hasAcceptedCodeOfConduct}
                   >
                     Continue
                     <ArrowRightIcon />
