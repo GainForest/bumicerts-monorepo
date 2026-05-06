@@ -3,6 +3,9 @@ export const MODAL_IDS = {
   // Auth
   AUTH: "auth",
 
+  // Account setup
+  ACCOUNT_SETUP_CHOICE: "account/setup-choice",
+
   // Cart
   CART: "cart",
 

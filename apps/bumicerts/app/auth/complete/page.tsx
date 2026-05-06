@@ -1,51 +1,33 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useAtprotoStore } from "@/components/stores/atproto";
+import { Loader2Icon } from "lucide-react";
+import { motion } from "framer-motion";
+import { BumicertsMark } from "@/components/auth/OnboardingRoleSelector";
+import { Button } from "@/components/ui/button";
 import Container from "@/components/ui/container";
 import { links } from "@/lib/links";
-import {
-  Building2Icon,
-  ChevronRight,
-  HandHeartIcon,
-  Loader2Icon,
-  XIcon,
-} from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import {
-  BumicertsMark,
-  OnboardingRoleSelector,
-} from "@/components/auth/OnboardingRoleSelector";
-
-const HAS_SEEN_ONBOARDING_IN_PAST_KEY = (did: string) =>
-  `has-${did}-seen-onboarding-in-past`;
-const getHasSeenOnboardingInPast = (did: string) => {
-  if (typeof localStorage === "undefined") return false;
-  return localStorage.getItem(HAS_SEEN_ONBOARDING_IN_PAST_KEY(did)) !== null;
-};
 
 const AUTH_REDIRECT_KEY = "auth_redirect";
-const getRedirectToUri = () => {
-  if (typeof localStorage === "undefined") return "/";
-  return localStorage.getItem(AUTH_REDIRECT_KEY) ?? "/";
-};
-/**
- * Lightweight page that handles post-login redirect.
- *
- * Both OAuth callbacks redirect here. This page reads the saved return path
- * from localStorage (set by LoginModal before login) and navigates there,
- * falling back to "/" if no path was saved.
- */
+
+function getRedirectToUri() {
+  if (typeof localStorage === "undefined") {
+    return links.root;
+  }
+
+  return localStorage.getItem(AUTH_REDIRECT_KEY) ?? links.root;
+}
+
 export default function AuthCompletePage() {
   const router = useRouter();
-  const auth = useAtprotoStore((state) => state.auth);
-  const userDid = auth.user?.did;
   const redirectToUriRef = useRef<string | null>(null);
+  const didAttemptAutoRedirectRef = useRef(false);
 
   const getRedirectToUriCached = useCallback(() => {
-    if (redirectToUriRef.current) return redirectToUriRef.current;
+    if (redirectToUriRef.current) {
+      return redirectToUriRef.current;
+    }
 
     const redirectToUri = getRedirectToUri();
     redirectToUriRef.current = redirectToUri;
@@ -54,144 +36,45 @@ export default function AuthCompletePage() {
 
   const redirect = useCallback(() => {
     const redirectToUri = getRedirectToUriCached();
-    router.replace(redirectToUri);
     localStorage.removeItem(AUTH_REDIRECT_KEY);
-  }, [router, getRedirectToUriCached]);
-
-  // One time state to track if user has stayed on the page for more than 10 seconds.
-  const [hasWaitedEnough, setHasWaitedEnough] = useState(false);
-  setTimeout(() => {
-    setHasWaitedEnough(true);
-  }, 10000);
-
-  const [didUserCancelOnboarding, setDidUserCancelOnboarding] = useState(false);
-  const isOnboardingInProgress = useMemo(() => {
-    if (!userDid) return false;
-    if (didUserCancelOnboarding) return false;
-    return !getHasSeenOnboardingInPast(userDid);
-  }, [userDid, didUserCancelOnboarding]);
-
-  const handleOnboardingOptionClick = useCallback(
-    (href: string) => {
-      // Silenty set the has seen onboarding value. Even if userDid is a nullish value.
-      localStorage.setItem(
-        HAS_SEEN_ONBOARDING_IN_PAST_KEY(userDid ?? "unknown"),
-        "true",
-      );
-      localStorage.removeItem(AUTH_REDIRECT_KEY);
-      setTimeout(() => {
-        router.replace(href);
-      });
-    },
-    [router, userDid],
-  );
-
-  const shouldRedirect = isOnboardingInProgress
-    ? false
-    : hasWaitedEnough
-      ? true
-      : userDid
-        ? getHasSeenOnboardingInPast(userDid)
-        : false;
+    router.replace(redirectToUri);
+  }, [getRedirectToUriCached, router]);
 
   useEffect(() => {
-    if (shouldRedirect) {
-      redirect();
+    if (didAttemptAutoRedirectRef.current) {
       return;
     }
-  }, [shouldRedirect, redirect]);
+
+    didAttemptAutoRedirectRef.current = true;
+    redirect();
+  }, [redirect]);
 
   return (
-    <Container className="flex flex-col items-center justify-center min-h-screen">
+    <Container className="flex min-h-screen flex-col items-center justify-center">
       <BumicertsMark showAnimations />
       <motion.div
         initial={{ scale: 0.2, filter: "blur(20px)", opacity: 0.5 }}
         animate={{ scale: 1, filter: "blur(0px)", opacity: 1 }}
-        transition={{
-          delay: 0.5,
-          duration: 0.5,
-        }}
-        className="flex flex-col items-center gap-1 mt-12 font-medium"
+        transition={{ delay: 0.5, duration: 0.5 }}
+        className="mt-12 flex flex-col items-center gap-1 font-medium"
       >
-        <Loader2Icon className="animate-spin size-6 text-primary" />
+        <Loader2Icon className="size-6 animate-spin text-primary" />
         Signing you in...
-        {shouldRedirect && (
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 10, duration: 0.25 }}
+          className="mt-2"
+        >
           <Button
-            size={"sm"}
-            variant={"link"}
-            className="mt-2"
+            size="sm"
+            variant="link"
             onClick={redirect}
           >
             Taking too long? Click here to redirect.
           </Button>
-        )}
+        </motion.div>
       </motion.div>
-      <AnimatePresence>
-        {isOnboardingInProgress && (
-          <motion.div
-            className="fixed h-screen w-screen bg-black/0 sm:bg-black/20 flex items-center justify-center"
-            initial={{
-              backdropFilter: "blur(0px)",
-              opacity: 0,
-            }}
-            animate={{ backdropFilter: "blur(10px)", opacity: 1 }}
-          >
-            <motion.div
-              className="relative bg-background rounded-3xl shadow-none sm:shadow-2xl w-full max-w-sm h-screen flex flex-col justify-center sm:h-auto"
-              initial={{
-                scale: 0.4,
-                filter: "blur(10px)",
-                opacity: 0,
-              }}
-              animate={{
-                scale: 1,
-                filter: "blur(0px)",
-                opacity: 1,
-              }}
-            >
-              <Button
-                variant={"secondary"}
-                size={"icon-sm"}
-                className="absolute top-3 right-3 hidden sm:inline-flex"
-                onClick={() => setDidUserCancelOnboarding(true)}
-              >
-                <XIcon />
-              </Button>
-              <OnboardingRoleSelector
-                title="How will you use Bumicerts?"
-                description="Choose your role to get started..."
-                options={[
-                  {
-                    onClick: () =>
-                      handleOnboardingOptionClick(getRedirectToUriCached()),
-                    Icon: HandHeartIcon,
-                    optionName: "Funder",
-                    optionDescription:
-                      "Explore and fund impactful regenerative projects",
-                  },
-                  {
-                    onClick: () =>
-                      handleOnboardingOptionClick(links.manage.home),
-                    Icon: Building2Icon,
-                    optionName: "Nature Steward",
-                    optionDescription:
-                      "Manage your organization, issue Bumicerts and upload supporting evidence",
-                  },
-                ]}
-                footer={
-                  <Button
-                    className="mt-4 w-full"
-                    variant="ghost"
-                    onClick={() => setDidUserCancelOnboarding(true)}
-                  >
-                    I&apos;ll decide later <ChevronRight />
-                  </Button>
-                }
-              />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </Container>
   );
 }
