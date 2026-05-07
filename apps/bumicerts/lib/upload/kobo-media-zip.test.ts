@@ -14,15 +14,15 @@ async function makeMediaZipFile(): Promise<File> {
     new Uint8Array([1, 2, 3]),
   );
   zip.file(
-    "gainforest/attachments/form-hash/bd20be4b-bb56-4efc-94be-c551aa249fe6/bark.PNG",
+    "field-team/attachments/form-hash/bd20be4b-bb56-4efc-94be-c551aa249fe6/bark.PNG",
     new Uint8Array([4, 5, 6]),
   );
   zip.file(
-    "gainforest/attachments/form-hash/ABCDEFAB-1234-4567-89AB-ABCDEFABCDEF/case.jpeg",
+    "field-team/attachments/ABCDEFAB-1234-4567-89AB-ABCDEFABCDEF/case.jpeg",
     new Uint8Array([7, 8, 9]),
   );
   zip.file(
-    "other/attachments/form-hash/5986026a-1315-42d7-854a-88e1a7d98ee9/ignored.jpeg",
+    "other/media/form-hash/5986026a-1315-42d7-854a-88e1a7d98ee9/ignored.jpeg",
     new Uint8Array([10, 11, 12]),
   );
   zip.file(
@@ -48,6 +48,9 @@ describe("Kobo media ZIP index", () => {
     expect(index.fileName).toBe("media.zip");
     expect(index.entries).toHaveLength(3);
     expect(index.submissionCount).toBe(3);
+    expect(
+      index.entries.some((entry) => entry.fileName === "ignored.jpeg"),
+    ).toBe(false);
 
     const match = resolveKoboMediaZipEntry(
       index,
@@ -72,6 +75,9 @@ describe("Kobo media ZIP index", () => {
     );
 
     expect(match?.fileName).toBe("bark.PNG");
+    expect(match?.entryPath).toBe(
+      "field-team/attachments/form-hash/bd20be4b-bb56-4efc-94be-c551aa249fe6/bark.PNG",
+    );
     expect(match?.mimeType).toBe("image/png");
   });
 
@@ -86,6 +92,9 @@ describe("Kobo media ZIP index", () => {
     );
 
     expect(match?.fileName).toBe("case.jpeg");
+    expect(match?.entryPath).toBe(
+      "field-team/attachments/ABCDEFAB-1234-4567-89AB-ABCDEFABCDEF/case.jpeg",
+    );
   });
 
   test("reads a ZIP entry as a SerializableFile", async () => {

@@ -127,4 +127,26 @@ describe("parseAndValidateRows photo extraction", () => {
       },
     ]);
   });
+
+  test("uses a Kobo URL companion fallback only once for multi-value filename cells", () => {
+    const result = parseAndValidateRows(
+      [VALID_MAPPED_ROW],
+      [
+        {
+          _uuid: "row-uuid",
+          "Photo – Leaf": "missing-one.jpeg, missing-two.jpeg",
+          "Photo – Leaf_URL": "https://example.com/leaf.jpeg",
+        },
+      ],
+      [{ sourceColumn: "Photo – Leaf", targetField: "photoUrl" }],
+    );
+
+    expect(result.valid[0]?.photos).toEqual([
+      {
+        source: "url",
+        url: "https://example.com/leaf.jpeg",
+        subjectPart: "leaf",
+      },
+    ]);
+  });
 });

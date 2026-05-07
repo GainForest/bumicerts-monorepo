@@ -161,6 +161,9 @@ function extractPhotos(
     }
 
     const urls = splitPhotoUrls(cellValue);
+    const fallbackUrl = getPhotoUrlFallback(rawRow, sourceColumn);
+    let usedFallbackUrl = false;
+
     for (const value of urls) {
       if (koboMediaZipIndex) {
         const zipEntry = resolveKoboMediaZipEntry(
@@ -185,9 +188,9 @@ function extractPhotos(
         continue;
       }
 
-      const fallbackUrl = getPhotoUrlFallback(rawRow, sourceColumn);
-      if (fallbackUrl) {
+      if (fallbackUrl && !usedFallbackUrl) {
         photos.push({ source: "url", url: fallbackUrl, subjectPart });
+        usedFallbackUrl = true;
       }
     }
   }

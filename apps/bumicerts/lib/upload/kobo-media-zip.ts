@@ -43,15 +43,22 @@ function getFileNameFromPath(path: string): string | null {
 
 function getSubmissionUuidFromPath(path: string): string | null {
   const segments = getPathSegments(path);
-  if (
-    segments.length !== 5 ||
-    segments[0] !== "gainforest" ||
-    segments[1] !== "attachments"
-  ) {
+  const parentDirectoryIndex = segments.length - 2;
+
+  if (parentDirectoryIndex < 1) {
     return null;
   }
 
-  const submissionUuid = segments[3];
+  const hasAttachmentsAncestor = segments.some(
+    (segment, index) =>
+      index < parentDirectoryIndex && segment.toLowerCase() === "attachments",
+  );
+
+  if (!hasAttachmentsAncestor) {
+    return null;
+  }
+
+  const submissionUuid = segments[parentDirectoryIndex];
   return submissionUuid && submissionUuid.length > 0
     ? normalizeSubmissionUuid(submissionUuid)
     : null;
@@ -71,7 +78,9 @@ export function getImageMimeTypeFromFileName(fileName: string): string {
 }
 
 export function isAcceptedKoboMediaImage(fileName: string): boolean {
-  return IMAGE_MIME_BY_EXTENSION.has(fileName.split(".").pop()?.toLowerCase() ?? "");
+  return IMAGE_MIME_BY_EXTENSION.has(
+    fileName.split(".").pop()?.toLowerCase() ?? "",
+  );
 }
 
 export async function loadKoboMediaZipArchive(
