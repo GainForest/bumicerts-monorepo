@@ -137,8 +137,20 @@ function getPhotoUrlFallback(
   rawRow: Record<string, string>,
   sourceColumn: string,
 ): string | null {
-  const fallbackValue = rawRow[`${sourceColumn}_URL`]?.trim();
-  return fallbackValue && isLikelyUrl(fallbackValue) ? fallbackValue : null;
+  const companionColumn = `${sourceColumn}_url`.toLowerCase();
+
+  for (const [columnName, value] of Object.entries(rawRow)) {
+    if (columnName.toLowerCase() !== companionColumn) {
+      continue;
+    }
+
+    const fallbackValue = value.trim();
+    if (fallbackValue && isLikelyUrl(fallbackValue)) {
+      return fallbackValue;
+    }
+  }
+
+  return null;
 }
 
 /**

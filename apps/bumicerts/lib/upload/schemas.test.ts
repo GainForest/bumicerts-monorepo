@@ -128,6 +128,28 @@ describe("parseAndValidateRows photo extraction", () => {
     ]);
   });
 
+  test("uses lowercase Kobo URL companion columns as fallback", () => {
+    const result = parseAndValidateRows(
+      [VALID_MAPPED_ROW],
+      [
+        {
+          _uuid: "row-uuid",
+          "Photo – Leaf": "leaf.jpeg",
+          "Photo – Leaf_url": "https://example.com/lowercase-leaf.jpeg",
+        },
+      ],
+      [{ sourceColumn: "Photo – Leaf", targetField: "photoUrl" }],
+    );
+
+    expect(result.valid[0]?.photos).toEqual([
+      {
+        source: "url",
+        url: "https://example.com/lowercase-leaf.jpeg",
+        subjectPart: "leaf",
+      },
+    ]);
+  });
+
   test("uses a Kobo URL companion fallback only once for multi-value filename cells", () => {
     const result = parseAndValidateRows(
       [VALID_MAPPED_ROW],
