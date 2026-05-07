@@ -6,6 +6,7 @@ import ColumnMappingStep from "./ColumnMappingStep";
 import PreviewStep from "./PreviewStep";
 import UploadStep, { readPendingUpload } from "./UploadStep";
 import type { ColumnMapping, ValidatedRow } from "@/lib/upload/types";
+import type { KoboMediaZipIndex } from "@/lib/upload/kobo-media-zip";
 import {
   NO_UPLOAD_DATASET_SELECTION,
   type UploadDatasetSelection,
@@ -18,6 +19,8 @@ import {
 type WizardState = {
   currentStep: 1 | 2 | 3 | 4;
   file: File | null;
+  koboMediaZipFile: File | null;
+  koboMediaZipIndex: KoboMediaZipIndex | null;
   parsedData: Record<string, string>[] | null;
   headers: string[] | null;
   mappings: ColumnMapping[];
@@ -29,6 +32,8 @@ type WizardState = {
 const INITIAL_STATE: WizardState = {
   currentStep: 1,
   file: null,
+  koboMediaZipFile: null,
+  koboMediaZipIndex: null,
   parsedData: null,
   headers: null,
   mappings: [],
@@ -154,6 +159,8 @@ export function TreeUploadWizard({ did }: TreeUploadWizardProps) {
   // ── Step 1 → 2: file parsed and initial mappings detected ─────────────────
   const handleFileAndMappings = (
     file: File,
+    koboMediaZipFile: File | null,
+    koboMediaZipIndex: KoboMediaZipIndex | null,
     parsedData: Record<string, string>[],
     headers: string[],
     mappings: ColumnMapping[],
@@ -163,6 +170,8 @@ export function TreeUploadWizard({ did }: TreeUploadWizardProps) {
     setState((prev) => ({
       ...prev,
       file,
+      koboMediaZipFile,
+      koboMediaZipIndex,
       parsedData,
       headers,
       mappings,
@@ -214,6 +223,8 @@ export function TreeUploadWizard({ did }: TreeUploadWizardProps) {
     headers,
     mappings,
     validRows,
+    koboMediaZipFile,
+    koboMediaZipIndex,
     establishmentMeans,
     datasetSelection,
   } = state;
@@ -256,6 +267,7 @@ export function TreeUploadWizard({ did }: TreeUploadWizardProps) {
         <PreviewStep
           parsedData={parsedData}
           mappings={mappings}
+          koboMediaZipIndex={koboMediaZipIndex}
           onBack={handleBackToStep2}
           onNext={handleValidRows}
         />
@@ -266,6 +278,7 @@ export function TreeUploadWizard({ did }: TreeUploadWizardProps) {
         <UploadStep
           did={did}
           validRows={validRows}
+          koboMediaZipFile={koboMediaZipFile}
           establishmentMeans={establishmentMeans}
           datasetSelection={datasetSelection}
           backLabel={parsedData !== null ? "Back to Preview" : "Start Over"}

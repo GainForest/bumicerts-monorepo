@@ -33,10 +33,21 @@ export type FloraMeasurementBundle = {
   canopyCoverPercent?: string;
 };
 
-export type PhotoEntry = {
+export type UrlPhotoEntry = {
+  source: "url";
   url: string;
   subjectPart: string;
 };
+
+export type KoboZipPhotoEntry = {
+  source: "koboZip";
+  entryPath: string;
+  fileName: string;
+  mimeType: string;
+  subjectPart: string;
+};
+
+export type PhotoEntry = UrlPhotoEntry | KoboZipPhotoEntry;
 
 export type ValidatedRow = {
   index: number;

@@ -9,6 +9,10 @@ import type {
   ValidationResult,
 } from "./types";
 import { inferSubjectPartFromColumnName } from "./column-mapper";
+import {
+  resolveKoboMediaZipEntry,
+  type KoboMediaZipIndex,
+} from "./kobo-media-zip";
 
 const DATE_PATTERNS = [
   /^\d{4}-\d{2}-\d{2}$/, // YYYY-MM-DD
@@ -125,6 +129,18 @@ function splitPhotoUrls(value: string): string[] {
     .filter((s) => s.length > 0);
 }
 
+function isLikelyUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value.trim());
+}
+
+function getPhotoUrlFallback(
+  rawRow: Record<string, string>,
+  sourceColumn: string,
+): string | null {
+  const fallbackValue = rawRow[`${sourceColumn}_URL`]?.trim();
+  return fallbackValue && isLikelyUrl(fallbackValue) ? fallbackValue : null;
+}
+
 /**
  * Extract photo entries from a raw CSV row using the column mappings.
  * Supports:
@@ -133,7 +149,8 @@ function splitPhotoUrls(value: string): string[] {
  */
 function extractPhotos(
   rawRow: Record<string, string>,
-  photoMappings: { sourceColumn: string; subjectPart: string }[]
+  photoMappings: { sourceColumn: string; subjectPart: string }[],
+  koboMediaZipIndex: KoboMediaZipIndex | null,
 ): PhotoEntry[] {
   const photos: PhotoEntry[] = [];
 
@@ -144,8 +161,34 @@ function extractPhotos(
     }
 
     const urls = splitPhotoUrls(cellValue);
-    for (const url of urls) {
-      photos.push({ url, subjectPart });
+    for (const value of urls) {
+      if (koboMediaZipIndex) {
+        const zipEntry = resolveKoboMediaZipEntry(
+          koboMediaZipIndex,
+          rawRow,
+          value,
+        );
+        if (zipEntry) {
+          photos.push({
+            source: "koboZip",
+            entryPath: zipEntry.entryPath,
+            fileName: zipEntry.fileName,
+            mimeType: zipEntry.mimeType,
+            subjectPart,
+          });
+          continue;
+        }
+      }
+
+      if (isLikelyUrl(value)) {
+        photos.push({ source: "url", url: value, subjectPart });
+        continue;
+      }
+
+      const fallbackUrl = getPhotoUrlFallback(rawRow, sourceColumn);
+      if (fallbackUrl) {
+        photos.push({ source: "url", url: fallbackUrl, subjectPart });
+      }
     }
   }
 
@@ -166,7 +209,8 @@ function extractPhotos(
 export function parseAndValidateRows(
   rows: Record<string, string>[],
   rawRows?: Record<string, string>[],
-  mappings?: ColumnMapping[]
+  mappings?: ColumnMapping[],
+  options?: { koboMediaZipIndex?: KoboMediaZipIndex | null },
 ): ValidationResult {
   const valid: ValidatedRow[] = [];
   const errors: RowError[] = [];
@@ -192,7 +236,11 @@ export function parseAndValidateRows(
       if (rawRows && photoMappings.length > 0) {
         const rawRow = rawRows[index];
         if (rawRow) {
-          const photos = extractPhotos(rawRow, photoMappings);
+          const photos = extractPhotos(
+            rawRow,
+            photoMappings,
+            options?.koboMediaZipIndex ?? null,
+          );
           if (photos.length > 0) {
             validatedRow.photos = photos;
           }

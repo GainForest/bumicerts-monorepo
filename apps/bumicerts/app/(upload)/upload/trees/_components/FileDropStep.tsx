@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { Upload, FileSpreadsheet } from "lucide-react";
+import { Archive, FileSpreadsheet, Upload, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,6 +28,10 @@ import {
 import { links } from "@/lib/links";
 import { cn } from "@/lib/utils";
 import type { ColumnMapping } from "@/lib/upload/types";
+import {
+  buildKoboMediaZipIndex,
+  type KoboMediaZipIndex,
+} from "@/lib/upload/kobo-media-zip";
 import TreeDataGuide from "./TreeDataGuide";
 import type {
   ExistingUploadDatasetSelection,
@@ -40,6 +44,8 @@ type FileDropStepProps = {
   initialDatasetSelection: UploadDatasetSelection;
   onFileAndMappings: (
     file: File,
+    koboMediaZipFile: File | null,
+    koboMediaZipIndex: KoboMediaZipIndex | null,
     parsedData: Record<string, string>[],
     headers: string[],
     mappings: ColumnMapping[],
@@ -49,8 +55,14 @@ type FileDropStepProps = {
 };
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAX_MEDIA_ZIP_SIZE_BYTES = 200 * 1024 * 1024; // 200 MB
 const ACCEPTED_EXTENSIONS = [".csv", ".tsv"];
 const ACCEPTED_MIME_TYPES = ["text/csv", "text/tab-separated-values", "application/csv"];
+const ACCEPTED_MEDIA_ZIP_MIME_TYPES = [
+  "application/zip",
+  "application/x-zip-compressed",
+  "multipart/x-zip",
+];
 const DATASET_MODE_OPTIONS: Array<{
   mode: UploadDatasetSelection["mode"];
   title: string;
@@ -83,6 +95,13 @@ function isAcceptedFile(file: File): boolean {
   const name = file.name.toLowerCase();
   const hasValidExtension = ACCEPTED_EXTENSIONS.some((ext) => name.endsWith(ext));
   const hasValidMime = ACCEPTED_MIME_TYPES.includes(file.type);
+  return hasValidExtension || (file.type !== "" && hasValidMime);
+}
+
+function isAcceptedMediaZipFile(file: File): boolean {
+  const name = file.name.toLowerCase();
+  const hasValidExtension = name.endsWith(".zip");
+  const hasValidMime = ACCEPTED_MEDIA_ZIP_MIME_TYPES.includes(file.type);
   return hasValidExtension || (file.type !== "" && hasValidMime);
 }
 
@@ -125,8 +144,16 @@ export default function FileDropStep({
     useCsvParser();
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedMediaZipFile, setSelectedMediaZipFile] = useState<File | null>(
+    null,
+  );
+  const [mediaZipIndex, setMediaZipIndex] = useState<KoboMediaZipIndex | null>(
+    null,
+  );
   const [fileError, setFileError] = useState<string | null>(null);
+  const [mediaZipError, setMediaZipError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isMediaZipParsing, setIsMediaZipParsing] = useState(false);
   const [establishmentMeans, setEstablishmentMeans] = useState<string | null>(
     initialEstablishmentMeans,
   );
@@ -156,6 +183,8 @@ export default function FileDropStep({
   });
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const mediaZipInputRef = useRef<HTMLInputElement>(null);
+  const mediaZipParseRequestRef = useRef(0);
 
   const detectedFormat =
     headers.length > 0 ? detectKoboFormat(headers) : null;
@@ -192,10 +221,74 @@ export default function FileDropStep({
     [parseFile, reset]
   );
 
+  const handleMediaZipFile = useCallback(async (file: File) => {
+    const requestId = mediaZipParseRequestRef.current + 1;
+    mediaZipParseRequestRef.current = requestId;
+    setMediaZipError(null);
+    setMediaZipIndex(null);
+    setSelectedMediaZipFile(null);
+    setIsMediaZipParsing(false);
+
+    if (!isAcceptedMediaZipFile(file)) {
+      setMediaZipError("Only Kobo Media Attachments .zip files are supported.");
+      return;
+    }
+
+    if (file.size > MAX_MEDIA_ZIP_SIZE_BYTES) {
+      setMediaZipError(
+        `ZIP file is too large. Maximum size is 200 MB (got ${formatBytes(file.size)}).`,
+      );
+      return;
+    }
+
+    setIsMediaZipParsing(true);
+    try {
+      const index = await buildKoboMediaZipIndex(file);
+      if (mediaZipParseRequestRef.current !== requestId) {
+        return;
+      }
+
+      if (index.entries.length === 0) {
+        setMediaZipError(
+          "No supported image attachments were found in this ZIP. Make sure you selected KoboToolbox's Media Attachments export.",
+        );
+        return;
+      }
+
+      setSelectedMediaZipFile(file);
+      setMediaZipIndex(index);
+    } catch {
+      if (mediaZipParseRequestRef.current !== requestId) {
+        return;
+      }
+
+      setMediaZipError(
+        "Couldn't read this ZIP file. Please export Media Attachments (ZIP) from KoboToolbox and try again.",
+      );
+    } finally {
+      if (mediaZipParseRequestRef.current === requestId) {
+        setIsMediaZipParsing(false);
+      }
+    }
+  }, []);
+
+  const handleRemoveMediaZip = () => {
+    mediaZipParseRequestRef.current += 1;
+    setSelectedMediaZipFile(null);
+    setMediaZipIndex(null);
+    setMediaZipError(null);
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) handleFile(file);
     // Reset input so the same file can be re-selected
+    e.target.value = "";
+  };
+
+  const handleMediaZipInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) void handleMediaZipFile(file);
     e.target.value = "";
   };
 
@@ -241,6 +334,8 @@ export default function FileDropStep({
 
     onFileAndMappings(
       selectedFile,
+      selectedMediaZipFile,
+      mediaZipIndex,
       parsedData,
       headers,
       mappings,
@@ -255,6 +350,8 @@ export default function FileDropStep({
     isParsed &&
     !error &&
     !fileError &&
+    !mediaZipError &&
+    !isMediaZipParsing &&
     (datasetMode !== "new" || datasetName.trim().length > 0) &&
     (datasetMode !== "existing" || selectedExistingDataset !== null);
   const hasUnavailableExistingSelection =
@@ -273,7 +370,8 @@ export default function FileDropStep({
       <div>
         <h2 className="text-lg font-semibold">Upload Your File</h2>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Drop a CSV or TSV file to get started. Maximum file size: 10 MB.
+          Drop a CSV or TSV file to get started. KoboToolbox photo attachments
+          can be added with the optional Media Attachments ZIP below.
         </p>
       </div>
 
@@ -325,6 +423,83 @@ export default function FileDropStep({
         className="hidden"
         onChange={handleInputChange}
       />
+
+      {/* Optional Kobo media ZIP input */}
+      <div className="space-y-2 rounded-lg border border-border bg-muted/20 p-4">
+        <div className="space-y-1">
+          <h3 className="text-sm font-medium">KoboToolbox photos ZIP</h3>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Optional, but recommended for Kobo exports with photo questions. Add
+            the matching <span className="font-medium">Media Attachments (ZIP)</span>{" "}
+            export so Whole Tree, Leaf, and Bark photos can be uploaded to your
+            PDS even when Kobo photo URLs are private.
+          </p>
+        </div>
+
+        <Card
+          className="cursor-pointer border-dashed bg-background transition-colors hover:border-primary/60 hover:bg-muted/30"
+          onClick={() => mediaZipInputRef.current?.click()}
+        >
+          <CardContent className="flex items-center justify-between gap-3 py-4">
+            {isMediaZipParsing ? (
+              <div className="flex items-center gap-3 text-muted-foreground">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                <span className="text-sm">Reading media ZIP…</span>
+              </div>
+            ) : selectedMediaZipFile && mediaZipIndex ? (
+              <div className="flex min-w-0 items-center gap-3">
+                <Archive className="h-5 w-5 shrink-0 text-primary" />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {selectedMediaZipFile.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {mediaZipIndex.entries.length.toLocaleString()} image
+                    {mediaZipIndex.entries.length === 1 ? "" : "s"} across{" "}
+                    {mediaZipIndex.submissionCount.toLocaleString()} submission
+                    {mediaZipIndex.submissionCount === 1 ? "" : "s"}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 text-muted-foreground">
+                <Archive className="h-5 w-5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium">Click to select ZIP</p>
+                  <p className="text-xs">Accepts .zip files up to 200 MB</p>
+                </div>
+              </div>
+            )}
+
+            {selectedMediaZipFile || mediaZipError ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleRemoveMediaZip();
+                }}
+              >
+                <X />
+                {selectedMediaZipFile ? "Remove" : "Clear"}
+              </Button>
+            ) : null}
+          </CardContent>
+        </Card>
+
+        <input
+          ref={mediaZipInputRef}
+          type="file"
+          accept=".zip,application/zip,application/x-zip-compressed"
+          className="hidden"
+          onChange={handleMediaZipInputChange}
+        />
+
+        {mediaZipError ? (
+          <p className="text-sm text-destructive">{mediaZipError}</p>
+        ) : null}
+      </div>
 
       {/* File error */}
       {fileError && (
