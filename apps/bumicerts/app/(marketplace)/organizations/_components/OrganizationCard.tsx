@@ -7,6 +7,7 @@ import { BuildingIcon, LeafIcon } from "lucide-react";
 import { countries } from "@/lib/countries";
 import type { OrganizationData } from "@/lib/types";
 import { links } from "@/lib/links";
+import { blo } from "blo";
 
 export const orgCardVariants = {
   hidden: { opacity: 0, y: 16, scale: 0.97, filter: "blur(4px)" },
@@ -29,7 +30,7 @@ export function OrganizationCard({ org }: { org: OrganizationData }) {
           whileHover={{ y: -3 }}
           whileTap={{ scale: 0.98 }}
           transition={{ type: "spring", stiffness: 400, damping: 25 }}
-          className="group h-full flex flex-col rounded-xl border border-border bg-card overflow-hidden cursor-pointer shadow-sm hover:shadow-xl hover:border-primary/20 transition-all duration-300"
+          className="group h-full flex flex-col rounded-2xl border border-border/50! overflow-hidden cursor-pointer transition-all duration-300"
           style={{
             viewTransitionName: `org-${org.did.replace(/[^a-z0-9]/gi, "-")}`,
           }}
@@ -47,7 +48,7 @@ export function OrganizationCard({ org }: { org: OrganizationData }) {
               <div className="absolute inset-0 bg-muted" />
             )}
             {/* Gradient */}
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+            <div className="absolute inset-0 bg-linear-to-t from-background via-background/80 to-transparent" />
 
             {/* Country badge */}
             {countryData && (
@@ -57,36 +58,33 @@ export function OrganizationCard({ org }: { org: OrganizationData }) {
               </div>
             )}
 
-            {/* Logo + Name row on gradient */}
-            <div className="absolute bottom-2 left-2 right-2 flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-background/80 border border-border/50 overflow-hidden flex items-center justify-center shadow-sm shrink-0">
-                {org.logoUrl ? (
-                  <Image
-                    src={org.logoUrl}
-                    alt={org.displayName}
-                    width={32}
-                    height={32}
-                    className="object-cover rounded-full"
-                  />
-                ) : (
-                  <BuildingIcon className="h-4 w-4 text-muted-foreground" />
-                )}
+            {/* Logo + Name on gradient */}
+            <div className="absolute bottom-2 left-4 right-4 flex flex-col items-start gap-2">
+              {/*Image is intentionally misaligned for visual satisfaction.*/}
+              <div className="-ml-1 h-12 w-12 rounded-full bg-background/80 overflow-hidden flex items-center justify-center shrink-0">
+                <Image
+                  src={org.logoUrl ?? blo(org.did as `0x${string}`)}
+                  alt={org.displayName}
+                  width={42}
+                  height={42}
+                  className="object-cover rounded-full h-full w-full"
+                />
               </div>
-              <h3 className="font-serif font-bold text-base text-foreground line-clamp-1 leading-tight">
+              <h3 className="font-instrument text-2xl italic text-foreground line-clamp-1">
                 {org.displayName}
               </h3>
             </div>
           </div>
 
           {/* Body - flex-1 to fill remaining space */}
-          <div className="p-3 flex-1">
-            <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed">
+          <div className="px-4 flex-1">
+            <p className="text-muted-foreground line-clamp-3">
               {org.shortDescription}
             </p>
           </div>
 
           {/* Footer - fixed height, no wrap */}
-          <div className="px-3 pb-3 flex items-center justify-between shrink-0">
+          <div className="p-4 flex items-center justify-between shrink-0">
             <div className="flex gap-1 overflow-hidden">
               {org.objectives.slice(0, 2).map((obj) => (
                 <span
@@ -98,7 +96,7 @@ export function OrganizationCard({ org }: { org: OrganizationData }) {
               ))}
             </div>
             <div className="flex items-center gap-1 text-xs font-semibold text-primary shrink-0">
-              <LeafIcon className="h-3.5 w-3.5" />
+              <LeafIcon className="size-3.5" />
               <span>{org.bumicertCount}</span>
             </div>
           </div>

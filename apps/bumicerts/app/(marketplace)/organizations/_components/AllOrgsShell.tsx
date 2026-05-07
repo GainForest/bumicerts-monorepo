@@ -2,7 +2,12 @@
 
 import { useState, useMemo, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { UsersIcon, SearchIcon, ArrowUpDownIcon, ChevronDownIcon } from "lucide-react";
+import {
+  UsersIcon,
+  SearchIcon,
+  ArrowUpDownIcon,
+  ChevronDownIcon,
+} from "lucide-react";
 import type { OrganizationData } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -22,7 +27,9 @@ function CountryChips({
   setCountryFilter: (c: string | null) => void;
 }) {
   const chips = useMemo(() => {
-    const codes = Array.from(new Set(organizations.map((o) => o.country).filter(Boolean)));
+    const codes = Array.from(
+      new Set(organizations.map((o) => o.country).filter(Boolean)),
+    );
     return codes
       .map((code) => ({
         code,
@@ -40,12 +47,14 @@ function CountryChips({
       {chips.map((c) => (
         <button
           key={c.code}
-          onClick={() => setCountryFilter(countryFilter === c.code ? null : c.code)}
+          onClick={() =>
+            setCountryFilter(countryFilter === c.code ? null : c.code)
+          }
           className={cn(
             "shrink-0 text-xs font-medium rounded-full px-3 py-1.5 border transition-all whitespace-nowrap",
             c.isSelected
               ? "bg-foreground text-background border-foreground"
-              : "text-muted-foreground border-border hover:border-foreground/50 hover:text-foreground"
+              : "text-muted-foreground border-border hover:border-foreground/50 hover:text-foreground",
           )}
         >
           {c.emoji} {c.name}
@@ -59,7 +68,11 @@ function CountryChipsSkeleton() {
   return (
     <div className="flex items-center gap-2 pb-1">
       {[96, 80, 88, 100, 84].map((w, i) => (
-        <Skeleton key={i} className="h-7 rounded-full shrink-0" style={{ width: w }} />
+        <Skeleton
+          key={i}
+          className="h-7 rounded-full shrink-0"
+          style={{ width: w }}
+        />
       ))}
     </div>
   );
@@ -90,7 +103,11 @@ function BioregionChips({
         name: realms[id]?.name ?? id,
         isSelected: bioregionFilter === id,
       }))
-      .sort((a, b) => Number(b.isSelected) - Number(a.isSelected) || a.name.localeCompare(b.name));
+      .sort(
+        (a, b) =>
+          Number(b.isSelected) - Number(a.isSelected) ||
+          a.name.localeCompare(b.name),
+      );
   }, [organizations, bioregionFilter]);
 
   if (chips.length === 0) return null;
@@ -100,12 +117,14 @@ function BioregionChips({
       {chips.map((r) => (
         <button
           key={r.id}
-          onClick={() => setBioregionFilter(bioregionFilter === r.id ? null : r.id)}
+          onClick={() =>
+            setBioregionFilter(bioregionFilter === r.id ? null : r.id)
+          }
           className={cn(
             "shrink-0 text-xs font-medium rounded-full px-3 py-1.5 border transition-all whitespace-nowrap",
             r.isSelected
               ? "bg-foreground text-background border-foreground"
-              : "text-muted-foreground border-border hover:border-foreground/50 hover:text-foreground"
+              : "text-muted-foreground border-border hover:border-foreground/50 hover:text-foreground",
           )}
         >
           {r.emoji} {r.name}
@@ -168,15 +187,27 @@ export function AllOrgsShell({
         (o) =>
           o.displayName.toLowerCase().includes(q) ||
           o.shortDescription.toLowerCase().includes(q) ||
-          o.objectives.some((obj) => obj.toLowerCase().includes(q))
+          o.objectives.some((obj) => obj.toLowerCase().includes(q)),
       );
     }
-    if (countryFilter) result = result.filter((o) => o.country === countryFilter);
-    if (bioregionFilter) result = result.filter((o) => countryToRealm[o.country] === bioregionFilter);
+    if (countryFilter)
+      result = result.filter((o) => o.country === countryFilter);
+    if (bioregionFilter)
+      result = result.filter(
+        (o) => countryToRealm[o.country] === bioregionFilter,
+      );
     switch (sort) {
-      case "bumicerts": result.sort((a, b) => b.bumicertCount - a.bumicertCount); break;
-      case "alpha":     result.sort((a, b) => a.displayName.localeCompare(b.displayName)); break;
-      case "newest":    result.sort((a, b) => (b.startDate ?? "").localeCompare(a.startDate ?? "")); break;
+      case "bumicerts":
+        result.sort((a, b) => b.bumicertCount - a.bumicertCount);
+        break;
+      case "alpha":
+        result.sort((a, b) => a.displayName.localeCompare(b.displayName));
+        break;
+      case "newest":
+        result.sort((a, b) =>
+          (b.startDate ?? "").localeCompare(a.startDate ?? ""),
+        );
+        break;
     }
     return result;
   }, [organizations, query, sort, countryFilter, bioregionFilter]);
@@ -184,7 +215,6 @@ export function AllOrgsShell({
   return (
     <section className="pt-6 pb-20 md:pb-28 px-6">
       <div className="max-w-6xl mx-auto">
-
         {/* Static heading */}
         <motion.div
           initial={animate ? { opacity: 0, y: 16 } : false}
@@ -205,7 +235,10 @@ export function AllOrgsShell({
             Nature{" "}
             <span
               className="text-foreground/80"
-              style={{ fontFamily: "var(--font-instrument-serif-var)", fontStyle: "italic" }}
+              style={{
+                fontFamily: "var(--font-instrument-serif-var)",
+                fontStyle: "italic",
+              }}
             >
               Stewards
             </span>
@@ -228,12 +261,21 @@ export function AllOrgsShell({
 
             <div className="relative shrink-0">
               <button
-                onClick={() => setOpenDropdown((p) => (p === "sort" ? null : "sort"))}
+                onClick={() =>
+                  setOpenDropdown((p) => (p === "sort" ? null : "sort"))
+                }
                 className="flex items-center gap-2 h-10 px-3 text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg transition-colors"
               >
                 <ArrowUpDownIcon className="h-4 w-4" />
-                <span className="hidden sm:inline">{SORT_OPTIONS.find((o) => o.value === sort)?.label}</span>
-                <ChevronDownIcon className={cn("h-4 w-4 transition-transform", openDropdown === "sort" && "rotate-180")} />
+                <span className="hidden sm:inline">
+                  {SORT_OPTIONS.find((o) => o.value === sort)?.label}
+                </span>
+                <ChevronDownIcon
+                  className={cn(
+                    "h-4 w-4 transition-transform",
+                    openDropdown === "sort" && "rotate-180",
+                  )}
+                />
               </button>
               <AnimatePresence>
                 {openDropdown === "sort" && (
@@ -246,12 +288,15 @@ export function AllOrgsShell({
                     {SORT_OPTIONS.map((option) => (
                       <button
                         key={option.value}
-                        onClick={() => { setSort(option.value); setOpenDropdown(null); }}
+                        onClick={() => {
+                          setSort(option.value);
+                          setOpenDropdown(null);
+                        }}
                         className={cn(
                           "w-full text-left px-3 py-2 text-sm transition-colors",
                           sort === option.value
                             ? "text-primary bg-primary/5"
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
                         )}
                       >
                         {option.label}
@@ -301,8 +346,8 @@ export function AllOrgsShell({
           - loading.tsx passes skeleton cards as children.
           - page.tsx passes nothing → Shell renders the real filtered grid.
         */}
-        {children ?? (
-          filtered.length === 0 ? (
+        {children ??
+          (filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-28 text-center">
               <span
                 className="text-7xl md:text-8xl font-light text-primary/[0.15] tracking-tight mb-4"
@@ -318,7 +363,10 @@ export function AllOrgsShell({
               </h3>
               <p
                 className="text-base text-foreground/80 max-w-md leading-relaxed"
-                style={{ fontFamily: "var(--font-instrument-serif-var)", fontStyle: "italic" }}
+                style={{
+                  fontFamily: "var(--font-instrument-serif-var)",
+                  fontStyle: "italic",
+                }}
               >
                 Try adjusting your search or filters.
               </p>
@@ -329,7 +377,7 @@ export function AllOrgsShell({
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-8 lg:gap-10"
+              className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-2 lg:gap-4"
             >
               <AnimatePresence mode="popLayout">
                 {filtered.map((org) => (
@@ -337,9 +385,7 @@ export function AllOrgsShell({
                 ))}
               </AnimatePresence>
             </motion.div>
-          )
-        )}
-
+          ))}
       </div>
     </section>
   );
