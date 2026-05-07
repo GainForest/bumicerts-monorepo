@@ -548,6 +548,55 @@ async function requestOrganizationAccounts(
   }
 }
 
+
+const ORGANIZATION_ACCOUNT_DID_QUERY_BATCH_SIZE = 25;
+
+async function requestOrganizationAccountsByDidBatch(
+  operation: "AccountOrganizationsByDid" | "AccountOrganizationListingAccounts",
+  dids: string[],
+): Promise<Map<string, OrganizationAccountState>> {
+  const accountByDid = new Map<string, OrganizationAccountState>();
+
+  for (const did of dids) {
+    const response = await requestOrganizationAccounts(operation, [did], 1);
+    const batchAccountByDid = await buildOrganizationAccountMapFromResponse(response);
+    const account = batchAccountByDid.get(did);
+    if (account) {
+      accountByDid.set(did, account);
+    }
+  }
+
+  return accountByDid;
+}
+
+async function requestOrganizationAccountsForDids(
+  operation: "AccountOrganizationsByDid" | "AccountOrganizationListingAccounts",
+  dids: string[],
+): Promise<Map<string, OrganizationAccountState>> {
+  const accountByDid = new Map<string, OrganizationAccountState>();
+
+  for (
+    let startIndex = 0;
+    startIndex < dids.length;
+    startIndex += ORGANIZATION_ACCOUNT_DID_QUERY_BATCH_SIZE
+  ) {
+    const batchDids = dids.slice(
+      startIndex,
+      startIndex + ORGANIZATION_ACCOUNT_DID_QUERY_BATCH_SIZE,
+    );
+    const batchAccountByDid = await requestOrganizationAccountsByDidBatch(
+      operation,
+      batchDids,
+    );
+
+    for (const [did, account] of batchAccountByDid) {
+      accountByDid.set(did, account);
+    }
+  }
+
+  return accountByDid;
+}
+
 async function requestOrganizationActivityCounts(
   dids: string[],
   first: number,
@@ -791,13 +840,10 @@ export async function readOrganizationAccountsByDids(
     return new Map();
   }
 
-  const response = await requestOrganizationAccounts(
+  return await requestOrganizationAccountsForDids(
     "AccountOrganizationsByDid",
     uniqueDids,
-    uniqueDids.length,
   );
-
-  return await buildOrganizationAccountMapFromResponse(response);
 }
 
 export async function listOrganizationData(options?: {
@@ -818,18 +864,10 @@ export async function listOrganizationData(options?: {
     return [];
   }
 
-  const [accountsResponse, bumicertCounts] = await Promise.all([
-    requestOrganizationAccounts(
-      "AccountOrganizationListingAccounts",
-      dids,
-      dids.length,
-    ),
+  const [accountByDid, bumicertCounts] = await Promise.all([
+    requestOrganizationAccountsForDids("AccountOrganizationListingAccounts", dids),
     countOrganizationActivitiesByDid(dids),
   ]);
-
-  const accountByDid = await buildOrganizationAccountMapFromResponse(
-    accountsResponse,
-  );
 
   return dids
     .map((did) => accountByDid.get(did))
