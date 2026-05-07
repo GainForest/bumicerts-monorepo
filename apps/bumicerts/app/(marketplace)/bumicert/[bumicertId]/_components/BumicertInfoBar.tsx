@@ -51,7 +51,7 @@ export function BumicertCreationMeta({ bumicert }: { bumicert: BumicertData }) {
   return (
     <div className="flex items-center gap-3">
       {/* Avatar */}
-      <Link href={links.organization.home(bumicert.organizationDid)} className="shrink-0">
+      <Link href={links.account.byDid(bumicert.organizationDid)} className="shrink-0">
         <div className="h-9 w-9 rounded-full overflow-hidden bg-muted border border-border">
           {bumicert.logoUrl ? (
             <Image src={bumicert.logoUrl} alt={bumicert.organizationName} width={36} height={36} className="object-cover" />
@@ -64,7 +64,7 @@ export function BumicertCreationMeta({ bumicert }: { bumicert: BumicertData }) {
       </Link>
 
       {/* Name + time */}
-      <Link href={links.organization.home(bumicert.organizationDid)} className="flex flex-col min-w-0 group">
+      <Link href={links.account.byDid(bumicert.organizationDid)} className="flex flex-col min-w-0 group">
         <span className="text-sm font-medium text-foreground leading-tight group-hover:text-primary transition-colors truncate">
           {bumicert.organizationName}
         </span>

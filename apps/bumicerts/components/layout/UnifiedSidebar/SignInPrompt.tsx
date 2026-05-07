@@ -25,7 +25,7 @@ export function SignInPrompt() {
       className="mx-1 p-3 rounded-lg bg-muted/40 border border-border/50"
     >
       <p className="text-xs text-muted-foreground text-center mb-2">
-        Sign in to manage your organization and content.
+        Sign in to manage your account and content.
       </p>
       <Button
         variant="ghost"

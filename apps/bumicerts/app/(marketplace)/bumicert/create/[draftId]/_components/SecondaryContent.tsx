@@ -11,10 +11,9 @@ import useNewBumicertStore from "../store";
 import BumicertPreviewCard from "./Steps/Step4/BumicertPreviewCard";
 import { BumicertCardVisual } from "@/app/(marketplace)/explore/_components/BumicertCard";
 import { useFormStore } from "../form-store";
-import { useAtprotoStore } from "@/components/stores/atproto";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { indexerTrpc } from "@/lib/trpc/indexer/client";
+import { useCurrentAccountIdentity } from "@/hooks/use-current-account-identity";
 
 const stepImages = [
   {
@@ -74,31 +73,16 @@ const SecondaryContent = () => {
   const step1FormValues = useFormStore((state) => state.formValues[0]);
   const step2FormValues = useFormStore((state) => state.formValues[1]);
   const step1Progress = completionPercentages[0];
-  const auth = useAtprotoStore((state) => state.auth);
+  const {
+    displayName: organizationName,
+    logoUrl,
+    query,
+  } = useCurrentAccountIdentity();
+  const isLoadingOrganizationInfo = query.isLoading;
 
   const [isBumicertPreviewOpen, setIsBumicertPreviewOpen] = useState(
     stepImages[currentStep].previewBumicertByDefault
   );
-
-  const did = auth.user?.did ?? "";
-
-  const {
-    data: orgSingleData,
-    isPlaceholderData: isOlderData,
-    isPending: isPendingOrganizationInfo,
-  } = indexerTrpc.organization.byDid.useQuery(
-    { did },
-    { enabled: !!did }
-  );
-
-  const org = orgSingleData?.org ?? null;
-  const logoUrl = isOlderData ? null : (org?.record?.logo?.uri ?? null);
-  const organizationNameFromData = isOlderData
-    ? undefined
-    : org?.record?.displayName;
-  const organizationName =
-    organizationNameFromData ?? auth.user?.displayName ?? auth.user?.handle ?? "";
-  const isLoadingOrganizationInfo = isPendingOrganizationInfo || isOlderData;
 
   return (
     <div className="w-full min-h-full flex flex-col bg-muted/50 rounded-xl">

@@ -9,10 +9,7 @@ import { links } from "@/lib/links";
 import { Skeleton } from "@/components/ui/skeleton";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import type { OrganizationData } from "@/lib/types";
-import {
-  activitiesToBumicertDataArray,
-  type GraphQLHcActivityItem,
-} from "@/lib/adapters";
+import { activitiesToBumicertDataArray } from "@/lib/adapters";
 
 interface BumicertsPreviewProps {
   organization: OrganizationData;
@@ -24,13 +21,11 @@ interface BumicertsPreviewProps {
  * "View all" links to the bumicerts management page.
  */
 export function BumicertsPreview({ organization }: BumicertsPreviewProps) {
-  const { data: orgData, isLoading } = indexerTrpc.organization.byDid.useQuery({
+  const { data: activities, isLoading } = indexerTrpc.activities.list.useQuery({
     did: organization.did,
   });
-  const data = orgData
-    ? activitiesToBumicertDataArray(
-        (orgData.activities as GraphQLHcActivityItem[]).slice(0, 2),
-      )
+  const data = Array.isArray(activities)
+    ? activitiesToBumicertDataArray(activities.slice(0, 2))
     : undefined;
 
   const bumicerts = data ?? [];

@@ -18,8 +18,8 @@ import { PaymentSection } from "./PaymentSection";
 import { ShareSuccess } from "./ShareSuccess";
 import { useCheckoutFlow, type CheckoutItem } from "./hooks/useCheckoutFlow";
 import { useBatchPayment } from "./hooks/useBatchPayment";
-import type { CartBumicertItem } from "@/lib/graphql-dev/queries/cartBumicert";
-import type { EvmLink } from "@/lib/graphql-dev/queries/linkEvm";
+import type { CartBumicertItem } from "@/graphql/indexer/queries/cartBumicert";
+import type { EvmLink } from "@/graphql/indexer/queries/linkEvm";
 import Container from "@/components/ui/container";
 
 // ---------------------------------------------------------------------------

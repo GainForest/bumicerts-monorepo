@@ -20,8 +20,8 @@
       },
       {
         "name": "@0no-co/graphqlsp",
-        "schema": "./graphql/schema.graphql",
-        "tadaOutputLocation": "./graphql/graphql-env.d.ts"
+        "schema": "./graphql/indexer/schema.graphql",
+        "tadaOutputLocation": "./graphql/indexer/env.d.ts"
       }
     ],
     "paths": {

@@ -21,7 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { clientEnv } from "@/lib/env/client";
-import type { EvmLink } from "@/lib/graphql-dev/queries/linkEvm";
+import type { EvmLink } from "@/graphql/indexer/queries/linkEvm";
 import { AddWalletModal } from "./add";
 import { DeleteWalletModal } from "./delete";
 import { MODAL_IDS } from "@/components/global/modals/ids";

@@ -2,15 +2,14 @@
 import Container from "@/components/ui/container";
 import ErrorPage from "@/components/error-page";
 import React from "react";
-import { useAtprotoStore } from "@/components/stores/atproto";
-import { BuildingIcon, Loader2Icon } from "lucide-react";
+import { Loader2Icon, UserIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AtprotoSignInButton from "@/components/global/Header/AtprotoSignInButton";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { links } from "@/lib/links";
+import { useCurrentAccountIdentity } from "@/hooks/use-current-account-identity";
 
 const AuthWrapper = ({
   children,
@@ -21,58 +20,62 @@ const AuthWrapper = ({
   className?: string;
   footer?: React.ReactNode;
 }) => {
-  const auth = useAtprotoStore((state) => state.auth);
+  const { auth, account, query } = useCurrentAccountIdentity();
 
-  const {
-    isPending: isPendingOrganizationInfo,
-    error: organizationInfoError,
-    isPlaceholderData: isOlderData,
-  } = indexerTrpc.organization.byDid.useQuery(
-    { did: auth.user?.did ?? "" },
-    { enabled: !!auth.user?.did },
-  );
-
-  const isLoadingOrganizationInfo = isPendingOrganizationInfo || isOlderData;
   const isAuthenticated = auth.status === "AUTHENTICATED";
   const isUnauthenticated = auth.status === "UNAUTHENTICATED";
   const isResuming = auth.status === "RESUMING";
-  const hasOrganizationError = !!organizationInfoError;
+  const isLoadingAccount = isAuthenticated && query.isLoading;
+  const hasAccountError = !!query.error;
+  const hasBumicertAccount =
+    account?.kind === "user" || account?.kind === "organization";
   const isContentReady =
-    isAuthenticated && !isLoadingOrganizationInfo && !hasOrganizationError;
+    isAuthenticated && hasBumicertAccount && !isLoadingAccount && !hasAccountError;
   const shouldShowOverlay = !isContentReady;
 
   const renderOverlayContent = () => {
-    if (isUnauthenticated || hasOrganizationError) {
+    if (isUnauthenticated) {
       return (
         <ErrorPage
-          title={
-            isUnauthenticated
-              ? "You are not signed in."
-              : "Your organization is not set up yet."
-          }
-          description={
-            isUnauthenticated
-              ? "Please sign in to create a bumicert."
-              : "Please complete your organization information to create a bumicert."
-          }
+          title="You are not signed in."
+          description="Please sign in to create a bumicert."
+          showRefreshButton={false}
+          cta={<AtprotoSignInButton />}
+        />
+      );
+    }
+
+    if (hasAccountError) {
+      return (
+        <ErrorPage
+          title="Couldn't load your account"
+          description="We had trouble loading your account. Please try again."
+          error={query.error}
+          showRefreshButton
+          showHomeButton={false}
+        />
+      );
+    }
+
+    if (isAuthenticated && !hasBumicertAccount && !isLoadingAccount) {
+      return (
+        <ErrorPage
+          title="Your account is not set up yet."
+          description="Please complete your account information to create a bumicert."
           showRefreshButton={false}
           cta={
-            isUnauthenticated ? (
-              <AtprotoSignInButton />
-            ) : (
-              <Link href={links.manage.home}>
-                <Button>
-                  <BuildingIcon />
-                  Manage my organization
-                </Button>
-              </Link>
-            )
+            <Link href={links.manage.home}>
+              <Button>
+                <UserIcon />
+                Manage my account
+              </Button>
+            </Link>
           }
         />
       );
     }
 
-    if (isResuming || isLoadingOrganizationInfo) {
+    if (isResuming || isLoadingAccount) {
       return (
         <div className="flex flex-col items-center justify-center">
           <Loader2Icon className="animate-spin text-primary" />

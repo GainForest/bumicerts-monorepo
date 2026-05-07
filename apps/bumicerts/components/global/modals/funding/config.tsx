@@ -28,7 +28,7 @@ import { trpc } from "@/lib/trpc/client";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { clientEnv } from "@/lib/env/client";
 import type { FundingConfigData } from "@/lib/types";
-import type { EvmLink } from "@/lib/graphql-dev/queries/linkEvm";
+import type { EvmLink } from "@/graphql/indexer/queries/linkEvm";
 import { formatError } from "@/lib/utils/trpc-errors";
 import { AddWalletModal } from "@/components/global/modals/wallet/add";
 import { ManageWalletsModal } from "@/components/global/modals/wallet/manage";

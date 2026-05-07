@@ -1,11 +1,10 @@
 "use client";
-import { useAtprotoStore } from "@/components/stores/atproto";
 import { useModal } from "@/components/ui/modal/context";
 import { Loader2Icon, UploadIcon } from "lucide-react";
 import { useFormStore } from "../../../form-store";
 import { UploadLogoModal, UploadLogoModalId } from "./UploadLogoModal";
-import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { BumicertCardVisual } from "@/app/(marketplace)/explore/_components/BumicertCard";
+import { useCurrentAccountIdentity } from "@/hooks/use-current-account-identity";
 
 const BumicertPreviewCard = () => {
   const step1FormValues = useFormStore((state) => state.formValues[0]);
@@ -15,26 +14,10 @@ const BumicertPreviewCard = () => {
     projectName: title,
     workType: objectives,
   } = step1FormValues;
-  const auth = useAtprotoStore((state) => state.auth);
+  const { displayName: organizationName, logoUrl, query } =
+    useCurrentAccountIdentity();
   const { show, pushModal } = useModal();
-  const {
-    data: orgData,
-    isPending: isPendingOrganizationInfo,
-    isPlaceholderData: isOlderData,
-  } = indexerTrpc.organization.byDid.useQuery(
-    { did: auth.user?.did ?? "" },
-    { enabled: !!auth.user?.did }
-  );
-
-  const logoFromData = isOlderData ? undefined : (orgData?.org?.record?.logo?.uri ?? null);
-  const organizationNameFromData = isOlderData
-    ? undefined
-    : orgData?.org?.record?.displayName;
-  const organizationName =
-    organizationNameFromData ?? auth.user?.displayName ?? auth.user?.handle ?? "";
-  const logoUrl = logoFromData ?? null;
-
-  const isLoadingOrganizationInfo = isPendingOrganizationInfo || isOlderData;
+  const isLoadingOrganizationInfo = query.isLoading;
 
   const isBumicertArtReady = coverImage && title && objectives.length;
 
@@ -65,8 +48,7 @@ const BumicertPreviewCard = () => {
               <UploadIcon className="size-4" />
             </button>
             <span className="text-sm text-pretty mr-3">
-              Your organization doesn&apos;t have a logo. Do you want to add
-              one?
+              Your account doesn&apos;t have a logo. Do you want to add one?
             </span>
           </div>
         )}

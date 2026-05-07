@@ -32,7 +32,7 @@ import { ContributorSelector } from "./ContributorSelector";
 import QuerySuspense from "@/components/query-suspense";
 
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
-import type { CertifiedLocation } from "@/lib/graphql-dev/queries/locations";
+import type { CertifiedLocation } from "@/graphql/indexer/queries/locations";
 import { queryKeys } from "@/lib/query-keys";
 
 const SiteEditorModal = dynamic(

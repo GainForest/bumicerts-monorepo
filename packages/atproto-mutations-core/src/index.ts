@@ -59,6 +59,7 @@ export type { SerializableFile, FileOrBlobRef, WithFileInputs } from "./blob/typ
 export { toSerializableFile, fromSerializableFile, isAnyBlobRef, normalizeBlobRef } from "./blob/types";
 export { extractBlobConstraints, mimeMatches } from "./blob/introspect";
 export type { BlobConstraint } from "./blob/introspect";
+export { validateFileConstraints } from "./blob/helpers";
 
 // ---------------------------------------------------------------------------
 // Shared generic types
@@ -74,6 +75,7 @@ export type {
   SingletonUpdateInput,
   RecordUpdateInput,
 } from "./utils/shared/types";
+export { applyPatch, fetchRecord, finalValidate, resolveFileInputs, stubValidate } from "./utils/shared";
 
 // ---------------------------------------------------------------------------
 // GeoJSON utilities
@@ -101,6 +103,22 @@ export {
   CertifiedLocationPdsError,
   CertifiedLocationIsDefaultError,
 } from "./mutations/certified.location/utils/errors";
+
+// actor.profile
+export {
+  ActorProfileAlreadyExistsError,
+  ActorProfileNotFoundError,
+  ActorProfilePdsError,
+  ActorProfileValidationError,
+} from "./mutations/actor.profile/utils/errors";
+
+// actor.organization
+export {
+  ActorOrganizationAlreadyExistsError,
+  ActorOrganizationNotFoundError,
+  ActorOrganizationPdsError,
+  ActorOrganizationValidationError,
+} from "./mutations/actor.organization/utils/errors";
 
 // organization.defaultSite
 export {
@@ -213,6 +231,32 @@ export type {
   UpdateCertifiedLocationInput,
   UpsertCertifiedLocationInput,
 } from "./mutations/certified.location/utils/types";
+
+// actor.profile
+export type {
+  ActorProfileRecord,
+  ActorProfileMutationResult,
+  CreateActorProfileInput,
+  UpdateActorProfileInput,
+  UpsertActorProfileInput,
+  SmallImage as ActorProfileSmallImage,
+  LargeImage as ActorProfileLargeImage,
+  Uri as ActorProfileUri,
+} from "./mutations/actor.profile/utils/types";
+
+// actor.organization
+export type {
+  ActorOrganizationRecord,
+  ActorOrganizationMutationResult,
+  CreateActorOrganizationInput,
+  UpdateActorOrganizationInput,
+  UpsertActorOrganizationInput,
+  DescriptionString as ActorOrganizationDescriptionString,
+  LinearDocument as ActorOrganizationLinearDocument,
+  StrongRef as ActorOrganizationStrongRef,
+  UrlItem as ActorOrganizationUrlItem,
+  Uri as ActorOrganizationUri,
+} from "./mutations/actor.organization/utils/types";
 
 // organization.defaultSite
 export type {

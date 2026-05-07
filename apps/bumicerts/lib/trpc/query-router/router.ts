@@ -1,11 +1,14 @@
 /**
  * bumicerts local query router
  *
- * All procedures here are public reads (no auth required).
+ * All procedures here are read-only indexer-backed queries.
+ * Most are public reads; a small number (such as account.current) can use the
+ * optional signed-in session DID from context.
  * This router is merged with the package's appRouter (mutations) in
  * lib/trpc/merged-router.ts to form the full BumicertsRouter.
  *
  * Namespace alignment:
+ *   account.*        — current / byDid (Certified actor account state)
  *   organization.*   — info / list / logo
  *   activities.*     — list (discriminated by input shape)
  *   locations.*      — list (did-only or did+rkey)
@@ -20,6 +23,7 @@
  */
 
 import { queryRouter } from "./init";
+import { accountRouter } from "./account";
 import { organizationRouter } from "./organization";
 import { activitiesRouter } from "./activities";
 import { locationsRouter } from "./locations";
@@ -34,6 +38,7 @@ import { dwcQueryRouter } from "./dwc";
 import { datasetsRouter } from "./datasets";
 
 export const localQueryRouter = queryRouter({
+  account: accountRouter,
   organization: organizationRouter,
   activities: activitiesRouter,
   locations: locationsRouter,

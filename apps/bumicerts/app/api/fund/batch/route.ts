@@ -28,8 +28,8 @@ import { serverEnv } from "@/lib/env/server";
 import { clientEnv } from "@/lib/env/client";
 import { parsePaymentSignature } from "@/lib/facilitator/eip3009";
 import { executeTransferWithAuthorization, executeSimpleTransfer } from "@/lib/facilitator/index";
-import { fetchCidByAtUri } from "@/lib/graphql-dev/queries/activities";
-import { fetchVerifiedAddress } from "@/lib/graphql-dev/queries/linkEvm";
+import { fetchCidByAtUri } from "@/graphql/indexer/queries/activities";
+import { fetchVerifiedAddress } from "@/graphql/indexer/queries/linkEvm";
 import {
   makeCredentialAgentLayer,
   mutations,

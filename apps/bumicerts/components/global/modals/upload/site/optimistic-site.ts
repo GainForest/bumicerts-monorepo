@@ -1,7 +1,7 @@
 import type {
   CertifiedLocationMutationResult,
 } from "@gainforest/atproto-mutations-next";
-import type { CertifiedLocation } from "@/lib/graphql-dev/queries/locations";
+import type { CertifiedLocation } from "@/graphql/indexer/queries/locations";
 
 export const SITE_CREATE_INVALIDATION_DELAY_MS = 5_000;
 

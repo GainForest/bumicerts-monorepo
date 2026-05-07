@@ -6,11 +6,14 @@
  *   { did }          → Activity[]                 (my bumicerts)
  *   { limit?, cursor?, labelTier?, hasImage?,
  *     hasOrganizationInfoRecord? }                → { data, pageInfo }  (explore feed)
+ *
+ * `hasOrganizationInfoRecord` is a compatibility name; it now effectively means
+ * “creator resolves to a Certified organization account”.
  */
 
 import { z } from "zod";
 import { queryRouter, publicQueryProcedure } from "./init";
-import * as activitiesModule from "@/lib/graphql-dev/queries/activities";
+import * as activitiesModule from "@/graphql/indexer/queries/activities";
 
 export const activitiesRouter = queryRouter({
   list: publicQueryProcedure
@@ -35,5 +38,5 @@ export const activitiesRouter = queryRouter({
         }),
       ])
     )
-    .query(({ input }) => activitiesModule.fetch(input)),
+    .query(({ input }) => activitiesModule.fetchAny(input)),
 });

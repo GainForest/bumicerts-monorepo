@@ -11,7 +11,7 @@
  */
 
 import { NextRequest } from "next/server";
-import { fetchVerifiedAddress } from "@/lib/graphql-dev/queries/linkEvm";
+import { fetchVerifiedAddress } from "@/graphql/indexer/queries/linkEvm";
 
 export const dynamic = "force-dynamic";
 // ---------------------------------------------------------------------------

@@ -11,8 +11,8 @@
 
 import { z } from "zod";
 import { queryRouter, publicQueryProcedure } from "./init";
-import * as occurrencesModule from "@/lib/graphql-dev/queries/occurrences";
-import * as measurementsModule from "@/lib/graphql-dev/queries/measurements";
+import * as occurrencesModule from "@/graphql/indexer/queries/occurrences";
+import * as measurementsModule from "@/graphql/indexer/queries/measurements";
 
 export const dwcQueryRouter = queryRouter({
   occurrences: publicQueryProcedure

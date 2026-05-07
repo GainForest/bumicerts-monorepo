@@ -14,7 +14,7 @@
  *     fundingConfig   – joined funding config record (activities only)
  */
 
-import type { BumicertData, BumicertContributor, OrganizationData } from "./types";
+import type { BumicertData, BumicertContributor } from "./types";
 import type { LeafletLinearDocument } from "@gainforest/leaflet-react";
 import type { Facet, FacetFeature } from "@gainforest/leaflet-react/richtext";
 
@@ -96,33 +96,14 @@ export interface GraphQLHcActivityItem {
   } | null;
 }
 
-/**
- * An OrgInfoItem from the new indexer schema.
- * { metadata, creatorInfo, record }
- */
-export interface GraphQLOrgInfoItem {
-  metadata: GraphQLRecordMetadata | null;
-  creatorInfo: GraphQLCreatorInfo | null;
-  record: {
-    displayName: string | null;
-    shortDescription: unknown; // JSON scalar (Richtext — { text: string, facets?: ... })
-    longDescription: unknown; // JSON scalar (pub.leaflet.pages.linearDocument)
-    logo: GraphQLBlobRef | null;
-    coverImage: GraphQLBlobRef | null;
-    objectives: string[] | null;
-    country: string | null;
-    website: string | null;
-    startDate: string | null;
-    visibility: string | null;
-    createdAt: string | null;
-  } | null;
-}
-
 // Keep old name as alias for backward compatibility with any remaining consumers
 /** @deprecated Use GraphQLHcActivityItem */
 export type GraphQLHcActivity = GraphQLHcActivityItem;
-/** @deprecated Use GraphQLOrgInfoItem */
-export type GraphQLOrgInfo = GraphQLOrgInfoItem;
+
+type ActivityAdapterInput = Pick<
+  GraphQLHcActivityItem,
+  "metadata" | "creatorInfo" | "record"
+>;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -133,7 +114,11 @@ export type GraphQLOrgInfo = GraphQLOrgInfoItem;
 function extractWorkScopeObjectives(workScope: unknown): string[] {
   if (!workScope) return [];
   // WorkScopeString format: { scope: string }
-  if (typeof workScope === "object" && "scope" in workScope && typeof workScope.scope === "string") {
+  if (
+    typeof workScope === "object" &&
+    "scope" in workScope &&
+    typeof workScope.scope === "string"
+  ) {
     return workScope.scope
       .split(",")
       .map((s: string) => s.trim())
@@ -150,9 +135,12 @@ function isFacetFeature(val: unknown): val is FacetFeature {
   if (!val || typeof val !== "object") return false;
   const obj = val as Record<string, unknown>;
   const t = obj["$type"];
-  if (t === "app.bsky.richtext.facet#mention") return typeof obj["did"] === "string";
-  if (t === "app.bsky.richtext.facet#link") return typeof obj["uri"] === "string";
-  if (t === "app.bsky.richtext.facet#tag") return typeof obj["tag"] === "string";
+  if (t === "app.bsky.richtext.facet#mention")
+    return typeof obj["did"] === "string";
+  if (t === "app.bsky.richtext.facet#link")
+    return typeof obj["uri"] === "string";
+  if (t === "app.bsky.richtext.facet#tag")
+    return typeof obj["tag"] === "string";
   return false;
 }
 
@@ -166,7 +154,11 @@ function isFacet(val: unknown): val is Facet {
   const idx = obj["index"];
   if (!idx || typeof idx !== "object") return false;
   const index = idx as Record<string, unknown>;
-  if (typeof index["byteStart"] !== "number" || typeof index["byteEnd"] !== "number") return false;
+  if (
+    typeof index["byteStart"] !== "number" ||
+    typeof index["byteEnd"] !== "number"
+  )
+    return false;
   if (!Array.isArray(obj["features"])) return false;
   return true;
 }
@@ -186,24 +178,6 @@ function parseFacets(raw: unknown): Facet[] {
     // Filter features to only those with recognised $types
     features: facet.features.filter(isFacetFeature),
   }));
-}
-
-/**
- * Extract text and facets from a Richtext JSON field.
- * For org shortDescription which is stored as { text, facets? }.
- * Also handles legacy plain-string values.
- */
-function extractRichtextWithFacets(rt: unknown): { text: string; facets: Facet[] } {
-  if (!rt) return { text: "", facets: [] };
-  if (typeof rt === "string") return { text: rt, facets: [] };
-  if (typeof rt === "object" && "text" in rt) {
-    const obj = rt as Record<string, unknown>;
-    return {
-      text: typeof obj["text"] === "string" ? obj["text"] : "",
-      facets: parseFacets(obj["facets"]),
-    };
-  }
-  return { text: "", facets: [] };
 }
 
 /**
@@ -228,12 +202,15 @@ function parseLinearDocument(raw: unknown): LeafletLinearDocument {
   // Legacy: plain string stored before LinearDocument was adopted
   if (typeof raw === "string" && raw.trim()) {
     return {
-      blocks: raw.split(/\n\n+/).filter((p) => p.trim()).map((paragraph) => ({
-        block: {
-          $type: "pub.leaflet.blocks.text" as const,
-          plaintext: paragraph.trim(),
-        },
-      })),
+      blocks: raw
+        .split(/\n\n+/)
+        .filter((p) => p.trim())
+        .map((paragraph) => ({
+          block: {
+            $type: "pub.leaflet.blocks.text" as const,
+            plaintext: paragraph.trim(),
+          },
+        })),
     };
   }
   return { blocks: [] };
@@ -245,7 +222,9 @@ function parseLinearDocument(raw: unknown): LeafletLinearDocument {
  * This is the ONLY legitimate use of extracting text from a LinearDocument.
  * For display, always use <LeafletRenderer> instead.
  */
-export function extractTextFromLinearDocument(doc: LeafletLinearDocument): string {
+export function extractTextFromLinearDocument(
+  doc: LeafletLinearDocument,
+): string {
   const extractTextFromListItems = (value: unknown): string[] => {
     if (!Array.isArray(value)) return [];
 
@@ -318,7 +297,9 @@ function extractContributors(raw: unknown): BumicertContributor[] {
  * Org name and logo come from `item.creatorInfo`, which the indexer resolves
  * inline at query time — no separate org lookup needed.
  */
-export function activityToBumicertData(item: GraphQLHcActivityItem): BumicertData {
+export function activityToBumicertData(
+  item: ActivityAdapterInput,
+): BumicertData {
   const metadata = item.metadata;
   const record = item.record;
   const creatorInfo = item.creatorInfo;
@@ -347,7 +328,10 @@ export function activityToBumicertData(item: GraphQLHcActivityItem): BumicertDat
 
   // Extract location strong refs — keep only entries that have a non-null uri
   const locationRefs = (record?.locations ?? [])
-    .filter((ref): ref is { uri: string; cid: string | null } => typeof ref?.uri === "string")
+    .filter(
+      (ref): ref is { uri: string; cid: string | null } =>
+        typeof ref?.uri === "string",
+    )
     .map((ref) => ({ uri: ref.uri, cid: ref.cid ?? null }));
 
   return {
@@ -361,7 +345,7 @@ export function activityToBumicertData(item: GraphQLHcActivityItem): BumicertDat
     description: parseLinearDocument(record?.description),
     coverImageUrl,
     logoUrl,
-    organizationName: creatorInfo?.organizationName ?? "",
+    organizationName: creatorInfo?.organizationName ?? "Unknown",
     country: "", // country is on the org record, not the activity — populated via org query if needed
     objectives: extractWorkScopeObjectives(record?.workScope),
     contributors: extractContributors(record?.contributors),
@@ -369,39 +353,6 @@ export function activityToBumicertData(item: GraphQLHcActivityItem): BumicertDat
     endDate: record?.endDate ?? null,
     createdAt: record?.createdAt ?? metadata?.createdAt ?? "",
     locationRefs,
-  };
-}
-
-// ── OrgInfoItem → OrganizationData ───────────────────────────────────────────
-
-/**
- * Convert a GraphQL OrgInfoItem to OrganizationData.
- */
-export function orgInfoToOrganizationData(
-  item: GraphQLOrgInfoItem,
-  bumicertCount: number = 0
-): OrganizationData {
-  const metadata = item.metadata;
-  const record = item.record;
-  const did = metadata?.did ?? "";
-
-  const shortDesc = extractRichtextWithFacets(record?.shortDescription);
-
-  return {
-    did,
-    displayName: record?.displayName ?? "",
-    shortDescription: shortDesc.text,
-    shortDescriptionFacets: shortDesc.facets,
-    longDescription: parseLinearDocument(record?.longDescription),
-    logoUrl: record?.logo?.uri ?? null,
-    coverImageUrl: record?.coverImage?.uri ?? null,
-    objectives: record?.objectives ?? [],
-    country: record?.country ?? "",
-    website: record?.website ?? null,
-    startDate: record?.startDate ?? null,
-    visibility: (record?.visibility as "Public" | "Unlisted") ?? "Public",
-    createdAt: record?.createdAt ?? metadata?.createdAt ?? "",
-    bumicertCount,
   };
 }
 
@@ -414,58 +365,7 @@ export function orgInfoToOrganizationData(
  * needed since the indexer resolves it inline per item.
  */
 export function activitiesToBumicertDataArray(
-  activities: GraphQLHcActivityItem[]
+  activities: ActivityAdapterInput[],
 ): BumicertData[] {
   return activities.map((item) => activityToBumicertData(item));
-}
-
-/**
- * Derive a deduplicated list of OrganizationData from activity items.
- *
- * Since creatorInfo is inline on each activity, we don't need a separate
- * org info query. We aggregate: one entry per unique DID, with a bumicertCount.
- *
- * Note: `country`, `objectives`, and full org details are NOT available from
- * activity items alone. Those fields are left as empty defaults here.
- * For a full org profile, use the organization query directly.
- */
-export function orgInfosToOrganizationDataArray(
-  activities: GraphQLHcActivityItem[]
-): OrganizationData[] {
-  // Count activities per org DID
-  const countByDid = new Map<string, number>();
-  for (const item of activities) {
-    const did = item.metadata?.did ?? "";
-    if (did) countByDid.set(did, (countByDid.get(did) ?? 0) + 1);
-  }
-
-  // Deduplicate by DID — take the first occurrence of each org's creatorInfo
-  const seenDids = new Set<string>();
-  const orgs: OrganizationData[] = [];
-
-  for (const item of activities) {
-    const did = item.metadata?.did ?? "";
-    if (!did || seenDids.has(did)) continue;
-    seenDids.add(did);
-
-    const creatorInfo = item.creatorInfo;
-    orgs.push({
-      did,
-      displayName: creatorInfo?.organizationName ?? "",
-      shortDescription: "",
-      shortDescriptionFacets: [],
-      longDescription: { blocks: [] },
-      logoUrl: creatorInfo?.organizationLogo?.uri ?? null,
-      coverImageUrl: null,
-      objectives: [],
-      country: "",
-      website: null,
-      startDate: null,
-      visibility: "Public",
-      createdAt: item.metadata?.createdAt ?? "",
-      bumicertCount: countByDid.get(did) ?? 0,
-    });
-  }
-
-  return orgs;
 }

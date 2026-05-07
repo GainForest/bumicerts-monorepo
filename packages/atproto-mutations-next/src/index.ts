@@ -97,6 +97,44 @@ export {
   CertifiedLocationIsDefaultError,
 } from "@gainforest/atproto-mutations-core";
 
+// certified.actor.profile types — safe everywhere
+export type {
+  ActorProfileRecord,
+  ActorProfileMutationResult,
+  CreateActorProfileInput,
+  UpdateActorProfileInput,
+  UpsertActorProfileInput,
+  ActorProfileSmallImage,
+  ActorProfileLargeImage,
+  ActorProfileUri,
+} from "@gainforest/atproto-mutations-core";
+export {
+  ActorProfileAlreadyExistsError,
+  ActorProfileNotFoundError,
+  ActorProfilePdsError,
+  ActorProfileValidationError,
+} from "@gainforest/atproto-mutations-core";
+
+// certified.actor.organization types — safe everywhere
+export type {
+  ActorOrganizationRecord,
+  ActorOrganizationMutationResult,
+  CreateActorOrganizationInput,
+  UpdateActorOrganizationInput,
+  UpsertActorOrganizationInput,
+  ActorOrganizationDescriptionString,
+  ActorOrganizationLinearDocument,
+  ActorOrganizationStrongRef,
+  ActorOrganizationUrlItem,
+  ActorOrganizationUri,
+} from "@gainforest/atproto-mutations-core";
+export {
+  ActorOrganizationAlreadyExistsError,
+  ActorOrganizationNotFoundError,
+  ActorOrganizationPdsError,
+  ActorOrganizationValidationError,
+} from "@gainforest/atproto-mutations-core";
+
 // organization.defaultSite types — safe everywhere
 export type {
   DefaultSiteRecord,
