@@ -31,6 +31,9 @@ import {
 } from "./errors";
 import { buildOrganizationDataFromOrganizationAccount } from "./organization-data";
 
+const ORGANIZATION_ACTIVITY_COUNT_PAGE_SIZE = 500;
+const MAX_ORGANIZATION_ACTIVITY_COUNT_PAGES = 200;
+
 const organizationListingDocument = graphql(`
   query AccountOrganizationListing($limit: Int!) {
     appCertifiedActorOrganization(
@@ -456,8 +459,37 @@ const organizationAccountsDocument = graphql(`
   }
 `);
 
+const organizationActivityCountDocument = graphql(`
+  query AccountOrganizationActivityCounts(
+    $dids: [String!]!
+    $first: Int!
+    $after: String
+  ) {
+    orgHypercertsClaimActivity(
+      where: { did: { in: $dids } }
+      first: $first
+      after: $after
+      sortDirection: DESC
+      sortBy: createdAt
+    ) {
+      edges {
+        node {
+          did
+        }
+      }
+      pageInfo {
+        endCursor
+        hasNextPage
+      }
+    }
+  }
+`);
+
 type OrganizationListingResponse = ResultOf<typeof organizationListingDocument>;
 type OrganizationAccountsResponse = ResultOf<typeof organizationAccountsDocument>;
+type OrganizationActivityCountResponse = ResultOf<
+  typeof organizationActivityCountDocument
+>;
 type OrganizationNode = ConnectionNode<
   OrganizationAccountsResponse["appCertifiedActorOrganization"]
 >;
@@ -514,6 +546,84 @@ async function requestOrganizationAccounts(
       cause,
     });
   }
+}
+
+async function requestOrganizationActivityCounts(
+  dids: string[],
+  first: number,
+  after: string | undefined,
+): Promise<OrganizationActivityCountResponse> {
+  try {
+    const client = createGraphQLClient();
+    return await client.request(organizationActivityCountDocument, {
+      dids,
+      first,
+      after,
+    });
+  } catch (cause) {
+    throw new AccountIndexerReadError({
+      operation: "AccountOrganizationActivityCounts",
+      message: "Indexer request failed for AccountOrganizationActivityCounts",
+      cause,
+    });
+  }
+}
+
+async function countOrganizationActivitiesByDid(
+  dids: string[],
+): Promise<Map<string, number>> {
+  const counts = new Map(dids.map((did) => [did, 0]));
+  let after: string | undefined;
+  const seenCursors = new Set<string>();
+
+  for (
+    let pageIndex = 0;
+    pageIndex < MAX_ORGANIZATION_ACTIVITY_COUNT_PAGES;
+    pageIndex += 1
+  ) {
+    const response = await requestOrganizationActivityCounts(
+      dids,
+      ORGANIZATION_ACTIVITY_COUNT_PAGE_SIZE,
+      after,
+    );
+
+    for (const node of getConnectionNodes(response.orgHypercertsClaimActivity)) {
+      if (!node.did) continue;
+      counts.set(node.did, (counts.get(node.did) ?? 0) + 1);
+    }
+
+    const endCursor =
+      response.orgHypercertsClaimActivity?.pageInfo?.endCursor ?? undefined;
+    const hasNextPage =
+      response.orgHypercertsClaimActivity?.pageInfo?.hasNextPage ?? false;
+
+    if (!hasNextPage) {
+      return counts;
+    }
+
+    if (!endCursor) {
+      throw new AccountIndexerReadError({
+        operation: "AccountOrganizationActivityCounts",
+        message:
+          "orgHypercertsClaimActivity reported hasNextPage without an endCursor while counting activities",
+      });
+    }
+
+    if (endCursor === after || seenCursors.has(endCursor)) {
+      throw new AccountIndexerReadError({
+        operation: "AccountOrganizationActivityCounts",
+        message: `orgHypercertsClaimActivity repeated cursor ${endCursor} while counting activities`,
+      });
+    }
+
+    seenCursors.add(endCursor);
+    after = endCursor;
+  }
+
+  throw new AccountIndexerReadError({
+    operation: "AccountOrganizationActivityCounts",
+    message: `orgHypercertsClaimActivity exceeded ${MAX_ORGANIZATION_ACTIVITY_COUNT_PAGES} pages while counting activities`,
+  });
 }
 
 function parseOrganizationRecord(
@@ -708,11 +818,14 @@ export async function listOrganizationData(options?: {
     return [];
   }
 
-  const accountsResponse = await requestOrganizationAccounts(
-    "AccountOrganizationListingAccounts",
-    dids,
-    dids.length,
-  );
+  const [accountsResponse, bumicertCounts] = await Promise.all([
+    requestOrganizationAccounts(
+      "AccountOrganizationListingAccounts",
+      dids,
+      dids.length,
+    ),
+    countOrganizationActivitiesByDid(dids),
+  ]);
 
   const accountByDid = await buildOrganizationAccountMapFromResponse(
     accountsResponse,
@@ -721,5 +834,10 @@ export async function listOrganizationData(options?: {
   return dids
     .map((did) => accountByDid.get(did))
     .filter((account): account is OrganizationAccountState => Boolean(account))
-    .map((account) => buildOrganizationDataFromOrganizationAccount(account));
+    .map((account) =>
+      buildOrganizationDataFromOrganizationAccount(
+        account,
+        bumicertCounts.get(account.did) ?? 0,
+      ),
+    );
 }
