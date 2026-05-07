@@ -20,9 +20,7 @@ export const IndexerTRPCContext = React.createContext<unknown>(null);
 /**
  * tRPC React client for the indexer query router.
  *
- * Served at /api/indexer/trpc — read-only indexer queries.
- * Most procedures are public reads; a small number (such as account.current)
- * can use the signed-in session cookie on the server endpoint.
+ * Served at /api/indexer/trpc — public reads only, no auth required.
  * Uses its own React context (IndexerTRPCContext) so it never conflicts
  * with the mutation trpc client.
  *

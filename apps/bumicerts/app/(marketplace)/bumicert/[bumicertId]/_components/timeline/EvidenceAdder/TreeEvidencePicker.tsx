@@ -1,4 +1,4 @@
-import type { OccurrenceItem } from "@/graphql/indexer/queries";
+import type { OccurrenceItem } from "@/lib/graphql-dev/queries";
 import { formatDate } from "@/lib/utils/date";
 import UriEvidencePicker from "./shared/UriEvidenceViewer";
 import { getManagedEvidenceTabConfig } from "./shared/evidenceRegistry";

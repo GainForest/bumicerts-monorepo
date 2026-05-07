@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { listOrganizationData } from "@/lib/account/server";
+import type { GraphQLOrgInfoItem } from "@/lib/adapters";
+import { getIndexerCaller } from "@/lib/trpc/indexer/server";
 import { DashboardClient } from "./_components/DashboardClient";
 
 export const metadata: Metadata = {
@@ -19,10 +20,14 @@ export const metadata: Metadata = {
 async function fetchOrgCountryMap(): Promise<Record<string, string>> {
   const map: Record<string, string> = {};
   try {
-    const orgs = await listOrganizationData({ limit: 1000 });
+    const caller = await getIndexerCaller();
+    const response = await caller.organization.list({ limit: 1000 });
+    const orgs = (
+      "data" in response ? response.data : []
+    ) as GraphQLOrgInfoItem[];
     for (const org of orgs) {
-      const did = org.did;
-      const country = org.country;
+      const did = org.metadata?.did;
+      const country = org.record?.country;
       if (did && country) {
         map[did] = country;
       }

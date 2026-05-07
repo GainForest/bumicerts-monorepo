@@ -9,7 +9,7 @@
 
 import { z } from "zod";
 import { queryRouter, publicQueryProcedure } from "./init";
-import * as linkEvmModule from "@/graphql/indexer/queries/linkEvm";
+import * as linkEvmModule from "@/lib/graphql-dev/queries/linkEvm";
 
 export const linkEvmQueryRouter = queryRouter({
   list: publicQueryProcedure

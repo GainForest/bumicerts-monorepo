@@ -2,7 +2,6 @@ import { mutations } from "@gainforest/atproto-mutations-core";
 import { router } from "./init";
 import { entityRouter } from "./entity-router";
 import { effectMutation } from "./effect-adapter";
-import { combinedActorSave } from "./combined-actor-save";
 
 export const appRouter = router({
   organization: router({
@@ -19,11 +18,6 @@ export const appRouter = router({
     attachment: entityRouter(mutations.context.attachment),
   }),
   certified: router({
-    actor: router({
-      profile: entityRouter(mutations.certified.actor.profile),
-      organization: entityRouter(mutations.certified.actor.organization),
-      profileAndOrganizationSave: combinedActorSave,
-    }),
     location: entityRouter(mutations.certified.location),
   }),
   funding: router({

@@ -11,7 +11,7 @@
 
 import { z } from "zod";
 import { queryRouter, publicQueryProcedure } from "./init";
-import * as cartBumicertModule from "@/graphql/indexer/queries/cartBumicert";
+import * as cartBumicertModule from "@/lib/graphql-dev/queries/cartBumicert";
 
 export const claimQueryRouter = queryRouter({
   activity: queryRouter({

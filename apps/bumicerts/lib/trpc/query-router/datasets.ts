@@ -6,7 +6,7 @@
 
 import { z } from "zod";
 import { queryRouter, publicQueryProcedure } from "./init";
-import * as datasetsModule from "@/graphql/indexer/queries/datasets";
+import * as datasetsModule from "@/lib/graphql-dev/queries/datasets";
 
 export const datasetsRouter = queryRouter({
   list: publicQueryProcedure

@@ -8,7 +8,7 @@
 
 import { z } from "zod";
 import { queryRouter, publicQueryProcedure } from "./init";
-import * as actorModule from "@/graphql/indexer/queries/actor";
+import * as actorModule from "@/lib/graphql-dev/queries/actor";
 
 export const actorRouter = queryRouter({
   profile: publicQueryProcedure

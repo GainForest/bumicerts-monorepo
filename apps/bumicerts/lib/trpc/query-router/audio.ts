@@ -6,7 +6,7 @@
 
 import { z } from "zod";
 import { queryRouter, publicQueryProcedure } from "./init";
-import * as audioModule from "@/graphql/indexer/queries/audio";
+import * as audioModule from "@/lib/graphql-dev/queries/audio";
 
 export const audioRouter = queryRouter({
   list: publicQueryProcedure

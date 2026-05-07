@@ -1,4 +1,4 @@
-import type { AudioRecordingItem } from "@/graphql/indexer/queries";
+import type { AudioRecordingItem } from "@/lib/graphql-dev/queries";
 import { formatDate } from "@/lib/utils/date";
 import UriEvidencePicker from "./shared/UriEvidenceViewer";
 import { getManagedEvidenceTabConfig } from "./shared/evidenceRegistry";

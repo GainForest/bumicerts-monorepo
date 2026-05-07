@@ -15,7 +15,7 @@ import { FundingConfigModal } from "@/components/global/modals/funding/config";
 import { MODAL_IDS } from "@/components/global/modals/ids";
 import { clientEnv } from "@/lib/env/client";
 import type { FundingConfigData } from "@/lib/types";
-import type { EvmLink } from "@/graphql/indexer/queries/linkEvm";
+import type { EvmLink } from "@/lib/graphql-dev/queries/linkEvm";
 import {
   AlertTriangleIcon,
   CircleDotIcon,

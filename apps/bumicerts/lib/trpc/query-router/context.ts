@@ -10,7 +10,7 @@
 
 import { z } from "zod";
 import { queryRouter, publicQueryProcedure } from "./init";
-import * as attachmentsModule from "@/graphql/indexer/queries/attachments";
+import * as attachmentsModule from "@/lib/graphql-dev/queries/attachments";
 
 export const contextQueryRouter = queryRouter({
   attachments: publicQueryProcedure

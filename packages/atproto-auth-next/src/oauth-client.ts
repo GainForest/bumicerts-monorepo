@@ -1,6 +1,5 @@
 import { NodeOAuthClient } from "@atproto/oauth-client-node";
 import type { NodeOAuthClientOptions } from "@atproto/oauth-client-node";
-import { requestLocalLock } from "@atproto/oauth-client";
 import { JoseKey } from "@atproto/jwk-jose";
 import { isLoopback } from "./utils/url";
 
@@ -89,7 +88,6 @@ export function createOAuthClient({
         dpop_bound_access_tokens: true,
       },
       keyset: [key],
-      requestLock: requestLocalLock,
       stateStore,
       sessionStore,
     });
@@ -112,7 +110,6 @@ export function createOAuthClient({
       jwks_uri: `${url}/.well-known/jwks.json`,
     },
     keyset: [key],
-    requestLock: requestLocalLock,
     stateStore,
     sessionStore,
   });

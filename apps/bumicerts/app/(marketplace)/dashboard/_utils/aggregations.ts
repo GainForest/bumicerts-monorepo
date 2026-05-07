@@ -5,7 +5,7 @@
  * top donors, recent donations, time series, etc.
  */
 
-import type { FundingReceiptItem } from "@/graphql/indexer/queries/fundingReceipts";
+import type { FundingReceiptItem } from "@/lib/graphql-dev/queries/fundingReceipts";
 import {
   extractDonor as extractDonorFromReceipt,
   extractOrgDidFromFor,

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { AudioRecordingItem, CertifiedLocation, OccurrenceItem } from "@/graphql/indexer/queries";
+import type { AudioRecordingItem, CertifiedLocation, OccurrenceItem } from "@/lib/graphql-dev/queries";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { parseAttachmentContent } from "../../../shared/attachmentContentParser";
 import { parseAtUri } from "./atUri";

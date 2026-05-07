@@ -2,40 +2,23 @@
 
 ## Rendering Strategy
 
-`/upload` is the one allowed exception to the old "auth-only server page" rule.
-The root page may do an **SSR authoritative account read** so the first render has
-the correct current account state, then the client should immediately resume with a
-direct freshness query.
-
-Use this split:
-
-- `page.tsx` on `/upload`: read the session, fetch the authoritative account on the
-  server, build the initial page data from that account, and pass both into the
-  client component.
-- Client component on `/upload`: call `indexerTrpc.account.byDid.useQuery(...)`
-  directly with `initialData`, `refetchOnMount: "always"`, and `staleTime: 0` so
-  the write surface refreshes against the latest indexer state after hydration.
-- Other `/upload/*` sub-routes: keep using the practical client-first pattern unless
-  there is a concrete reason they need their own SSR read.
+All routes under `app/(upload)/upload/` are **100% client-rendered** after the
+initial auth check. The page server component exists only to read the session and
+pass the authenticated DID down to the client component — it does **no** data
+fetching.
 
 ```
 app/(upload)/upload/
   layout.tsx        ← guards unauthenticated access (server, redirects)
-  page.tsx          ← reads session + authoritative account, passes initial props
+  page.tsx          ← reads session.did, renders <UploadDashboardClient did={did} />
   loading.tsx       ← full-page skeleton (streams instantly)
   error.tsx         ← error boundary
   _components/
-    UploadDashboardClient.tsx  ← "use client", re-queries account freshness directly
+    UploadDashboardClient.tsx  ← "use client", owns all data fetching via useQuery
 ```
 
-Allowed on `/upload`: the initial account read that seeds the write surface.
-
-Avoid in `/upload` server pages:
-
-- extra non-essential SSR fetches that slow first paint
-- shell/sidebar-style ambient account reads through shared providers when the route
-  itself needs fresher state
-- treating the SSR result as permanently fresh; the client query is still required
+**Never add `await dataFetch()` in `page.tsx` under `/upload/*`.** All data is
+fetched client-side so the skeleton appears instantly and edits are snappy.
 
 ---
 
@@ -45,7 +28,7 @@ Every sub-route under `/upload/` **must** have:
 
 | File | Purpose |
 |------|---------|
-| `page.tsx` | Server component — auth check, plus `/upload` may seed initial authoritative account data |
+| `page.tsx` | Server component — auth check only, passes DID to client component |
 | `loading.tsx` | Full-page skeleton — streams instantly while client hydrates |
 | `error.tsx` | Error boundary — catches unexpected errors in the route segment |
 
@@ -64,14 +47,11 @@ should render the same skeleton the client component shows before data loads.
 
 ## Mutations
 
-### `update` vs `upsert`
+### `update` — the right choice for `/upload/*`
 
-For an existing organization account on `/upload/*`, prefer `update`. That is the
-normal edit path once the organization record already exists.
-
-Use `upsert` only for the specific root `/upload` flow where an onboarded **user**
-account is being upgraded into an organization for the first time. Do not use
-`upsert` for routine edits to an existing organization record.
+The user can only reach `/upload/*` if they are authenticated and their org record
+already exists (it was created during onboarding). **Always use `update`, never
+`upsert`**, for edits on these pages.
 
 `update` takes a partial input `{ data, unset? }`:
 - Only send the fields that actually changed — the PDS merges your patch against
@@ -88,9 +68,8 @@ updateMutation.mutate({
   },
 });
 
-// ❌ wrong for normal organization edits — resending the whole record every time;
-//    any accidentally omitted field (logo, website, etc.) will be wiped from the
-//    PDS record
+// ❌ wrong — resending the whole record every time; any accidentally omitted
+//    field (logo, website, etc.) will be wiped from the PDS record
 upsertMutation.mutate({
   displayName: "New Name",
   shortDescription: { text: "..." },
@@ -119,42 +98,36 @@ Passing a bare `File` object (not wrapped in `{ image: ... }`) causes a
 
 ## Post-Save Pattern
 
-After a mutation succeeds on `/upload`, keep the local write surface optimistic
-and authoritative first, then let the rest of the app catch up through the shared
-account caches.
-
-For account-affecting saves, prefer this pattern:
+After a mutation succeeds, always do these three things in order:
 
 ```ts
 onSuccess: (result) => {
-  // 1. Update the page-local optimistic state immediately.
-  setPageData(buildOptimisticPageData(...));
+  // 1. Set optimistic query data immediately — user sees updated values
+  //    before the indexer processes the change. For image fields, use
+  //    URL.createObjectURL(file) as a temporary preview URL.
+  queryClient.setQueryData(queryKey, buildOptimisticData(result, edits, current));
 
-  // 2. Sync the shared account caches so sidebar/header/user menu stay aligned.
-  indexerUtils.account.current.setData(undefined, nextAccount);
-  indexerUtils.account.byDid.setData({ did }, nextAccount);
-
-  // 3. Clear edit mode so the page returns to view mode.
+  // 2. Clear edit mode so the page returns to view mode.
   setMode(null);
 
-  // 4. Reset the store's edit state.
+  // 3. Reset the store's edit state.
   onSaveSuccess();
+
+  // 4. Invalidate in the background — background refetch replaces optimistic
+  //    data (especially image CDN URLs) once the indexer has caught up.
+  void queryClient.invalidateQueries({ queryKey });
 },
 ```
 
-**Why avoid immediate invalidate + refresh?** The indexer may take a few seconds
-to catch up. If you immediately invalidate account queries or force a route
-refresh, a stale read can overwrite the optimistic state and regress the UI back
-to `unknown` / `user`, re-open onboarding, or temporarily lose fresh media.
-
-Use the optimistic caches first. Then allow normal future reads (revisit, focus,
-manual refresh, or a deliberately delayed invalidation) to reconcile once the
-indexer is actually current.
+**Why optimistic data?** The indexer may take a few seconds to index the updated
+record. Without `setQueryData`, the user would see the old data immediately after
+saving (because the refetch returns stale cached data) until the indexer catches
+up. Setting optimistic data bridges that gap.
 
 **Object URLs for images** (`URL.createObjectURL(file)`) are temporary in-memory
 URLs that display the file the user just uploaded. They are replaced by the real
-CDN URL once later refetches reconcile with the indexed record. No cleanup needed
-— they are short-lived by design.
+CDN URL once the background refetch completes. No cleanup needed — they are
+short-lived by design.
 
 ---
 

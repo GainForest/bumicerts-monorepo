@@ -53,7 +53,7 @@ import type {
   MeasurementItem,
   MultimediaItem,
   OccurrenceItem,
-} from "@/graphql/indexer/queries";
+} from "@/lib/graphql-dev/queries";
 import { links } from "@/lib/links";
 import useMediaQuery from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";

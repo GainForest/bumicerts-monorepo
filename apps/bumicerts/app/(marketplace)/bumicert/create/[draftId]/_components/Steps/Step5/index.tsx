@@ -43,8 +43,8 @@ import { useModal } from "@/components/ui/modal/context";
 import useNewBumicertStore from "../../../store";
 import { MODAL_IDS } from "@/components/global/modals/ids";
 import { FundingConfigModal } from "@/components/global/modals/funding/config";
+import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { BumicertCardVisual } from "@/app/(marketplace)/explore/_components/BumicertCard";
-import { useCurrentAccountIdentity } from "@/hooks/use-current-account-identity";
 import {
   BUMICERT_COVER_IMAGE_MAX_SIZE_BYTES,
   BUMICERT_COVER_IMAGE_MAX_SIZE_MB,
@@ -187,10 +187,13 @@ const Step5 = () => {
     setIsBumicertCreationMutationInFlight,
   ] = useState(false);
   const [hasClickedPublish, setHasClickedPublish] = useState(false);
-  const {
-    displayName: organizationName,
-    logoUrl: organizationLogoUrl,
-  } = useCurrentAccountIdentity();
+  const { data: orgData } = indexerTrpc.organization.byDid.useQuery(
+    { did: auth.user?.did ?? "" },
+    { enabled: !!auth.user?.did },
+  );
+
+  const organizationName = orgData?.org?.record?.displayName ?? "";
+  const organizationLogoUrl = orgData?.org?.record?.logo?.uri ?? null;
 
   const { pushModal, show } = useModal();
 

@@ -4,42 +4,33 @@ import { create } from "zustand";
 import type { LeafletLinearDocument } from "@gainforest/leaflet-react";
 import type { Facet } from "@gainforest/leaflet-react/richtext";
 
-export const UNCHANGED_EDIT = Symbol("unchanged-edit");
-
-export function isUnchangedEdit<T>(
-  value: T | typeof UNCHANGED_EDIT,
-): value is typeof UNCHANGED_EDIT {
-  return value === UNCHANGED_EDIT;
-}
-
 // ─── Editable field shape ────────────────────────────────────────────────────
 
 /**
  * Fields that can be modified in edit mode.
- * `UNCHANGED_EDIT` means "unchanged from the server value".
+ * `null` means "unchanged from the server value".
  */
 export type EditableFields = {
-  displayName: string | typeof UNCHANGED_EDIT;
-  shortDescription: string | null | typeof UNCHANGED_EDIT;
+  displayName: string | null;
+  shortDescription: string | null;
   /**
    * Richtext facets for shortDescription.
-   * UNCHANGED_EDIT = no change from the server value.
-   * [] = facets explicitly cleared.
+   * null = no change from the server value (empty array = facets cleared).
    */
-  shortDescriptionFacets: Facet[] | typeof UNCHANGED_EDIT;
+  shortDescriptionFacets: Facet[] | null;
   /**
    * Long-form about section as a Leaflet LinearDocument.
-    * null = no change from the server value.
+   * null = no change from the server value.
    */
   longDescription: LeafletLinearDocument | null;
   /** New cover image file to upload (null = no change) */
   coverImage: File | null;
   /** New logo file to upload (null = no change) */
   logo: File | null;
-  country: string | null | typeof UNCHANGED_EDIT;
-  website: string | null | typeof UNCHANGED_EDIT;
-  startDate: string | null | typeof UNCHANGED_EDIT;
-  visibility: "Public" | "Unlisted" | typeof UNCHANGED_EDIT;
+  country: string | null;
+  website: string | null;
+  startDate: string | null;
+  visibility: "Public" | "Unlisted" | null;
 };
 
 // ─── Store state ─────────────────────────────────────────────────────────────
@@ -80,16 +71,16 @@ type ManageDashboardActions = {
 // ─── Initial edits ────────────────────────────────────────────────────────────
 
 const EMPTY_EDITS: EditableFields = {
-  displayName: UNCHANGED_EDIT,
-  shortDescription: UNCHANGED_EDIT,
-  shortDescriptionFacets: UNCHANGED_EDIT,
+  displayName: null,
+  shortDescription: null,
+  shortDescriptionFacets: null,
   longDescription: null,
   coverImage: null,
   logo: null,
-  country: UNCHANGED_EDIT,
-  website: UNCHANGED_EDIT,
-  startDate: UNCHANGED_EDIT,
-  visibility: UNCHANGED_EDIT,
+  country: null,
+  website: null,
+  startDate: null,
+  visibility: null,
 };
 
 // ─── Store ───────────────────────────────────────────────────────────────────
@@ -111,7 +102,7 @@ export const useManageDashboardState = create<
   hasChanges: () => {
     const { edits } = get();
     return (Object.keys(edits) as (keyof EditableFields)[]).some(
-      (k) => edits[k] !== EMPTY_EDITS[k],
+      (k) => edits[k] !== null,
     );
   },
 

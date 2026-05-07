@@ -1,4 +1,4 @@
-import type { CertifiedLocation } from "@/graphql/indexer/queries";
+import type { CertifiedLocation } from "@/lib/graphql-dev/queries";
 import UriEvidencePicker from "./shared/UriEvidenceViewer";
 import { getManagedEvidenceTabConfig } from "./shared/evidenceRegistry";
 

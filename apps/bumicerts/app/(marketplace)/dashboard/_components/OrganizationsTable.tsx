@@ -112,7 +112,7 @@ export function OrganizationsTable({ rows }: OrganizationsTableProps) {
                 >
                   <td className="py-2.5 px-3">
                     <a
-                      href={links.account.byDid(row.orgDid)}
+                      href={links.organization.home(row.orgDid)}
                       className="inline-flex items-center gap-1 font-mono text-xs text-foreground hover:text-primary transition-colors"
                       title={row.orgDid}
                     >

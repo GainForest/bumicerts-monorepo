@@ -2,7 +2,6 @@
 
 import { cn } from "@/lib/utils";
 import Image from "next/image";
-import { motion } from "framer-motion";
 
 /** Resolves a coverImage that is either a URL string or a File (create flow). */
 function resolveImageSrc(coverImage: File | string): string {
@@ -29,27 +28,6 @@ export const cardVariants = {
   },
 };
 
-const orgLabelTextVariants = {
-  initial: {
-    opacity: 0,
-    width: 0,
-    marginLeft: "-0.25rem",
-    marginRight: "0rem",
-    pointerEvents: "none",
-    x: -2,
-    filter: "blur(4px)",
-  },
-  cardHover: {
-    opacity: 1,
-    width: "auto",
-    marginLeft: "0rem",
-    marginRight: "0.5rem",
-    pointerEvents: "auto",
-    x: 0,
-    filter: "blur(0px)",
-  },
-};
-
 export interface BumicertCardVisualProps {
   coverImage: File | string | null;
   logoUrl: string | null;
@@ -70,35 +48,22 @@ export function BumicertCardVisual({
   className,
 }: BumicertCardVisualProps) {
   const imageSrc = coverImage ? resolveImageSrc(coverImage) : null;
-  const normalizedObjectives = objectives.filter(
-    (objective): objective is string =>
-      typeof objective === "string" && objective.trim().length > 0,
-  );
 
   const objectivesToDisplay = [
-    normalizedObjectives[0],
-    normalizedObjectives.length > 1
-      ? `+${normalizedObjectives.length - 1}`
-      : null,
-  ].filter((objective): objective is string => typeof objective === "string");
+    objectives[0],
+    objectives.length > 1 ? `+${objectives.length - 1}` : null,
+  ].filter((o) => o !== null);
 
   return (
-    <motion.div
+    <div
       className={cn(
-        "group relative rounded-2xl border border-border bg-card hover:shadow-lg overflow-hidden w-full flex flex-col transition-all duration-300",
+        "relative rounded-2xl border border-border bg-card overflow-hidden w-full flex flex-col",
         className,
       )}
-      initial={"initial"}
-      whileHover={"cardHover"}
     >
       <div className="relative aspect-4/3 overflow-hidden z-0">
         {imageSrc ? (
-          <Image
-            src={imageSrc}
-            alt={title}
-            fill
-            className="object-cover scale-110 group-hover:scale-100 transition-all duration-300"
-          />
+          <Image src={imageSrc} alt={title} fill className="object-cover" />
         ) : (
           <div className="absolute inset-0 bg-muted" />
         )}
@@ -106,7 +71,10 @@ export function BumicertCardVisual({
       <div className="relative px-4 py-3 -mt-6 z-1 flex-1 flex flex-col justify-between">
         <div className="absolute -top-2 left-0 right-0 h-8 bg-linear-to-b from-transparent via-background/65 to-background z-0"></div>
         <div>
-          <h3 className="relative text-2xl font-instrument italic text-foreground leading-snug line-clamp-1 z-1">
+          <h3
+            className="relative text-2xl font-semibold text-foreground leading-snug line-clamp-1 z-1"
+            style={{ fontFamily: "var(--font-garamond-var)" }}
+          >
             {title}
           </h3>
           {description && (
@@ -116,28 +84,26 @@ export function BumicertCardVisual({
           )}
         </div>
         {/* Objective chips */}
-        {objectivesToDisplay.length > 0 && (
-          <div className="w-full flex items-center gap-2 flex-wrap mt-4">
-            {objectivesToDisplay.map((obj) => {
-              return (
-                <span
-                  key={obj}
-                  className={cn(
-                    "text-sm text-muted-foreground bg-muted rounded-full px-2.5 py-1 font-medium",
-                    obj.startsWith("+") && "text-foreground",
-                  )}
-                >
-                  {obj}
-                </span>
-              );
-            })}
-          </div>
-        )}
+        <div className="w-full flex items-center gap-2 flex-wrap mt-4">
+          {objectivesToDisplay.map((obj) => {
+            return (
+              <span
+                key={obj}
+                className={cn(
+                  "text-sm text-muted-foreground bg-muted rounded-full px-2.5 py-1 font-medium",
+                  obj.startsWith("+") && "text-foreground",
+                )}
+              >
+                {obj}
+              </span>
+            );
+          })}
+        </div>
       </div>
 
       {/* Header overlay */}
-      <div className="absolute top-2 left-2 bg-background/70 rounded-full p-1 backdrop-blur-lg shadow-lg flex items-center gap-1 min-w-0">
-        <div className="relative h-6 w-6 rounded-full bg-white shadow-sm overflow-hidden shrink-0 scale-120 group-hover:scale-100 transition-all duration-300">
+      <div className="absolute top-2 left-2 bg-background/70 rounded-full p-1 pr-3 backdrop-blur-lg shadow-lg flex items-center gap-1 min-w-0">
+        <div className="relative h-6 w-6 rounded-full bg-white border border-black/10 shadow-sm overflow-hidden shrink-0">
           {logoUrl ? (
             <Image
               src={logoUrl}
@@ -151,14 +117,11 @@ export function BumicertCardVisual({
             </div>
           )}
         </div>
-        <motion.span
-          variants={orgLabelTextVariants}
-          className="text-xs font-medium text-foreground text-shadow-md"
-        >
+        <span className="text-xs font-medium text-foreground text-shadow-md">
           {organizationName.length > 22
             ? organizationName.slice(0, 20) + "..."
             : organizationName}
-        </motion.span>
+        </span>
       </div>
 
       {/* Legacy Header overlay - kept for rolling back */}
@@ -187,7 +150,7 @@ export function BumicertCardVisual({
       </div>*/}
 
       {/* Footer */}
-    </motion.div>
+    </div>
   );
 }
 

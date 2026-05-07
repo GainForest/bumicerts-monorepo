@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Trash2Icon } from "lucide-react";
-import type { AttachmentItem } from "@/graphql/indexer/queries/attachments";
+import type { AttachmentItem } from "@/lib/graphql-dev/queries/attachments";
 import { trpc } from "@/lib/trpc/client";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { cn } from "@/lib/utils";

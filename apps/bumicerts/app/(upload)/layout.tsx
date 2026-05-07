@@ -8,7 +8,7 @@ import { ModalProvider } from "@/components/ui/modal/context";
  *
  * Server component — reads session on every request.
  * If the user is not authenticated, renders a sign-in prompt.
- * Otherwise, renders the client layout shell.
+ * Otherwise, passes the DID to the client layout shell.
  */
 export default async function ManageLayout({
   children,
@@ -26,5 +26,5 @@ export default async function ManageLayout({
     );
   }
 
-  return <ManageLayoutClient>{children}</ManageLayoutClient>;
+  return <ManageLayoutClient did={session.did}>{children}</ManageLayoutClient>;
 }

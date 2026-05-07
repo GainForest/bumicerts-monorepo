@@ -5,8 +5,8 @@
  *
  * On hover:
  *   1. Fetches basic profile from Bluesky public API (avatar, displayName, handle)
- *   2. Asynchronously checks the Bumicerts account state via typed indexer tRPC
- *   3. If it is an onboarded user or organization, shows a link to the internal account route
+ *   2. Asynchronously checks if the DID is indexed as a Gainforest organization
+ *   3. If it is, shows a "View organization profile" link to /organization/{did}
  *
  * Both fetches are gated on hover (not on mount) so there's no cold-load cost.
  * Results are cached by React Query for 5 minutes.
@@ -15,6 +15,7 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useQuery } from "@tanstack/react-query";
 import { BuildingIcon, ExternalLinkIcon, ArrowRightIcon } from "lucide-react";
 import {
   Tooltip,
@@ -22,9 +23,23 @@ import {
   TooltipContent,
   TooltipProvider,
 } from "@/components/ui/tooltip";
-import { useAccountByDid } from "@/hooks/use-account";
 import { useProfile } from "@/hooks/use-profile";
 import { links } from "@/lib/links";
+
+// ── Data fetchers ─────────────────────────────────────────────────────────────
+
+async function fetchIsOrganization(did: string): Promise<boolean> {
+  try {
+    const url = new URL("/api/check-organization", window.location.origin);
+    url.searchParams.set("did", did);
+    const res = await fetch(url.toString());
+    if (!res.ok) return false;
+    const data = (await res.json()) as { isOrganization: boolean };
+    return data.isOrganization;
+  } catch {
+    return false;
+  }
+}
 
 // ── Tooltip card content ──────────────────────────────────────────────────────
 
@@ -35,16 +50,15 @@ interface MentionCardProps {
 
 function MentionCard({ did, handle }: MentionCardProps) {
   const { data: profile, isLoading: profileLoading } = useProfile(did);
-  const { data: account } = useAccountByDid(did);
 
-  const accountDisplayName =
-    account?.kind === "user" || account?.kind === "organization"
-      ? account.profile.displayName
-      : null;
-  const displayName = accountDisplayName ?? profile?.displayName ?? handle;
+  const { data: isOrg } = useQuery({
+    queryKey: ["is-gainforest-org", did],
+    queryFn: () => fetchIsOrganization(did),
+    retry: false,
+  });
+
+  const displayName = profile?.displayName ?? handle;
   const resolvedHandle = profile?.handle ?? handle;
-  const hasInternalAccountLink =
-    account?.kind === "user" || account?.kind === "organization";
 
   return (
     <div className="w-64 space-y-3">
@@ -94,13 +108,13 @@ function MentionCard({ did, handle }: MentionCardProps) {
         View on Certified
       </a>
 
-      {/* View account profile for onboarded user and organization accounts */}
-      {hasInternalAccountLink && (
+      {/* View organization profile — only if indexed */}
+      {isOrg && (
         <Link
-          href={links.account.byDid(did)}
+          href={links.organization.home(did)}
           className="flex items-center justify-between w-full rounded-md px-3 py-2 bg-primary/10 hover:bg-primary/20 transition-colors text-xs font-medium text-primary"
         >
-          View account profile
+          View organization profile
           <ArrowRightIcon className="h-3.5 w-3.5 shrink-0" />
         </Link>
       )}

@@ -19,7 +19,7 @@ import {
   SiteEditorModalId,
 } from "@/components/global/modals/upload/site/editor";
 import { getShapefilePreviewUrl } from "@/lib/shapefile";
-import type { CertifiedLocation } from "@/graphql/indexer/queries/locations";
+import type { CertifiedLocation } from "@/lib/graphql-dev/queries/locations";
 import { formatError } from "@/lib/utils/trpc-errors";
 import {
   DropdownMenu,

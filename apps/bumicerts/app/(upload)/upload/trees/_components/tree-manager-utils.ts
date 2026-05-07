@@ -3,7 +3,7 @@ import type {
   MeasurementItem,
   MultimediaItem,
   OccurrenceItem,
-} from "@/graphql/indexer/queries";
+} from "@/lib/graphql-dev/queries";
 
 const FLORA_MEASUREMENT_TYPE =
   "app.gainforest.dwc.measurement#floraMeasurement";

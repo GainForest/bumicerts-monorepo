@@ -17,7 +17,7 @@ import { useEvmLinks } from "@/hooks/useEvmLinks";
 import { useCartStore } from "@/components/stores/cart";
 import { clientEnv } from "@/lib/env/client";
 import type { FundingConfigData } from "@/lib/types";
-import type { EvmLink } from "@/graphql/indexer/queries/linkEvm";
+import type { EvmLink } from "@/lib/graphql-dev/queries/linkEvm";
 import { DonateButton } from "./DonateButton";
 import type { BumicertData } from "@/lib/types";
 import {

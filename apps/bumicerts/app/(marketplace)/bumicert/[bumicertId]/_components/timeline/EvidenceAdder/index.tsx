@@ -10,9 +10,9 @@
 
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { AudioRecordingItem } from "@/graphql/indexer/queries/audio";
-import type { OccurrenceItem } from "@/graphql/indexer/queries/occurrences";
-import type { CertifiedLocation } from "@/graphql/indexer/queries/locations";
+import type { AudioRecordingItem } from "@/lib/graphql-dev/queries/audio";
+import type { OccurrenceItem } from "@/lib/graphql-dev/queries/occurrences";
+import type { CertifiedLocation } from "@/lib/graphql-dev/queries/locations";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import AudioEvidencePicker from "./AudioEvidencePicker";
 import TreeEvidencePicker from "./TreeEvidencePicker";

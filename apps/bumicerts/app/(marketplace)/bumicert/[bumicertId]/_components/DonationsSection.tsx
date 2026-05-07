@@ -9,7 +9,7 @@ import { UserChip } from "@/components/ui/user-chip";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { clientEnv } from "@/lib/env/client";
 import type { BumicertData } from "@/lib/types";
-import type { FundingReceiptItem } from "@/graphql/indexer/queries/fundingReceipts";
+import type { FundingReceiptItem } from "@/lib/graphql-dev/queries/fundingReceipts";
 import { extractDonor } from "@/lib/utils/extract-donor";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 import type { BumicertsLeafletEditorProps } from "@/components/ui/leaflet-editor";
-import type { AttachmentItem } from "@/graphql/indexer/queries/attachments";
+import type { AttachmentItem } from "@/lib/graphql-dev/queries/attachments";
 
 export type OptimisticAttachmentContent =
   | string

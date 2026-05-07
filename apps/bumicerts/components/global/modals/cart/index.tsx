@@ -20,8 +20,8 @@ import { useCartStore } from "@/components/stores/cart";
 import { useModal } from "@/components/ui/modal/context";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
 import { clientEnv } from "@/lib/env/client";
-import type { CartBumicertItem } from "@/graphql/indexer/queries/cartBumicert";
-import type { EvmLink } from "@/graphql/indexer/queries/linkEvm";
+import type { CartBumicertItem } from "@/lib/graphql-dev/queries/cartBumicert";
+import type { EvmLink } from "@/lib/graphql-dev/queries/linkEvm";
 import {
   ModalContent,
   ModalHeader,

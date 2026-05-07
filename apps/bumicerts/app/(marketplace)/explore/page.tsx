@@ -1,4 +1,7 @@
-import { activitiesToBumicertDataArray } from "@/lib/adapters";
+import {
+  activitiesToBumicertDataArray,
+  type GraphQLHcActivityItem,
+} from "@/lib/adapters";
 import type { BumicertData } from "@/lib/types";
 import { ExploreShell } from "./_components/ExploreShell";
 import { requirePublicUrl } from "@/lib/url";
@@ -22,7 +25,7 @@ export default async function ExplorePage() {
       labelTier: "high-quality",
     });
     // list() with no `did` returns { data, pageInfo }
-    const activities = "data" in response ? response.data : [];
+    const activities = ("data" in response ? response.data : []) as GraphQLHcActivityItem[];
     bumicerts = activitiesToBumicertDataArray(activities);
   } catch (error) {
     console.error("Failed to fetch bumicerts:", error);

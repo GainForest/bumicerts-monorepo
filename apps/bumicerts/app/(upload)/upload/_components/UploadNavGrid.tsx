@@ -18,7 +18,6 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   ArrowRightIcon,
-  ChevronRightIcon,
   MapPinIcon,
   MicIcon,
   PencilIcon,
@@ -28,7 +27,6 @@ import BumicertIcon from "@/icons/BumicertIcon";
 import { links } from "@/lib/links";
 import type { ComponentType } from "react";
 import type { LucideIcon } from "lucide-react";
-import type { AccountKind } from "@/lib/account";
 
 interface NavCard {
   id: string;
@@ -38,7 +36,15 @@ interface NavCard {
   Icon: LucideIcon | ComponentType<{ className?: string }>;
 }
 
-const ORG_NAV_CARDS: NavCard[] = [
+const NAV_CARDS: NavCard[] = [
+  {
+    id: "edit",
+    label: "Edit Profile",
+    description:
+      "Update your organization name, description, logo, and cover image.",
+    href: links.manage.edit,
+    Icon: PencilIcon,
+  },
   {
     id: "sites",
     label: "Sites",
@@ -71,24 +77,11 @@ const ORG_NAV_CARDS: NavCard[] = [
   },
 ];
 
-export function ManageNavGrid({
-  accountKind = "organization",
-}: {
-  accountKind?: AccountKind;
-}) {
-  const cards = accountKind === "organization" ? ORG_NAV_CARDS : []; // No cards for other kinds.
-  if (cards.length === 0) return null;
-
+export function ManageNavGrid() {
   return (
-    <div className="pb-2">
-      <h1 className="text-2xl font-medium">
-        Manage{" "}
-        {accountKind === "organization" && (
-          <span className="text-muted-foreground">your organization data</span>
-        )}
-      </h1>
-      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {cards.map((card, i) => {
+    <div className="pt-4 pb-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+        {NAV_CARDS.map((card, i) => {
           const Icon = card.Icon;
           return (
             <motion.div
@@ -103,21 +96,24 @@ export function ManageNavGrid({
             >
               <Link
                 href={card.href}
-                className="group flex flex-col gap-3 h-full p-4 rounded-2xl bg-muted/50 hover:bg-muted transition-all duration-300 overflow-hidden"
+                className="group flex flex-col gap-3 h-full p-4 rounded-2xl border border-border bg-background hover:border-primary/20 hover:shadow-md transition-all duration-300"
               >
-                {/*<div className="absolute z-0 bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-1/2 aspect-square rounded-full blur-3xl scale-0 group-hover:scale-100 opacity-0 group-hover:opacity-50 transition-all duration-500 bg-primary" />*/}
                 {/* Icon */}
                 <div className="flex items-center justify-between">
-                  <Icon className="size-6 text-muted-foreground opacity-60 group-hover:text-primary transition-colors duration-300" />
-                  <ChevronRightIcon className="size-6 text-muted-foreground opacity-10 group-hover:opacity-30 group-hover:translate-x-0.5 transition-all duration-300" />
+                  <div className="h-8 w-8 rounded-xl bg-muted/60 flex items-center justify-center group-hover:bg-primary/8 transition-colors duration-300">
+                    <Icon className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors duration-300" />
+                  </div>
+                  <ArrowRightIcon className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-primary/60 group-hover:translate-x-0.5 transition-all duration-300" />
                 </div>
 
                 {/* Text */}
                 <div>
-                  <p className="text-lg font-medium text-foreground group-hover:text-primary transition-all duration-300 mb-1">
+                  <p className="text-sm font-medium text-foreground mb-1">
                     {card.label}
                   </p>
-                  <p className="text-muted-foreground">{card.description}</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {card.description}
+                  </p>
                 </div>
               </Link>
             </motion.div>

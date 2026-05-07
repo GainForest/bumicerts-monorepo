@@ -7,7 +7,7 @@
 
 import { z } from "zod";
 import { queryRouter, publicQueryProcedure } from "./init";
-import * as locationsModule from "@/graphql/indexer/queries/locations";
+import * as locationsModule from "@/lib/graphql-dev/queries/locations";
 
 export const locationsRouter = queryRouter({
   list: publicQueryProcedure

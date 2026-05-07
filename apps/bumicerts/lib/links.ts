@@ -16,27 +16,23 @@ const GREEN_GLOBE_PREVIEW_BASE_URL =
 export const links = {
   root: "/",
   home: "/home",
+  onboarding: "/onboarding",
   leaderboard: "/leaderboard",
   dashboard: "/dashboard",
   checkout: "/checkout",
   myOrganization: (did?: string) =>
-    did ? `/account/${encodeURIComponent(did)}` : "/account",
-  allOrganizations: "/organizations",
+    did ? `/organization/${encodeURIComponent(did)}` : "/organization",
+  allOrganizations: "/organization/all",
 
-  account: {
-    self: "/account",
-    byDid: (did: string) => `/account/${encodeURIComponent(did)}`,
+  /** Tab routes for an organization profile page. */
+  organization: {
+    home: (did: string) => `/organization/${encodeURIComponent(did)}`,
     bumicerts: (did: string) =>
-      `/account/${encodeURIComponent(did)}/bumicerts`,
-    donations: (did: string) =>
-      `/account/${encodeURIComponent(did)}/donations`,
+      `/organization/${encodeURIComponent(did)}/bumicerts`,
   },
-
   manage: {
     home: "/upload",
     edit: "/upload?mode=edit",
-    onboardUser: "/upload?mode=onboard-user",
-    onboardOrganization: "/upload?mode=onboard-org",
     sites: "/upload/sites",
     audio: "/upload/audio",
     bumicerts: BUMICERT_CREATE_PATH,
@@ -55,6 +51,7 @@ export const links = {
       return `/upload/trees${queryString ? `?${queryString}` : ""}`;
     },
   },
+  user: didCatcher((did) => `/user/${did}`),
   explore: "/explore",
   bumicert: {
     create: BUMICERT_CREATE_PATH,
@@ -79,8 +76,6 @@ export const links = {
     certifiedApp: {
       profileUrl: didCatcher((did) => `https://certified.app/profile/${did}`),
     },
-    codeOfConduct:
-      "https://gainforest.notion.site/GainForest-Community-Code-of-Conduct-23094a2f76b380118bc0dfe560df4a2e",
     polygonsAppUrl: (
       options?:
         | {
@@ -168,21 +163,25 @@ export const links = {
     treeDataDetailedTemplate: "/templates/tree-data-detailed-xlsform.xlsx",
   },
   api: {
-    atproto: {
-      ensureProfileRecords: "/api/atproto/ensure-profile-records",
-    },
-    brand: {
-      fetchInfo: "/api/brand/fetch-info",
-    },
     upload: {
       trees: {
         datasets: "/api/upload/trees/datasets",
       },
     },
+    onboarding: {
+      sendVerificationCode: "/onboarding/api/send-verification-code",
+      verifyEmailCode: "/onboarding/api/verify-email-code",
+      generateShortDescription: "/onboarding/api/generate-short-description",
+      fetchBrandInfo: "/onboarding/api/fetch-brand-info",
+      onboard: "/onboarding/api/onboard",
+    },
     aws: {
       upload: {
         image: "/api/aws/upload/image",
       },
+    },
+    indexer: {
+      addRepos: "/api/indexer/add-repos",
     },
     searchActors: (q: string, limit: number = 5) =>
       `https://public.api.bsky.app/xrpc/app.bsky.actor.searchActors?q=${encodeURIComponent(q)}&limit=${limit}`,

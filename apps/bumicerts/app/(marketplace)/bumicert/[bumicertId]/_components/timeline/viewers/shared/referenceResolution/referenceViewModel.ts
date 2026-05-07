@@ -1,4 +1,4 @@
-import type { AudioRecordingItem, CertifiedLocation, OccurrenceItem } from "@/graphql/indexer/queries";
+import type { AudioRecordingItem, CertifiedLocation, OccurrenceItem } from "@/lib/graphql-dev/queries";
 import { links } from "@/lib/links";
 import { formatDate } from "@/lib/utils/date";
 import { isCertifiedLocationRecordUri, type ParsedAtUri } from "./atUri";

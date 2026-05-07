@@ -45,30 +45,21 @@ import CountrySelectorModal from "@/components/modals/country-selector";
 import { WebsiteEditorModal } from "../../_modals/WebsiteEditorModal";
 import { StartDateSelectorModal } from "../../_modals/StartDateSelectorModal";
 import { VisibilitySelectorModal } from "../../_modals/VisibilitySelectorModal";
-import {
-  isUnchangedEdit,
-  UNCHANGED_EDIT,
-  useManageDashboardState,
-} from "../store";
+import { useManageDashboardState } from "../store";
 import { useManageMode } from "../../_hooks/useUploadMode";
 import type { OrganizationData } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { BskyRichTextDisplay } from "@/components/ui/bsky-richtext-display";
+import { BskyRichTextEditor } from "@/components/ui/bsky-richtext-editor";
+import type { Facet } from "@gainforest/leaflet-react/richtext";
+import type { app } from "@gainforest/generated";
 import { countries } from "@/lib/countries";
 import { formatOrganizationSinceDate } from "@/lib/date";
-import { Button } from "@/components/ui/button";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatWebsite(url: string): string {
   return url.replace(/^https?:\/\//, "").replace(/\/$/, "");
-}
-
-function resolveEditValue<T>(
-  editValue: T | typeof UNCHANGED_EDIT,
-  currentValue: T,
-): T {
-  return isUnchangedEdit(editValue) ? currentValue : editValue;
 }
 
 // ── EditChip ──────────────────────────────────────────────────────────────────
@@ -128,13 +119,9 @@ function EditChip({
 
 interface EditableHeroProps {
   organization: OrganizationData;
-  enableOrganizationFields?: boolean;
 }
 
-export function EditableHero({
-  organization,
-  enableOrganizationFields = true,
-}: EditableHeroProps) {
+export function EditableHero({ organization }: EditableHeroProps) {
   const { pushModal, show } = useModal();
   const [mode] = useManageMode();
   const isEditing = mode === "edit";
@@ -143,25 +130,15 @@ export function EditableHero({
   const setEdit = useManageDashboardState((s) => s.setEdit);
 
   // Resolved display values — edit buffer takes priority over server data
-  const displayName = resolveEditValue(
-    edits.displayName,
-    organization.displayName,
-  );
-  const shortDescription = resolveEditValue(
-    edits.shortDescription,
-    organization.shortDescription,
-  );
-  const shortDescriptionFacets = resolveEditValue(
-    edits.shortDescriptionFacets,
-    organization.shortDescriptionFacets,
-  );
-  const country = resolveEditValue(edits.country, organization.country);
-  const website = resolveEditValue(edits.website, organization.website);
-  const startDate = resolveEditValue(edits.startDate, organization.startDate);
-  const visibility = resolveEditValue(
-    edits.visibility,
-    organization.visibility,
-  );
+  const displayName = edits.displayName ?? organization.displayName;
+  const shortDescription =
+    edits.shortDescription ?? organization.shortDescription;
+  const shortDescriptionFacets =
+    edits.shortDescriptionFacets ?? organization.shortDescriptionFacets;
+  const country = edits.country ?? organization.country;
+  const website = edits.website ?? organization.website;
+  const startDate = edits.startDate ?? organization.startDate;
+  const visibility = edits.visibility ?? organization.visibility;
 
   // Image sources — use object URL for newly selected files.
   // Memoized so the blob: URL is only (re-)created when the File reference changes,
@@ -197,12 +174,12 @@ export function EditableHero({
   const sinceDate = formatOrganizationSinceDate(startDate);
   const sinceLabel = sinceDate.label;
   const countryName = country ? (countries[country]?.name ?? country) : null;
-  const countryFlag = country ? (countries[country]?.emoji ?? "") : "";
+  const countryFlag = countries[country]?.emoji ?? "";
 
   const hasPillRow =
     isEditing ||
-    (enableOrganizationFields && sinceDate.state === "valid") ||
-    (enableOrganizationFields && countryName !== null) ||
+    sinceDate.state === "valid" ||
+    countryName !== null ||
     organization.objectives.length > 0 ||
     website !== null;
 
@@ -247,7 +224,7 @@ export function EditableHero({
         content: (
           <CountrySelectorModal
             initialCountryCode={country ?? ""}
-            onCountryChange={(code) => setEdit("country", code || null)}
+            onCountryChange={(code) => setEdit("country", code)}
           />
         ),
       },
@@ -304,19 +281,8 @@ export function EditableHero({
     show();
   };
 
-  const handleShortDescriptionChange = (value: string) => {
-    if (value === organization.shortDescription) {
-      setEdit("shortDescription", UNCHANGED_EDIT);
-      setEdit("shortDescriptionFacets", UNCHANGED_EDIT);
-      return;
-    }
-
-    setEdit("shortDescription", value);
-    setEdit("shortDescriptionFacets", []);
-  };
-
   return (
-    <section className="relative min-h-[260px] md:min-h-[320px] flex flex-col overflow-hidden rounded-t-4xl border-t border-border">
+    <section className="relative min-h-[260px] md:min-h-[320px] flex flex-col overflow-hidden rounded-2xl border border-border">
       {/* ── Cover image (purely decorative layer, z-0) ── */}
       <div className="absolute inset-0 z-0">
         <motion.div
@@ -349,141 +315,146 @@ export function EditableHero({
 
       {/* ── Bottom content (z-10, same level as top row — never blocks top row) ── */}
       <div className="relative z-10 flex-1 flex flex-col justify-end px-5 pb-6 pt-24">
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-3 mb-3">
-          <div className="relative shrink-0">
-            <div className="relative h-24 w-24 rounded-full overflow-hidden bg-muted border border-white/15 shadow-sm">
-              {logoUrl ? (
-                <Image
-                  src={logoUrl}
-                  alt={displayName}
-                  fill
-                  className="object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-sm font-bold text-muted-foreground">
-                  {initial}
-                </div>
+        <div className="max-w-3xl">
+          {/* Logo + name row */}
+          <div className="flex items-center gap-3 mb-3">
+            <div className="relative shrink-0">
+              <div className="h-9 w-9 rounded-full overflow-hidden bg-muted border border-white/15 shadow-sm">
+                {logoUrl ? (
+                  <Image
+                    src={logoUrl}
+                    alt={displayName}
+                    width={36}
+                    height={36}
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-sm font-bold text-muted-foreground">
+                    {initial}
+                  </div>
+                )}
+              </div>
+              {isEditing && (
+                <button
+                  type="button"
+                  onClick={openLogoEditor}
+                  className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-background border border-border flex items-center justify-center shadow-sm hover:bg-muted/60 transition-colors cursor-pointer"
+                  aria-label="Change logo"
+                >
+                  <PencilIcon className="h-2.5 w-2.5" />
+                </button>
               )}
             </div>
-            {isEditing && (
-              <button
-                type="button"
-                onClick={openLogoEditor}
-                className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-background border border-border flex items-center justify-center shadow-sm hover:bg-muted/60 transition-colors cursor-pointer"
-                aria-label="Change logo"
-              >
-                <PencilIcon className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
 
-          <div className="max-w-3xl w-full min-w-0">
-            {/* Logo + name row */}
             {isEditing ? (
               <input
                 type="text"
                 value={displayName}
-                onChange={(e) => setEdit("displayName", e.target.value)}
+                onChange={(e) => setEdit("displayName", e.target.value || null)}
                 placeholder="Organization name"
                 className={cn(
                   "text-3xl sm:text-4xl md:text-5xl font-light tracking-[-0.02em] leading-none",
-                  "font-instrument italic bg-transparent border-b-2 border-white/40 focus:border-primary/60 outline-none",
-                  "text-foreground placeholder:text-foreground/40 w-full transition-colors",
+                  "bg-transparent border-b-2 border-white/40 focus:border-primary/60 outline-none",
+                  "text-foreground placeholder:text-foreground/40 w-full max-w-lg transition-colors",
                 )}
+                style={{ fontFamily: "var(--font-garamond-var)" }}
               />
             ) : (
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-light tracking-[-0.02em] leading-none text-foreground font-instrument italic">
+              <h1
+                className="text-3xl sm:text-4xl md:text-5xl font-light tracking-[-0.02em] leading-none text-foreground"
+                style={{ fontFamily: "var(--font-garamond-var)" }}
+              >
                 {displayName}
               </h1>
             )}
-
-            {/* Short description */}
-            {isEditing ? (
-              <textarea
-                value={shortDescription ?? ""}
-                onChange={(e) => handleShortDescriptionChange(e.target.value)}
-                placeholder="Short description…"
-                rows={2}
-                className={cn(
-                  "mt-1 w-full resize-none overflow-hidden whitespace-pre-wrap break-words bg-transparent border-b border-white/30 focus:border-primary/60 outline-none transition-colors field-sizing-content",
-                  "text-muted-foreground placeholder:text-muted-foreground/60 leading-relaxed",
-                )}
-              />
-            ) : (
-              shortDescription &&
-              (shortDescriptionFacets.length > 0 ? (
-                <BskyRichTextDisplay
-                  text={shortDescription}
-                  facets={shortDescriptionFacets}
-                  className="text-muted-foreground line-clamp-4 md:line-clamp-2 mt-1"
-                />
-              ) : (
-                <p className="text-muted-foreground line-clamp-4 md:line-clamp-2 mt-1">
-                  {shortDescription}
-                </p>
-              ))
-            )}
           </div>
-        </div>
 
-        {/* Pills row */}
-        {hasPillRow && (
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            {enableOrganizationFields && (
-              <>
-                <EditChip
-                  onClick={openCountry}
-                  isEditing={isEditing}
-                  isEmpty={!countryName}
-                >
-                  {countryFlag && (
-                    <span className="text-sm leading-none" aria-hidden="true">
-                      {countryFlag}
-                    </span>
-                  )}
-                  {countryName ?? "Add country"}
-                </EditChip>
+          {/* Short description */}
+          {isEditing ? (
+            <BskyRichTextEditor
+              initialValue={{
+                text: shortDescription ?? "",
+                // app.bsky.richtext.facet.Main and our Facet type are structurally
+                // identical at runtime — this cast is safe and documented.
+                facets:
+                  shortDescriptionFacets as unknown as app.bsky.richtext.facet.Main[],
+              }}
+              onChange={(text, facets) => {
+                setEdit("shortDescription", text || null);
+                // Reverse cast: same structural identity in the other direction.
+                setEdit(
+                  "shortDescriptionFacets",
+                  facets && facets.length > 0
+                    ? (facets as unknown as Facet[])
+                    : null,
+                );
+              }}
+              placeholder="Short description…"
+              className="text-sm md:text-base max-w-2xl"
+            />
+          ) : (
+            shortDescription && (
+              <BskyRichTextDisplay
+                text={shortDescription}
+                facets={shortDescriptionFacets}
+                className="text-sm md:text-base text-foreground/75 max-w-2xl leading-relaxed"
+              />
+            )
+          )}
 
-                <EditChip
-                  onClick={openStartDate}
-                  isEditing={isEditing}
-                  isEmpty={
-                    isEditing
-                      ? sinceDate.state === "empty"
-                      : sinceDate.state !== "valid"
-                  }
-                >
-                  <CalendarIcon className="h-3 w-3 shrink-0" />
-                  {sinceDate.state === "valid"
-                    ? `Since ${sinceLabel}`
-                    : isEditing && sinceDate.state === "invalid"
-                      ? "Invalid Date"
-                      : "Add start date"}
-                </EditChip>
-              </>
-            )}
+          {/* Pills row */}
+          {hasPillRow && (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <EditChip
+                onClick={openCountry}
+                isEditing={isEditing}
+                isEmpty={!countryName}
+              >
+                {countryFlag && (
+                  <span className="text-sm leading-none" aria-hidden="true">
+                    {countryFlag}
+                  </span>
+                )}
+                {countryName ?? "Add country"}
+              </EditChip>
 
-            <EditChip
-              onClick={openWebsite}
-              isEditing={isEditing}
-              isEmpty={!website}
-            >
-              <GlobeIcon className="h-3 w-3 shrink-0" />
-              {website ? formatWebsite(website) : "Add website"}
-            </EditChip>
+              <EditChip
+                onClick={openStartDate}
+                isEditing={isEditing}
+                isEmpty={
+                  isEditing
+                    ? sinceDate.state === "empty"
+                    : sinceDate.state !== "valid"
+                }
+              >
+                <CalendarIcon className="h-3 w-3 shrink-0" />
+                {sinceDate.state === "valid"
+                  ? `Since ${sinceLabel}`
+                  : isEditing && sinceDate.state === "invalid"
+                    ? "Invalid Date"
+                    : "Add start date"}
+              </EditChip>
 
-            {!isEditing &&
-              organization.objectives.map((obj) => (
-                <span
-                  key={obj}
-                  className="text-[10px] uppercase tracking-[0.08em] text-foreground/60 bg-background/40 backdrop-blur-md border border-border/50 rounded-full px-2.5 py-1 font-medium"
-                >
-                  {obj}
-                </span>
-              ))}
+              <EditChip
+                onClick={openWebsite}
+                isEditing={isEditing}
+                isEmpty={!website}
+              >
+                <GlobeIcon className="h-3 w-3 shrink-0" />
+                {website ? formatWebsite(website) : "Add website"}
+              </EditChip>
 
-            {enableOrganizationFields &&
-              (isEditing || visibility === "Unlisted") && (
+              {!isEditing &&
+                organization.objectives.map((obj) => (
+                  <span
+                    key={obj}
+                    className="text-[10px] uppercase tracking-[0.08em] text-foreground/60 bg-background/40 backdrop-blur-md border border-border/50 rounded-full px-2.5 py-1 font-medium"
+                  >
+                    {obj}
+                  </span>
+                ))}
+
+              {(isEditing || visibility === "Unlisted") && (
                 <EditChip
                   onClick={openVisibility}
                   isEditing={isEditing}
@@ -497,8 +468,9 @@ export function EditableHero({
                   {visibility ?? "Public"}
                 </EditChip>
               )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/*
@@ -529,6 +501,24 @@ export function EditableHero({
             </motion.button>
           )}
         </AnimatePresence>
+
+        {/* Right: editing badge (edit mode) or nothing */}
+        <div className="ml-auto">
+          <AnimatePresence>
+            {isEditing && (
+              <motion.div
+                key="editing-badge"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-primary/90 text-primary-foreground text-[10px] font-medium uppercase tracking-[0.08em]"
+              >
+                <PencilIcon className="h-2.5 w-2.5" />
+                Editing
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </section>
   );
@@ -557,7 +547,7 @@ export function EditBar() {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-      className="flex items-center justify-between gap-4 rounded-3xl bg-muted/80 px-4 py-2.5"
+      className="flex items-center justify-between gap-4 px-4 py-2.5 rounded-xl border border-primary/20 bg-primary/5"
     >
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         {isSaving ? (
@@ -571,23 +561,24 @@ export function EditBar() {
         )}
       </div>
       <div className="flex items-center gap-2">
-        <Button
-          variant={"ghost"}
+        <button
           type="button"
           onClick={handleCancel}
           disabled={isSaving}
+          className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer disabled:opacity-50"
         >
           <XIcon className="h-3.5 w-3.5" />
           Cancel
-        </Button>
-        <Button
+        </button>
+        <button
           form="manage-dashboard-save-form"
           type="submit"
           disabled={isSaving || !hasChanges()}
+          className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-50"
         >
           <SaveIcon className="h-3.5 w-3.5" />
           Save
-        </Button>
+        </button>
       </div>
     </motion.div>
   );
