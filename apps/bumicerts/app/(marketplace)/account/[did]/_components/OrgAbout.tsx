@@ -10,7 +10,7 @@ export function OrgAbout({ organization }: { organization: OrganizationData }) {
   if (!organization.longDescription.blocks.length) return null;
 
   return (
-    <section className="py-6 md:py-8 org-animate org-fade-in-up org-delay-1">
+    <section className="py-1 md:py-2 org-animate org-fade-in-up org-delay-1">
       <LeafletRenderer
         document={organization.longDescription}
         ownerDid={organization.did}

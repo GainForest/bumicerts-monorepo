@@ -18,6 +18,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   ArrowRightIcon,
+  ChevronRightIcon,
   MapPinIcon,
   MicIcon,
   PencilIcon,
@@ -37,15 +38,7 @@ interface NavCard {
   Icon: LucideIcon | ComponentType<{ className?: string }>;
 }
 
-const NAV_CARDS: NavCard[] = [
-  {
-    id: "edit",
-    label: "Edit Profile",
-    description:
-      "Update your organization name, description, logo, and cover image.",
-    href: links.manage.edit,
-    Icon: PencilIcon,
-  },
+const ORG_NAV_CARDS: NavCard[] = [
   {
     id: "sites",
     label: "Sites",
@@ -83,31 +76,18 @@ export function ManageNavGrid({
 }: {
   accountKind?: AccountKind;
 }) {
-  const cards =
-    accountKind === "organization"
-      ? NAV_CARDS
-      : [
-          {
-            id: "edit",
-            label: "Edit Profile",
-            description:
-              "Update your account name, description, website, and avatar.",
-            href: links.manage.edit,
-            Icon: PencilIcon,
-          },
-          {
-            id: "bumicerts",
-            label: "Bumicerts",
-            description:
-              "Create and manage verified impact certificates for your work.",
-            href: links.manage.bumicerts,
-            Icon: BumicertIcon,
-          },
-        ];
+  const cards = accountKind === "organization" ? ORG_NAV_CARDS : []; // No cards for other kinds.
+  if (cards.length === 0) return null;
 
   return (
-    <div className="pt-4 pb-2">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+    <div className="pb-2">
+      <h1 className="text-2xl font-medium">
+        Manage{" "}
+        {accountKind === "organization" && (
+          <span className="text-muted-foreground">your organization data</span>
+        )}
+      </h1>
+      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {cards.map((card, i) => {
           const Icon = card.Icon;
           return (
@@ -123,24 +103,21 @@ export function ManageNavGrid({
             >
               <Link
                 href={card.href}
-                className="group flex flex-col gap-3 h-full p-4 rounded-2xl border border-border bg-background hover:border-primary/20 hover:shadow-md transition-all duration-300"
+                className="group flex flex-col gap-3 h-full p-4 rounded-2xl bg-muted/50 hover:bg-muted transition-all duration-300 overflow-hidden"
               >
+                {/*<div className="absolute z-0 bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-1/2 aspect-square rounded-full blur-3xl scale-0 group-hover:scale-100 opacity-0 group-hover:opacity-50 transition-all duration-500 bg-primary" />*/}
                 {/* Icon */}
                 <div className="flex items-center justify-between">
-                  <div className="h-8 w-8 rounded-xl bg-muted/60 flex items-center justify-center group-hover:bg-primary/8 transition-colors duration-300">
-                    <Icon className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors duration-300" />
-                  </div>
-                  <ArrowRightIcon className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-primary/60 group-hover:translate-x-0.5 transition-all duration-300" />
+                  <Icon className="size-6 text-muted-foreground opacity-60 group-hover:text-primary transition-colors duration-300" />
+                  <ChevronRightIcon className="size-6 text-muted-foreground opacity-10 group-hover:opacity-30 group-hover:translate-x-0.5 transition-all duration-300" />
                 </div>
 
                 {/* Text */}
                 <div>
-                  <p className="text-sm font-medium text-foreground mb-1">
+                  <p className="text-lg font-medium text-foreground group-hover:text-primary transition-all duration-300 mb-1">
                     {card.label}
                   </p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {card.description}
-                  </p>
+                  <p className="text-muted-foreground">{card.description}</p>
                 </div>
               </Link>
             </motion.div>
