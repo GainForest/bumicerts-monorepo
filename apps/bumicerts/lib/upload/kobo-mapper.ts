@@ -22,6 +22,21 @@ type KoboPattern = {
   koboSpecific?: boolean;
 };
 
+const MULTI_MAP_TARGETS = new Set(["photoUrl"]);
+const KOBO_METADATA_COLUMNS = new Set([
+  "_id",
+  "_uuid",
+  "_submission_time",
+  "_validation_status",
+  "_notes",
+  "_status",
+  "_submitted_by",
+  "__version__",
+  "_tags",
+  "meta/rootUuid",
+  "_index",
+]);
+
 function isCrownOrCanopyDiameterHeader(header: string): boolean {
   const normalizedHeader = header.replace(/([a-z0-9])([A-Z])/g, "$1 $2");
   const tokens = normalizedHeader
@@ -43,6 +58,44 @@ function isCrownOrCanopyDiameterHeader(header: string): boolean {
     /(diam|dia)(cm|mm|m)?$/.test(compactHeader);
 
   return mentionsCrownOrCanopy && mentionsDiameter;
+}
+
+function normalizeKoboHeader(header: string): string {
+  return header
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function isCombinedGpsHeader(header: string): boolean {
+  const normalized = normalizeKoboHeader(header);
+  const tokens = normalized.split("_").filter((token) => token.length > 0);
+  const mentionsGps = tokens.includes("gps") || tokens.includes("geopoint");
+  const mentionsGpsComponent = tokens.some((token) =>
+    ["latitude", "longitude", "altitude", "precision", "accuracy"].includes(
+      token,
+    ),
+  );
+
+  return mentionsGps && !mentionsGpsComponent;
+}
+
+function isExplicitLatitudeHeader(header: string): boolean {
+  const normalized = normalizeKoboHeader(header);
+  return normalized.includes("latitude") || normalized.endsWith("_lat");
+}
+
+function isExplicitLongitudeHeader(header: string): boolean {
+  const normalized = normalizeKoboHeader(header);
+  return normalized.includes("longitude") || normalized.endsWith("_lon") || normalized.endsWith("_lng");
+}
+
+function hasExplicitCoordinateColumns(headers: string[]): boolean {
+  return (
+    headers.some(isExplicitLatitudeHeader) &&
+    headers.some(isExplicitLongitudeHeader)
+  );
 }
 
 const KOBO_PATTERNS: KoboPattern[] = [
@@ -141,11 +194,13 @@ const KOBO_PATTERNS: KoboPattern[] = [
  */
 function matchPattern(header: string): KoboPattern | null {
   const lower = header.toLowerCase();
+  const normalized = normalizeKoboHeader(header);
   const isCrownOrCanopyDiameter = isCrownOrCanopyDiameterHeader(header);
+  const isCombinedGps = isCombinedGpsHeader(header);
 
   // Pass 1: exact match
   for (const entry of KOBO_PATTERNS) {
-    if (lower === entry.pattern) {
+    if (lower === entry.pattern || normalized === entry.pattern) {
       return entry;
     }
   }
@@ -153,6 +208,10 @@ function matchPattern(header: string): KoboPattern | null {
   // Pass 2: substring match — skip gpsCombined patterns to prevent
   // "_gps_longitude".includes("gps") from firing the combined-GPS handler
   for (const entry of KOBO_PATTERNS) {
+    if (isCombinedGps && entry.targetField === "locality") {
+      continue;
+    }
+
     if (
       isCrownOrCanopyDiameter &&
       (entry.pattern === "diameter" ||
@@ -161,7 +220,10 @@ function matchPattern(header: string): KoboPattern | null {
       continue;
     }
 
-    if (!entry.gpsCombined && lower.includes(entry.pattern)) {
+    if (
+      !entry.gpsCombined &&
+      (lower.includes(entry.pattern) || normalized.includes(entry.pattern))
+    ) {
       return entry;
     }
   }
@@ -170,12 +232,55 @@ function matchPattern(header: string): KoboPattern | null {
   // specific pattern matched above, i.e. the column is genuinely a combined
   // GPS field like "GPS" or "geopoint")
   for (const entry of KOBO_PATTERNS) {
-    if (entry.gpsCombined && lower.includes(entry.pattern)) {
+    if (
+      entry.gpsCombined &&
+      (lower.includes(entry.pattern) || normalized.includes(entry.pattern))
+    ) {
       return entry;
     }
   }
 
   return null;
+}
+
+export function isKoboPhotoUrlCompanionColumn(
+  header: string,
+  allHeaders: string[],
+): boolean {
+  const baseHeader = header.replace(/_url$/i, "");
+  if (baseHeader === header) {
+    return false;
+  }
+
+  const basePattern = matchPattern(baseHeader);
+  return (
+    basePattern?.targetField === "photoUrl" &&
+    allHeaders.some((candidate) => candidate === baseHeader)
+  );
+}
+
+export function isExpectedSkippedKoboColumn(
+  header: string,
+  allHeaders: string[],
+): boolean {
+  if (KOBO_METADATA_COLUMNS.has(header)) {
+    return true;
+  }
+
+  const normalized = normalizeKoboHeader(header);
+  if (
+    normalized.endsWith("_altitude") ||
+    normalized.endsWith("_precision") ||
+    normalized.endsWith("_accuracy")
+  ) {
+    return true;
+  }
+
+  if (isKoboPhotoUrlCompanionColumn(header, allHeaders)) {
+    return true;
+  }
+
+  return isCombinedGpsHeader(header) && hasExplicitCoordinateColumns(allHeaders);
 }
 
 /**
@@ -213,20 +318,39 @@ function buildMappings(header: string, pattern: KoboPattern): ColumnMapping[] {
  *
  * When multiple headers would map to the same target field, only the
  * first match (in header order) is kept to avoid duplicate mappings.
+ * Photo URL is the exception: Kobo tree forms commonly export Whole Tree,
+ * Leaf, and Bark photo filename columns, and all three should be uploaded.
  */
 export function getKoboColumnMappings(headers: string[]): ColumnMapping[] {
   const mappings: ColumnMapping[] = [];
   const usedTargets = new Set<string>();
 
   for (const header of headers) {
+    const normalizedHeader = normalizeKoboHeader(header);
+    if (
+      (isCombinedGpsHeader(header) && hasExplicitCoordinateColumns(headers)) ||
+      normalizedHeader.endsWith("_altitude") ||
+      normalizedHeader.endsWith("_precision") ||
+      normalizedHeader.endsWith("_accuracy")
+    ) {
+      continue;
+    }
+
+    if (isKoboPhotoUrlCompanionColumn(header, headers)) {
+      continue;
+    }
+
     const pattern = matchPattern(header);
     if (!pattern) continue;
 
     const candidates = buildMappings(header, pattern);
     for (const mapping of candidates) {
-      if (!usedTargets.has(mapping.targetField)) {
+      const isMultiMap = MULTI_MAP_TARGETS.has(mapping.targetField);
+      if (isMultiMap || !usedTargets.has(mapping.targetField)) {
         mappings.push(mapping);
-        usedTargets.add(mapping.targetField);
+        if (!isMultiMap) {
+          usedTargets.add(mapping.targetField);
+        }
       }
     }
   }

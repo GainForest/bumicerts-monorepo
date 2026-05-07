@@ -119,31 +119,27 @@ const FIELD_DOCS: FieldDoc[] = [
   },
   {
     field: "photo_tree",
-    description: "URL to a photo of the whole tree (Google Drive, etc.)",
-    format: "URL",
-    helperText: "Must be publicly accessible — no sign-in required",
-    helperTone: "destructive",
+    description: "Photo of the whole tree. Kobo filename columns are matched from the Media Attachments ZIP.",
+    format: "Filename or URL",
+    helperText: "For KoboToolbox, upload the matching Media Attachments ZIP with your CSV export",
   },
   {
     field: "photo_leaf",
-    description: "URL to a photo of the leaf. Subject part auto-detected.",
-    format: "URL",
-    helperText: "Must be publicly accessible — no sign-in required",
-    helperTone: "destructive",
+    description: "Photo of the leaf. Subject part auto-detected.",
+    format: "Filename or URL",
+    helperText: "Kobo private URLs are not needed when the Media Attachments ZIP is provided",
   },
   {
     field: "photo_bark",
-    description: "URL to a photo of the bark. Subject part auto-detected.",
-    format: "URL",
-    helperText: "Must be publicly accessible — no sign-in required",
-    helperTone: "destructive",
+    description: "Photo of the bark. Subject part auto-detected.",
+    format: "Filename or URL",
+    helperText: "Kobo private URLs are not needed when the Media Attachments ZIP is provided",
   },
   {
     field: "photo_url",
-    description: "Generic photo URL column. Multiple URLs may be separated with commas or semicolons.",
-    format: "URL(s)",
+    description: "Generic photo URL or Kobo filename column. Multiple values may be separated with commas or semicolons.",
+    format: "Filename(s) or URL(s)",
     helperText: "Subject part is inferred from the column name; generic photos default to whole tree",
-    helperTone: "destructive",
   },
 ];
 
@@ -169,8 +165,10 @@ export default function TreeDataGuide() {
             . Use the XLSForm templates below to create a KoboToolBox project
             for field data collection. The question names match the fields this
             uploader expects, so Kobo CSV/TSV exports can be uploaded here with
-            minimal mapping. You may add extra fields for your own use&nbsp;&mdash;
-            leave them unmapped before uploading.
+            minimal mapping. If your Kobo form includes photos, export and upload
+            Kobo&apos;s Media Attachments ZIP too; the uploader matches filenames in
+            the CSV to images in the ZIP. You may add extra fields for your own
+            use&nbsp;&mdash; leave them unmapped before uploading.
           </p>
 
           {/* Download templates */}

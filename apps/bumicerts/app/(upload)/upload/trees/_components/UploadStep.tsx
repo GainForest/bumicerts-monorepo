@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { links } from "@/lib/links";
 import { trpc } from "@/lib/trpc/client";
 import { indexerTrpc } from "@/lib/trpc/indexer/client";
-import type { ValidatedRow } from "@/lib/upload/types";
+import type { PhotoEntry, ValidatedRow } from "@/lib/upload/types";
 import { occurrenceInputToCreateInput } from "@/lib/upload/occurrence-adapter";
 import { fetchPhotoFromUrl } from "@/lib/upload/fetch-photo-from-url";
 import { useModal } from "@/components/ui/modal/context";
@@ -28,6 +28,11 @@ import PhotoAttachModal from "@/components/global/modals/upload/photo-attachment
 import { formatError, isErrorCode } from "@/lib/utils/trpc-errors";
 import { buildTreeDynamicProperties } from "@/lib/upload/tree-dynamic-properties";
 import { getUploadTimeEstimate } from "@/lib/upload/time-estimate";
+import {
+  loadKoboMediaZipArchive,
+  readKoboMediaZipEntryAsSerializableFile,
+  type KoboMediaZipArchive,
+} from "@/lib/upload/kobo-media-zip";
 import {
   APPEND_EXISTING_DWC_DATASET_CLIENT_ROWS,
   toAppendExistingDatasetRows,
@@ -77,6 +82,11 @@ type PhotoFetchProgress = {
   total: number;
   successes: number;
   failures: number;
+};
+
+type PhotoUploadQueueEntry = {
+  rowIndex: number;
+  photo: PhotoEntry;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -134,6 +144,7 @@ function getOccurrenceRkey(status: RowStatus | undefined): string | null {
 type UploadStepProps = {
   did: string;
   validRows: ValidatedRow[];
+  koboMediaZipFile: File | null;
   establishmentMeans: string | null;
   datasetSelection: UploadDatasetSelection;
   backLabel: string;
@@ -148,6 +159,7 @@ type UploadStepProps = {
 export default function UploadStep({
   did,
   validRows,
+  koboMediaZipFile,
   establishmentMeans,
   datasetSelection,
   backLabel,
@@ -162,6 +174,7 @@ export default function UploadStep({
   const updateOccurrence = trpc.dwc.occurrence.update.useMutation();
   const deleteOccurrence = trpc.dwc.occurrence.delete.useMutation();
   const createMeasurement = trpc.dwc.measurement.create.useMutation();
+  const createMultimedia = trpc.ac.multimedia.create.useMutation();
   const indexerUtils = indexerTrpc.useUtils();
   const queryClient = useQueryClient();
   const { pushModal, show } = useModal();
@@ -191,24 +204,26 @@ export default function UploadStep({
   // Photo attachment state (manual)
   const [photoUris, setPhotoUris] = useState<Map<number, string[]>>(new Map());
 
-  // Phase 2: background photo fetch from URLs
-  // Build a flat list of all photos to fetch: { rowIndex, photoIndex, url, subjectPart }
+  // Phase 2: background photo upload from public URLs or Kobo media ZIP entries
   const photoFetchQueue = useMemo(() => {
-    const queue: { rowIndex: number; url: string; subjectPart: string }[] = [];
+    const queue: PhotoUploadQueueEntry[] = [];
     for (let i = 0; i < validRows.length; i++) {
       const row = validRows[i];
       if (!row?.photos) continue;
       for (const photo of row.photos) {
         queue.push({
           rowIndex: i,
-          url: photo.url,
-          subjectPart: photo.subjectPart,
+          photo,
         });
       }
     }
     return queue;
   }, [validRows]);
-  const hasPhotoUrls = photoFetchQueue.length > 0;
+  const hasPhotoAttachments = photoFetchQueue.length > 0;
+  const needsKoboMediaZipFile = useMemo(
+    () => photoFetchQueue.some((entry) => entry.photo.source === "koboZip"),
+    [photoFetchQueue],
+  );
 
   const [photoFetchStarted, setPhotoFetchStarted] = useState(false);
   const [photoFetchDone, setPhotoFetchDone] = useState(false);
@@ -401,6 +416,15 @@ export default function UploadStep({
 
     // Clear sessionStorage once upload begins (state is no longer "pending")
     clearPendingUpload();
+
+    if (needsKoboMediaZipFile && !koboMediaZipFile) {
+      setUploadFatalError(
+        "This upload includes KoboToolbox ZIP photos, but the Media Attachments ZIP cannot be restored after a refresh or sign-in redirect. Please start over and select both the CSV export and matching Media Attachments ZIP.",
+      );
+      setClockMs(Date.now());
+      setUploadDone(true);
+      return;
+    }
 
     // ── Phase 0: Resolve dataset target ───────────────────────────────────
     let datasetUri: string | undefined;
@@ -757,6 +781,8 @@ export default function UploadStep({
     datasetSelection,
     establishmentMeans,
     invalidateTreeQueries,
+    koboMediaZipFile,
+    needsKoboMediaZipFile,
     updateDataset,
     validRows,
   ]);
@@ -768,7 +794,7 @@ export default function UploadStep({
     }
   }, [runUpload, uploadStarted]);
 
-  // ── Phase 2: Fetch photos from URLs (background, after Phase 1) ───────────
+  // ── Phase 2: Upload photos from URLs or Kobo ZIP (background) ─────────────
   const runPhotoFetch = useCallback(async () => {
     if (photoFetchRef.current) return;
     photoFetchRef.current = true;
@@ -779,11 +805,22 @@ export default function UploadStep({
 
     let successes = 0;
     let failures = 0;
+    let koboMediaArchivePromise: Promise<KoboMediaZipArchive> | null = null;
+
+    const getKoboMediaArchive = () => {
+      if (!koboMediaZipFile) {
+        return null;
+      }
+
+      koboMediaArchivePromise ??= loadKoboMediaZipArchive(koboMediaZipFile);
+      return koboMediaArchivePromise;
+    };
 
     for (let pIdx = 0; pIdx < photoFetchQueue.length; pIdx++) {
       const entry = photoFetchQueue[pIdx];
       if (!entry) continue;
-      const { rowIndex, url, subjectPart } = entry;
+      const { rowIndex, photo } = entry;
+      const { subjectPart } = photo;
 
       // Find the occurrence URI from Phase 1
       const rowStatus = rowStatuses[rowIndex];
@@ -807,7 +844,7 @@ export default function UploadStep({
         continue;
       }
 
-      // Mark as fetching
+      // Mark as uploading
       setPhotoFetchStatuses((prev) => ({
         ...prev,
         [rowIndex]: {
@@ -821,11 +858,44 @@ export default function UploadStep({
       }));
 
       try {
-        const result = await fetchPhotoFromUrl({
-          url,
-          occurrenceRef: occurrenceUri,
-          subjectPart,
-        });
+        const result =
+          photo.source === "url"
+            ? await fetchPhotoFromUrl({
+                url: photo.url,
+                occurrenceRef: occurrenceUri,
+                subjectPart,
+              })
+            : await (async () => {
+                const archivePromise = getKoboMediaArchive();
+                if (!archivePromise) {
+                  throw new Error(
+                    "Kobo Media Attachments ZIP is no longer available. Go back, reselect the ZIP, and retry the upload.",
+                  );
+                }
+
+                const archive = await archivePromise;
+                const serializableFile =
+                  await readKoboMediaZipEntryAsSerializableFile({
+                    archive,
+                    entryPath: photo.entryPath,
+                    fileName: photo.fileName,
+                    mimeType: photo.mimeType,
+                  });
+
+                const uploadResult = await createMultimedia.mutateAsync({
+                  imageFile: serializableFile,
+                  occurrenceRef: occurrenceUri,
+                  subjectPart,
+                  caption: `Imported from KoboToolbox Media Attachments ZIP: ${photo.fileName}`,
+                  format: serializableFile.type,
+                });
+
+                return {
+                  uri: uploadResult.uri,
+                  rkey: uploadResult.rkey,
+                  cid: uploadResult.cid,
+                };
+              })();
 
         successes += 1;
         setPhotoFetchStatuses((prev) => ({
@@ -886,13 +956,21 @@ export default function UploadStep({
         setRefreshWarning();
       });
     }
-  }, [did, indexerUtils, photoFetchQueue, rowStatuses, setRefreshWarning]);
+  }, [
+    createMultimedia,
+    did,
+    indexerUtils,
+    koboMediaZipFile,
+    photoFetchQueue,
+    rowStatuses,
+    setRefreshWarning,
+  ]);
 
-  // Auto-start photo fetch after Phase 1 completes
+  // Auto-start photo upload after Phase 1 completes
   useEffect(() => {
     if (
       uploadDone &&
-      hasPhotoUrls &&
+      hasPhotoAttachments &&
       progress.successes + progress.partials > 0 &&
       !photoFetchStarted &&
       !uploadFatalError
@@ -900,7 +978,7 @@ export default function UploadStep({
       void runPhotoFetch();
     }
   }, [
-    hasPhotoUrls,
+    hasPhotoAttachments,
     photoFetchStarted,
     progress.partials,
     progress.successes,
@@ -934,9 +1012,9 @@ export default function UploadStep({
     uploadDone && failures === 0 && partials === 0 && !uploadFatalError;
   const someFailed = uploadDone && attentionCount > 0 && !uploadFatalError;
 
-  // Phase 2 is complete when either there are no photo URLs, photo fetch is done,
+  // Phase 2 is complete when either there are no photo attachments, photo upload is done,
   // or the upload stopped before any records were written.
-  const hasPhotoFetchWork = hasPhotoUrls && persistedCount > 0;
+  const hasPhotoFetchWork = hasPhotoAttachments && persistedCount > 0;
   const allPhasesComplete = uploadFatalError
     ? uploadDone
     : uploadDone && (!hasPhotoFetchWork || photoFetchDone);
@@ -956,7 +1034,7 @@ export default function UploadStep({
     completedUnits: completedPhotoFetches,
     totalUnits: photoFetchProgress.total,
     isComplete: photoFetchDone,
-    unitLabel: "photo URL",
+    unitLabel: "photo attachment",
   });
   const hasUploadedTrees = persistedCount > 0;
   const treeManagerHref = links.manage.treesFiltered({
@@ -1150,15 +1228,15 @@ export default function UploadStep({
         </div>
       ) : null}
 
-      {/* Phase 2: Photo fetch progress */}
+      {/* Phase 2: Photo upload progress */}
       {uploadDone && hasPhotoFetchWork && !uploadFatalError && (
         <div className="space-y-2 rounded-lg border border-border p-4">
           <div className="flex items-center gap-2">
             <ImageDown className="h-4 w-4 text-muted-foreground" />
             <h3 className="text-sm font-medium">
               {photoFetchDone
-                ? "Photo fetch complete"
-                : "Fetching photos from URLs\u2026"}
+                ? "Photo upload complete"
+                : "Uploading photos…"}
             </h3>
           </div>
 
@@ -1187,12 +1265,12 @@ export default function UploadStep({
           )}
 
           <p className="text-xs text-muted-foreground">
-            {photoFetchProgress.successes} fetched
+            {photoFetchProgress.successes} uploaded
             {photoFetchProgress.failures > 0
               ? `, ${photoFetchProgress.failures} failed`
               : ""}
             {" of "}
-            {photoFetchProgress.total} photo URL
+            {photoFetchProgress.total} photo attachment
             {photoFetchProgress.total !== 1 ? "s" : ""}
           </p>
           <p className="text-xs text-muted-foreground">
@@ -1201,7 +1279,7 @@ export default function UploadStep({
 
           {photoFetchDone && photoFetchProgress.failures > 0 && (
             <p className="text-xs text-yellow-600 dark:text-yellow-400">
-              Some photos could not be fetched. You can add them manually using
+              Some photos could not be uploaded. You can add them manually using
               the Tree Manager.
             </p>
           )}
@@ -1261,7 +1339,7 @@ export default function UploadStep({
                             className="text-xs text-yellow-500"
                             title={
                               pfs?.lastError ??
-                              `${pfs?.failureCount ?? 0} photo fetch${(pfs?.failureCount ?? 0) === 1 ? "" : "es"} failed.`
+                              `${pfs?.failureCount ?? 0} photo upload${(pfs?.failureCount ?? 0) === 1 ? "" : "s"} failed.`
                             }
                           >
                             <AlertTriangle className="h-3 w-3" />
